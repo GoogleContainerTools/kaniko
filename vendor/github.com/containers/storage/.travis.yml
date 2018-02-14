@@ -1,0 +1,14 @@
+language: go
+go:
+    - 1.9
+    - 1.8
+    - 1.7
+dist: trusty
+sudo: required
+before_install:
+    - sudo apt-get -qq update
+    - sudo apt-get -qq install btrfs-tools libdevmapper-dev
+script:
+    - make install.tools
+    - make local-binary docs local-cross local-validate
+    - sudo PATH="$PATH" make local-test-unit local-test-integration

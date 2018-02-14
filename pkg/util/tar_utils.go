@@ -18,7 +18,7 @@ package util
 
 import (
 	"archive/tar"
-	"github.com/priyawadhwa/kbuild/pkg/constants"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
