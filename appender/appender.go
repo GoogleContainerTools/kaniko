@@ -42,9 +42,6 @@ func AppendLayersAndPushImage(srcImg, dstImg string) error {
 	if err := appendLayers(); err != nil {
 		return err
 	}
-	if err := ms.SaveConfig(); err != nil {
-		return err
-	}
 	return pushImage(dstImg)
 }
 
@@ -90,7 +87,10 @@ func initializeMutableSource(img string) error {
 
 func pushImage(destImg string) error {
 	logrus.Info("Pushing image to ", destImg)
-	srcRef, err := image.NewProxyReference(nil, ms)
+	srcRef := &image.ProxyReference{
+		ImageReference: nil,
+		Src:            &ms,
+	}
 
 	destRef, err := alltransports.ParseImageName("docker://" + destImg)
 	if err != nil {

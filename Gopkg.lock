@@ -30,6 +30,15 @@
   version = "v0.3.0"
 
 [[projects]]
+  name = "github.com/GoogleCloudPlatform/container-diff"
+  packages = [
+    "pkg/cache",
+    "pkg/util"
+  ]
+  revision = "97e5f12f8eed7f4879e50e43372b4bd48b315448"
+  version = "v0.5.2"
+
+[[projects]]
   branch = "master"
   name = "github.com/GoogleCloudPlatform/skaffold"
   packages = [
@@ -488,18 +497,6 @@
   revision = "d49c2bc1aa135aad0c6f4fc2056623ec78f5d5ac"
 
 [[projects]]
-  branch = "source-context"
-  name = "github.com/priyawadhwa/kbuild"
-  packages = [
-    "contexts/dest",
-    "pkg/constants",
-    "pkg/image",
-    "pkg/storage",
-    "pkg/util"
-  ]
-  revision = "21c408019094d02c590fa3792c3e5751413b3ae2"
-
-[[projects]]
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
@@ -883,6 +880,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0a377e6977fa29a83782e491042a9811ca912be5fb0ed4dacf5dbc47209cbb03"
+  inputs-digest = "c26af578650e5857b7fbc697d412d40c4ba25349e502430de604b563d354a150"
   solver-name = "gps-cdcl"
   solver-version = 1

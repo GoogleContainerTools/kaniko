@@ -14,4 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package commands
+
+import (
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
+	"os"
+)
+
+// EnvCommand represents the ENV command in a Dockerfile
+type EnvCommand struct {
+	cmd *instructions.EnvCommand
+}
+
+// ExecuteCommand executes the env command
+func (e EnvCommand) ExecuteCommand() error {
+	for _, env := range e.cmd.Env {
+		key := env.Key
+		value := env.Value
+		if err := os.Setenv(key, value); err != nil {
+			logrus.Debugf("Unable to set env variable %s: %s", key, value)
+			return err
+		}
+	}
+	return nil
+}

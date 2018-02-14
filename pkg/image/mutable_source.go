@@ -1,12 +1,9 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
-
+Copyright 2017 Google, Inc. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +17,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"time"
@@ -50,9 +46,9 @@ func NewMutableSource(r types.ImageReference) (*MutableSource, error) {
 
 	ms := &MutableSource{
 		ProxySource: ProxySource{
-			Ref: r,
-			src: src,
-			img: img,
+			Ref:         r,
+			ImageSource: src,
+			img:         img,
 		},
 		extraBlobs: make(map[string][]byte),
 	}
@@ -62,10 +58,13 @@ func NewMutableSource(r types.ImageReference) (*MutableSource, error) {
 	return ms, nil
 }
 
-// GetManifest marshals the stored manifest to the byte format.
-func (m MutableSource) GetManifest(instanceDigest *digest.Digest) ([]byte, string, error) {
+// Manifest marshals the stored manifest to the byte format.
+func (m *MutableSource) GetManifest(_ *digest.Digest) ([]byte, string, error) {
+	if err := m.saveConfig(); err != nil {
+		return nil, "", err
+	}
 	s, err := json.Marshal(m.mfst)
-	if err := m.SaveConfig(); err != nil {
+	if err != nil {
 		return nil, "", err
 	}
 	return s, manifest.DockerV2Schema2MediaType, err
@@ -73,7 +72,7 @@ func (m MutableSource) GetManifest(instanceDigest *digest.Digest) ([]byte, strin
 
 // populateManifestAndConfig parses the raw manifest and configs, storing them on the struct.
 func (m *MutableSource) populateManifestAndConfig() error {
-	mfstBytes, _, err := m.src.GetManifest(nil)
+	mfstBytes, _, err := m.ProxySource.GetManifest(nil)
 	if err != nil {
 		return err
 	}
@@ -84,7 +83,7 @@ func (m *MutableSource) populateManifestAndConfig() error {
 	}
 
 	bi := types.BlobInfo{Digest: m.mfst.ConfigDescriptor.Digest}
-	r, _, err := m.src.GetBlob(bi)
+	r, _, err := m.GetBlob(bi)
 	if err != nil {
 		return err
 	}
@@ -98,11 +97,11 @@ func (m *MutableSource) populateManifestAndConfig() error {
 }
 
 // GetBlob first checks the stored "extra" blobs, then proxies the call to the original source.
-func (m MutableSource) GetBlob(bi types.BlobInfo) (io.ReadCloser, int64, error) {
+func (m *MutableSource) GetBlob(bi types.BlobInfo) (io.ReadCloser, int64, error) {
 	if b, ok := m.extraBlobs[bi.Digest.String()]; ok {
 		return ioutil.NopCloser(bytes.NewReader(b)), int64(len(b)), nil
 	}
-	return m.src.GetBlob(bi)
+	return m.ImageSource.GetBlob(bi)
 }
 
 func gzipBytes(b []byte) ([]byte, error) {
@@ -116,7 +115,7 @@ func gzipBytes(b []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// AppendLayer appends an uncompressed blob to the image, preserving the invariants required across the config and manifest.
+// appendLayer appends an uncompressed blob to the image, preserving the invariants required across the config and manifest.
 func (m *MutableSource) AppendLayer(content []byte) error {
 	compressedBlob, err := gzipBytes(content)
 	if err != nil {
@@ -124,7 +123,6 @@ func (m *MutableSource) AppendLayer(content []byte) error {
 	}
 
 	dgst := digest.FromBytes(compressedBlob)
-	logrus.Debug("Digest is ", dgst)
 
 	// Add the layer to the manifest.
 	descriptor := manifest.Schema2Descriptor{
@@ -135,23 +133,22 @@ func (m *MutableSource) AppendLayer(content []byte) error {
 	m.mfst.LayersDescriptors = append(m.mfst.LayersDescriptors, descriptor)
 
 	m.extraBlobs[dgst.String()] = compressedBlob
+	m.extraLayers = append(m.extraLayers, dgst)
 
 	// Also add it to the config.
 	diffID := digest.FromBytes(content)
-	logrus.Debug("diffId is ", diffID)
 	m.cfg.RootFS.DiffIDs = append(m.cfg.RootFS.DiffIDs, diffID)
 	history := manifest.Schema2History{
 		Created: time.Now(),
-		Author:  "kbuild",
+		Author:  "container-diff",
 	}
 	m.cfg.History = append(m.cfg.History, history)
 
 	return nil
 }
 
-// SaveConfig marshals the stored image config, and updates the references to it in the manifest.
-func (m *MutableSource) SaveConfig() error {
-	logrus.Debug("Saving config")
+// saveConfig marshals the stored image config, and updates the references to it in the manifest.
+func (m *MutableSource) saveConfig() error {
 	cfgBlob, err := json.Marshal(m.cfg)
 	if err != nil {
 		return err

@@ -31,6 +31,8 @@ func GetCommand(cmd instructions.Command, context dest.Context) DockerCommand {
 		return RunCommand{cmd: c}
 	case *instructions.CopyCommand:
 		return CopyCommand{cmd: c, context: context}
+	case *instructions.EnvCommand:
+		return EnvCommand{cmd: c}
 	}
 	return nil
 }
