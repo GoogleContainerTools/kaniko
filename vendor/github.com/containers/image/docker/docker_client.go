@@ -8,10 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -27,9 +24,10 @@ import (
 )
 
 const (
-	dockerHostname   = "docker.io"
-	dockerV1Hostname = "index.docker.io"
-	dockerRegistry   = "registry-1.docker.io"
+	dockerHostname = "docker.io"
+	dockerRegistry = "registry-1.docker.io"
+
+	systemPerHostCertDirPath = "/etc/docker/certs.d"
 
 	resolvedPingV2URL       = "%s://%s/v2/"
 	resolvedPingV1URL       = "%s://%s/v1/_ping"
@@ -51,7 +49,6 @@ var (
 	ErrV1NotSupported = errors.New("can't talk to a V1 docker registry")
 	// ErrUnauthorizedForCredentials is returned when the status code returned is 401
 	ErrUnauthorizedForCredentials = errors.New("unable to retrieve auth token: invalid username/password")
-	systemPerHostCertDirPaths     = [2]string{"/etc/containers/certs.d", "/etc/docker/certs.d"}
 )
 
 // extensionSignature and extensionSignatureList come from github.com/openshift/origin/pkg/dockerregistry/server/signaturedispatcher.go:
@@ -131,42 +128,19 @@ func serverDefault() *tls.Config {
 }
 
 // dockerCertDir returns a path to a directory to be consumed by tlsclientconfig.SetupCertificates() depending on ctx and hostPort.
-func dockerCertDir(ctx *types.SystemContext, hostPort string) (string, error) {
+func dockerCertDir(ctx *types.SystemContext, hostPort string) string {
 	if ctx != nil && ctx.DockerCertPath != "" {
-		return ctx.DockerCertPath, nil
+		return ctx.DockerCertPath
 	}
+	var hostCertDir string
 	if ctx != nil && ctx.DockerPerHostCertDirPath != "" {
-		return filepath.Join(ctx.DockerPerHostCertDirPath, hostPort), nil
+		hostCertDir = ctx.DockerPerHostCertDirPath
+	} else if ctx != nil && ctx.RootForImplicitAbsolutePaths != "" {
+		hostCertDir = filepath.Join(ctx.RootForImplicitAbsolutePaths, systemPerHostCertDirPath)
+	} else {
+		hostCertDir = systemPerHostCertDirPath
 	}
-
-	var (
-		hostCertDir     string
-		fullCertDirPath string
-	)
-	for _, systemPerHostCertDirPath := range systemPerHostCertDirPaths {
-		if ctx != nil && ctx.RootForImplicitAbsolutePaths != "" {
-			hostCertDir = filepath.Join(ctx.RootForImplicitAbsolutePaths, systemPerHostCertDirPath)
-		} else {
-			hostCertDir = systemPerHostCertDirPath
-		}
-
-		fullCertDirPath = filepath.Join(hostCertDir, hostPort)
-		_, err := os.Stat(fullCertDirPath)
-		if err == nil {
-			break
-		}
-		if os.IsNotExist(err) {
-			continue
-		}
-		if os.IsPermission(err) {
-			logrus.Debugf("error accessing certs directory due to permissions: %v", err)
-			continue
-		}
-		if err != nil {
-			return "", err
-		}
-	}
-	return fullCertDirPath, nil
+	return filepath.Join(hostCertDir, hostPort)
 }
 
 // newDockerClientFromRef returns a new dockerClient instance for refHostname (a host a specified in the Docker image reference, not canonicalized to dockerRegistry)
@@ -200,10 +174,7 @@ func newDockerClientWithDetails(ctx *types.SystemContext, registry, username, pa
 	// dockerHostname here, because it is more symmetrical to read the configuration in that case as well, and because
 	// generally the UI hides the existence of the different dockerRegistry.  But note that this behavior is
 	// undocumented and may change if docker/docker changes.
-	certDir, err := dockerCertDir(ctx, hostName)
-	if err != nil {
-		return nil, err
-	}
+	certDir := dockerCertDir(ctx, hostName)
 	if err := tlsclientconfig.SetupCertificates(certDir, tr.TLSClientConfig); err != nil {
 		return nil, err
 	}
@@ -248,100 +219,6 @@ func CheckAuth(ctx context.Context, sCtx *types.SystemContext, username, passwor
 	default:
 		return errors.Errorf("error occured with status code %q", resp.StatusCode)
 	}
-}
-
-// SearchResult holds the information of each matching image
-// It matches the output returned by the v1 endpoint
-type SearchResult struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	// StarCount states the number of stars the image has
-	StarCount int  `json:"star_count"`
-	IsTrusted bool `json:"is_trusted"`
-	// IsAutomated states whether the image is an automated build
-	IsAutomated bool `json:"is_automated"`
-	// IsOfficial states whether the image is an official build
-	IsOfficial bool `json:"is_official"`
-}
-
-// SearchRegistry queries a registry for images that contain "image" in their name
-// The limit is the max number of results desired
-// Note: The limit value doesn't work with all registries
-// for example registry.access.redhat.com returns all the results without limiting it to the limit value
-func SearchRegistry(ctx context.Context, sCtx *types.SystemContext, registry, image string, limit int) ([]SearchResult, error) {
-	type V2Results struct {
-		// Repositories holds the results returned by the /v2/_catalog endpoint
-		Repositories []string `json:"repositories"`
-	}
-	type V1Results struct {
-		// Results holds the results returned by the /v1/search endpoint
-		Results []SearchResult `json:"results"`
-	}
-	v2Res := &V2Results{}
-	v1Res := &V1Results{}
-
-	// The /v2/_catalog endpoint has been disabled for docker.io therefore the call made to that endpoint will fail
-	// So using the v1 hostname for docker.io for simplicity of implementation and the fact that it returns search results
-	if registry == dockerHostname {
-		registry = dockerV1Hostname
-	}
-
-	client, err := newDockerClientWithDetails(sCtx, registry, "", "", "", nil, "")
-	if err != nil {
-		return nil, errors.Wrapf(err, "error creating new docker client")
-	}
-
-	logrus.Debugf("trying to talk to v2 search endpoint\n")
-	resp, err := client.makeRequest(ctx, "GET", "/v2/_catalog", nil, nil)
-	if err != nil {
-		logrus.Debugf("error getting search results from v2 endpoint %q: %v", registry, err)
-	} else {
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			logrus.Debugf("error getting search results from v2 endpoint %q, status code %q", registry, resp.StatusCode)
-		} else {
-			if err := json.NewDecoder(resp.Body).Decode(v2Res); err != nil {
-				return nil, err
-			}
-			searchRes := []SearchResult{}
-			for _, repo := range v2Res.Repositories {
-				if strings.Contains(repo, image) {
-					res := SearchResult{
-						Name: repo,
-					}
-					searchRes = append(searchRes, res)
-				}
-			}
-			return searchRes, nil
-		}
-	}
-
-	// set up the query values for the v1 endpoint
-	u := url.URL{
-		Path: "/v1/search",
-	}
-	q := u.Query()
-	q.Set("q", image)
-	q.Set("n", strconv.Itoa(limit))
-	u.RawQuery = q.Encode()
-
-	logrus.Debugf("trying to talk to v1 search endpoint\n")
-	resp, err = client.makeRequest(ctx, "GET", u.String(), nil, nil)
-	if err != nil {
-		logrus.Debugf("error getting search results from v1 endpoint %q: %v", registry, err)
-	} else {
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			logrus.Debugf("error getting search results from v1 endpoint %q, status code %q", registry, resp.StatusCode)
-		} else {
-			if err := json.NewDecoder(resp.Body).Decode(v1Res); err != nil {
-				return nil, err
-			}
-			return v1Res.Results, nil
-		}
-	}
-
-	return nil, errors.Wrapf(err, "couldn't search registry %q", registry)
 }
 
 // makeRequest creates and executes a http.Request with the specified parameters, adding authentication and TLS options for the Docker client.
