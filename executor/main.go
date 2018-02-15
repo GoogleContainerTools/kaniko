@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,29 +34,29 @@ import (
 var dockerfilePath = flag.String("dockerfile", "/dockerfile/Dockerfile", "Path to Dockerfile.")
 var source = flag.String("source", "", "Source context location")
 var destImg = flag.String("dest", "", "Destination of final image")
-var v = flag.String("verbosity", "", "Logging verbosity")
+var v = flag.String("verbosity", "info", "Logging verbosity")
 
 func main() {
 	flag.Parse()
 	if err := setLogLevel(); err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	// Read and parse dockerfile
 	b, err := ioutil.ReadFile(*dockerfilePath)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 
 	stages, err := dockerfile.Parse(b)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	from := stages[0].BaseName
 	// Unpack file system to root
-	logrus.Infof("Unpacking filesystem for %s...", from)
-	err = util.GetFileSystemFromImage(from)
+	logrus.Infof("Extracting filesystem for %s...", from)
+	err = util.ExtractFileSystemFromImage(from)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 
 	l := snapshot.NewLayeredMap(util.Hasher())
@@ -64,12 +64,12 @@ func main() {
 
 	// Take initial snapshot
 	if err := snapshotter.Init(); err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	// Save environment variables
 	env.SetEnvironmentVariables(from)
 
-	// Set context information
+	// Get context information
 	context := dest.GetContext(*source)
 
 	// Execute commands and take snapshots
@@ -77,17 +77,17 @@ func main() {
 		for _, cmd := range s.Commands {
 			dockerCommand := commands.GetCommand(cmd, context)
 			if err := dockerCommand.ExecuteCommand(); err != nil {
-				panic(err)
+				logrus.Fatal(err)
 			}
 			if err := snapshotter.TakeSnapshot(); err != nil {
-				panic(err)
+				logrus.Fatal(err)
 			}
 		}
 	}
 
 	// Append layers and push image
 	if err := appender.AppendLayersAndPushImage(from, *destImg); err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 }
 

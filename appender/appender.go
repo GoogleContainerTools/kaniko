@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ limitations under the License.
 package appender
 
 import (
+	"github.com/GoogleCloudPlatform/container-diff/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/containers/image/copy"
 	"github.com/containers/image/docker"
 	"github.com/containers/image/signature"
@@ -45,35 +45,8 @@ func AppendLayersAndPushImage(srcImg, dstImg string) error {
 	return pushImage(dstImg)
 }
 
-func appendLayers() error {
-	dir, err := os.Open(constants.WorkDir)
-	if err != nil {
-		panic(err)
-	}
-	defer dir.Close()
-	files, err := dir.Readdir(0)
-	var tars []string
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".tar") && strings.HasPrefix(file.Name(), "layer") {
-			tars = append(tars, file.Name())
-		}
-	}
-	sort.Strings(tars)
-	for _, file := range tars {
-		contents, err := ioutil.ReadFile(constants.WorkDir + file)
-		if err != nil {
-			panic(err)
-		}
-		logrus.Debug("Appending layer ", file)
-		ms.AppendLayer(contents)
-	}
-	return nil
-
-}
-
 func initializeMutableSource(img string) error {
 	ref, err := docker.ParseReference("//" + img)
-
 	if err != nil {
 		return err
 	}
@@ -85,23 +58,48 @@ func initializeMutableSource(img string) error {
 	return nil
 }
 
+func appendLayers() error {
+	dir, err := os.Open(constants.WorkDir)
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+	files, err := dir.Readdir(0)
+	if err != nil {
+		return err
+	}
+	var tars []string
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".tar") && strings.HasPrefix(file.Name(), "layer") {
+			tars = append(tars, file.Name())
+		}
+	}
+	sort.Strings(tars)
+	for _, file := range tars {
+		contents, err := ioutil.ReadFile(constants.WorkDir + file)
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("Appending layer %s", file)
+		ms.AppendLayer(contents)
+	}
+	return nil
+}
+
 func pushImage(destImg string) error {
-	logrus.Info("Pushing image to ", destImg)
+	logrus.Infof("Pushing image to %s", destImg)
 	srcRef := &image.ProxyReference{
 		ImageReference: nil,
 		Src:            &ms,
 	}
-
 	destRef, err := alltransports.ParseImageName("docker://" + destImg)
 	if err != nil {
 		return err
 	}
-
 	policyContext, err := getPolicyContext()
 	if err != nil {
 		return err
 	}
-
 	err = copy.Image(policyContext, destRef, srcRef, nil)
 	return err
 }
@@ -109,13 +107,12 @@ func pushImage(destImg string) error {
 func getPolicyContext() (*signature.PolicyContext, error) {
 	policy, err := signature.DefaultPolicy(nil)
 	if err != nil {
-		logrus.Debug("Error retrieving policy: %s", err)
+		logrus.Debugf("Error retrieving policy: %s", err)
 		return nil, err
 	}
-
 	policyContext, err := signature.NewPolicyContext(policy)
 	if err != nil {
-		logrus.Debug("Error retrieving policy context: %s", err)
+		logrus.Debugf("Error retrieving policy context: %s", err)
 		return nil, err
 	}
 	return policyContext, nil

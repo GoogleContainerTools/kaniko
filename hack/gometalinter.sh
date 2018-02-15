@@ -1,4 +1,6 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+#!/bin/bash
+
+# Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/google-appengine/debian9:latest
-RUN apt-get update && apt-get install -y curl
-RUN echo "hey" > /etc/foo
-RUN echo "baz" > /etc/foo
-RUN echo "baz" > /etc/foo2
 
-COPY ./pkg/image/ ./pkg/env/ foo/
-COPY ./pkg/*/stor*.go ./pkg/env /storage/
-COPY ./pkg/image/proxy*.go hello.go
+#!/bin/bash
+set -e -o pipefail
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+install_gometalinter() {
+	echo "Installing gometalinter.v2"
+	go get -u gopkg.in/alecthomas/gometalinter.v2
+	gometalinter.v2 --install
+}
+
+if ! [ -x "$(command -v gometalinter.v2)" ]; then
+  install_gometalinter
+fi
+
+gometalinter.v2 \
+	${GOMETALINTER_OPTS:--deadine 5m} \
+	--config $SCRIPTDIR/gometalinter.json ./...

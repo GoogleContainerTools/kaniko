@@ -115,7 +115,7 @@ func unpackDockerSave(tarPath string, target string) error {
 	}
 
 	for _, layer := range layers {
-		if err = UnTar(bytes.NewReader(layerMap[layer]), target); err != nil {
+		if err = UnTar(bytes.NewReader(layerMap[layer]), target, nil); err != nil {
 			return fmt.Errorf("Could not unpack layer %s: %s", layer, err)
 		}
 	}

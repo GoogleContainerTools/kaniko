@@ -19,13 +19,12 @@ package util
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
 	"github.com/containers/image/docker/tarfile"
 	"github.com/docker/docker/client"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 type TarPrepper struct {
@@ -62,7 +61,7 @@ func (p TarPrepper) GetConfig() (ConfigSchema, error) {
 		return ConfigSchema{}, err
 	}
 	defer f.Close()
-	if err := UnTar(f, tempDir); err != nil {
+	if err := UnTar(f, tempDir, nil); err != nil {
 		return ConfigSchema{}, err
 	}
 

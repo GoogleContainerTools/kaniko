@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package constants
 
 const (
@@ -31,3 +30,9 @@ const (
 // the filesystem and snapshotting
 var Whitelist = []string{"/work-dir", "/dockerfile", "/dev", "/sys", "/proc", "/var/run/secrets",
 	"/etc/hostname", "/etc/hosts", "/etc/mtab", "/etc/resolv.conf", "/.dockerenv"}
+
+// DefaultEnvVariables are the default env variables set in the container
+var DefaultEnvVariables = map[string]string{
+	"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root",
+	"HOME": "/root",
+}

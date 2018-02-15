@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package snapshot
 import (
 	"archive/tar"
 	"fmt"
+	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/sirupsen/logrus"
 
@@ -26,7 +27,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
@@ -99,7 +99,7 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 func ignorePath(p, directory string) bool {
 	for _, d := range constants.Whitelist {
 		dirPath := filepath.Join(directory, d)
-		if strings.HasPrefix(p, dirPath) {
+		if pkgutil.HasFilepathPrefix(p, dirPath) {
 			return true
 		}
 	}

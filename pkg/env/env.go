@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,12 +17,17 @@ limitations under the License.
 package env
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"os"
 )
 
 // SetEnvironmentVariables sets the envs in the image
+// TODO: Set environment variables as they are in image config
 func SetEnvironmentVariables(image string) error {
-	os.Setenv("HOME", "/root")
-	// TODO: Pull the PATH from the actual image
-	return os.Setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root")
+	for key, val := range constants.DefaultEnvVariables {
+		if err := os.Setenv(key, val); err != nil {
+			return err
+		}
+	}
+	return nil
 }

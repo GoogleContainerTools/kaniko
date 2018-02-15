@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,44 +18,26 @@ package storage
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	// "golang.org/x/oauth2/google"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"google.golang.org/api/iterator"
 	"io"
 	"io/ioutil"
 	"os"
-	"time"
 
 	"cloud.google.com/go/storage"
 )
 
-// CreateStorageBucket creates a storage bucket to store the source context in
-func CreateStorageBucket() (*storage.BucketHandle, string, error) {
+// UploadFilesToBucket uploads files (given as a list of filepaths) to the given bucket
+func UploadFilesToBucket(files []string, bucketName string) error {
 	ctx := context.Background()
-
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		return nil, "", err
+		return err
 	}
-	projectID, err := getProjectID("")
-	bucketName := fmt.Sprintf("kbuild-buckets-%d", time.Now().Unix())
 	// Creates a Bucket instance.
 	bucket := client.Bucket(bucketName)
-
-	// Creates the new bucket.
-	if err := bucket.Create(ctx, projectID, nil); err != nil {
-		logrus.Errorf("Failed to create bucket: %v", err)
-		return nil, "", err
-	}
-	logrus.Info("Created bucket ", bucketName)
-	return bucket, bucketName, nil
-}
-
-// UploadContextToBucket uploads the given context to the given bucket
-func UploadContextToBucket(files []string, bucket *storage.BucketHandle) error {
 	for _, file := range files {
 		if dir, err := util.IsDir(file); dir || err != nil {
 			logrus.Debugf("%s is directory, continue to upload context", file)
@@ -67,41 +49,30 @@ func UploadContextToBucket(files []string, bucket *storage.BucketHandle) error {
 		f, err := os.Open(file)
 		if err != nil {
 			logrus.Debugf("Could not open %s, err: %v", file, err)
-			return nil
+			return err
 		}
 		defer f.Close()
 		buf := bytes.NewBuffer(nil)
 		_, err = io.Copy(buf, f)
 		if err != nil {
 			logrus.Debugf("Could not copy contents of %s, err: %v", file, err)
-			return nil
+			return err
 		}
-		if err := uploadFile(bucket, buf.Bytes(), file); err != nil {
+		w := bucket.Object(file).NewWriter(ctx)
+		if _, err := w.Write(buf.Bytes()); err != nil {
+			logrus.Errorf("createFile: unable to write file %s: %v", file, err)
+			return err
+		}
+		if err := w.Close(); err != nil {
+			logrus.Errorf("createFile: unable to close bucket: %v", err)
 			return err
 		}
 	}
 	return nil
 }
 
-// uploadFile uploads a file to a Google Cloud Storage bucket.
-func uploadFile(bucket *storage.BucketHandle, fileContents []byte, path string) error {
-	ctx := context.Background()
-	// Write something to obj.
-	// w implements io.Writer.
-	logrus.Debugf("Copying to %s", path)
-	w := bucket.Object(path).NewWriter(ctx)
-	if _, err := w.Write(fileContents); err != nil {
-		logrus.Errorf("createFile: unable to write file %s: %v", path, err)
-		return err
-	}
-	if err := w.Close(); err != nil {
-		logrus.Errorf("createFile: unable to close bucket: %v", err)
-		return err
-	}
-	return nil
-}
-
-// GetFilesFromStorageBucket gets all files at path
+// GetFilesFromStorageBucket returns a map [filename]:[file contents] of all
+// files in the specified bucket at the given path
 func GetFilesFromStorageBucket(bucketName string, path string) (map[string][]byte, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -109,11 +80,12 @@ func GetFilesFromStorageBucket(bucketName string, path string) (map[string][]byt
 		return nil, err
 	}
 	bucket := client.Bucket(bucketName)
-	// return nil
+	// First, get all the files located at that path in the bucket
 	files, err := listFilesInBucket(bucket, bucketName, path)
 	if err != nil {
 		return nil, err
 	}
+	// Next, get the contents for each file and add to fileMap
 	fileMap := make(map[string][]byte)
 	for _, file := range files {
 		reader, err := bucket.Object(file).NewReader(ctx)
@@ -151,14 +123,4 @@ func listFilesInBucket(bucket *storage.BucketHandle, bucketName, path string) ([
 		files = append(files, obj.Name)
 	}
 	return files, nil
-}
-
-func getProjectID(scope string) (string, error) {
-	// ctx := context.Background()
-	// // defaultCreds, err := google.FindDefaultCredentials(ctx, scope)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// return defaultCreds.ProjectID, nil
-	return "priya-wadhwa", nil
 }

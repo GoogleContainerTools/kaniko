@@ -160,3 +160,22 @@ func CheckSameFile(f1name, f2name string) (bool, error) {
 	}
 	return true, nil
 }
+
+// HasFilepathPrefix checks if the given file path begins with prefix
+func HasFilepathPrefix(path, prefix string) bool {
+	path = filepath.Clean(path)
+	prefix = filepath.Clean(prefix)
+	pathArray := strings.Split(path, "/")
+	prefixArray := strings.Split(prefix, "/")
+
+	if len(pathArray) < len(prefixArray) {
+		return false
+	}
+	for index := range prefixArray {
+		if prefixArray[index] == pathArray[index] {
+			continue
+		}
+		return false
+	}
+	return true
+}

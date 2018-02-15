@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/storage"
 )
 
-type BucketContext struct {
+type GCSBucketContext struct {
 	bucketName string
 }
 
 // GetFilesFromSource gets the files at path from the GCS storage bucket
-func (b BucketContext) GetFilesFromSource(path string) (map[string][]byte, error) {
+func (b GCSBucketContext) GetFilesFromSource(path string) (map[string][]byte, error) {
 	return storage.GetFilesFromStorageBucket(b.bucketName, path)
 }

@@ -127,7 +127,7 @@ func getImageFromTar(tarPath string) (string, error) {
 	return tempPath, unpackDockerSave(tarPath, tempPath)
 }
 
-func getFileSystemFromReference(ref types.ImageReference, imgSrc types.ImageSource, path string) error {
+func GetFileSystemFromReference(ref types.ImageReference, imgSrc types.ImageSource, path string, whitelist []string) error {
 	img, err := ref.NewImage(nil)
 	if err != nil {
 		return err
@@ -151,7 +151,7 @@ func getFileSystemFromReference(ref types.ImageReference, imgSrc types.ImageSour
 			}
 		}
 		tr := tar.NewReader(reader)
-		if err := unpackTar(tr, path); err != nil {
+		if err := unpackTar(tr, path, whitelist); err != nil {
 			return err
 		}
 	}

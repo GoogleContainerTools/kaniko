@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/contexts/dest"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -35,55 +37,19 @@ func (c CopyCommand) ExecuteCommand() error {
 	srcs := c.cmd.SourcesAndDest[:len(c.cmd.SourcesAndDest)-1]
 	dest := c.cmd.SourcesAndDest[len(c.cmd.SourcesAndDest)-1]
 
+	fmt.Println("cmd: copy", srcs)
+	fmt.Println("dest: ", dest)
+
+	if containsWildcards(srcs) {
+		return c.executeWithWildcards()
+	}
+	// If there are multiple sources, the destination must be a directory
 	if len(srcs) > 1 {
 		if !isDir(dest) {
 			return errors.Errorf("When specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 		}
 	}
-
-	if containsWildcards(srcs) {
-		// If COPY cmd contains wildcards, we will need to look through the entire filesystem
-		// So, pull in all files from the bucket, and check each one against the source
-		files, err := c.context.GetFilesFromSource("")
-		if err != nil {
-			return err
-		}
-		addFiles, err := getFiles(srcs, files)
-		if err != nil {
-			return err
-		}
-		if isDir(dest) {
-			for src, srcFiles := range addFiles {
-				for _, file := range srcFiles {
-					relPath, err := filepath.Rel(src, file)
-					if err != nil {
-						return err
-					}
-					destPath := filepath.Join(dest, relPath)
-					logrus.Infof("Creating file %s", destPath)
-					err = util.CreateFile(destPath, files[file])
-					if err != nil {
-						return err
-					}
-				}
-			}
-		} else {
-			for _, srcFiles := range addFiles {
-				if len(srcFiles) > 1 {
-					return errors.Errorf("When specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
-				}
-				for _, file := range srcFiles {
-					logrus.Infof("Creating file %s", dest)
-					err = util.CreateFile(dest, files[file])
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-		return nil
-	}
-
+	// Go through each src, and copy over the files into dest
 	for _, src := range srcs {
 		src = filepath.Clean(src)
 		files, err := c.context.GetFilesFromSource(src)
@@ -92,7 +58,7 @@ func (c CopyCommand) ExecuteCommand() error {
 		}
 		for file, contents := range files {
 			if !isDir(dest) {
-				logrus.Infof("Creating file %s", dest)
+				logrus.Infof("Copying from %s to %s", file, dest)
 				return util.CreateFile(dest, contents)
 			}
 			relPath, err := filepath.Rel(src, file)
@@ -100,10 +66,61 @@ func (c CopyCommand) ExecuteCommand() error {
 				return err
 			}
 			destPath := filepath.Join(dest, relPath)
-			logrus.Infof("Creating file %s", destPath)
+			logrus.Infof("Copying from %s to %s", file, dest)
 			err = util.CreateFile(destPath, contents)
 			if err != nil {
 				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c CopyCommand) executeWithWildcards() error {
+	srcs := c.cmd.SourcesAndDest[:len(c.cmd.SourcesAndDest)-1]
+	dest := c.cmd.SourcesAndDest[len(c.cmd.SourcesAndDest)-1]
+
+	// Get all files from the source, since each needs to be matched against the sources
+	files, err := c.context.GetFilesFromSource("")
+	if err != nil {
+		return err
+	}
+	matchedFiles, err := getMatchedFiles(srcs, files)
+	if err != nil {
+		return err
+	}
+	// If destination is a directory, copy all the matched files
+	// for each source into it
+	if isDir(dest) {
+		for src, srcFiles := range matchedFiles {
+			for _, file := range srcFiles {
+				// Calculate relative path between src and the file
+				relPath, err := filepath.Rel(src, file)
+				if err != nil {
+					return err
+				}
+				// Join destination and relative path to create final path for the file
+				destPath := filepath.Join(dest, relPath)
+				logrus.Infof("Copying %s into file %s", file, destPath)
+				err = util.CreateFile(destPath, files[file])
+				if err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		// If dest is not a directory, make sure only 1 file was matched
+		totalFiles := 0
+		for _, srcFiles := range matchedFiles {
+			totalFiles += len(srcFiles)
+		}
+		if totalFiles > 1 {
+			return errors.Errorf("When specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+		}
+		for _, srcFiles := range matchedFiles {
+			for _, file := range srcFiles {
+				logrus.Infof("Copying %s into file %s", file, dest)
+				return util.CreateFile(dest, files[file])
 			}
 		}
 	}
@@ -127,26 +144,23 @@ func containsWildcards(paths []string) bool {
 	return false
 }
 
-func getFiles(srcs []string, files map[string][]byte) (map[string][]string, error) {
+func getMatchedFiles(srcs []string, files map[string][]byte) (map[string][]string, error) {
 	f := make(map[string][]string)
 	for _, src := range srcs {
 		src = filepath.Clean(src)
-		addedFiles := []string{}
+		matchedFiles := []string{}
 		for file := range files {
 			matched, err := filepath.Match(src, file)
-			keep := matched || strings.HasPrefix(file, src)
-			logrus.Debugf("Tried to match %s to %s: %s", file, src, keep)
+			keep := matched || pkgutil.HasFilepathPrefix(file, src)
 			if err != nil {
 				return nil, err
 			}
 			if !keep {
 				continue
 			}
-			addedFiles = append(addedFiles, file)
+			matchedFiles = append(matchedFiles, file)
 		}
-		logrus.Debugf("Src %s and addedfiles %s", src, addedFiles)
-		f[src] = addedFiles
+		f[src] = matchedFiles
 	}
-	logrus.Debug(f)
 	return f, nil
 }

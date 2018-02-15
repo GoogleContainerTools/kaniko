@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,12 +23,15 @@ import (
 	"github.com/docker/docker/builder/dockerfile/parser"
 )
 
+// Parse parses through dockerfile contents
 func Parse(b []byte) ([]instructions.Stage, error) {
 	p, err := parser.Parse(bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
 	stages, _, err := instructions.Parse(p.AST)
 	if err != nil {
 		return nil, err
 	}
-
 	return stages, err
 }

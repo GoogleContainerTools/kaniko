@@ -1,4 +1,6 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+#!/bin/bash
+
+# Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/google-appengine/debian9:latest
-RUN apt-get update && apt-get install -y curl
-RUN echo "hey" > /etc/foo
-RUN echo "baz" > /etc/foo
-RUN echo "baz" > /etc/foo2
+#!/bin/bash
 
-COPY ./pkg/image/ ./pkg/env/ foo/
-COPY ./pkg/*/stor*.go ./pkg/env /storage/
-COPY ./pkg/image/proxy*.go hello.go
+# Ignore these paths in the following tests.
+ignore="vendor\|out"
+BOILERPLATEDIR=./hack/boilerplate
+# Grep returns a non-zero exit code if we don't match anything, which is good in this case.
+set +e
+files=$(python ${BOILERPLATEDIR}/boilerplate.py --rootdir . --boilerplate-dir ${BOILERPLATEDIR} | grep -v $ignore)
+set -e
+if [[ ! -z ${files} ]]; then
+	echo "Boilerplate missing in:"
+    echo "${files}"
+	exit 1
+fi

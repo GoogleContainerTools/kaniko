@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,8 +31,6 @@ func GetCommand(cmd instructions.Command, context dest.Context) DockerCommand {
 		return RunCommand{cmd: c}
 	case *instructions.CopyCommand:
 		return CopyCommand{cmd: c, context: context}
-	case *instructions.EnvCommand:
-		return EnvCommand{cmd: c}
 	}
 	return nil
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,17 +19,21 @@ import (
 	"fmt"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"cloud.google.com/go/storage"
 )
 
 func TestStorage(t *testing.T) {
-	// First, test creating the bucket
-
-	bucket, bucketName, err := CreateStorageBucket()
-	if err != nil {
+	// First, create a test bucket
+	bucketName := fmt.Sprintf("kbuild-test-buckets-%d", time.Now().Unix())
+	if err := createStorageBucket(bucketName); err != nil {
 		t.Fatalf("Unable to create GCS storage bucket: %s", err)
 	}
 
@@ -53,7 +57,7 @@ func TestStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get files at test dir %s", "")
 	}
-	if err := UploadContextToBucket(files, bucket); err != nil {
+	if err := UploadFilesToBucket(files, bucketName); err != nil {
 		t.Fatalf("Unable to upload files to bucket, %s", err)
 	}
 
@@ -89,4 +93,25 @@ func TestStorage(t *testing.T) {
 		}
 	}
 
+}
+
+// CreateStorageBucket creates a storage bucket to store the source context in
+func createStorageBucket(bucketName string) error {
+	ctx := context.Background()
+
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	projectID := "kbuild-test"
+	// Creates a Bucket instance.
+	bucket := client.Bucket(bucketName)
+
+	// Creates the new bucket.
+	if err := bucket.Create(ctx, projectID, nil); err != nil {
+		logrus.Errorf("Failed to create bucket: %v", err)
+		return err
+	}
+	logrus.Info("Created bucket ", bucketName)
+	return nil
 }

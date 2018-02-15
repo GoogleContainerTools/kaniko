@@ -64,7 +64,7 @@ func (p DaemonPrepper) GetFileSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path, getFileSystemFromReference(ref, src, path)
+	return path, GetFileSystemFromReference(ref, src, path, nil)
 }
 
 func (p DaemonPrepper) GetConfig() (ConfigSchema, error) {

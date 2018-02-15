@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package util
 
 import (
+	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
+	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // CreateFile creates a file at path with contents specified
@@ -35,6 +36,7 @@ func CreateFile(path string, contents []byte) error {
 	}
 
 	f, err := os.Create(path)
+	defer f.Close()
 	if err != nil {
 		return err
 	}
@@ -46,9 +48,6 @@ func CreateFile(path string, contents []byte) error {
 func Files(root string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if strings.HasPrefix(path, "vendor") || strings.HasPrefix(path, ".") {
-			return err
-		}
 		files = append(files, path)
 		return err
 	})
@@ -59,4 +58,16 @@ func Files(root string) ([]string, error) {
 func IsDir(path string) (bool, error) {
 	f, err := os.Stat(path)
 	return f.IsDir(), err
+}
+
+func ExtractFileSystemFromImage(img string) error {
+	ref, err := docker.ParseReference("//" + img)
+	if err != nil {
+		return err
+	}
+	imgSrc, err := ref.NewImageSource(nil)
+	if err != nil {
+		return err
+	}
+	return pkgutil.GetFileSystemFromReference(ref, imgSrc, constants.RootDir, constants.Whitelist)
 }
