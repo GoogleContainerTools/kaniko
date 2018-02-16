@@ -24,6 +24,7 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/env"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/pkg/errors"
@@ -58,6 +59,9 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
+	// Initialize source image
+	image.InitializeSourceImage(from)
 
 	l := snapshot.NewLayeredMap(util.Hasher())
 	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)

@@ -17,10 +17,10 @@ limitations under the License.
 package appender
 
 import (
-	"github.com/GoogleCloudPlatform/container-diff/pkg/image"
+	pkgimage "github.com/GoogleCloudPlatform/container-diff/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/containers/image/copy"
-	"github.com/containers/image/docker"
 	"github.com/containers/image/signature"
 	"github.com/containers/image/transports/alltransports"
 	"github.com/sirupsen/logrus"
@@ -31,31 +31,13 @@ import (
 	"strings"
 )
 
-var ms image.MutableSource
-
 // AppendLayersAndPushImage appends layers taken from snapshotter
 // and then pushes the image to the specified destination
 func AppendLayersAndPushImage(srcImg, dstImg string) error {
-	if err := initializeMutableSource(srcImg); err != nil {
-		return err
-	}
 	if err := appendLayers(); err != nil {
 		return err
 	}
 	return pushImage(dstImg)
-}
-
-func initializeMutableSource(img string) error {
-	ref, err := docker.ParseReference("//" + img)
-	if err != nil {
-		return err
-	}
-	m, err := image.NewMutableSource(ref)
-	if err != nil {
-		return err
-	}
-	ms = *m
-	return nil
 }
 
 func appendLayers() error {
@@ -81,16 +63,16 @@ func appendLayers() error {
 			return err
 		}
 		logrus.Debugf("Appending layer %s", file)
-		ms.AppendLayer(contents)
+		image.SourceImage.AppendLayer(contents)
 	}
 	return nil
 }
 
 func pushImage(destImg string) error {
 	logrus.Infof("Pushing image to %s", destImg)
-	srcRef := &image.ProxyReference{
+	srcRef := &pkgimage.ProxyReference{
 		ImageReference: nil,
-		Src:            &ms,
+		Src:            &image.SourceImage,
 	}
 	destRef, err := alltransports.ParseImageName("docker://" + destImg)
 	if err != nil {
