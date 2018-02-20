@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright YEAR Google, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,5 @@
 # limitations under the License.
 
 # Builds the static Go image to execute in a Kubernetes job
-FROM scratch
+FROM gcr.io/distroless/base
 ADD out/executor /work-dir/executor
-ADD files/ca-certificates.crt /etc/ssl/certs/
-ADD files/policy.json /etc/containers/
-ADD files/docker-credential-gcr_linux_amd64-1.4.1.tar.gz /usr/local/bin/
-ADD files/config.json /root/.docker/

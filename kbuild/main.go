@@ -1,12 +1,9 @@
 /*
-Copyright 2018 Google LLC
-
+Copyright 2018 Google, Inc. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,14 +14,14 @@ limitations under the License.
 package main
 
 import (
-	"flag"
+	"fmt"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/kbuild/cmd"
+	"os"
 )
 
-var dockerfilePath = flag.String("dockerfile", "/dockerfile/Dockerfile", "Path to Dockerfile.")
-var source = flag.String("source", "", "Source context location")
-var destImg = flag.String("dest", "", "Destination of final image")
-var v = flag.String("verbosity", "info", "Logging verbosity")
-
 func main() {
-
+	if err := cmd.RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
