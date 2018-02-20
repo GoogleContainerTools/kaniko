@@ -20,11 +20,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+}
+
 var RootCmd = &cobra.Command{
-	Use:   "kbuild",
-	Short: "kbuild is a CLI tool for building container images with full Dockerfile support without the need for Docker",
-	Long: `kbuild is a CLI tool for building container images with full Dockerfile support. It doesn't require Docker,
-			and builds the images in a Kubernetes cluster before pushing the final image to a registry.`,
+	Use: "executor",
 	Run: func(cmd *cobra.Command, args []string) {
 	},
 }

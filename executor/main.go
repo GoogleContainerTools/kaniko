@@ -17,14 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"flag"
+	"fmt"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/executor/cmd"
+	"os"
 )
 
-var dockerfilePath = flag.String("dockerfile", "/dockerfile/Dockerfile", "Path to Dockerfile.")
-var source = flag.String("source", "", "Source context location")
-var destImg = flag.String("dest", "", "Destination of final image")
-var v = flag.String("verbosity", "info", "Logging verbosity")
-
 func main() {
-
+	if err := cmd.RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
