@@ -27,6 +27,8 @@ import (
 	"strings"
 )
 
+var whitelist = []string{"/work-dir", "/dockerfile"}
+
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {
 	ref, err := docker.ParseReference("//" + img)
@@ -52,7 +54,6 @@ func ExtractFileSystemFromImage(img string) error {
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func fileSystemWhitelist(path string) ([]string, error) {
-	whitelist := []string{"/work-dir", "/dockerfile"}
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -61,20 +62,24 @@ func fileSystemWhitelist(path string) ([]string, error) {
 	reader := bufio.NewReader(f)
 	for {
 		line, err := reader.ReadString('\n')
+		logrus.Debugf("Read the following line from %s: %s", path, line)
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
 		lineArr := strings.Split(line, " ")
 		if len(lineArr) < 5 {
 			if err == io.EOF {
+				logrus.Debugf("Reached end of file %s", path)
 				break
 			}
 			continue
 		}
 		if lineArr[4] != constants.RootDir {
+			logrus.Debugf("Appending %s from line: %s", lineArr[4], line)
 			whitelist = append(whitelist, lineArr[4])
 		}
 		if err == io.EOF {
+			logrus.Debugf("Reached end of file %s", path)
 			break
 		}
 	}
