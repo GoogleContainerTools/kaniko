@@ -17,14 +17,30 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/spf13/cobra"
 )
 
+var (
+	dockerfilePath string
+	name           string
+	srcContext     string
+	logLevel       string
+)
+
 func init() {
+	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "d", "/dockerfile/Dockerfile", "Path to the dockerfile to be built.")
+	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
+	RootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 }
 
 var RootCmd = &cobra.Command{
 	Use: "executor",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return util.SetLogLevel(logLevel)
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 	},
 }
