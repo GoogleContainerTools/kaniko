@@ -19,4 +19,9 @@ package constants
 const (
 	// DefaultLogLevel is the default log level
 	DefaultLogLevel = "info"
+
+	// RootDir is the path to the root directory
+	RootDir = "/"
+
+	WhitelistPath = "/proc/self/mountinfo"
 )
