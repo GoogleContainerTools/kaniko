@@ -23,20 +23,28 @@ GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
 ORG := github.com/GoogleCloudPlatform
 PROJECT := k8s-container-builder
+REGISTRY?=gcr.io/kbuild-project
 
 REPOPATH ?= $(ORG)/$(PROJECT)
 
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+GO_LDFLAGS := '-extldflags "-static"'
+GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs"
 
 EXECUTOR_PACKAGE = $(REPOPATH)/executor
 KBUILD_PACKAGE = $(REPOPATH)/kbuild
 
 out/executor: $(GO_FILES)
-	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=1 go build -o $@ $(EXECUTOR_PACKAGE)
+	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
+
 
 out/kbuild: $(GO_FILES)
-	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=1 go build -o $@ $(KBUILD_PACKAGE)
+	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KBUILD_PACKAGE)
 
 .PHONY: test
 test: out/executor out/kbuild
 	@ ./test.sh
+
+.PHONY: integration-test
+integration-test: out/executor out/kbuild
+	@ ./integration-test.sh
