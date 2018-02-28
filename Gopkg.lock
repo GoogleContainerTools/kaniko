@@ -2,10 +2,17 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/GoogleCloudPlatform/container-diff"
   packages = [
     "cmd/util/output",
+    "pkg/image",
     "pkg/util"
   ]
   revision = "6267be2c48c901780fdeab3ada003b323136c254"
@@ -13,9 +20,19 @@
 
 [[projects]]
   name = "github.com/Microsoft/go-winio"
-  packages = ["."]
+  packages = [
+    ".",
+    "archive/tar",
+    "backuptar"
+  ]
   revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
   version = "v0.4.7"
+
+[[projects]]
+  name = "github.com/Microsoft/hcsshim"
+  packages = ["."]
+  revision = "45ef15484298b76abeb9513ea0ea0abd2b5b84b3"
+  version = "v0.6.8"
 
 [[projects]]
   branch = "master"
@@ -32,7 +49,11 @@
 [[projects]]
   name = "github.com/containers/image"
   packages = [
+    "copy",
+    "directory",
+    "directory/explicitfilepath",
     "docker",
+    "docker/archive",
     "docker/daemon",
     "docker/policyconfiguration",
     "docker/reference",
@@ -40,14 +61,65 @@
     "image",
     "internal/tmpdir",
     "manifest",
+    "oci/archive",
+    "oci/internal",
+    "oci/layout",
+    "openshift",
+    "ostree",
     "pkg/compression",
     "pkg/docker/config",
     "pkg/strslice",
     "pkg/tlsclientconfig",
+    "signature",
+    "storage",
+    "tarball",
     "transports",
-    "types"
+    "transports/alltransports",
+    "types",
+    "version"
   ]
   revision = "495da41bd26c50be62fa07ae903ea2ee54c00283"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/containers/storage"
+  packages = [
+    ".",
+    "drivers",
+    "drivers/aufs",
+    "drivers/btrfs",
+    "drivers/devmapper",
+    "drivers/overlay",
+    "drivers/overlayutils",
+    "drivers/quota",
+    "drivers/register",
+    "drivers/vfs",
+    "drivers/windows",
+    "drivers/zfs",
+    "pkg/archive",
+    "pkg/chrootarchive",
+    "pkg/devicemapper",
+    "pkg/directory",
+    "pkg/dmesg",
+    "pkg/fileutils",
+    "pkg/fsutils",
+    "pkg/homedir",
+    "pkg/idtools",
+    "pkg/ioutils",
+    "pkg/locker",
+    "pkg/longpath",
+    "pkg/loopback",
+    "pkg/mount",
+    "pkg/parsers",
+    "pkg/parsers/kernel",
+    "pkg/pools",
+    "pkg/promise",
+    "pkg/reexec",
+    "pkg/stringid",
+    "pkg/system",
+    "pkg/truncindex"
+  ]
+  revision = "477e551dd493e5c80999d3690d3a201fd26ba2f1"
 
 [[projects]]
   branch = "master"
@@ -166,16 +238,46 @@
   version = "v1.6.1"
 
 [[projects]]
+  name = "github.com/imdario/mergo"
+  packages = ["."]
+  revision = "163f41321a19dd09362d4c63cc2489db2015f1f4"
+  version = "0.3.2"
+
+[[projects]]
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
 
 [[projects]]
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
+  version = "v0.0.2"
+
+[[projects]]
+  name = "github.com/mattn/go-shellwords"
+  packages = ["."]
+  revision = "02e3cf038dcea8290e44424da473dd12be796a8a"
+  version = "v1.0.3"
+
+[[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
   revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/mistifyio/go-zfs"
+  packages = ["."]
+  revision = "cdc0f941c4d0e0e94d85348285568d921891e138"
+  version = "v2.1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mtrmac/gpgme"
+  packages = ["."]
+  revision = "b2432428689ca58c2b8e8dea9449d3295cf96fc9"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -194,15 +296,45 @@
 
 [[projects]]
   name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/user"]
+  packages = [
+    "libcontainer/system",
+    "libcontainer/user"
+  ]
   revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
   version = "v0.1.1"
+
+[[projects]]
+  name = "github.com/opencontainers/selinux"
+  packages = [
+    "go-selinux",
+    "go-selinux/label"
+  ]
+  revision = "ba1aefe8057f1d0cfb8e88d0ec1dc85925ef987d"
+  version = "v1.0.0-rc1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/ostreedev/ostree-go"
+  packages = [
+    "pkg/glibobject",
+    "pkg/otbuiltin"
+  ]
+  revision = "cb6250d5a6a240b509609915842f763fd87b819d"
 
 [[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/pquerna/ffjson"
+  packages = [
+    "fflib/v1",
+    "fflib/v1/internal"
+  ]
+  revision = "d49c2bc1aa135aad0c6f4fc2056623ec78f5d5ac"
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
@@ -259,9 +391,34 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/tchap/go-patricia"
+  packages = ["patricia"]
+  revision = "666120de432aea38ab06bd5c818f04f4129882c9"
+  version = "v2.2.6"
+
+[[projects]]
+  name = "github.com/vbatts/tar-split"
+  packages = [
+    "archive/tar",
+    "tar/asm",
+    "tar/storage"
+  ]
+  revision = "38ec4ddb06dedbea0a895c4848b248eb38af221b"
+  version = "v0.10.2"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = [
+    "cast5",
+    "openpgp",
+    "openpgp/armor",
+    "openpgp/elgamal",
+    "openpgp/errors",
+    "openpgp/packet",
+    "openpgp/s2k",
+    "ssh/terminal"
+  ]
   revision = "432090b8f568c018896cd8a0fb0345872bbac6ce"
 
 [[projects]]
@@ -270,6 +427,10 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "http2",
+    "http2/hpack",
+    "idna",
+    "lex/httplex",
     "proxy"
   ]
   revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
@@ -284,14 +445,47 @@
   revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
 
 [[projects]]
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable"
+  ]
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
+
+[[projects]]
+  name = "gopkg.in/cheggaaa/pb.v1"
+  packages = ["."]
+  revision = "72b964305fba1230d3d818711138195f22b9ceea"
+  version = "v1.0.22"
+
+[[projects]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
+[[projects]]
+  name = "k8s.io/client-go"
+  packages = ["util/homedir"]
+  revision = "78700dec6369ba22221b72770783300f143df150"
+  version = "v6.0.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c5933c09ead2842baa85dcb4321cef9623f4ab6ec4f6c84b6579071aa1baf3e4"
+  inputs-digest = "c921fb5fb2c1a18044a6d5eda5e9c0b084ef2b699b33b022f1db0783b76ef618"
   solver-name = "gps-cdcl"
   solver-version = 1
