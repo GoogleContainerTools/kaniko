@@ -24,4 +24,7 @@ const (
 	RootDir = "/"
 
 	WhitelistPath = "/proc/self/mountinfo"
+
+	// PolicyJSONPath is the path to the policy JSON
+	PolicyJSONPath = "/workspace/policy.json"
 )
