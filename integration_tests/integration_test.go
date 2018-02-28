@@ -36,7 +36,7 @@ var imageTests = []struct {
 	{
 		description: "test extract filesystem",
 		repo:        "extract-filesystem",
-		added:       []string{"/work-dir", "/work-dir/executor", "/dockerfile", "/dockerfile/Dockerfile"},
+		added:       []string{"/workspace", "/workspace/executor", "/workspace/Dockerfile"},
 		deleted:     []string{"/proc", "/sys", "/dev", "/etc/hosts", "/etc/resolv.conf"},
 	},
 }

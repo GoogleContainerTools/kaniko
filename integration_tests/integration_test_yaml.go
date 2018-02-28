@@ -47,7 +47,7 @@ type testyaml struct {
 }
 
 var executorImage = "executor-image"
-var executorCommand = "/work-dir/executor"
+var executorCommand = "/workspace/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var testRepo = "gcr.io/kbuild-test/"
 var dockerPrefix = "docker-"
@@ -85,7 +85,7 @@ func main() {
 		var commitID = "test"
 		kbuild := step{
 			Name: dockerImage,
-			Args: []string{"run", "-v", dockerfilePath + ":/dockerfile/Dockerfile", "--name", commitID, executorImage, executorCommand},
+			Args: []string{"run", "-v", dockerfilePath + ":/workspace/Dockerfile", "--name", commitID, executorImage, executorCommand},
 		}
 
 		commit := step{
@@ -98,7 +98,7 @@ func main() {
 	integrationTests := step{
 		Name: "gcr.io/cloud-builders/go:debian",
 		Args: []string{"test", "integration_tests/integration_test.go"},
-		Env:  []string{"GOPATH=/", "PATH=/builder/bin:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/workspace"},
+		Env:  []string{"GOPATH=/", "PATH=/builder/bin:/go/bin:/usr/local/go/bin:/workspace"},
 	}
 	y.Steps = append(y.Steps, integrationTests)
 
