@@ -1,0 +1,46 @@
+[
+  {
+    "Image1": "gcr.io/kbuild-test/docker-extract-filesystem:latest",
+    "Image2": "gcr.io/kbuild-test/kbuild-extract-filesystem:latest",
+    "DiffType": "File",
+    "Diff": {
+      "Adds": [
+        {
+          "Name": "/workspace",
+          "Size": 16271436
+        },
+        {
+          "Name": "/workspace/Dockerfile",
+          "Size": 0
+        },
+        {
+          "Name": "/workspace/executor",
+          "Size": 16271436
+        }
+      ],
+      "Dels": [
+        {
+          "Name": "/dev",
+          "Size": 0
+        },
+        {
+          "Name": "/etc/hosts",
+          "Size": 109
+        },
+        {
+          "Name": "/etc/resolv.conf",
+          "Size": 38
+        },
+        {
+          "Name": "/proc",
+          "Size": 0
+        },
+        {
+          "Name": "/sys",
+          "Size": 0
+        }
+      ],
+      "Mods": null
+    }
+  }
+]
