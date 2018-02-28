@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-var whitelist = []string{"/work-dir", "/dockerfile"}
+var whitelist = []string{"/workspace"}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {
