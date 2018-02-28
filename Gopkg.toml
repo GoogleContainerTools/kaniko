@@ -7,3 +7,13 @@
   name = "github.com/prometheus/client_golang"
   revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
   source = "github.com/prometheus/client_golang"
+
+[[constraint]]
+  name = "github.com/GoogleCloudPlatform/container-diff"
+  branch = "master"
+  source = "github.com/GoogleCloudPlatform/container-diff"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  revision = "b1a1234c60cf87048814aa37da523b03a7b0d344"
+  source = "github.com/docker/docker"
