@@ -15,7 +15,7 @@
     "pkg/image",
     "pkg/util"
   ]
-  revision = "6267be2c48c901780fdeab3ada003b323136c254"
+  revision = "ce3228b4afba2b2fb9b42c416c8f59a14ee7c1dd"
   source = "github.com/GoogleCloudPlatform/container-diff"
 
 [[projects]]
@@ -119,7 +119,7 @@
     "pkg/system",
     "pkg/truncindex"
   ]
-  revision = "477e551dd493e5c80999d3690d3a201fd26ba2f1"
+  revision = "66a38bb219e9776482c18e8c02f438e5112916f1"
 
 [[projects]]
   branch = "master"
@@ -137,7 +137,7 @@
     "registry/storage/cache",
     "registry/storage/cache/memory"
   ]
-  revision = "6664ec703991875e14419ff4960921cce7678bab"
+  revision = "6fca8d6e6713acbdf3f9ca40cf6370fc5ee5ee53"
 
 [[projects]]
   name = "github.com/docker/docker"
@@ -359,7 +359,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "89604d197083d4781071d3c65855d24ecfb0a563"
+  revision = "6fb6fce6f8b75884b92e1889c150403fc0872c5e"
 
 [[projects]]
   branch = "master"
@@ -370,7 +370,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "282c8707aa210456a825798969cc27edda34992a"
+  revision = "d274e363d5759d1c916232217be421f1cc89c5fe"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -419,7 +419,7 @@
     "openpgp/s2k",
     "ssh/terminal"
   ]
-  revision = "432090b8f568c018896cd8a0fb0345872bbac6ce"
+  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
 
 [[projects]]
   branch = "master"
@@ -433,7 +433,7 @@
     "lex/httplex",
     "proxy"
   ]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  revision = "22ae77b79946ea320088417e4d50825671d82d57"
 
 [[projects]]
   branch = "master"
@@ -442,7 +442,7 @@
     "unix",
     "windows"
   ]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -472,10 +472,10 @@
   version = "v1.0.22"
 
 [[projects]]
-  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
+  revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
+  version = "v2.1.1"
 
 [[projects]]
   name = "k8s.io/client-go"

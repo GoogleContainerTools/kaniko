@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/containers/image/manifest"
@@ -119,7 +120,7 @@ func gzipBytes(b []byte) ([]byte, error) {
 }
 
 // appendLayer appends an uncompressed blob to the image, preserving the invariants required across the config and manifest.
-func (m *MutableSource) AppendLayer(content []byte) error {
+func (m *MutableSource) AppendLayer(content []byte, author string) error {
 	compressedBlob, err := gzipBytes(content)
 	if err != nil {
 		return err
@@ -141,12 +142,7 @@ func (m *MutableSource) AppendLayer(content []byte) error {
 	// Also add it to the config.
 	diffID := digest.FromBytes(content)
 	m.cfg.RootFS.DiffIDs = append(m.cfg.RootFS.DiffIDs, diffID)
-	history := manifest.Schema2History{
-		Created: time.Now(),
-		Author:  "container-diff",
-	}
-	m.cfg.History = append(m.cfg.History, history)
-
+	m.appendConfigHistory(author, false)
 	return nil
 }
 
@@ -165,4 +161,46 @@ func (m *MutableSource) saveConfig() error {
 		Digest:    cfgDigest,
 	}
 	return nil
+}
+
+// Env returns a map of environment variables stored in the image config
+// Converts each variable from a string of the form KEY=VALUE to a map of KEY:VALUE
+func (m *MutableSource) Env() map[string]string {
+	envArray := m.cfg.Schema2V1Image.Config.Env
+	envMap := make(map[string]string)
+	for _, env := range envArray {
+		entry := strings.Split(env, "=")
+		envMap[entry[0]] = entry[1]
+	}
+	return envMap
+}
+
+// SetEnv takes a map of environment variables, and converts them to an array of strings
+// in the form KEY=VALUE, and then sets the image config
+func (m *MutableSource) SetEnv(envMap map[string]string, author string) {
+	envArray := []string{}
+	for key, value := range envMap {
+		entry := key + "=" + value
+		envArray = append(envArray, entry)
+	}
+	m.cfg.Schema2V1Image.Config.Env = envArray
+	m.appendConfigHistory(author, true)
+}
+
+func (m *MutableSource) Config() *manifest.Schema2Config {
+	return m.cfg.Schema2V1Image.Config
+}
+
+func (m *MutableSource) SetConfig(config *manifest.Schema2Config, author string, emptyLayer bool) {
+	m.cfg.Schema2V1Image.Config = config
+	m.appendConfigHistory(author, emptyLayer)
+}
+
+func (m *MutableSource) appendConfigHistory(author string, emptyLayer bool) {
+	history := manifest.Schema2History{
+		Created:    time.Now(),
+		Author:     author,
+		EmptyLayer: emptyLayer,
+	}
+	m.cfg.History = append(m.cfg.History, history)
 }

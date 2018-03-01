@@ -462,6 +462,12 @@ type store struct {
 // GetStore attempts to find an already-created Store object matching the
 // specified location and graph driver, and if it can't, it creates and
 // initializes a new Store object, and the underlying storage that it controls.
+//
+// If StoreOptions `options` haven't been fully populated, then DefaultStoreOptions are used.
+//
+// These defaults observe environment variables:
+//  * `STORAGE_DRIVER` for the name of the storage driver to attempt to use
+//  * `STORAGE_OPTS` for the string of options to pass to the driver
 func GetStore(options StoreOptions) (Store, error) {
 	if options.RunRoot == "" && options.GraphRoot == "" && options.GraphDriverName == "" && len(options.GraphDriverOptions) == 0 {
 		options = DefaultStoreOptions
