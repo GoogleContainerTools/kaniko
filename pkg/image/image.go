@@ -44,8 +44,8 @@ func InitializeSourceImage(srcImg string) error {
 }
 
 // AppendLayer appends a layer onto the base image
-func AppendLayer(contents []byte) error {
-	return sourceImage.AppendLayer(contents)
+func AppendLayer(contents []byte, author string) error {
+	return sourceImage.AppendLayer(contents, author)
 }
 
 // PushImage pushes the final image
