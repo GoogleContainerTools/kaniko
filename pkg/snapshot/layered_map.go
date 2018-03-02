@@ -18,10 +18,10 @@ package snapshot
 
 type LayeredMap struct {
 	layers []map[string]string
-	hasher func(string) string
+	hasher func(string) (string, error)
 }
 
-func NewLayeredMap(h func(string) string) *LayeredMap {
+func NewLayeredMap(h func(string) (string, error)) *LayeredMap {
 	l := LayeredMap{
 		hasher: h,
 	}
@@ -42,12 +42,15 @@ func (l *LayeredMap) Get(s string) (string, bool) {
 	return "", false
 }
 
-func (l *LayeredMap) MaybeAdd(s string) bool {
+func (l *LayeredMap) MaybeAdd(s string) (bool, error) {
 	oldV, ok := l.Get(s)
-	newV := l.hasher(s)
+	newV, err := l.hasher(s)
+	if err != nil {
+		return false, err
+	}
 	if ok && newV == oldV {
-		return false
+		return false, nil
 	}
 	l.layers[len(l.layers)-1][s] = newV
-	return true
+	return true, nil
 }

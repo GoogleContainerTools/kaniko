@@ -36,12 +36,12 @@ func SetLogLevel(logLevel string) error {
 }
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
-func Hasher() func(string) string {
-	hasher := func(p string) string {
+func Hasher() func(string) (string, error) {
+	hasher := func(p string) (string, error) {
 		h := md5.New()
 		fi, err := os.Lstat(p)
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 		h.Write([]byte(fi.Mode().String()))
 		h.Write([]byte(fi.ModTime().String()))
@@ -49,15 +49,15 @@ func Hasher() func(string) string {
 		if fi.Mode().IsRegular() {
 			f, err := os.Open(p)
 			if err != nil {
-				panic(err)
+				return "", err
 			}
 			defer f.Close()
 			if _, err := io.Copy(h, f); err != nil {
-				panic(err)
+				return "", err
 			}
 		}
 
-		return hex.EncodeToString(h.Sum(nil))
+		return hex.EncodeToString(h.Sum(nil)), nil
 	}
 	return hasher
 }
