@@ -19,6 +19,7 @@ package cmd
 import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -68,5 +69,13 @@ func execute() error {
 
 	// Unpack file system to root
 	logrus.Infof("Unpacking filesystem of %s...", baseImage)
-	return util.ExtractFileSystemFromImage(baseImage)
+	if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
+		return err
+	}
+
+	l := snapshot.NewLayeredMap(util.Hasher())
+	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
+
+	// Take initial snapshot
+	return snapshotter.Init()
 }

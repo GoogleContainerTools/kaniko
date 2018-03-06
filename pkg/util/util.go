@@ -17,8 +17,12 @@ limitations under the License.
 package util
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io"
+	"os"
 )
 
 // SetLogLevel sets the logrus logging level
@@ -29,4 +33,31 @@ func SetLogLevel(logLevel string) error {
 	}
 	logrus.SetLevel(lvl)
 	return nil
+}
+
+// Hasher returns a hash function, used in snapshotting to determine if a file has changed
+func Hasher() func(string) (string, error) {
+	hasher := func(p string) (string, error) {
+		h := md5.New()
+		fi, err := os.Lstat(p)
+		if err != nil {
+			return "", err
+		}
+		h.Write([]byte(fi.Mode().String()))
+		h.Write([]byte(fi.ModTime().String()))
+
+		if fi.Mode().IsRegular() {
+			f, err := os.Open(p)
+			if err != nil {
+				return "", err
+			}
+			defer f.Close()
+			if _, err := io.Copy(h, f); err != nil {
+				return "", err
+			}
+		}
+
+		return hex.EncodeToString(h.Sum(nil)), nil
+	}
+	return hasher
 }
