@@ -46,7 +46,7 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	}
 
 	actualWhitelist, err := fileSystemWhitelist(path)
-	expectedWhitelist := []string{"/workspace", "/proc", "/dev", "/dev/pts", "/sys"}
+	expectedWhitelist := []string{"/work-dir", "/proc", "/dev", "/dev/pts", "/sys"}
 	sort.Strings(actualWhitelist)
 	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)

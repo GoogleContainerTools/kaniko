@@ -23,8 +23,8 @@ const (
 	// RootDir is the path to the root directory
 	RootDir = "/"
 
-	WhitelistPath = "/proc/self/mountinfo"
+	// WorkspaceDir is the path to the workspace directory
+	WorkspaceDir = "/workspace"
 
-	// PolicyJSONPath is the path to the policy JSON
-	PolicyJSONPath = "/workspace/policy.json"
+	WhitelistPath = "/proc/self/mountinfo"
 )

@@ -24,10 +24,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-var whitelist = []string{"/workspace"}
+var whitelist = []string{"/work-dir"}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {
@@ -45,6 +46,17 @@ func ExtractFileSystemFromImage(img string) error {
 	}
 	logrus.Infof("Whitelisted directories are %s", whitelist)
 	return pkgutil.GetFileSystemFromReference(ref, imgSrc, constants.RootDir, whitelist)
+}
+
+// PathInWhitelist returns true if the path is whitelisted
+func PathInWhitelist(path, directory string) bool {
+	for _, d := range whitelist {
+		dirPath := filepath.Join(directory, d)
+		if pkgutil.HasFilepathPrefix(path, dirPath) {
+			return true
+		}
+	}
+	return false
 }
 
 // Get whitelist from roots of mounted files

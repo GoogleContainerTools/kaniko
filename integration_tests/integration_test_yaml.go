@@ -48,7 +48,7 @@ type testyaml struct {
 }
 
 var executorImage = "executor-image"
-var executorCommand = "/workspace/executor"
+var executorCommand = "/work-dir/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var ubuntuImage = "ubuntu"
 var testRepo = "gcr.io/kbuild-test/"
@@ -73,46 +73,50 @@ func main() {
 		Name: dockerImage,
 		Args: []string{"build", "-t", executorImage, "-f", "integration_tests/executor/Dockerfile", "."},
 	}
-
 	y := testyaml{
 		Steps: []step{containerDiffStep, containerDiffPermissions, buildExecutorImage},
 	}
 	for _, test := range tests {
 		// First, build the image with docker
+		dockerImageTag := testRepo + dockerPrefix + test.repo
 		dockerBuild := step{
 			Name: dockerImage,
-			Args: []string{"build", "-t", testRepo + dockerPrefix + test.repo, "-f", test.dockerfilePath, test.context},
+			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.context},
 		}
 
-		// Then, buld the image with kbuild and commit it
-		var commitID = "test"
+		// Then, buld the image with kbuild
+		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
-			Name: dockerImage,
-			Args: []string{"run", "-v", test.dockerfilePath + ":/workspace/Dockerfile", "--name", commitID, executorImage, executorCommand},
+			Name: executorImage,
+			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
 		}
 
-		commit := step{
+		// Pull the kbuild image
+		pullKbuildImage := step{
 			Name: dockerImage,
-			Args: []string{"commit", commitID, testRepo + kbuildPrefix + test.repo},
+			Args: []string{"pull", kbuildImage},
 		}
 
-		dockerImage := daemonPrefix + testRepo + dockerPrefix + test.repo
-		kbuildImage := daemonPrefix + testRepo + kbuildPrefix + test.repo
+		daemonDockerImage := daemonPrefix + dockerImageTag
+		daemonKbuildImage := daemonPrefix + kbuildImage
 		// Run container diff on the images
-		args := "container-diff-linux-amd64 diff " + dockerImage + " " + kbuildImage + " --type=file -j > " + containerDiffOutputFile
+		args := "container-diff-linux-amd64 diff " + daemonDockerImage + " " + daemonKbuildImage + " --type=file -j >" + containerDiffOutputFile
 		containerDiff := step{
 			Name: ubuntuImage,
 			Args: []string{"sh", "-c", args},
 			Env:  []string{"PATH=/workspace:/bin"},
 		}
 
-		// Compare output files
+		catContainerDiffOutput := step{
+			Name: ubuntuImage,
+			Args: []string{"cat", containerDiffOutputFile},
+		}
 		compareOutputs := step{
 			Name: ubuntuImage,
 			Args: []string{"cmp", test.configPath, containerDiffOutputFile},
 		}
 
-		y.Steps = append(y.Steps, dockerBuild, kbuild, commit, containerDiff, compareOutputs)
+		y.Steps = append(y.Steps, dockerBuild, kbuild, pullKbuildImage, containerDiff, catContainerDiffOutput, compareOutputs)
 	}
 
 	d, _ := yaml.Marshal(&y)

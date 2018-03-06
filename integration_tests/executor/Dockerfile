@@ -15,5 +15,5 @@
 # Builds the static Go image to execute in a Kubernetes job
 
 FROM scratch
-ADD out/executor /workspace/executor
+ADD out/executor /work-dir/executor
 ADD files/ca-certificates.crt /etc/ssl/certs/

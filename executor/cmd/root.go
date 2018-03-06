@@ -19,6 +19,8 @@ package cmd
 import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,15 +30,15 @@ import (
 
 var (
 	dockerfilePath string
-	name           string
+	destination    string
 	srcContext     string
 	logLevel       string
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "d", "/workspace/Dockerfile", "Path to the dockerfile to be built.")
+	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "/workspace/Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
-	RootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
+	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 }
 
@@ -68,5 +70,25 @@ func execute() error {
 
 	// Unpack file system to root
 	logrus.Infof("Unpacking filesystem of %s...", baseImage)
-	return util.ExtractFileSystemFromImage(baseImage)
+	if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
+		return err
+	}
+
+	l := snapshot.NewLayeredMap(util.Hasher())
+	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
+
+	// Take initial snapshot
+	if err := snapshotter.Init(); err != nil {
+		return err
+	}
+
+	// Initialize source image
+	if err := image.InitializeSourceImage(baseImage); err != nil {
+		return err
+	}
+
+	// Execute commands here
+
+	// Push the image
+	return image.PushImage(destination)
 }

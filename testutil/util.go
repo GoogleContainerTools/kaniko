@@ -18,9 +18,26 @@ package testutil
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
+
+// SetupFiles creates files at path
+func SetupFiles(path string, files map[string]string) error {
+	for p, c := range files {
+		path := filepath.Join(path, p)
+		if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(path, []byte(c), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func CheckErrorAndDeepEqual(t *testing.T, shouldErr bool, err error, expected, actual interface{}) {
 	if err := checkErr(shouldErr, err); err != nil {

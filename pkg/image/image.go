@@ -18,7 +18,6 @@ package image
 
 import (
 	img "github.com/GoogleCloudPlatform/container-diff/pkg/image"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/containers/image/copy"
 	"github.com/containers/image/docker"
 	"github.com/containers/image/signature"
@@ -31,6 +30,7 @@ var sourceImage img.MutableSource
 
 // InitializeSourceImage initializes the source image with the base image
 func InitializeSourceImage(srcImg string) error {
+	logrus.Infof("Initializing source image %s", srcImg)
 	ref, err := docker.ParseReference("//" + srcImg)
 	if err != nil {
 		return err
@@ -67,12 +67,9 @@ func PushImage(destImg string) error {
 }
 
 func getPolicyContext() (*signature.PolicyContext, error) {
-	policy, err := signature.NewPolicyFromFile(constants.PolicyJSONPath)
-	if err != nil {
-		logrus.Debugf("Error retrieving policy: %s", err)
-		return nil, err
-	}
-	policyContext, err := signature.NewPolicyContext(policy)
+	policyContext, err := signature.NewPolicyContext(&signature.Policy{
+		Default: signature.PolicyRequirements{signature.NewPRInsecureAcceptAnything()},
+	})
 	if err != nil {
 		logrus.Debugf("Error retrieving policy context: %s", err)
 		return nil, err
