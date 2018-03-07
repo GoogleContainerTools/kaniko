@@ -31,7 +31,7 @@ install_dep() {
 }
 
 if [ -z "$VALIDATE_UPSTREAM" ]; then
-	VALIDATE_REPO='git@github.com:GoogleCloudPlatform/skaffold.git'
+	VALIDATE_REPO='git@github.com:GoogleCloudPlatform/k8s-container-builder.git'
 	VALIDATE_BRANCH='master'
 
 	VALIDATE_HEAD="$(git rev-parse --verify HEAD)"
