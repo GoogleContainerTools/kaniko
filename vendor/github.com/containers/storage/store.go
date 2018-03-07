@@ -2276,14 +2276,15 @@ func (s *store) Shutdown(force bool) ([]string, error) {
 		return mounted, err
 	}
 
+	s.graphLock.Lock()
+	defer s.graphLock.Unlock()
+
 	rlstore.Lock()
 	defer rlstore.Unlock()
 	if modified, err := rlstore.Modified(); modified || err != nil {
 		rlstore.Load()
 	}
 
-	s.graphLock.Lock()
-	defer s.graphLock.Unlock()
 	layers, err := rlstore.Layers()
 	if err != nil {
 		return mounted, err
