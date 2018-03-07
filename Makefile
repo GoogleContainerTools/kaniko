@@ -39,7 +39,7 @@ out/executor: $(GO_FILES)
 
 
 out/kbuild: $(GO_FILES)
-	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KBUILD_PACKAGE)
+	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=1 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KBUILD_PACKAGE)
 
 .PHONY: test
 test: out/executor out/kbuild
