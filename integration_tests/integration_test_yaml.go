@@ -35,6 +35,13 @@ var tests = []struct {
 		context:        "integration_tests/dockerfiles/",
 		repo:           "extract-filesystem",
 	},
+	{
+		description:    "test run",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_run",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run.json",
+		context:        "integration_tests/dockerfiles/",
+		repo:           "test-run",
+	},
 }
 
 type step struct {

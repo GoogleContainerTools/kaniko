@@ -1,0 +1,5 @@
+FROM gcr.io/google-appengine/debian9
+RUN echo "hey" > /etc/foo
+RUN apt-get update && apt-get install -y \
+  bzr \
+  cvs \

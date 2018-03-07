@@ -17,11 +17,13 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/commands"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -88,7 +90,57 @@ func execute() error {
 	}
 
 	// Execute commands here
+	if err := image.SetEnvVariables(); err != nil {
+		return err
+	}
 
+	// Currently only supports single stage builds
+	for _, stage := range stages {
+		for _, cmd := range stage.Commands {
+			dockerCommand := commands.GetCommand(cmd)
+			if dockerCommand == nil {
+				return errors.Errorf("Invalid or unsupported docker command: %v", cmd)
+			}
+			if err := dockerCommand.ExecuteCommand(); err != nil {
+				return err
+			}
+			// Now, we get the files to snapshot from this command
+			// If this is nil, snapshot the entire filesystem
+			// Else take a snapshot of the specific files
+			snapshotFiles := dockerCommand.FilesToSnapshot()
+			if snapshotFiles == nil {
+				logrus.Info("Taking snapshot of full filesystem...")
+				contents, filesAdded, err := snapshotter.TakeSnapshot()
+				if err != nil {
+					return err
+				}
+				if !filesAdded {
+					logrus.Info("No files were changed, appending empty layer to config.")
+					image.AppendConfigHistory(dockerCommand.Author(), true)
+					continue
+				}
+				// Append the layer to the image
+				if err := image.AppendLayer(contents, dockerCommand.Author()); err != nil {
+					return err
+				}
+			} else {
+				logrus.Infof("Taking snapshot of files %v...", snapshotFiles)
+				contents, err := snapshotter.TakeSnapshotOfFiles(snapshotFiles)
+				if err != nil {
+					return err
+				}
+				if contents == nil {
+					logrus.Info("No files were changed, appending empty layer to config.")
+					image.AppendConfigHistory(dockerCommand.Author(), true)
+					continue
+				}
+				// Append the layer to the image
+				if err := image.AppendLayer(contents, dockerCommand.Author()); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	// Push the image
 	return image.PushImage(destination)
 }

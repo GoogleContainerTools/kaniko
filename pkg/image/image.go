@@ -23,6 +23,7 @@ import (
 	"github.com/containers/image/signature"
 	"github.com/containers/image/transports/alltransports"
 	"github.com/sirupsen/logrus"
+	"os"
 )
 
 // sourceImage is the image that will be modified by the executor
@@ -45,6 +46,7 @@ func InitializeSourceImage(srcImg string) error {
 
 // AppendLayer appends a layer onto the base image
 func AppendLayer(contents []byte, author string) error {
+	logrus.Info("Appending layer to base image")
 	return sourceImage.AppendLayer(contents, author)
 }
 
@@ -64,6 +66,23 @@ func PushImage(destImg string) error {
 	}
 	logrus.Infof("Pushing image to %s", destImg)
 	return copy.Image(policyContext, destRef, srcRef, nil)
+}
+
+// AppendConfigHistory appends to the source image config history
+func AppendConfigHistory(author string, emptyLayer bool) {
+	sourceImage.AppendConfigHistory(author, emptyLayer)
+}
+
+// SetEnvVariables sets environment variables as specified in the image
+func SetEnvVariables() error {
+	envVars := sourceImage.Env()
+	for key, val := range envVars {
+		if err := os.Setenv(key, val); err != nil {
+			return err
+		}
+		logrus.Debugf("Setting environment variable %s=%s", key, val)
+	}
+	return nil
 }
 
 func getPolicyContext() (*signature.PolicyContext, error) {
