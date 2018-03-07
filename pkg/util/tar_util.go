@@ -18,9 +18,13 @@ package util
 
 import (
 	"archive/tar"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"syscall"
 )
+
+var hardlinks = make(map[uint64]string)
 
 // AddToTar adds the file i to tar w at path p
 func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
@@ -32,19 +36,46 @@ func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
 			return err
 		}
 	}
+
+	hardlink := false
+	if sys := i.Sys(); sys != nil {
+		if stat, ok := sys.(*syscall.Stat_t); ok {
+			nlinks := stat.Nlink
+			if nlinks > 1 {
+				inode := stat.Ino
+				if original, exists := hardlinks[inode]; exists && original != p {
+					hardlink = true
+					logrus.Infof("%s inode exists in hardlinks map, linking to %s", p, original)
+					linkDst = original
+				} else {
+					hardlinks[inode] = p
+				}
+			}
+		}
+	}
+
 	hdr, err := tar.FileInfoHeader(i, linkDst)
 	if err != nil {
 		return err
 	}
 	hdr.Name = p
-	w.WriteHeader(hdr)
-	if !i.Mode().IsRegular() {
+
+	if hardlink {
+		hdr.Linkname = linkDst
+		hdr.Typeflag = tar.TypeLink
+		hdr.Size = 0
+	}
+	if err := w.WriteHeader(hdr); err != nil {
+		return err
+	}
+	if !(i.Mode().IsRegular()) || hardlink {
 		return nil
 	}
 	r, err := os.Open(p)
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	if _, err := io.Copy(w, r); err != nil {
 		return err
 	}
