@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -54,5 +55,13 @@ func (r *RunCommand) FilesToSnapshot() []string {
 
 // Author returns some information about the command for the image config
 func (r *RunCommand) Author() string {
-	return "kbuild /bin/sh -c" + strings.Join(r.cmd.CmdLine, " ")
+	author := []string{constants.Author}
+	cmdLine := strings.Join(r.cmd.CmdLine, " ")
+	if r.cmd.PrependShell {
+		shell := []string{"/bin/sh", "-c"}
+		author = append(author, shell...)
+		return strings.Join(author, " ") + " " + cmdLine
+	}
+	author = append(author, cmdLine)
+	return strings.Join(author, " ")
 }

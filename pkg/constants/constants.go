@@ -27,4 +27,6 @@ const (
 	WorkspaceDir = "/workspace"
 
 	WhitelistPath = "/proc/self/mountinfo"
+
+	Author = "kbuild"
 )

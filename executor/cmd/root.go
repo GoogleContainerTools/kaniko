@@ -91,7 +91,7 @@ func execute() error {
 	}
 
 	// Execute commands here
-	if err := image.SetEnvVariables(); err != nil {
+	if err := image.SetEnvVariables(sourceImage); err != nil {
 		return err
 	}
 
@@ -109,36 +109,23 @@ func execute() error {
 			// If this is nil, snapshot the entire filesystem
 			// Else take a snapshot of the specific files
 			snapshotFiles := dockerCommand.FilesToSnapshot()
+			var contents []byte
 			if snapshotFiles == nil {
-				logrus.Info("Taking snapshot of full filesystem...")
-				contents, filesAdded, err := snapshotter.TakeSnapshot()
-				if err != nil {
-					return err
-				}
-				if !filesAdded {
-					logrus.Info("No files were changed, appending empty layer to config.")
-					image.AppendConfigHistory(dockerCommand.Author(), true)
-					continue
-				}
-				// Append the layer to the image
-				if err := image.AppendLayer(contents, dockerCommand.Author()); err != nil {
-					return err
-				}
+				contents, err = snapshotter.TakeSnapshot()
 			} else {
-				logrus.Infof("Taking snapshot of files %v...", snapshotFiles)
-				contents, err := snapshotter.TakeSnapshotOfFiles(snapshotFiles)
-				if err != nil {
-					return err
-				}
-				if contents == nil {
-					logrus.Info("No files were changed, appending empty layer to config.")
-					image.AppendConfigHistory(dockerCommand.Author(), true)
-					continue
-				}
-				// Append the layer to the image
-				if err := image.AppendLayer(contents, dockerCommand.Author()); err != nil {
-					return err
-				}
+				contents, err = snapshotter.TakeSnapshotOfFiles(snapshotFiles)
+			}
+			if err != nil {
+				return err
+			}
+			if contents == nil {
+				logrus.Info("No files were changed, appending empty layer to config.")
+				sourceImage.AppendConfigHistory(dockerCommand.Author(), true)
+				continue
+			}
+			// Append the layer to the image
+			if err := sourceImage.AppendLayer(contents, dockerCommand.Author()); err != nil {
+				return err
 			}
 		}
 	}

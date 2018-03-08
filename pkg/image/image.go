@@ -56,14 +56,9 @@ func PushImage(ms *img.MutableSource, destImg string) error {
 	return copy.Image(policyContext, destRef, srcRef, nil)
 }
 
-// AppendConfigHistory appends to the source image config history
-func AppendConfigHistory(author string, emptyLayer bool) {
-	sourceImage.AppendConfigHistory(author, emptyLayer)
-}
-
 // SetEnvVariables sets environment variables as specified in the image
-func SetEnvVariables() error {
-	envVars := sourceImage.Env()
+func SetEnvVariables(ms *img.MutableSource) error {
+	envVars := ms.Env()
 	for key, val := range envVars {
 		if err := os.Setenv(key, val); err != nil {
 			return err

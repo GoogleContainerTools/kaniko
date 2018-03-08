@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Test to make sure the executor builds an image correctly
+# when no files are changed
+
 FROM gcr.io/google-appengine/debian9
-RUN echo "hey" > /etc/foo
-RUN apt-get update && apt-get install -y \
-  bzr \
-  cvs \
+RUN echo "hey" 

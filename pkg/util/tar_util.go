@@ -45,7 +45,7 @@ func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
 				inode := stat.Ino
 				if original, exists := hardlinks[inode]; exists && original != p {
 					hardlink = true
-					logrus.Infof("%s inode exists in hardlinks map, linking to %s", p, original)
+					logrus.Debugf("%s inode exists in hardlinks map, linking to %s", p, original)
 					linkDst = original
 				} else {
 					hardlinks[inode] = p

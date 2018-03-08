@@ -42,6 +42,13 @@ var tests = []struct {
 		context:        "integration_tests/dockerfiles/",
 		repo:           "test-run",
 	},
+	{
+		description:    "test run no files changed",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_run_2",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run_2.json",
+		context:        "integration_tests/dockerfiles/",
+		repo:           "test-run-2",
+	},
 }
 
 type step struct {
