@@ -27,34 +27,22 @@ import (
 )
 
 // sourceImage is the image that will be modified by the executor
-var sourceImage img.MutableSource
 
 // InitializeSourceImage initializes the source image with the base image
-func InitializeSourceImage(srcImg string) error {
+func NewSourceImage(srcImg string) (*img.MutableSource, error) {
 	logrus.Infof("Initializing source image %s", srcImg)
 	ref, err := docker.ParseReference("//" + srcImg)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	ms, err := img.NewMutableSource(ref)
-	if err != nil {
-		return err
-	}
-	sourceImage = *ms
-	return nil
-}
-
-// AppendLayer appends a layer onto the base image
-func AppendLayer(contents []byte, author string) error {
-	logrus.Info("Appending layer to base image")
-	return sourceImage.AppendLayer(contents, author)
+	return img.NewMutableSource(ref)
 }
 
 // PushImage pushes the final image
-func PushImage(destImg string) error {
+func PushImage(ms *img.MutableSource, destImg string) error {
 	srcRef := &img.ProxyReference{
 		ImageReference: nil,
-		Src:            &sourceImage,
+		Src:            ms,
 	}
 	destRef, err := alltransports.ParseImageName("docker://" + destImg)
 	if err != nil {

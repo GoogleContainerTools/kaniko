@@ -55,7 +55,7 @@ type testyaml struct {
 }
 
 var executorImage = "executor-image"
-var executorCommand = "/work-dir/executor"
+var executorCommand = "/kbuild/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var ubuntuImage = "ubuntu"
 var testRepo = "gcr.io/kbuild-test/"

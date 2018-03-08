@@ -85,7 +85,8 @@ func execute() error {
 	}
 
 	// Initialize source image
-	if err := image.InitializeSourceImage(baseImage); err != nil {
+	sourceImage, err := image.NewSourceImage(baseImage)
+	if err != nil {
 		return err
 	}
 
@@ -142,5 +143,5 @@ func execute() error {
 		}
 	}
 	// Push the image
-	return image.PushImage(destination)
+	return image.PushImage(sourceImage, destination)
 }

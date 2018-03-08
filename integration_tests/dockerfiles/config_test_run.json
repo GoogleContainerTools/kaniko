@@ -4,16 +4,7 @@
     "Image2": "gcr.io/kbuild-test/kbuild-test-run:latest",
     "DiffType": "File",
     "Diff": {
-      "Adds": [
-        {
-          "Name": "/bin/bzcat",
-          "Size": 35448
-        },
-        {
-          "Name": "/bin/bzip2",
-          "Size": 35448
-        }
-      ],
+      "Adds": null,
       "Dels": null,
       "Mods": [
         {
