@@ -28,7 +28,7 @@ import (
 	"strings"
 )
 
-var whitelist = []string{"/workspace"}
+var whitelist = []string{"/kbuild"}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {

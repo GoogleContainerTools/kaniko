@@ -29,7 +29,7 @@ REPOPATH ?= $(ORG)/$(PROJECT)
 
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_LDFLAGS := '-extldflags "-static"'
-GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs"
+GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay"
 
 EXECUTOR_PACKAGE = $(REPOPATH)/executor
 KBUILD_PACKAGE = $(REPOPATH)/kbuild
