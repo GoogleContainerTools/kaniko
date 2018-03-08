@@ -23,6 +23,7 @@ import (
 	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,4 +97,38 @@ func fileSystemWhitelist(path string) ([]string, error) {
 		}
 	}
 	return whitelist, nil
+}
+
+// FilesAndContents returns a map of [file path]:[file contents] relative to root
+func FilesAndContents(fp string, root string) (map[string][]byte, error) {
+	fileMap := make(map[string][]byte)
+	fullPath := filepath.Join(root, fp)
+	logrus.Debugf("Getting files and contents at root %s", fullPath)
+	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			fileMap[relPath] = nil
+			return nil
+		}
+		contents, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("Adding file %s and contents to file map", relPath)
+		fileMap[relPath] = contents
+		return err
+	})
+	return fileMap, err
+}
+
+// FilepathExists returns true if the path exists
+func FilepathExists(path string) bool {
+	_, err := os.Stat(path)
+	return (err == nil)
 }

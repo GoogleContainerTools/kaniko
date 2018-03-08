@@ -51,3 +51,80 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
 }
+
+var tests = []struct {
+	files       map[string]string
+	directory   string
+	expectedMap map[string][]byte
+}{
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+			"/workspace/foo/b": "baz2",
+			"/kbuild/file":     "file",
+		},
+		directory: "/workspace/foo/",
+		expectedMap: map[string][]byte{
+			"workspace/foo/a": []byte("baz1"),
+			"workspace/foo/b": []byte("baz2"),
+			"workspace/foo":   nil,
+		},
+	},
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+		},
+		directory: "/workspace/foo/a",
+		expectedMap: map[string][]byte{
+			"workspace/foo/a": []byte("baz1"),
+		},
+	},
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+			"/workspace/foo/b": "baz2",
+			"/workspace/baz":   "hey",
+			"/kbuild/file":     "file",
+		},
+		directory: "/workspace",
+		expectedMap: map[string][]byte{
+			"workspace/foo/a": []byte("baz1"),
+			"workspace/foo/b": []byte("baz2"),
+			"workspace/baz":   []byte("hey"),
+			"workspace":       nil,
+			"workspace/foo":   nil,
+		},
+	},
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+			"/workspace/foo/b": "baz2",
+			"/kbuild/file":     "file",
+		},
+		directory: "",
+		expectedMap: map[string][]byte{
+			"workspace/foo/a": []byte("baz1"),
+			"workspace/foo/b": []byte("baz2"),
+			"kbuild/file":     []byte("file"),
+			"workspace":       nil,
+			"workspace/foo":   nil,
+			"kbuild":          nil,
+			".":               nil,
+		},
+	},
+}
+
+func Test_FilesAndContents(t *testing.T) {
+	for _, test := range tests {
+		testDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatalf("err setting up temp dir: %v", err)
+		}
+		defer os.RemoveAll(testDir)
+		if err := testutil.SetupFiles(testDir, test.files); err != nil {
+			t.Fatalf("err setting up files: %v", err)
+		}
+		fileMap, err := FilesAndContents(test.directory, testDir)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedMap, fileMap)
+	}
+}
