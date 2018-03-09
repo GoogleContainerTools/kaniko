@@ -14,23 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package contexts
+package buildcontext
 
 import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
-	"github.com/sirupsen/logrus"
 )
 
-type Context interface {
-	// Returns a map of [file path]:[file contents] of all files rooted at path
-	GetFilesFromPath(path string) (map[string][]byte, error)
+type LocalDirectory struct {
+	root string
 }
 
-func GetContext(source string) Context {
-	if util.FilepathExists(source) {
-		logrus.Infof("Using local directory context at path %s", source)
-		return &LocalDirectory{root: source}
-	}
-	logrus.Errorf("Unable to find valid context for %s", source)
-	return nil
+// GetFilesFromSource returns a map of [file name]:[file contents] at path
+func (ld *LocalDirectory) GetFilesFromPath(path string) (map[string][]byte, error) {
+	return util.FilesAndContents(path, ld.root)
 }
