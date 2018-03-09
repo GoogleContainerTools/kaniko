@@ -15,7 +15,7 @@
     "pkg/image",
     "pkg/util"
   ]
-  revision = "ce3228b4afba2b2fb9b42c416c8f59a14ee7c1dd"
+  revision = "6a521891eafa833a08adf664edb6e67b18220ea7"
   source = "github.com/GoogleCloudPlatform/container-diff"
 
 [[projects]]
@@ -119,7 +119,7 @@
     "pkg/system",
     "pkg/truncindex"
   ]
-  revision = "66a38bb219e9776482c18e8c02f438e5112916f1"
+  revision = "1e5ce40cdb84ab66e26186435b1273e04b879fef"
 
 [[projects]]
   branch = "master"
@@ -370,7 +370,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "d274e363d5759d1c916232217be421f1cc89c5fe"
+  revision = "1c7ff3de94ae006f58cba483a4c9c6d7c61e1d98"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -419,7 +419,7 @@
     "openpgp/s2k",
     "ssh/terminal"
   ]
-  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
+  revision = "85f98707c97e11569271e4d9b3d397e079c4f4d0"
 
 [[projects]]
   branch = "master"
@@ -433,7 +433,7 @@
     "lex/httplex",
     "proxy"
   ]
-  revision = "22ae77b79946ea320088417e4d50825671d82d57"
+  revision = "07e8617a6db2368fa55d4616f371ee1b1403c817"
 
 [[projects]]
   branch = "master"
@@ -442,7 +442,7 @@
     "unix",
     "windows"
   ]
-  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
+  revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -486,6 +486,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d806d861c987e81225e9da4da86d9417d01fd42d84dbe34e21daf076651e17b5"
+  inputs-digest = "fd21de0404336debb893db778210835a27a3612fe9b9e5e412dcdc80d288a986"
   solver-name = "gps-cdcl"
   solver-version = 1

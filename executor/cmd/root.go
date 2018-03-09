@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/commands"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
@@ -88,8 +89,39 @@ func execute() error {
 		return err
 	}
 
-	// Execute commands here
+	// Set environment variables within the image
+	if err := image.SetEnvVariables(sourceImage); err != nil {
+		return err
+	}
 
+	imageConfig := sourceImage.Config()
+	// Currently only supports single stage builds
+	for _, stage := range stages {
+		for _, cmd := range stage.Commands {
+			dockerCommand, err := commands.GetCommand(cmd)
+			if err != nil {
+				return err
+			}
+			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
+				return err
+			}
+			// Now, we get the files to snapshot from this command and take the snapshot
+			snapshotFiles := dockerCommand.FilesToSnapshot()
+			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
+			if err != nil {
+				return err
+			}
+			if contents == nil {
+				logrus.Info("No files were changed, appending empty layer to config.")
+				sourceImage.AppendConfigHistory(constants.Author, true)
+				continue
+			}
+			// Append the layer to the image
+			if err := sourceImage.AppendLayer(contents, constants.Author); err != nil {
+				return err
+			}
+		}
+	}
 	// Push the image
 	return image.PushImage(sourceImage, destination)
 }

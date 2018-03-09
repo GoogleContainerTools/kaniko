@@ -49,23 +49,30 @@ func (s *Snapshotter) Init() error {
 
 // TakeSnapshot takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshot() ([]byte, bool, error) {
+func (s *Snapshotter) TakeSnapshot(files []string) ([]byte, error) {
+	if files != nil {
+		return s.TakeSnapshotOfFiles(files)
+	}
+	logrus.Info("Taking snapshot of full filesystem...")
 	buf := bytes.NewBuffer([]byte{})
 	filesAdded, err := s.snapShotFS(buf)
 	if err != nil {
-		return nil, filesAdded, err
+		return nil, err
 	}
 	contents, err := ioutil.ReadAll(buf)
 	if err != nil {
-		return nil, filesAdded, err
+		return nil, err
 	}
-	return contents, filesAdded, err
+	if !filesAdded {
+		return nil, nil
+	}
+	return contents, err
 }
 
 // TakeSnapshotOfFiles takes a snapshot of specific files
 // Used for ADD/COPY commands, when we know which files have changed
 func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
-	logrus.Infof("Taking snapshot of files %s", files)
+	logrus.Infof("Taking snapshot of files %v...", files)
 	s.l.Snapshot()
 	if len(files) == 0 {
 		logrus.Info("No files changed in this command, skipping snapshotting.")

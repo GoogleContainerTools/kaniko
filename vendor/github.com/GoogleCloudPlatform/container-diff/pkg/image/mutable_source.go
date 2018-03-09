@@ -142,7 +142,7 @@ func (m *MutableSource) AppendLayer(content []byte, author string) error {
 	// Also add it to the config.
 	diffID := digest.FromBytes(content)
 	m.cfg.RootFS.DiffIDs = append(m.cfg.RootFS.DiffIDs, diffID)
-	m.appendConfigHistory(author, false)
+	m.AppendConfigHistory(author, false)
 	return nil
 }
 
@@ -184,7 +184,7 @@ func (m *MutableSource) SetEnv(envMap map[string]string, author string) {
 		envArray = append(envArray, entry)
 	}
 	m.cfg.Schema2V1Image.Config.Env = envArray
-	m.appendConfigHistory(author, true)
+	m.AppendConfigHistory(author, true)
 }
 
 func (m *MutableSource) Config() *manifest.Schema2Config {
@@ -193,10 +193,10 @@ func (m *MutableSource) Config() *manifest.Schema2Config {
 
 func (m *MutableSource) SetConfig(config *manifest.Schema2Config, author string, emptyLayer bool) {
 	m.cfg.Schema2V1Image.Config = config
-	m.appendConfigHistory(author, emptyLayer)
+	m.AppendConfigHistory(author, emptyLayer)
 }
 
-func (m *MutableSource) appendConfigHistory(author string, emptyLayer bool) {
+func (m *MutableSource) AppendConfigHistory(author string, emptyLayer bool) {
 	history := manifest.Schema2History{
 		Created:    time.Now(),
 		Author:     author,
