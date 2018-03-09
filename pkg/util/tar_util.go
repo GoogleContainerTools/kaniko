@@ -36,30 +36,13 @@ func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
 			return err
 		}
 	}
-
-	hardlink := false
-	if sys := i.Sys(); sys != nil {
-		if stat, ok := sys.(*syscall.Stat_t); ok {
-			nlinks := stat.Nlink
-			if nlinks > 1 {
-				inode := stat.Ino
-				if original, exists := hardlinks[inode]; exists && original != p {
-					hardlink = true
-					logrus.Debugf("%s inode exists in hardlinks map, linking to %s", p, original)
-					linkDst = original
-				} else {
-					hardlinks[inode] = p
-				}
-			}
-		}
-	}
-
 	hdr, err := tar.FileInfoHeader(i, linkDst)
 	if err != nil {
 		return err
 	}
 	hdr.Name = p
 
+	hardlink, linkDst := checkHardlink(p, i)
 	if hardlink {
 		hdr.Linkname = linkDst
 		hdr.Typeflag = tar.TypeLink
@@ -80,4 +63,26 @@ func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
 		return err
 	}
 	return nil
+}
+
+// Returns true if path is hardlink, and the link destination
+func checkHardlink(p string, i os.FileInfo) (bool, string) {
+	hardlink := false
+	linkDst := ""
+	if sys := i.Sys(); sys != nil {
+		if stat, ok := sys.(*syscall.Stat_t); ok {
+			nlinks := stat.Nlink
+			if nlinks > 1 {
+				inode := stat.Ino
+				if original, exists := hardlinks[inode]; exists && original != p {
+					hardlink = true
+					logrus.Debugf("%s inode exists in hardlinks map, linking to %s", p, original)
+					linkDst = original
+				} else {
+					hardlinks[inode] = p
+				}
+			}
+		}
+	}
+	return hardlink, linkDst
 }

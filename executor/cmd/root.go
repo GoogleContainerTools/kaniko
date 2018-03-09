@@ -23,7 +23,6 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -90,41 +89,35 @@ func execute() error {
 		return err
 	}
 
-	// Execute commands here
+	// Set environment variables within the image
 	if err := image.SetEnvVariables(sourceImage); err != nil {
 		return err
 	}
 
+	imageConfig := sourceImage.Config()
 	// Currently only supports single stage builds
 	for _, stage := range stages {
 		for _, cmd := range stage.Commands {
-			dockerCommand := commands.GetCommand(cmd)
-			if dockerCommand == nil {
-				return errors.Errorf("Invalid or unsupported docker command: %v", cmd)
-			}
-			if err := dockerCommand.ExecuteCommand(); err != nil {
+			dockerCommand, err := commands.GetCommand(cmd)
+			if err != nil {
 				return err
 			}
-			// Now, we get the files to snapshot from this command
-			// If this is nil, snapshot the entire filesystem
-			// Else take a snapshot of the specific files
-			snapshotFiles := dockerCommand.FilesToSnapshot()
-			var contents []byte
-			if snapshotFiles == nil {
-				contents, err = snapshotter.TakeSnapshot()
-			} else {
-				contents, err = snapshotter.TakeSnapshotOfFiles(snapshotFiles)
+			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
+				return err
 			}
+			// Now, we get the files to snapshot from this command and take the snapshot
+			snapshotFiles := dockerCommand.FilesToSnapshot()
+			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
 			if err != nil {
 				return err
 			}
 			if contents == nil {
 				logrus.Info("No files were changed, appending empty layer to config.")
-				sourceImage.AppendConfigHistory(dockerCommand.Author(), true)
+				sourceImage.AppendConfigHistory(constants.Author, true)
 				continue
 			}
 			// Append the layer to the image
-			if err := sourceImage.AppendLayer(contents, dockerCommand.Author()); err != nil {
+			if err := sourceImage.AppendLayer(contents, constants.Author); err != nil {
 				return err
 			}
 		}

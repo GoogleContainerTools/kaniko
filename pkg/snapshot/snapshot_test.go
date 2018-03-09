@@ -45,7 +45,7 @@ func TestSnapshotFileChange(t *testing.T) {
 		t.Fatalf("Error setting up fs: %s", err)
 	}
 	// Take another snapshot
-	contents, err := snapshotter.TakeSnapshot()
+	contents, err := snapshotter.TakeSnapshot(nil)
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
@@ -93,7 +93,7 @@ func TestSnapshotChangePermissions(t *testing.T) {
 		t.Fatalf("Error changing permissions on %s: %v", batPath, err)
 	}
 	// Take another snapshot
-	contents, err := snapshotter.TakeSnapshot()
+	contents, err := snapshotter.TakeSnapshot(nil)
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
@@ -144,7 +144,7 @@ func TestSnapshotFiles(t *testing.T) {
 		filepath.Join(testDir, "foo"),
 		filepath.Join(testDir, "kbuild/file"),
 	}
-	contents, err := snapshotter.TakeSnapshotOfFiles(filesToSnapshot)
+	contents, err := snapshotter.TakeSnapshot(filesToSnapshot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestEmptySnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Take snapshot with no changes
-	contents, err := snapshotter.TakeSnapshot()
+	contents, err := snapshotter.TakeSnapshot(nil)
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}

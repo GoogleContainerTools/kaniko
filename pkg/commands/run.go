@@ -17,7 +17,7 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
+	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -29,10 +29,11 @@ type RunCommand struct {
 	cmd *instructions.RunCommand
 }
 
-func (r *RunCommand) ExecuteCommand() error {
+func (r *RunCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	var newCommand []string
 	if r.cmd.PrependShell {
 		// This is the default shell on Linux
+		// TODO: Support shell command here
 		shell := []string{"/bin/sh", "-c"}
 		newCommand = append(shell, strings.Join(r.cmd.CmdLine, " "))
 	} else {
@@ -54,14 +55,12 @@ func (r *RunCommand) FilesToSnapshot() []string {
 }
 
 // Author returns some information about the command for the image config
-func (r *RunCommand) Author() string {
-	author := []string{constants.Author}
+func (r *RunCommand) CreatedBy() string {
 	cmdLine := strings.Join(r.cmd.CmdLine, " ")
 	if r.cmd.PrependShell {
+		// TODO: Support shell command here
 		shell := []string{"/bin/sh", "-c"}
-		author = append(author, shell...)
-		return strings.Join(author, " ") + " " + cmdLine
+		return strings.Join(append(shell, cmdLine), " ")
 	}
-	author = append(author, cmdLine)
-	return strings.Join(author, " ")
+	return cmdLine
 }
