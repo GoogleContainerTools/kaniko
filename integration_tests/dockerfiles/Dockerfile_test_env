@@ -1,0 +1,5 @@
+FROM gcr.io/distroless/base
+ENV hey hey
+ENV PATH /usr/local
+ENV hey hello
+ENV first=foo second=foo2

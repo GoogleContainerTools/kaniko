@@ -1,0 +1,11 @@
+schemaVersion: '2.0.0'
+metadataTest:
+  env:
+    - key: hey
+      value: hello
+    - key: PATH
+      value: /usr/local
+    - key: first
+      value: foo
+    - key: second
+      value: foo2
