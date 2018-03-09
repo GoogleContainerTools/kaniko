@@ -38,6 +38,8 @@ func GetCommand(cmd instructions.Command) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
 		return &RunCommand{cmd: c}, nil
+	case *instructions.EnvCommand:
+		return &EnvCommand{cmd: c}, nil
 	}
 	return nil, errors.Errorf("%s is not a supported command", cmd.Name())
 }
