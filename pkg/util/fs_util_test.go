@@ -53,9 +53,9 @@ func Test_fileSystemWhitelist(t *testing.T) {
 }
 
 var tests = []struct {
-	files       map[string]string
-	directory   string
-	expectedMap map[string][]byte
+	files         map[string]string
+	directory     string
+	expectedFiles []string
 }{
 	{
 		files: map[string]string{
@@ -64,10 +64,10 @@ var tests = []struct {
 			"/kbuild/file":     "file",
 		},
 		directory: "/workspace/foo/",
-		expectedMap: map[string][]byte{
-			"workspace/foo/a": []byte("baz1"),
-			"workspace/foo/b": []byte("baz2"),
-			"workspace/foo":   nil,
+		expectedFiles: []string{
+			"workspace/foo/a",
+			"workspace/foo/b",
+			"workspace/foo",
 		},
 	},
 	{
@@ -75,8 +75,8 @@ var tests = []struct {
 			"/workspace/foo/a": "baz1",
 		},
 		directory: "/workspace/foo/a",
-		expectedMap: map[string][]byte{
-			"workspace/foo/a": []byte("baz1"),
+		expectedFiles: []string{
+			"workspace/foo/a",
 		},
 	},
 	{
@@ -87,12 +87,12 @@ var tests = []struct {
 			"/kbuild/file":     "file",
 		},
 		directory: "/workspace",
-		expectedMap: map[string][]byte{
-			"workspace/foo/a": []byte("baz1"),
-			"workspace/foo/b": []byte("baz2"),
-			"workspace/baz":   []byte("hey"),
-			"workspace":       nil,
-			"workspace/foo":   nil,
+		expectedFiles: []string{
+			"workspace/foo/a",
+			"workspace/foo/b",
+			"workspace/baz",
+			"workspace",
+			"workspace/foo",
 		},
 	},
 	{
@@ -102,19 +102,19 @@ var tests = []struct {
 			"/kbuild/file":     "file",
 		},
 		directory: "",
-		expectedMap: map[string][]byte{
-			"workspace/foo/a": []byte("baz1"),
-			"workspace/foo/b": []byte("baz2"),
-			"kbuild/file":     []byte("file"),
-			"workspace":       nil,
-			"workspace/foo":   nil,
-			"kbuild":          nil,
-			".":               nil,
+		expectedFiles: []string{
+			"workspace/foo/a",
+			"workspace/foo/b",
+			"kbuild/file",
+			"workspace",
+			"workspace/foo",
+			"kbuild",
+			".",
 		},
 	},
 }
 
-func Test_FilesAndContents(t *testing.T) {
+func Test_Files(t *testing.T) {
 	for _, test := range tests {
 		testDir, err := ioutil.TempDir("", "")
 		if err != nil {
@@ -124,7 +124,9 @@ func Test_FilesAndContents(t *testing.T) {
 		if err := testutil.SetupFiles(testDir, test.files); err != nil {
 			t.Fatalf("err setting up files: %v", err)
 		}
-		fileMap, err := FilesAndContents(test.directory, testDir)
-		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedMap, fileMap)
+		actualFiles, err := Files(test.directory, testDir)
+		sort.Strings(actualFiles)
+		sort.Strings(test.expectedFiles)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
 	}
 }
