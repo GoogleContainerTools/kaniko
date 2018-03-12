@@ -1,5 +1,15 @@
-FROM gcr.io/distroless/base
+FROM gcr.io/google-appengine/debian9
 ENV hey hey
 ENV PATH /usr/local
 ENV hey hello
 ENV first=foo second=foo2
+ENV third $second:/third
+ENV myName="John Doe" myDog=Rex\ The\ Dog \
+    myCat=fluffy
+ENV PATH something
+ENV test=value\ value2
+ENV test1="a'b'c"
+ENV test2='a"b"c'
+ENV test3=a\ b name2=b\ c
+ENV test4="a\"b"
+ENV test5='a\"b'

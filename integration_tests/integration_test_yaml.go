@@ -55,12 +55,14 @@ var structureTests = []struct {
 	description           string
 	dockerfilePath        string
 	structureTestYamlPath string
+	dockerBuildContext    string
 	repo                  string
 }{
 	{
-		description:    "test env",
-		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_env",
-		repo:           "test-env",
+		description:           "test env",
+		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_env",
+		repo:                  "test-env",
+		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_env.yaml",
 	},
 }
@@ -156,6 +158,14 @@ func main() {
 	}
 
 	for _, test := range structureTests {
+
+		// First, build the image with docker
+		dockerImageTag := testRepo + dockerPrefix + test.repo
+		dockerBuild := step{
+			Name: dockerImage,
+			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerBuildContext},
+		}
+
 		// Build the image with kbuild
 		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
@@ -167,15 +177,21 @@ func main() {
 			Name: dockerImage,
 			Args: []string{"pull", kbuildImage},
 		}
-		// Run structure tests on the image
+		// Run structure tests on the kbuild and docker image
 		args := "container-structure-test -image " + kbuildImage + " " + test.structureTestYamlPath
 		structureTest := step{
 			Name: ubuntuImage,
 			Args: []string{"sh", "-c", args},
 			Env:  []string{"PATH=/workspace:/bin"},
 		}
+		args = "container-structure-test -image " + dockerImageTag + " " + test.structureTestYamlPath
+		dockerStructureTest := step{
+			Name: ubuntuImage,
+			Args: []string{"sh", "-c", args},
+			Env:  []string{"PATH=/workspace:/bin"},
+		}
 
-		y.Steps = append(y.Steps, kbuild, pullKbuildImage, structureTest)
+		y.Steps = append(y.Steps, dockerBuild, kbuild, pullKbuildImage, structureTest, dockerStructureTest)
 	}
 
 	d, _ := yaml.Marshal(&y)

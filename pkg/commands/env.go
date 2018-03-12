@@ -19,6 +19,7 @@ package commands
 import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/shlex"
 	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
@@ -31,34 +32,52 @@ type EnvCommand struct {
 func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env
-	for _, pair := range newEnvs {
-		logrus.Infof("Setting environment variable %s:%s", pair.Key, pair.Value)
+	for index, pair := range newEnvs {
+		newVal := os.Expand(pair.Value, os.Getenv)
+		tokens, _ := shlex.Split(newVal)
+		newEnvs[index] = instructions.KeyValuePair{
+			Key:   pair.Key,
+			Value: strings.Join(tokens, " "),
+		}
+		logrus.Infof("Setting environment variable %s=%s", pair.Key, pair.Value)
 		if err := os.Setenv(pair.Key, pair.Value); err != nil {
 			return err
 		}
 	}
-	return updateConfig(newEnvs, config)
+	return updateConfigEnv(newEnvs, config)
 }
 
-func updateConfig(newEnvs []instructions.KeyValuePair, config *manifest.Schema2Config) error {
-	// First, create map of current environment variables to prevent duplicates
-	envMap := make(map[string]string)
+func updateConfigEnv(newEnvs []instructions.KeyValuePair, config *manifest.Schema2Config) error {
+	// First, convert config.Env array to []instruction.KeyValuePair
+	var kvps []instructions.KeyValuePair
 	for _, env := range config.Env {
 		entry := strings.Split(env, "=")
-		envMap[entry[0]] = entry[1]
+		kvps = append(kvps, instructions.KeyValuePair{
+			Key:   entry[0],
+			Value: entry[1],
+		})
 	}
-	// Now, add new envs to the map
-	for _, pair := range newEnvs {
-		envMap[pair.Key] = pair.Value
+	// Iterate through new environment variables, and replace existing keys
+	// We can't use a map because we need to preserve the order of the environment variables
+Loop:
+	for _, newEnv := range newEnvs {
+		for index, kvp := range kvps {
+			// If key exists, replace the KeyValuePair...
+			if kvp.Key == newEnv.Key {
+				logrus.Debugf("Replacing environment variable %v with %v in config", kvp, newEnv)
+				kvps[index] = newEnv
+				continue Loop
+			}
+		}
+		// ... Else, append it as a new env variable
+		kvps = append(kvps, newEnv)
 	}
-
-	// Now, convert back to array and modify config
+	// Convert back to array and set in config
 	envArray := []string{}
-	for key, value := range envMap {
-		entry := key + "=" + value
+	for _, kvp := range kvps {
+		entry := kvp.Key + "=" + kvp.Value
 		envArray = append(envArray, entry)
 	}
-	logrus.Debugf("Setting Env in config to %v", envArray)
 	config.Env = envArray
 	return nil
 }
