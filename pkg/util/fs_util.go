@@ -97,3 +97,28 @@ func fileSystemWhitelist(path string) ([]string, error) {
 	}
 	return whitelist, nil
 }
+
+// Files returns a list of all files at the filepath relative to root
+func Files(fp string, root string) ([]string, error) {
+	var files []string
+	fullPath := filepath.Join(root, fp)
+	logrus.Debugf("Getting files and contents at root %s", fullPath)
+	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files = append(files, relPath)
+		return err
+	})
+	return files, err
+}
+
+// FilepathExists returns true if the path exists
+func FilepathExists(path string) bool {
+	_, err := os.Stat(path)
+	return (err == nil)
+}
