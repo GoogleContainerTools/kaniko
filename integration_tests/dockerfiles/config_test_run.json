@@ -9,13 +9,13 @@
       "Mods": [
         {
           "Name": "/var/log/dpkg.log",
-          "Size1": 57425,
-          "Size2": 57425
+          "Size1": 57481,
+          "Size2": 57481
         },
         {
           "Name": "/var/log/apt/term.log",
-          "Size1": 24400,
-          "Size2": 24400
+          "Size1": 24421,
+          "Size2": 24421
         },
         {
           "Name": "/var/cache/ldconfig/aux-cache",
@@ -24,8 +24,8 @@
         },
         {
           "Name": "/var/log/apt/history.log",
-          "Size1": 5089,
-          "Size2": 5089
+          "Size1": 5415,
+          "Size2": 5415
         },
         {
           "Name": "/var/log/alternatives.log",
