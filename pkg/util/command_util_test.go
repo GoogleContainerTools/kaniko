@@ -79,7 +79,7 @@ var relativeFilepathTests = []struct {
 		filename:         "context/empty",
 		cwd:              "/dir",
 		dest:             "/empty",
-		expectedFilepath: "/dir/empty",
+		expectedFilepath: "/empty",
 	},
 	{
 		srcName:          "./",
@@ -121,7 +121,6 @@ func Test_RelativeFilepath(t *testing.T) {
 var matchSourcesTests = []struct {
 	srcs          []string
 	files         []string
-	cwd           string
 	expectedFiles []string
 }{
 	{
@@ -135,18 +134,16 @@ var matchSourcesTests = []struct {
 			"pkg/b/d/",
 			"dir/",
 		},
-		cwd: "/",
 		expectedFiles: []string{
 			"pkg/a",
 			"pkg/b",
-			"/pkg/d",
 		},
 	},
 }
 
 func Test_MatchSources(t *testing.T) {
 	for _, test := range matchSourcesTests {
-		actualFiles, err := matchSources(test.srcs, test.files, test.cwd)
+		actualFiles, err := matchSources(test.srcs, test.files)
 		sort.Strings(actualFiles)
 		sort.Strings(test.expectedFiles)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
@@ -253,7 +250,6 @@ func Test_IsSrcsValid(t *testing.T) {
 
 var testResolveSources = []struct {
 	srcsAndDest []string
-	cwd         string
 	expectedMap map[string][]string
 }{
 	{
@@ -262,7 +258,6 @@ var testResolveSources = []struct {
 			"context/b*",
 			"dest/",
 		},
-		cwd: "/",
 		expectedMap: map[string][]string{
 			"context/foo": {
 				"context/foo",
@@ -280,7 +275,7 @@ var testResolveSources = []struct {
 
 func Test_ResolveSources(t *testing.T) {
 	for _, test := range testResolveSources {
-		actualMap, err := ResolveSources(test.srcsAndDest, buildContextPath, test.cwd)
+		actualMap, err := ResolveSources(test.srcsAndDest, buildContextPath)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedMap, actualMap)
 	}
 }

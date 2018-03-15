@@ -41,7 +41,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Infof("dest: %s", dest)
 
 	// Get a map of [src]:[files rooted at src]
-	srcMap, err := util.ResolveSources(c.cmd.SourcesAndDest, c.buildcontext, config.WorkingDir)
+	srcMap, err := util.ResolveSources(c.cmd.SourcesAndDest, c.buildcontext)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (c *CopyCommand) FilesToSnapshot() []string {
 	return c.snapshotFiles
 }
 
-// Author returns some information about the command for the image config
+// CreatedBy returns some information about the command for the image config
 func (c *CopyCommand) CreatedBy() string {
 	return strings.Join(c.cmd.SourcesAndDest, " ")
 }

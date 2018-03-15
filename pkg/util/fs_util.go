@@ -98,8 +98,8 @@ func fileSystemWhitelist(path string) ([]string, error) {
 	return whitelist, nil
 }
 
-// Files returns a list of all files at the filepath relative to root
-func Files(fp string, root string) ([]string, error) {
+// RelativeFiles returns a list of all files at the filepath relative to root
+func RelativeFiles(fp string, root string) ([]string, error) {
 	var files []string
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
@@ -112,7 +112,7 @@ func Files(fp string, root string) ([]string, error) {
 			return err
 		}
 		files = append(files, relPath)
-		return err
+		return nil
 	})
 	return files, err
 }

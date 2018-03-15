@@ -19,6 +19,7 @@ package util
 import (
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,21 +39,22 @@ func ContainsWildcards(paths []string) bool {
 	return false
 }
 
-// ResolveSources resolves the given sources if the sources contains wildcard
+// ResolveSources resolves the given sources if the sources contains wildcards
 // It returns a map of [src]:[files rooted at src]
-func ResolveSources(srcsAndDest instructions.SourcesAndDest, root, cwd string) (map[string][]string, error) {
+func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[string][]string, error) {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	// If sources contain wildcards, we first need to resolve them to actual paths
-	wildcard := ContainsWildcards(srcs)
-	if wildcard {
-		files, err := Files("", root)
+	if ContainsWildcards(srcs) {
+		logrus.Debugf("Resolving srcs %v...", srcs)
+		files, err := RelativeFiles("", root)
 		if err != nil {
 			return nil, err
 		}
-		srcs, err = matchSources(srcs, files, cwd)
+		srcs, err = matchSources(srcs, files)
 		if err != nil {
 			return nil, err
 		}
+		logrus.Debugf("Resolved sources to %v", srcs)
 	}
 	// Now, get a map of [src]:[files rooted at src]
 	srcMap, err := SourcesToFilesMap(srcs, root)
@@ -63,8 +65,8 @@ func ResolveSources(srcsAndDest instructions.SourcesAndDest, root, cwd string) (
 	return srcMap, IsSrcsValid(srcsAndDest, srcMap)
 }
 
-// matchSources returns a map of [src]:[matching filepaths], used to resolve wildcards
-func matchSources(srcs, files []string, cwd string) ([]string, error) {
+// matchSources returns a list of sources that match wildcards
+func matchSources(srcs, files []string) ([]string, error) {
 	var matchedSources []string
 	for _, src := range srcs {
 		src = filepath.Clean(src)
@@ -73,15 +75,9 @@ func matchSources(srcs, files []string, cwd string) ([]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			// Check cwd
-			matchedRoot, err := filepath.Match(filepath.Join(cwd, src), file)
-			if err != nil {
-				return nil, err
+			if matched {
+				matchedSources = append(matchedSources, file)
 			}
-			if !(matched || matchedRoot) {
-				continue
-			}
-			matchedSources = append(matchedSources, file)
 		}
 	}
 	return matchedSources, nil
@@ -91,13 +87,17 @@ func IsDestDir(path string) bool {
 	return strings.HasSuffix(path, "/")
 }
 
-// RelativeFilepath returns the relative filepath
-// If source is a file:
-//	If dest is a dir, copy it to /cwd/dest/relpath
-// 	If dest is a file, copy directly to /cwd/dest
+func IsAbsoluteFilepath(path string) bool {
+	return strings.HasPrefix(path, "/")
+}
 
+// RelativeFilepath returns the relative filepath from the build context to the image filesystem
+// If source is a file:
+//	If dest is a dir, copy it to /dest/relpath
+// 	If dest is a file, copy directly to dest
 // If source is a dir:
-//	Assume dest is also a dir, and copy to /cwd/dest/relpath
+//	Assume dest is also a dir, and copy to dest/relpath
+// If dest is not an absolute filepath, add /cwd to the beginning
 func RelativeFilepath(filename, srcName, dest, cwd, buildcontext string) (string, error) {
 	fi, err := os.Stat(filepath.Join(buildcontext, filename))
 	if err != nil {
@@ -115,8 +115,14 @@ func RelativeFilepath(filename, srcName, dest, cwd, buildcontext string) (string
 		if relPath == "." && !fi.IsDir() {
 			relPath = filepath.Base(filename)
 		}
-		destPath := filepath.Join(cwd, dest, relPath)
-		return destPath, nil
+		destPath := filepath.Join(dest, relPath)
+		if IsAbsoluteFilepath(dest) {
+			return destPath, nil
+		}
+		return filepath.Join(cwd, destPath), nil
+	}
+	if IsAbsoluteFilepath(dest) {
+		return dest, nil
 	}
 	return filepath.Join(cwd, dest), nil
 }
@@ -126,7 +132,7 @@ func SourcesToFilesMap(srcs []string, root string) (map[string][]string, error) 
 	srcMap := make(map[string][]string)
 	for _, src := range srcs {
 		src = filepath.Clean(src)
-		files, err := Files(src, root)
+		files, err := RelativeFiles(src, root)
 		if err != nil {
 			return nil, err
 		}

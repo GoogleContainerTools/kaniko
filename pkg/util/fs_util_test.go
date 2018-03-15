@@ -114,7 +114,7 @@ var tests = []struct {
 	},
 }
 
-func Test_Files(t *testing.T) {
+func Test_RelativeFiles(t *testing.T) {
 	for _, test := range tests {
 		testDir, err := ioutil.TempDir("", "")
 		if err != nil {
@@ -124,7 +124,7 @@ func Test_Files(t *testing.T) {
 		if err := testutil.SetupFiles(testDir, test.files); err != nil {
 			t.Fatalf("err setting up files: %v", err)
 		}
-		actualFiles, err := Files(test.directory, testDir)
+		actualFiles, err := RelativeFiles(test.directory, testDir)
 		sort.Strings(actualFiles)
 		sort.Strings(test.expectedFiles)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)

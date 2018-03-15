@@ -10,3 +10,5 @@ COPY . newdir
 COPY context/bar /baz/
 COPY ["context/foo", "/tmp/foo" ]
 COPY context/b* /baz/
+COPY context/foo context/bar/ba? /test/
+COPY context/arr[[]0].txt /mydir/
