@@ -51,3 +51,82 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
 }
+
+var tests = []struct {
+	files         map[string]string
+	directory     string
+	expectedFiles []string
+}{
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+			"/workspace/foo/b": "baz2",
+			"/kbuild/file":     "file",
+		},
+		directory: "/workspace/foo/",
+		expectedFiles: []string{
+			"workspace/foo/a",
+			"workspace/foo/b",
+			"workspace/foo",
+		},
+	},
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+		},
+		directory: "/workspace/foo/a",
+		expectedFiles: []string{
+			"workspace/foo/a",
+		},
+	},
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+			"/workspace/foo/b": "baz2",
+			"/workspace/baz":   "hey",
+			"/kbuild/file":     "file",
+		},
+		directory: "/workspace",
+		expectedFiles: []string{
+			"workspace/foo/a",
+			"workspace/foo/b",
+			"workspace/baz",
+			"workspace",
+			"workspace/foo",
+		},
+	},
+	{
+		files: map[string]string{
+			"/workspace/foo/a": "baz1",
+			"/workspace/foo/b": "baz2",
+			"/kbuild/file":     "file",
+		},
+		directory: "",
+		expectedFiles: []string{
+			"workspace/foo/a",
+			"workspace/foo/b",
+			"kbuild/file",
+			"workspace",
+			"workspace/foo",
+			"kbuild",
+			".",
+		},
+	},
+}
+
+func Test_Files(t *testing.T) {
+	for _, test := range tests {
+		testDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatalf("err setting up temp dir: %v", err)
+		}
+		defer os.RemoveAll(testDir)
+		if err := testutil.SetupFiles(testDir, test.files); err != nil {
+			t.Fatalf("err setting up files: %v", err)
+		}
+		actualFiles, err := Files(test.directory, testDir)
+		sort.Strings(actualFiles)
+		sort.Strings(test.expectedFiles)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
+	}
+}

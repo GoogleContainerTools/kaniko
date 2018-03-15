@@ -97,3 +97,48 @@ func fileSystemWhitelist(path string) ([]string, error) {
 	}
 	return whitelist, nil
 }
+
+// Files returns a list of all files at the filepath relative to root
+func Files(fp string, root string) ([]string, error) {
+	var files []string
+	fullPath := filepath.Join(root, fp)
+	logrus.Debugf("Getting files and contents at root %s", fullPath)
+	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files = append(files, relPath)
+		return err
+	})
+	return files, err
+}
+
+// FilepathExists returns true if the path exists
+func FilepathExists(path string) bool {
+	_, err := os.Stat(path)
+	return (err == nil)
+}
+
+// CreateFile creates a file at path with contents specified
+func CreateFile(path string, contents []byte, perm os.FileMode) error {
+	// Create directory path if it doesn't exist
+	baseDir := filepath.Dir(path)
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		if err := os.MkdirAll(baseDir, perm); err != nil {
+			return err
+		}
+	}
+
+	f, err := os.Create(path)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(contents)
+	return err
+}
