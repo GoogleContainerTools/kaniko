@@ -161,6 +161,7 @@
     "builder/dockerfile/command",
     "builder/dockerfile/instructions",
     "builder/dockerfile/parser",
+    "builder/dockerfile/shell",
     "client",
     "pkg/homedir",
     "pkg/idtools",
@@ -224,12 +225,6 @@
   packages = ["proto"]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
   version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/google/shlex"
-  packages = ["."]
-  revision = "6f45313302b9c56850fc17f99e40caebce98c716"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -492,6 +487,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0a35c48c8d6982331bd68de44349b310410a7cf987465b3429ddb11b67854de7"
+  inputs-digest = "eadec1feacc8473e54622d5f3a25fbc9c7fb1f9bd38776475c3e2d283bd80d2a"
   solver-name = "gps-cdcl"
   solver-version = 1
