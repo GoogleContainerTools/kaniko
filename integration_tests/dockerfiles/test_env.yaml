@@ -31,3 +31,11 @@ metadataTest:
       value: a"b
     - key: test5
       value: a\"b
+    - key: test6
+      value: a\'b
+    - key: atomic
+      value: two
+    - key: newatomic
+      value: one
+    - key: newenv
+      value: /newenv

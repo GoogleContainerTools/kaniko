@@ -13,3 +13,7 @@ ENV test2='a"b"c'
 ENV test3=a\ b name2=b\ c
 ENV test4="a\"b"
 ENV test5='a\"b'
+ENV test6="a\'b"
+ENV atomic=one
+ENV atomic=two newatomic=$atomic
+ENV newenv=$doesntexist/newenv

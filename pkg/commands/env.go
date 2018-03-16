@@ -17,9 +17,10 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/google/shlex"
+	"github.com/docker/docker/builder/dockerfile/shell"
 	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
@@ -33,14 +34,23 @@ func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env
 	for index, pair := range newEnvs {
-		newVal := os.Expand(pair.Value, os.Getenv)
-		tokens, _ := shlex.Split(newVal)
+		// The dockerfile/shell package handles processing env values
+		// It handles escape characters and supports expansion from the config.Env array
+		// Shlex handles some of the following use cases (these and more are tested in integration tests)
+		// ""a'b'c"" -> "a'b'c"
+		// "Rex\ The\ Dog \" -> "Rex The Dog"
+		// "a\"b" -> "a"b"
+		shlex := shell.NewLex(dockerfile.EscapeToken)
+		expandedValue, err := shlex.ProcessWord(pair.Value, config.Env)
+		if err != nil {
+			return err
+		}
 		newEnvs[index] = instructions.KeyValuePair{
 			Key:   pair.Key,
-			Value: strings.Join(tokens, " "),
+			Value: expandedValue,
 		}
-		logrus.Infof("Setting environment variable %s=%s", pair.Key, pair.Value)
-		if err := os.Setenv(pair.Key, pair.Value); err != nil {
+		logrus.Infof("Setting environment variable %s=%s", pair.Key, expandedValue)
+		if err := os.Setenv(pair.Key, expandedValue); err != nil {
 			return err
 		}
 	}
