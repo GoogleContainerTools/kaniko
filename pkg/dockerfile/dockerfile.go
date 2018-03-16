@@ -31,10 +31,18 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 	if err != nil {
 		return nil, err
 	}
-	EscapeToken = p.EscapeToken
 	stages, _, err := instructions.Parse(p.AST)
 	if err != nil {
 		return nil, err
 	}
 	return stages, err
+}
+
+func SetEscapeToken(b []byte) error {
+	p, err := parser.Parse(bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	EscapeToken = p.EscapeToken
+	return nil
 }
