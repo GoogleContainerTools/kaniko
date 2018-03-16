@@ -28,12 +28,8 @@ import (
 // ContainsWildcards returns true if any entry in paths contains wildcards
 func ContainsWildcards(paths []string) bool {
 	for _, path := range paths {
-		for i := 0; i < len(path); i++ {
-			ch := path[i]
-			// These are the wildcards that correspond to filepath.Match
-			if ch == '*' || ch == '?' || ch == '[' {
-				return true
-			}
+		if strings.ContainsAny(path, "*?[") {
+			return true
 		}
 	}
 	return false
@@ -87,18 +83,14 @@ func IsDestDir(path string) bool {
 	return strings.HasSuffix(path, "/")
 }
 
-func IsAbsoluteFilepath(path string) bool {
-	return strings.HasPrefix(path, "/")
-}
-
-// RelativeFilepath returns the relative filepath from the build context to the image filesystem
+// DestinationFilepath returns the destination filepath from the build context to the image filesystem
 // If source is a file:
 //	If dest is a dir, copy it to /dest/relpath
 // 	If dest is a file, copy directly to dest
 // If source is a dir:
 //	Assume dest is also a dir, and copy to dest/relpath
 // If dest is not an absolute filepath, add /cwd to the beginning
-func RelativeFilepath(filename, srcName, dest, cwd, buildcontext string) (string, error) {
+func DestinationFilepath(filename, srcName, dest, cwd, buildcontext string) (string, error) {
 	fi, err := os.Stat(filepath.Join(buildcontext, filename))
 	if err != nil {
 		return "", err
@@ -116,12 +108,12 @@ func RelativeFilepath(filename, srcName, dest, cwd, buildcontext string) (string
 			relPath = filepath.Base(filename)
 		}
 		destPath := filepath.Join(dest, relPath)
-		if IsAbsoluteFilepath(dest) {
+		if filepath.IsAbs(dest) {
 			return destPath, nil
 		}
 		return filepath.Join(cwd, destPath), nil
 	}
-	if IsAbsoluteFilepath(dest) {
+	if filepath.IsAbs(dest) {
 		return dest, nil
 	}
 	return filepath.Join(cwd, dest), nil
@@ -145,18 +137,7 @@ func SourcesToFilesMap(srcs []string, root string) (map[string][]string, error) 
 func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, srcMap map[string][]string) error {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	dest := srcsAndDest[len(srcsAndDest)-1]
-	// If destination is a directory, return nil
-	if IsDestDir(dest) {
-		return nil
-	}
-	// If no wildcards and multiple sources, return error
-	if !ContainsWildcards(srcs) {
-		if len(srcs) > 1 {
-			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
-		}
-		return nil
-	}
-	// If there are wildcards, and the destination is a file, there must be exactly one file to copy over
+
 	totalFiles := 0
 	for _, files := range srcMap {
 		totalFiles += len(files)
@@ -164,7 +145,18 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, srcMap map[string][]st
 	if totalFiles == 0 {
 		return errors.New("copy failed: no source files specified")
 	}
-	if totalFiles > 1 {
+
+	if !ContainsWildcards(srcs) {
+		// If multiple sources and destination isn't a directory, return an error
+		if len(srcs) > 1 && !IsDestDir(dest) {
+			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+		}
+		return nil
+	}
+
+	// If there are wildcards, and the destination is a file, there must be exactly one file to copy over,
+	// Otherwise, return an error
+	if !IsDestDir(dest) && totalFiles > 1 {
 		return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 	}
 	return nil

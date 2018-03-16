@@ -129,7 +129,7 @@ func CreateFile(path string, contents []byte, perm os.FileMode) error {
 	baseDir := filepath.Dir(path)
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
 		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, path)
-		if err := os.MkdirAll(baseDir, perm); err != nil {
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
 		}
 	}
@@ -140,5 +140,8 @@ func CreateFile(path string, contents []byte, perm os.FileMode) error {
 		return err
 	}
 	_, err = f.Write(contents)
-	return err
+	if err != nil {
+		return err
+	}
+	return f.Chmod(perm)
 }

@@ -24,7 +24,7 @@ import (
 
 var buildContextPath = "../../integration_tests/"
 
-var relativeFilepathTests = []struct {
+var destinationFilepathTests = []struct {
 	srcName          string
 	filename         string
 	dest             string
@@ -111,9 +111,9 @@ var relativeFilepathTests = []struct {
 	},
 }
 
-func Test_RelativeFilepath(t *testing.T) {
-	for _, test := range relativeFilepathTests {
-		actualFilepath, err := RelativeFilepath(test.filename, test.srcName, test.dest, test.cwd, buildContextPath)
+func Test_DestinationFilepath(t *testing.T) {
+	for _, test := range destinationFilepathTests {
+		actualFilepath, err := DestinationFilepath(test.filename, test.srcName, test.dest, test.cwd, buildContextPath)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFilepath, actualFilepath)
 	}
 }
@@ -161,7 +161,14 @@ var isSrcValidTests = []struct {
 			"src2",
 			"dest",
 		},
-		files:     nil,
+		files: map[string][]string{
+			"src1": {
+				"file1",
+			},
+			"src2:": {
+				"file2",
+			},
+		},
 		shouldErr: true,
 	},
 	{
@@ -170,7 +177,14 @@ var isSrcValidTests = []struct {
 			"src2",
 			"dest/",
 		},
-		files:     nil,
+		files: map[string][]string{
+			"src1": {
+				"file1",
+			},
+			"src2:": {
+				"file2",
+			},
+		},
 		shouldErr: false,
 	},
 	{
@@ -178,7 +192,14 @@ var isSrcValidTests = []struct {
 			"src2/",
 			"dest",
 		},
-		files:     nil,
+		files: map[string][]string{
+			"src1": {
+				"file1",
+			},
+			"src2:": {
+				"file2",
+			},
+		},
 		shouldErr: false,
 	},
 	{
@@ -186,7 +207,14 @@ var isSrcValidTests = []struct {
 			"src2",
 			"dest",
 		},
-		files:     nil,
+		files: map[string][]string{
+			"src1": {
+				"file1",
+			},
+			"src2:": {
+				"file2",
+			},
+		},
 		shouldErr: false,
 	},
 	{
@@ -195,7 +223,14 @@ var isSrcValidTests = []struct {
 			"src*",
 			"dest/",
 		},
-		files:     nil,
+		files: map[string][]string{
+			"src1": {
+				"file1",
+			},
+			"src2:": {
+				"file2",
+			},
+		},
 		shouldErr: false,
 	},
 	{

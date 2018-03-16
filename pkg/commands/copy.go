@@ -52,7 +52,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 			if err != nil {
 				return err
 			}
-			destPath, err := util.RelativeFilepath(file, src, dest, config.WorkingDir, c.buildcontext)
+			destPath, err := util.DestinationFilepath(file, src, dest, config.WorkingDir, c.buildcontext)
 			if err != nil {
 				return err
 			}
