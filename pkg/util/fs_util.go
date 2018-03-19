@@ -23,7 +23,6 @@ import (
 	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -124,8 +123,8 @@ func FilepathExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-// CreateFile creates a file at path with contents specified
-func CreateFile(path string, contents []byte, perm os.FileMode) error {
+// CreateFile creates a file at path and copies over contents from the reader
+func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
@@ -134,5 +133,12 @@ func CreateFile(path string, contents []byte, perm os.FileMode) error {
 			return err
 		}
 	}
-	return ioutil.WriteFile(path, contents, perm)
+	dest, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(dest, reader); err != nil {
+		return err
+	}
+	return dest.Chmod(perm)
 }

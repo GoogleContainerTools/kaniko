@@ -21,7 +21,6 @@ import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,11 +64,12 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 			} else {
 				// ... Else, we want to copy over a file
 				logrus.Infof("Copying file %s to %s", file, destPath)
-				contents, err := ioutil.ReadFile(filepath.Join(c.buildcontext, file))
+				srcFile, err := os.Open(filepath.Join(c.buildcontext, file))
 				if err != nil {
 					return err
 				}
-				if err := util.CreateFile(destPath, contents, fi.Mode()); err != nil {
+				defer srcFile.Close()
+				if err := util.CreateFile(destPath, srcFile, fi.Mode()); err != nil {
 					return err
 				}
 			}
