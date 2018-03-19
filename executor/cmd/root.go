@@ -67,10 +67,6 @@ func execute() error {
 	if err != nil {
 		return err
 	}
-	// Set the escape token
-	if err := dockerfile.SetEscapeToken(d); err != nil {
-		return err
-	}
 	baseImage := stages[0].BaseName
 
 	// Unpack file system to root

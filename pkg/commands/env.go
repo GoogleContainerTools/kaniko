@@ -17,9 +17,10 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
+	"bytes"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/docker/docker/builder/dockerfile/parser"
 	"github.com/docker/docker/builder/dockerfile/shell"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -32,15 +33,20 @@ type EnvCommand struct {
 
 func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ENV")
+	// The dockerfile/shell package handles processing env values
+	// It handles escape characters and supports expansion from the config.Env array
+	// Shlex handles some of the following use cases (these and more are tested in integration tests)
+	// ""a'b'c"" -> "a'b'c"
+	// "Rex\ The\ Dog \" -> "Rex The Dog"
+	// "a\"b" -> "a"b"
+	envString := envToString(e.cmd)
+	p, err := parser.Parse(bytes.NewReader([]byte(envString)))
+	if err != nil {
+		return err
+	}
+	shlex := shell.NewLex(p.EscapeToken)
 	newEnvs := e.cmd.Env
 	for index, pair := range newEnvs {
-		// The dockerfile/shell package handles processing env values
-		// It handles escape characters and supports expansion from the config.Env array
-		// Shlex handles some of the following use cases (these and more are tested in integration tests)
-		// ""a'b'c"" -> "a'b'c"
-		// "Rex\ The\ Dog \" -> "Rex The Dog"
-		// "a\"b" -> "a"b"
-		shlex := shell.NewLex(dockerfile.EscapeToken)
 		expandedValue, err := shlex.ProcessWord(pair.Value, config.Env)
 		if err != nil {
 			return err
@@ -90,6 +96,14 @@ Loop:
 	}
 	config.Env = envArray
 	return nil
+}
+
+func envToString(cmd *instructions.EnvCommand) string {
+	env := []string{"ENV"}
+	for _, kvp := range cmd.Env {
+		env = append(env, kvp.Key+"="+kvp.Value)
+	}
+	return strings.Join(env, " ")
 }
 
 // We know that no files have changed, so return an empty array

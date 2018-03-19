@@ -23,8 +23,6 @@ import (
 	"github.com/docker/docker/builder/dockerfile/parser"
 )
 
-var EscapeToken rune
-
 // Parse parses the contents of a Dockerfile and returns a list of commands
 func Parse(b []byte) ([]instructions.Stage, error) {
 	p, err := parser.Parse(bytes.NewReader(b))
@@ -36,13 +34,4 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 		return nil, err
 	}
 	return stages, err
-}
-
-func SetEscapeToken(b []byte) error {
-	p, err := parser.Parse(bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	EscapeToken = p.EscapeToken
-	return nil
 }

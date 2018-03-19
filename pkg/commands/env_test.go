@@ -53,3 +53,21 @@ func TestUpdateEnvConfig(t *testing.T) {
 	updateConfigEnv(newEnvs, cfg)
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedEnvArray, cfg.Env)
 }
+
+func TestEnvToString(t *testing.T) {
+	envCmd := &instructions.EnvCommand{
+		Env: []instructions.KeyValuePair{
+			{
+				Key:   "PATH",
+				Value: "/some/path",
+			},
+			{
+				Key:   "HOME",
+				Value: "/root",
+			},
+		},
+	}
+	expectedString := "ENV PATH=/some/path HOME=/root"
+	actualString := envToString(envCmd)
+	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedString, actualString)
+}
