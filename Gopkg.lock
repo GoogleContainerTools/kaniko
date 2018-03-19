@@ -161,6 +161,7 @@
     "builder/dockerfile/command",
     "builder/dockerfile/instructions",
     "builder/dockerfile/parser",
+    "builder/dockerfile/shell",
     "client",
     "pkg/homedir",
     "pkg/idtools",
@@ -486,6 +487,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fd21de0404336debb893db778210835a27a3612fe9b9e5e412dcdc80d288a986"
+  inputs-digest = "eadec1feacc8473e54622d5f3a25fbc9c7fb1f9bd38776475c3e2d283bd80d2a"
   solver-name = "gps-cdcl"
   solver-version = 1
