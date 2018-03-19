@@ -82,9 +82,6 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 
 // FilesToSnapshot should return an empty array if still nil; no files were changed
 func (c *CopyCommand) FilesToSnapshot() []string {
-	if c.snapshotFiles == nil {
-		return []string{}
-	}
 	return c.snapshotFiles
 }
 

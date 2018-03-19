@@ -23,6 +23,7 @@ import (
 	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -120,7 +121,7 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 // FilepathExists returns true if the path exists
 func FilepathExists(path string) bool {
 	_, err := os.Stat(path)
-	return (err == nil)
+	return !os.IsNotExist(err)
 }
 
 // CreateFile creates a file at path with contents specified
@@ -133,15 +134,5 @@ func CreateFile(path string, contents []byte, perm os.FileMode) error {
 			return err
 		}
 	}
-
-	f, err := os.Create(path)
-	defer f.Close()
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(contents)
-	if err != nil {
-		return err
-	}
-	return f.Chmod(perm)
+	return ioutil.WriteFile(path, contents, perm)
 }
