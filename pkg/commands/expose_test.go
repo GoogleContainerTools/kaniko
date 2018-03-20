@@ -17,12 +17,14 @@ func TestUpdateExposedPorts(t *testing.T) {
 		"8080",
 		"8081/tcp",
 		"8082",
+		"8083/udp",
 	}
 
 	expectedPorts := manifest.Schema2PortSet{
 		"8080/tcp": {},
 		"8081/tcp": {},
 		"8082/tcp": {},
+		"8083/udp": {},
 	}
 
 	updateExposedPorts(ports, cfg)

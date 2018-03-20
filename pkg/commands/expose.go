@@ -11,7 +11,7 @@ type ExposeCommand struct {
 }
 
 func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
-	return updateExposedPorts(r.Ports, config)
+	return updateExposedPorts(r.cmd.Ports, config)
 }
 
 func updateExposedPorts(ports []string, config *manifest.Schema2Config) error {
@@ -24,7 +24,8 @@ func updateExposedPorts(ports []string, config *manifest.Schema2Config) error {
 		if !strings.Contains(p, "/") {
 			p = p + "/tcp"
 		}
-		existingPorts[p] = {}
+		var x struct{}
+		existingPorts[manifest.Schema2Port(p)] = x
 	}
 	config.ExposedPorts = existingPorts
 	return nil
@@ -36,5 +37,5 @@ func (r *ExposeCommand) FilesToSnapshot() []string {
 
 func (r *ExposeCommand) CreatedBy() string {
 	s := []string{"/bin/sh", "-c"}
-	return strings.Join(append(s, r.Ports...), " ")
+	return strings.Join(append(s, r.cmd.Ports...), " ")
 }
