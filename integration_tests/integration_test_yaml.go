@@ -65,6 +65,13 @@ var structureTests = []struct {
 		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_env.yaml",
 	},
+	{
+		description:           "test cmd",
+		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_cmd",
+		repo:                  "test-cmd",
+		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
+		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_cmd.yaml",
+	},
 }
 
 type step struct {
