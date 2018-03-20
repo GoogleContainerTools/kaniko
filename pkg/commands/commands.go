@@ -40,6 +40,8 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &RunCommand{cmd: c}, nil
 	case *instructions.CopyCommand:
 		return &CopyCommand{cmd: c, buildcontext: buildcontext}, nil
+	case *instructions.ExposeCommand:
+		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
 		return &EnvCommand{cmd: c}, nil
 	}
