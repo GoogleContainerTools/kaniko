@@ -2,3 +2,6 @@ FROM gcr.io/distroless/base:latest
 CMD ["command", "one"]
 CMD ["command", "two"]
 CMD echo "hello"
+
+ENTRYPOINT ["execute", "something"]
+ENTRYPOINT ["execute", "entrypoint"]

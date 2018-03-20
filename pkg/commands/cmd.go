@@ -53,11 +53,13 @@ func (c *CmdCommand) FilesToSnapshot() []string {
 
 // CreatedBy returns some information about the command for the image config history
 func (c *CmdCommand) CreatedBy() string {
+	cmd := []string{"CMD"}
 	cmdLine := strings.Join(c.cmd.CmdLine, " ")
 	if c.cmd.PrependShell {
 		// TODO: Support shell command here
 		shell := []string{"/bin/sh", "-c"}
-		return strings.Join(append(shell, cmdLine), " ")
+		appendedShell := append(cmd, shell...)
+		return strings.Join(append(appendedShell, cmdLine), " ")
 	}
-	return cmdLine
+	return strings.Join(append(cmd, cmdLine), " ")
 }
