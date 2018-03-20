@@ -1,0 +1,73 @@
+/*
+Copyright 2018 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package commands
+
+import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
+	"github.com/containers/image/manifest"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"testing"
+)
+
+func TestUpdateEnvConfig(t *testing.T) {
+	cfg := &manifest.Schema2Config{
+		Env: []string{
+			"PATH=/path/to/dir",
+			"hey=hey",
+		},
+	}
+
+	newEnvs := []instructions.KeyValuePair{
+		{
+			Key:   "foo",
+			Value: "foo2",
+		},
+		{
+			Key:   "PATH",
+			Value: "/new/path/",
+		},
+		{
+			Key:   "foo",
+			Value: "newfoo",
+		},
+	}
+
+	expectedEnvArray := []string{
+		"PATH=/new/path/",
+		"hey=hey",
+		"foo=newfoo",
+	}
+	updateConfigEnv(newEnvs, cfg)
+	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedEnvArray, cfg.Env)
+}
+
+func TestEnvToString(t *testing.T) {
+	envCmd := &instructions.EnvCommand{
+		Env: []instructions.KeyValuePair{
+			{
+				Key:   "PATH",
+				Value: "/some/path",
+			},
+			{
+				Key:   "HOME",
+				Value: "/root",
+			},
+		},
+	}
+	expectedString := "ENV PATH=/some/path HOME=/root"
+	actualString := envToString(envCmd)
+	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedString, actualString)
+}

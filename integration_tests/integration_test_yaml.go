@@ -21,7 +21,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var tests = []struct {
+var fileTests = []struct {
 	description    string
 	dockerfilePath string
 	configPath     string
@@ -48,6 +48,22 @@ var tests = []struct {
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run_2.json",
 		context:        "integration_tests/dockerfiles/",
 		repo:           "test-run-2",
+	},
+}
+
+var structureTests = []struct {
+	description           string
+	dockerfilePath        string
+	structureTestYamlPath string
+	dockerBuildContext    string
+	repo                  string
+}{
+	{
+		description:           "test env",
+		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_env",
+		repo:                  "test-env",
+		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
+		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_env.yaml",
 	},
 }
 
@@ -82,15 +98,23 @@ func main() {
 		Name: ubuntuImage,
 		Args: []string{"chmod", "+x", "container-diff-linux-amd64"},
 	}
+	structureTestsStep := step{
+		Name: "gcr.io/cloud-builders/gsutil",
+		Args: []string{"cp", "gs://container-structure-test/latest/container-structure-test", "."},
+	}
+	structureTestPermissions := step{
+		Name: ubuntuImage,
+		Args: []string{"chmod", "+x", "container-structure-test"},
+	}
 	// Build executor image
 	buildExecutorImage := step{
 		Name: dockerImage,
 		Args: []string{"build", "-t", executorImage, "-f", "integration_tests/executor/Dockerfile", "."},
 	}
 	y := testyaml{
-		Steps: []step{containerDiffStep, containerDiffPermissions, buildExecutorImage},
+		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, buildExecutorImage},
 	}
-	for _, test := range tests {
+	for _, test := range fileTests {
 		// First, build the image with docker
 		dockerImageTag := testRepo + dockerPrefix + test.repo
 		dockerBuild := step{
@@ -131,6 +155,43 @@ func main() {
 		}
 
 		y.Steps = append(y.Steps, dockerBuild, kbuild, pullKbuildImage, containerDiff, catContainerDiffOutput, compareOutputs)
+	}
+
+	for _, test := range structureTests {
+
+		// First, build the image with docker
+		dockerImageTag := testRepo + dockerPrefix + test.repo
+		dockerBuild := step{
+			Name: dockerImage,
+			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerBuildContext},
+		}
+
+		// Build the image with kbuild
+		kbuildImage := testRepo + kbuildPrefix + test.repo
+		kbuild := step{
+			Name: executorImage,
+			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
+		}
+		// Pull the kbuild image
+		pullKbuildImage := step{
+			Name: dockerImage,
+			Args: []string{"pull", kbuildImage},
+		}
+		// Run structure tests on the kbuild and docker image
+		args := "container-structure-test -image " + kbuildImage + " " + test.structureTestYamlPath
+		structureTest := step{
+			Name: ubuntuImage,
+			Args: []string{"sh", "-c", args},
+			Env:  []string{"PATH=/workspace:/bin"},
+		}
+		args = "container-structure-test -image " + dockerImageTag + " " + test.structureTestYamlPath
+		dockerStructureTest := step{
+			Name: ubuntuImage,
+			Args: []string{"sh", "-c", args},
+			Env:  []string{"PATH=/workspace:/bin"},
+		}
+
+		y.Steps = append(y.Steps, dockerBuild, kbuild, pullKbuildImage, structureTest, dockerStructureTest)
 	}
 
 	d, _ := yaml.Marshal(&y)
