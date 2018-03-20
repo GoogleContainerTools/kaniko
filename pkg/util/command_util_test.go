@@ -109,6 +109,13 @@ var destinationFilepathTests = []struct {
 		dest:             "/dir",
 		expectedFilepath: "/dir/context/bar",
 	},
+	{
+		srcName:          "context/foo",
+		filename:         "context/foo",
+		cwd:              "/test",
+		dest:             ".",
+		expectedFilepath: "/test/foo",
+	},
 }
 
 func Test_DestinationFilepath(t *testing.T) {

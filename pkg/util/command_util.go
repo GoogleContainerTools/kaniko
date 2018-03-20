@@ -80,7 +80,7 @@ func matchSources(srcs, files []string) ([]string, error) {
 }
 
 func IsDestDir(path string) bool {
-	return strings.HasSuffix(path, "/")
+	return strings.HasSuffix(path, "/") || path == "."
 }
 
 // DestinationFilepath returns the destination filepath from the build context to the image filesystem
