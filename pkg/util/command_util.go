@@ -18,12 +18,31 @@ package util
 
 import (
 	"bytes"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
 	"github.com/docker/docker/builder/dockerfile/shell"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"os"
 	"path/filepath"
+	"strings"
 )
 
-// ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
+// ResolveEnvironmentReplacement resolves a list of values by calling resolveEnvironmentReplacement
+func ResolveEnvironmentReplacementList(command string, values, envs []string, isFilepath bool) ([]string, error) {
+	var resolvedValues []string
+	for _, value := range values {
+		resolved, err := ResolveEnvironmentReplacement(command, value, envs, isFilepath)
+		logrus.Infof("Resolved %s to %s", value, resolved)
+		if err != nil {
+			return nil, err
+		}
+		resolvedValues = append(resolvedValues, resolved)
+	}
+	return resolvedValues, nil
+}
+
+// resolveEnvironmentReplacement resolves replacing env variables in some text from envs
 // It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
 // Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
 // The dockerfile/shell package handles processing env values
@@ -32,30 +51,159 @@ import (
 // ""a'b'c"" -> "a'b'c"
 // "Rex\ The\ Dog \" -> "Rex The Dog"
 // "a\"b" -> "a"b"
-func ResolveEnvironmentReplacement(command, value string, envs []string) (string, error) {
-	p, err := parser.Parse(bytes.NewReader([]byte(command)))
-	if err != nil {
-		return "", err
-	}
-	shlex := shell.NewLex(p.EscapeToken)
-	return shlex.ProcessWord(value, envs)
-}
-
-// ResolveFilepathEnvironmentReplacement replaces env variables in filepaths
-// and returns a cleaned version of the path
-func ResolveFilepathEnvironmentReplacement(command, value string, envs []string) (string, error) {
+func ResolveEnvironmentReplacement(command, value string, envs []string, isFilepath bool) (string, error) {
 	p, err := parser.Parse(bytes.NewReader([]byte(command)))
 	if err != nil {
 		return "", err
 	}
 	shlex := shell.NewLex(p.EscapeToken)
 	fp, err := shlex.ProcessWord(value, envs)
+	if !isFilepath {
+		return fp, err
+	}
 	if err != nil {
 		return "", err
 	}
 	fp = filepath.Clean(fp)
-	if filepath.IsAbs(value) {
-		fp = filepath.Join(fp, "/")
+	if IsDestDir(value) {
+		fp = fp + "/"
 	}
 	return fp, nil
+}
+
+// ContainsWildcards returns true if any entry in paths contains wildcards
+func ContainsWildcards(paths []string) bool {
+	for _, path := range paths {
+		if strings.ContainsAny(path, "*?[") {
+			return true
+		}
+	}
+	return false
+}
+
+// ResolveSources resolves the given sources if the sources contains wildcards
+// It returns a map of [src]:[files rooted at src]
+func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[string][]string, error) {
+	srcs := srcsAndDest[:len(srcsAndDest)-1]
+	// If sources contain wildcards, we first need to resolve them to actual paths
+	if ContainsWildcards(srcs) {
+		logrus.Debugf("Resolving srcs %v...", srcs)
+		files, err := RelativeFiles("", root)
+		if err != nil {
+			return nil, err
+		}
+		srcs, err = matchSources(srcs, files)
+		if err != nil {
+			return nil, err
+		}
+		logrus.Debugf("Resolved sources to %v", srcs)
+	}
+	// Now, get a map of [src]:[files rooted at src]
+	srcMap, err := SourcesToFilesMap(srcs, root)
+	if err != nil {
+		return nil, err
+	}
+	// Check to make sure the sources are valid
+	return srcMap, IsSrcsValid(srcsAndDest, srcMap)
+}
+
+// matchSources returns a list of sources that match wildcards
+func matchSources(srcs, files []string) ([]string, error) {
+	var matchedSources []string
+	for _, src := range srcs {
+		src = filepath.Clean(src)
+		for _, file := range files {
+			matched, err := filepath.Match(src, file)
+			if err != nil {
+				return nil, err
+			}
+			if matched {
+				matchedSources = append(matchedSources, file)
+			}
+		}
+	}
+	return matchedSources, nil
+}
+
+func IsDestDir(path string) bool {
+	return strings.HasSuffix(path, "/") || path == "."
+}
+
+// DestinationFilepath returns the destination filepath from the build context to the image filesystem
+// If source is a file:
+//	If dest is a dir, copy it to /dest/relpath
+// 	If dest is a file, copy directly to dest
+// If source is a dir:
+//	Assume dest is also a dir, and copy to dest/relpath
+// If dest is not an absolute filepath, add /cwd to the beginning
+func DestinationFilepath(filename, srcName, dest, cwd, buildcontext string) (string, error) {
+	fi, err := os.Stat(filepath.Join(buildcontext, filename))
+	if err != nil {
+		return "", err
+	}
+	src, err := os.Stat(filepath.Join(buildcontext, srcName))
+	if err != nil {
+		return "", err
+	}
+	if src.IsDir() || IsDestDir(dest) {
+		relPath, err := filepath.Rel(srcName, filename)
+		if err != nil {
+			return "", err
+		}
+		if relPath == "." && !fi.IsDir() {
+			relPath = filepath.Base(filename)
+		}
+		destPath := filepath.Join(dest, relPath)
+		if filepath.IsAbs(dest) {
+			return destPath, nil
+		}
+		return filepath.Join(cwd, destPath), nil
+	}
+	if filepath.IsAbs(dest) {
+		return dest, nil
+	}
+	return filepath.Join(cwd, dest), nil
+}
+
+// SourcesToFilesMap returns a map of [src]:[files rooted at source]
+func SourcesToFilesMap(srcs []string, root string) (map[string][]string, error) {
+	srcMap := make(map[string][]string)
+	for _, src := range srcs {
+		src = filepath.Clean(src)
+		files, err := RelativeFiles(src, root)
+		if err != nil {
+			return nil, err
+		}
+		srcMap[src] = files
+	}
+	return srcMap, nil
+}
+
+// IsSrcsValid returns an error if the sources provided are invalid, or nil otherwise
+func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, srcMap map[string][]string) error {
+	srcs := srcsAndDest[:len(srcsAndDest)-1]
+	dest := srcsAndDest[len(srcsAndDest)-1]
+
+	totalFiles := 0
+	for _, files := range srcMap {
+		totalFiles += len(files)
+	}
+	if totalFiles == 0 {
+		return errors.New("copy failed: no source files specified")
+	}
+
+	if !ContainsWildcards(srcs) {
+		// If multiple sources and destination isn't a directory, return an error
+		if len(srcs) > 1 && !IsDestDir(dest) {
+			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+		}
+		return nil
+	}
+
+	// If there are wildcards, and the destination is a file, there must be exactly one file to copy over,
+	// Otherwise, return an error
+	if !IsDestDir(dest) && totalFiles > 1 {
+		return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+	}
+	return nil
 }

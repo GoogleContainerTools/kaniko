@@ -36,7 +36,7 @@ func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	// Add any new ones in
 	for _, p := range r.cmd.Ports {
 		// Resolve any environment variables
-		p, err := util.ResolveEnvironmentReplacement(exposeString, p, config.Env)
+		p, err := util.ResolveEnvironmentReplacement(exposeString, p, config.Env, false)
 		if err != nil {
 			return err
 		}

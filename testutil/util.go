@@ -50,6 +50,12 @@ func CheckErrorAndDeepEqual(t *testing.T, shouldErr bool, err error, expected, a
 	}
 }
 
+func CheckError(t *testing.T, shouldErr bool, err error) {
+	if err := checkErr(shouldErr, err); err != nil {
+		t.Error(err)
+	}
+}
+
 func checkErr(shouldErr bool, err error) error {
 	if err == nil && shouldErr {
 		return fmt.Errorf("Expected error, but returned none")

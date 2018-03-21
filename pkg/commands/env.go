@@ -35,11 +35,11 @@ func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	envString := envToString(e.cmd)
 	newEnvs := e.cmd.Env
 	for index, pair := range newEnvs {
-		expandedKey, err := util.ResolveEnvironmentReplacement(envString, pair.Key, config.Env)
+		expandedKey, err := util.ResolveEnvironmentReplacement(envString, pair.Key, config.Env, false)
 		if err != nil {
 			return err
 		}
-		expandedValue, err := util.ResolveEnvironmentReplacement(envString, pair.Value, config.Env)
+		expandedValue, err := util.ResolveEnvironmentReplacement(envString, pair.Value, config.Env, false)
 		if err != nil {
 			return err
 		}

@@ -97,3 +97,48 @@ func fileSystemWhitelist(path string) ([]string, error) {
 	}
 	return whitelist, nil
 }
+
+// RelativeFiles returns a list of all files at the filepath relative to root
+func RelativeFiles(fp string, root string) ([]string, error) {
+	var files []string
+	fullPath := filepath.Join(root, fp)
+	logrus.Debugf("Getting files and contents at root %s", fullPath)
+	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files = append(files, relPath)
+		return nil
+	})
+	return files, err
+}
+
+// FilepathExists returns true if the path exists
+func FilepathExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}
+
+// CreateFile creates a file at path and copies over contents from the reader
+func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
+	// Create directory path if it doesn't exist
+	baseDir := filepath.Dir(path)
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return err
+		}
+	}
+	dest, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(dest, reader); err != nil {
+		return err
+	}
+	return dest.Chmod(perm)
+}

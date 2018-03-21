@@ -34,10 +34,12 @@ type DockerCommand interface {
 	FilesToSnapshot() []string
 }
 
-func GetCommand(cmd instructions.Command) (DockerCommand, error) {
+func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
 		return &RunCommand{cmd: c}, nil
+	case *instructions.CopyCommand:
+		return &CopyCommand{cmd: c, buildcontext: buildcontext}, nil
 	case *instructions.ExposeCommand:
 		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
