@@ -38,9 +38,24 @@ func ResolveEnvironmentReplacement(command, value string, envs []string) (string
 		return "", err
 	}
 	shlex := shell.NewLex(p.EscapeToken)
-	processedWord, err := shlex.ProcessWord(value, envs)
+	return shlex.ProcessWord(value, envs)
+}
+
+// ResolveFilepathEnvironmentReplacement replaces env variables in filepaths
+// and returns a cleaned version of the path
+func ResolveFilepathEnvironmentReplacement(command, value string, envs []string) (string, error) {
+	p, err := parser.Parse(bytes.NewReader([]byte(command)))
 	if err != nil {
 		return "", err
 	}
-	return filepath.Clean(processedWord), nil
+	shlex := shell.NewLex(p.EscapeToken)
+	fp, err := shlex.ProcessWord(value, envs)
+	if err != nil {
+		return "", err
+	}
+	fp = filepath.Clean(fp)
+	if filepath.IsAbs(value) {
+		fp = filepath.Join(fp, "/")
+	}
+	return fp, nil
 }
