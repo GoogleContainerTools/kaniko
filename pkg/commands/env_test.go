@@ -71,3 +71,40 @@ func TestEnvToString(t *testing.T) {
 	actualString := envToString(envCmd)
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedString, actualString)
 }
+
+func Test_EnvExecute(t *testing.T) {
+	cfg := &manifest.Schema2Config{
+		Env: []string{
+			"path=/usr/",
+			"home=/root",
+		},
+	}
+
+	envCmd := &EnvCommand{
+		&instructions.EnvCommand{
+			Env: []instructions.KeyValuePair{
+				{
+					Key:   "path",
+					Value: "/some/path",
+				},
+				{
+					Key:   "HOME",
+					Value: "$home",
+				},
+				{
+					Key:   "$path",
+					Value: "$home",
+				},
+			},
+		},
+	}
+
+	expectedEnvs := []string{
+		"path=/some/path",
+		"home=/root",
+		"HOME=/root",
+		"/usr/=/root",
+	}
+	err := envCmd.ExecuteCommand(cfg)
+	testutil.CheckErrorAndDeepEqual(t, false, err, expectedEnvs, cfg.Env)
+}
