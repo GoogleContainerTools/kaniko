@@ -69,6 +69,6 @@ func (r *ExposeCommand) FilesToSnapshot() []string {
 }
 
 func (r *ExposeCommand) CreatedBy() string {
-	s := []string{"/bin/sh", "-c"}
+	s := []string{r.cmd.Name()}
 	return strings.Join(append(s, r.cmd.Ports...), " ")
 }
