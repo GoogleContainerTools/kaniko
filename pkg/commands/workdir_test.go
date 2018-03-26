@@ -22,6 +22,10 @@ import (
 	"testing"
 )
 
+// Each test here changes the same WorkingDir field in the config
+// So, some of the tests build off of each other
+// This is needed to make sure WorkingDir handles paths correctly
+// For example, if WORKDIR specifies a non-absolute path, it should be appended to the current WORKDIR
 var workdirTests = []struct {
 	path         string
 	expectedPath string
