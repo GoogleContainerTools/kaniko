@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -48,6 +49,13 @@ var fileTests = []struct {
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run_2.json",
 		context:        "integration_tests/dockerfiles/",
 		repo:           "test-run-2",
+	},
+	{
+		description:    "test copy",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_copy",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_copy.json",
+		context:        "/workspace/integration_tests/",
+		repo:           "test-copy",
 	},
 }
 
@@ -116,7 +124,7 @@ func main() {
 	// Build executor image
 	buildExecutorImage := step{
 		Name: dockerImage,
-		Args: []string{"build", "-t", executorImage, "-f", "integration_tests/executor/Dockerfile", "."},
+		Args: []string{"build", "-t", executorImage, "-f", "deploy/Dockerfile", "."},
 	}
 	y := testyaml{
 		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, buildExecutorImage},
@@ -133,7 +141,7 @@ func main() {
 		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
+			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
 		}
 
 		// Pull the kbuild image
