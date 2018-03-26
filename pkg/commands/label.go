@@ -19,6 +19,7 @@ package commands
 import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/docker/docker/builder/dockerfile/shell"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
@@ -34,6 +35,18 @@ func (r *LabelCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 func updateLabels(labels []instructions.KeyValuePair, config *manifest.Schema2Config) error {
 	existingLabels := config.Labels
 
+	// Let's unescape values before setting the label
+	shlex := shell.NewLex('\\')
+	for index, kvp := range labels {
+		unescaped, err := shlex.ProcessWord(kvp.Value, []string{})
+		if err != nil {
+			return err
+		}
+		labels[index] = instructions.KeyValuePair{
+			Key:   kvp.Key,
+			Value: unescaped,
+		}
+	}
 	for _, kvp := range labels {
 		logrus.Infof("Applying label %s=%s", kvp.Key, kvp.Value)
 		existingLabels[kvp.Key] = kvp.Value
@@ -44,10 +57,12 @@ func updateLabels(labels []instructions.KeyValuePair, config *manifest.Schema2Co
 
 }
 
+// No files have changed, this command only touches metadata.
 func (r *LabelCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
+// CreatedBy returns some information about the command for the image config history
 func (r *LabelCommand) CreatedBy() string {
 	l := []string{r.cmd.Name()}
 	for _, kvp := range r.cmd.Labels {
