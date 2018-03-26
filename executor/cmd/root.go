@@ -98,7 +98,7 @@ func execute() error {
 	// Currently only supports single stage builds
 	for _, stage := range stages {
 		for _, cmd := range stage.Commands {
-			dockerCommand, err := commands.GetCommand(cmd)
+			dockerCommand, err := commands.GetCommand(cmd, srcContext)
 			if err != nil {
 				return err
 			}
