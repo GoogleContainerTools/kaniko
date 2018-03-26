@@ -44,6 +44,8 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
 		return &EnvCommand{cmd: c}, nil
+	case *instructions.WorkdirCommand:
+		return &WorkdirCommand{cmd: c}, nil
 	}
 	return nil, errors.Errorf("%s is not a supported command", cmd.Name())
 }
