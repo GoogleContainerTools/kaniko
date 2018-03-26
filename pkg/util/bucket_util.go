@@ -56,9 +56,7 @@ func getTarFromBucket(bucketName, directory string) (string, error) {
 		return "", err
 	}
 	bucket := client.Bucket(bucketName)
-
 	// Get the tarfile kbuild.tar from the GCS bucket, and save it to a tar object
-
 	reader, err := bucket.Object(constants.KbuildTar).NewReader(ctx)
 	if err != nil {
 		return "", err
