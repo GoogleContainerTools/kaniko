@@ -23,6 +23,7 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -33,12 +34,14 @@ var (
 	dockerfilePath string
 	destination    string
 	srcContext     string
+	bucket         string
 	logLevel       string
 )
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "/workspace/Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
+	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 }
@@ -63,16 +66,21 @@ var RootCmd = &cobra.Command{
 // resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
 // it resets srcContext to be the path to the unpacked build context within the image
 func resolveSourceContext() error {
-	if util.FilepathExists(srcContext) {
+	if srcContext == "" && bucket == "" {
+		return errors.New("please specify a path to the build context with the --context flag or a GCS bucket with the --bucket flag")
+	}
+	if srcContext != "" && bucket != "" {
+		return errors.New("please specify either --bucket or --context as the desired build context")
+	}
+	if srcContext != "" {
 		return nil
 	}
-	// Else, assume the source context is the name of a bucket
-	logrus.Infof("Using GCS bucket %s as source context", srcContext)
+	logrus.Infof("Using GCS bucket %s as source context", bucket)
 	buildContextPath := constants.BuildContextDir
-	if err := util.UnpackTarFromGCSBucket(srcContext, buildContextPath); err != nil {
+	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
 		return err
 	}
-	logrus.Debugf("Unpacked tar from %s to path %s", srcContext, buildContextPath)
+	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
 	srcContext = buildContextPath
 	return nil
 }

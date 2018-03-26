@@ -38,12 +38,13 @@ const (
 )
 
 var fileTests = []struct {
-	description    string
-	dockerfilePath string
-	configPath     string
-	dockerContext  string
-	kbuildContext  string
-	repo           string
+	description         string
+	dockerfilePath      string
+	configPath          string
+	dockerContext       string
+	kbuildContext       string
+	kbuildContextBucket bool
+	repo                string
 }{
 	{
 		description:    "test extract filesystem",
@@ -78,12 +79,13 @@ var fileTests = []struct {
 		repo:           "test-copy",
 	},
 	{
-		description:    "test bucket build context",
-		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_copy",
-		configPath:     "/workspace/integration_tests/dockerfiles/config_test_bucket_buildcontext.json",
-		dockerContext:  buildcontextPath,
-		kbuildContext:  kbuildTestBucket,
-		repo:           "test-bucket-buildcontext",
+		description:         "test bucket build context",
+		dockerfilePath:      "/workspace/integration_tests/dockerfiles/Dockerfile_test_copy",
+		configPath:          "/workspace/integration_tests/dockerfiles/config_test_bucket_buildcontext.json",
+		dockerContext:       buildcontextPath,
+		kbuildContext:       kbuildTestBucket,
+		kbuildContextBucket: true,
+		repo:                "test-bucket-buildcontext",
 	},
 }
 
@@ -162,9 +164,13 @@ func main() {
 
 		// Then, buld the image with kbuild
 		kbuildImage := testRepo + kbuildPrefix + test.repo
+		contextFlag := "--context"
+		if test.kbuildContextBucket {
+			contextFlag = "--bucket"
+		}
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.kbuildContext},
+			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kbuildContext},
 		}
 
 		// Pull the kbuild image
