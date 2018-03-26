@@ -93,7 +93,7 @@ func Test_EnvExecute(t *testing.T) {
 				},
 				{
 					Key:   "$path",
-					Value: "$home",
+					Value: "$home/",
 				},
 			},
 		},
@@ -103,7 +103,7 @@ func Test_EnvExecute(t *testing.T) {
 		"path=/some/path",
 		"home=/root",
 		"HOME=/root",
-		"/usr/=/root",
+		"/usr/=/root/",
 	}
 	err := envCmd.ExecuteCommand(cfg)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedEnvs, cfg.Env)

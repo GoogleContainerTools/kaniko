@@ -31,7 +31,6 @@ type EnvCommand struct {
 
 func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ENV")
-
 	envString := envToString(e.cmd)
 	newEnvs := e.cmd.Env
 	for index, pair := range newEnvs {

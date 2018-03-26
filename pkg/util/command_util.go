@@ -33,7 +33,7 @@ func ResolveEnvironmentReplacementList(command string, values, envs []string, is
 	var resolvedValues []string
 	for _, value := range values {
 		resolved, err := ResolveEnvironmentReplacement(command, value, envs, isFilepath)
-		logrus.Infof("Resolved %s to %s", value, resolved)
+		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
 		}
