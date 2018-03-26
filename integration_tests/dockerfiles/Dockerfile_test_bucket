@@ -1,0 +1,2 @@
+FROM gcr.io/distroless/base:latest
+COPY baz /tmp/baz

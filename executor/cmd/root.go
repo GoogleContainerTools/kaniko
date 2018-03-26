@@ -49,11 +49,32 @@ var RootCmd = &cobra.Command{
 		return util.SetLogLevel(logLevel)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := resolveSourceContext(); err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
 		if err := execute(); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
 	},
+}
+
+// resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
+// it resets srcContext to be the path to the unpacked build context within the image
+func resolveSourceContext() error {
+	if util.FilepathExists(srcContext) {
+		return nil
+	}
+	// Else, assume the source context is the name of a bucket
+	logrus.Infof("Using GCS bucket %s as source context", srcContext)
+	buildContextPath := constants.BuildContextDir
+	if err := util.UnpackTarFromGCSBucket(srcContext, buildContextPath); err != nil {
+		return err
+	}
+	logrus.Debugf("Unpacked tar from %s to path %s", srcContext, buildContextPath)
+	srcContext = buildContextPath
+	return nil
 }
 
 func execute() error {
@@ -123,5 +144,23 @@ func execute() error {
 		}
 	}
 	// Push the image
+	if err := setDefaultEnv(); err != nil {
+		return err
+	}
 	return image.PushImage(sourceImage, destination)
+}
+
+// setDefaultEnv sets default values for HOME and PATH so that
+// config.json and docker-credential-gcr can be accessed
+func setDefaultEnv() error {
+	defaultEnvs := map[string]string{
+		"HOME": "/root",
+		"PATH": "/usr/local/bin/",
+	}
+	for key, val := range defaultEnvs {
+		if err := os.Setenv(key, val); err != nil {
+			return err
+		}
+	}
+	return nil
 }
