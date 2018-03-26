@@ -39,11 +39,16 @@ func TestUpdateLabels(t *testing.T) {
 			Key:   "bar",
 			Value: "baz",
 		},
+		{
+			Key:   "multiword",
+			Value: "lots\\ of\\ words",
+		},
 	}
 
 	expectedLabels := map[string]string{
-		"foo": "override",
-		"bar": "baz",
+		"foo":       "override",
+		"bar":       "baz",
+		"multiword": "lots of words",
 	}
 	updateLabels(labels, cfg)
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedLabels, cfg.Labels)
