@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -116,7 +117,7 @@ func main() {
 	// Build executor image
 	buildExecutorImage := step{
 		Name: dockerImage,
-		Args: []string{"build", "-t", executorImage, "-f", "integration_tests/executor/Dockerfile", "."},
+		Args: []string{"build", "-t", executorImage, "-f", "deploy/Dockerfile", "."},
 	}
 	y := testyaml{
 		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, buildExecutorImage},
