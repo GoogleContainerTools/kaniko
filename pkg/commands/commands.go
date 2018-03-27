@@ -44,6 +44,10 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
 		return &EnvCommand{cmd: c}, nil
+	case *instructions.CmdCommand:
+		return &CmdCommand{cmd: c}, nil
+	case *instructions.EntrypointCommand:
+		return &EntrypointCommand{cmd: c}, nil
 	case *instructions.LabelCommand:
 		return &LabelCommand{cmd: c}, nil
 	}
