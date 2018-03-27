@@ -31,14 +31,13 @@ type EnvCommand struct {
 
 func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ENV")
-	envString := envToString(e.cmd)
 	newEnvs := e.cmd.Env
 	for index, pair := range newEnvs {
-		expandedKey, err := util.ResolveEnvironmentReplacement(envString, pair.Key, config.Env, false)
+		expandedKey, err := util.ResolveEnvironmentReplacement(pair.Key, config.Env, false)
 		if err != nil {
 			return err
 		}
-		expandedValue, err := util.ResolveEnvironmentReplacement(envString, pair.Value, config.Env, false)
+		expandedValue, err := util.ResolveEnvironmentReplacement(pair.Value, config.Env, false)
 		if err != nil {
 			return err
 		}
@@ -87,14 +86,6 @@ Loop:
 	}
 	config.Env = envArray
 	return nil
-}
-
-func envToString(cmd *instructions.EnvCommand) string {
-	env := []string{"ENV"}
-	for _, kvp := range cmd.Env {
-		env = append(env, kvp.Key+"="+kvp.Value)
-	}
-	return strings.Join(env, " ")
 }
 
 // We know that no files have changed, so return an empty array

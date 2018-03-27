@@ -40,11 +40,11 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Infof("dest: %s", dest)
 
 	// First, resolve any environment replacement
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.copyToString(), c.cmd.SourcesAndDest, config.Env, true)
+	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, config.Env, true)
 	if err != nil {
 		return err
 	}
-	dest = resolvedEnvs[len(c.cmd.SourcesAndDest)-1]
+	dest = resolvedEnvs[len(resolvedEnvs)-1]
 	// Get a map of [src]:[files rooted at src]
 	srcMap, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
@@ -84,11 +84,6 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		}
 	}
 	return nil
-}
-
-func (c *CopyCommand) copyToString() string {
-	copy := []string{"COPY"}
-	return strings.Join(append(copy, c.cmd.SourcesAndDest...), " ")
 }
 
 // FilesToSnapshot should return an empty array if still nil; no files were changed

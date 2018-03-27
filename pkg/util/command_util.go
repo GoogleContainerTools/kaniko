@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"bytes"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
 	"github.com/docker/docker/builder/dockerfile/shell"
@@ -29,10 +28,10 @@ import (
 )
 
 // ResolveEnvironmentReplacement resolves a list of values by calling resolveEnvironmentReplacement
-func ResolveEnvironmentReplacementList(command string, values, envs []string, isFilepath bool) ([]string, error) {
+func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
-		resolved, err := ResolveEnvironmentReplacement(command, value, envs, isFilepath)
+		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -42,7 +41,7 @@ func ResolveEnvironmentReplacementList(command string, values, envs []string, is
 	return resolvedValues, nil
 }
 
-// resolveEnvironmentReplacement resolves replacing env variables in some text from envs
+// ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
 // It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
 // Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
 // The dockerfile/shell package handles processing env values
@@ -51,12 +50,8 @@ func ResolveEnvironmentReplacementList(command string, values, envs []string, is
 // ""a'b'c"" -> "a'b'c"
 // "Rex\ The\ Dog \" -> "Rex The Dog"
 // "a\"b" -> "a"b"
-func ResolveEnvironmentReplacement(command, value string, envs []string, isFilepath bool) (string, error) {
-	p, err := parser.Parse(bytes.NewReader([]byte(command)))
-	if err != nil {
-		return "", err
-	}
-	shlex := shell.NewLex(p.EscapeToken)
+func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool) (string, error) {
+	shlex := shell.NewLex(parser.DefaultEscapeToken)
 	fp, err := shlex.ProcessWord(value, envs)
 	if !isFilepath {
 		return fp, err

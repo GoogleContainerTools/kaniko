@@ -32,11 +32,10 @@ type ExposeCommand struct {
 func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	// Grab the currently exposed ports
 	existingPorts := config.ExposedPorts
-	exposeString := r.exposeToString()
 	// Add any new ones in
 	for _, p := range r.cmd.Ports {
 		// Resolve any environment variables
-		p, err := util.ResolveEnvironmentReplacement(exposeString, p, config.Env, false)
+		p, err := util.ResolveEnvironmentReplacement(p, config.Env, false)
 		if err != nil {
 			return err
 		}
@@ -64,11 +63,6 @@ func validProtocol(protocol string) bool {
 		}
 	}
 	return false
-}
-
-func (r *ExposeCommand) exposeToString() string {
-	expose := []string{"EXPOSE"}
-	return strings.Join(append(expose, r.cmd.Ports...), " ")
 }
 
 func (r *ExposeCommand) FilesToSnapshot() []string {
