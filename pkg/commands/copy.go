@@ -44,7 +44,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	if err != nil {
 		return err
 	}
-	dest = resolvedEnvs[len(c.cmd.SourcesAndDest)-1]
+	dest = resolvedEnvs[len(resolvedEnvs)-1]
 	// Get a map of [src]:[files rooted at src]
 	srcMap, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
