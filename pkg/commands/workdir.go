@@ -23,7 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type WorkdirCommand struct {
@@ -34,7 +33,7 @@ type WorkdirCommand struct {
 func (w *WorkdirCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: workdir")
 	workdirPath := w.cmd.Path
-	resolvedWorkingDir, err := util.ResolveEnvironmentReplacement(w.workdirToString(), workdirPath, config.Env, true)
+	resolvedWorkingDir, err := util.ResolveEnvironmentReplacement(workdirPath, config.Env, true)
 	if err != nil {
 		return err
 	}
@@ -46,11 +45,6 @@ func (w *WorkdirCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Infof("Changed working directory to %s", config.WorkingDir)
 	w.snapshotFiles = []string{config.WorkingDir}
 	return os.MkdirAll(config.WorkingDir, 0755)
-}
-
-func (w *WorkdirCommand) workdirToString() string {
-	workdir := []string{"WORKDIR"}
-	return strings.Join(append(workdir, w.cmd.Path), " ")
 }
 
 // FilesToSnapshot returns the workingdir, which should have been created if it didn't already exist
