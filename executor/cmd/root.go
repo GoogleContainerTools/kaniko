@@ -33,7 +33,7 @@ var (
 	dockerfilePath string
 	destination    string
 	srcContext     string
-	mtime          bool
+	mtime          string
 	logLevel       string
 )
 
@@ -41,7 +41,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "/workspace/Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
-	RootCmd.PersistentFlags().BoolVarP(&mtime, "mtime", "", false, "Only look at mtime of a file when snapshotting")
+	RootCmd.PersistentFlags().StringVarP(&mtime, "mtime", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 }
 
@@ -76,12 +76,8 @@ func execute() error {
 	if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
 		return err
 	}
-	hasher := util.Hasher()
-	if mtime {
-		logrus.Info("Only file modification times will be considered when snapshotting.")
-		hasher = util.MtimeHasher()
-	}
-	l := snapshot.NewLayeredMap(hasher)
+
+	l := snapshot.NewLayeredMap(getHasher())
 	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
 
 	// Take initial snapshot
@@ -130,4 +126,12 @@ func execute() error {
 	}
 	// Push the image
 	return image.PushImage(sourceImage, destination)
+}
+
+func getHasher() func(string) (string, error) {
+	if mtime == "time" {
+		logrus.Info("Only file modification time will be considered when snapshotting")
+		return util.MtimeHasher()
+	}
+	return util.Hasher()
 }
