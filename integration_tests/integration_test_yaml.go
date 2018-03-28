@@ -28,6 +28,7 @@ var fileTests = []struct {
 	configPath     string
 	context        string
 	repo           string
+	mtime          bool
 }{
 	{
 		description:    "test extract filesystem",
@@ -35,6 +36,7 @@ var fileTests = []struct {
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_extract_fs.json",
 		context:        "integration_tests/dockerfiles/",
 		repo:           "extract-filesystem",
+		mtime:          true,
 	},
 	{
 		description:    "test run",
@@ -49,6 +51,7 @@ var fileTests = []struct {
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run_2.json",
 		context:        "integration_tests/dockerfiles/",
 		repo:           "test-run-2",
+		mtime:          true,
 	},
 	{
 		description:    "test copy",
@@ -56,6 +59,7 @@ var fileTests = []struct {
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_copy.json",
 		context:        "/workspace/integration_tests/",
 		repo:           "test-copy",
+		mtime:          true,
 	},
 }
 
@@ -139,9 +143,13 @@ func main() {
 
 		// Then, buld the image with kbuild
 		kbuildImage := testRepo + kbuildPrefix + test.repo
+		mtime := ""
+		if test.mtime {
+			mtime = "--mtime"
+		}
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
+			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.context, mtime},
 		}
 
 		// Pull the kbuild image
