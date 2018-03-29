@@ -16,4 +16,4 @@ FROM gcr.io/google-appengine/debian9
 RUN useradd testuser
 RUN groupadd testgroup
 USER testuser:testgroup
-RUN echo "hey" > /etc/foo
+RUN echo "hey" > /tmp/foo
