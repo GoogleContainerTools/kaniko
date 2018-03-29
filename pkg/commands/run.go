@@ -22,7 +22,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"syscall"
 )
 
 type RunCommand struct {
@@ -45,6 +47,26 @@ func (r *RunCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 	cmd.Stdout = os.Stdout
+	// If specified, run the command as a specific user
+	if config.User != "" {
+		userAndGroup := strings.Split(config.User, ":")
+		// uid and gid need to be uint32
+		uid64, err := strconv.ParseUint(userAndGroup[0], 10, 32)
+		if err != nil {
+			return err
+		}
+		uid := uint32(uid64)
+		var gid uint32
+		if len(userAndGroup) > 1 {
+			gid64, err := strconv.ParseUint(userAndGroup[1], 10, 32)
+			if err != nil {
+				return err
+			}
+			gid = uint32(gid64)
+		}
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
+	}
 	return cmd.Run()
 }
 
