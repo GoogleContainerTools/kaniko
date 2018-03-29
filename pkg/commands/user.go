@@ -77,3 +77,12 @@ func (r *UserCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	config.User = uid
 	return nil
 }
+
+func (r *UserCommand) FilesToSnapshot() []string {
+	return []string{}
+}
+
+func (r *UserCommand) CreatedBy() string {
+	s := []string{r.cmd.Name(), r.cmd.User}
+	return strings.Join(s, " ")
+}
