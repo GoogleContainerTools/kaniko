@@ -46,6 +46,7 @@ func (r *RunCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Infof("args: %s", newCommand[1:])
 
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
+	cmd.Dir = config.WorkingDir
 	cmd.Stdout = os.Stdout
 	// If specified, run the command as a specific user
 	if config.User != "" {
