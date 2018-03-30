@@ -23,9 +23,11 @@ import (
 	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var whitelist = []string{"/kbuild"}
@@ -117,6 +119,17 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	return files, err
 }
 
+// Files returns a list of all files rooted at root
+func Files(root string) ([]string, error) {
+	var files []string
+	logrus.Debugf("Getting files and contents at root %s", root)
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		files = append(files, path)
+		return err
+	})
+	return files, err
+}
+
 // FilepathExists returns true if the path exists
 func FilepathExists(path string) bool {
 	_, err := os.Stat(path)
@@ -141,4 +154,28 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 		return err
 	}
 	return dest.Chmod(perm)
+}
+
+// DownloadFileToDest downloads the file at rawurl to the given dest for the ADD command
+// From add command docs:
+// 	1. If <src> is a remote file URL:
+// 		- destination will have permissions of 0600
+// 		- If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
+func DownloadFileToDest(rawurl, dest string) error {
+	resp, err := http.Get(rawurl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if err := CreateFile(dest, resp.Body, 0600); err != nil {
+		return err
+	}
+	mTime := time.Time{}
+	lastMod := resp.Header.Get("Last-Modified")
+	if lastMod != "" {
+		if parsedMTime, err := http.ParseTime(lastMod); err == nil {
+			mTime = parsedMTime
+		}
+	}
+	return os.Chtimes(dest, mTime, mTime)
 }

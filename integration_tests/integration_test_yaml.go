@@ -64,6 +64,13 @@ var fileTests = []struct {
 		context:        "/workspace/integration_tests/",
 		repo:           "test-workdir",
 	},
+	{
+		description:    "test add",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_add",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_add.json",
+		context:        "/workspace/integration_tests/",
+		repo:           "test-add",
+	},
 }
 
 var structureTests = []struct {
