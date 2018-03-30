@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
@@ -32,10 +33,16 @@ func (r *UserCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: USER")
 	u := r.cmd.User
 	userAndGroup := strings.Split(u, ":")
-	userStr := userAndGroup[0]
+	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], config.Env, false)
+	if err != nil {
+		return err
+	}
 	var groupStr string
 	if len(userAndGroup) > 1 {
-		groupStr = userAndGroup[1]
+		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], config.Env, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Lookup by username

@@ -67,11 +67,26 @@ var userTests = []struct {
 		expectedUid: "",
 		shouldError: true,
 	},
+	{
+		user:        "$envuser",
+		expectedUid: "0",
+		shouldError: false,
+	},
+	{
+		user:        "root:$envgroup",
+		expectedUid: "0:0",
+		shouldError: false,
+	},
 }
 
 func TestUpdateUser(t *testing.T) {
 	for _, test := range userTests {
-		cfg := &manifest.Schema2Config{}
+		cfg := &manifest.Schema2Config{
+			Env: []string{
+				"envuser=root",
+				"envgroup=root",
+			},
+		}
 		cmd := UserCommand{
 			&instructions.UserCommand{
 				User: test.user,
