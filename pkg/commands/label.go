@@ -29,6 +29,7 @@ type LabelCommand struct {
 }
 
 func (r *LabelCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+	logrus.Info("cmd: LABEL")
 	return updateLabels(r.cmd.Labels, config)
 }
 
