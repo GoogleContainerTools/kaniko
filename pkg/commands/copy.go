@@ -39,8 +39,14 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Infof("cmd: copy %s", srcs)
 	logrus.Infof("dest: %s", dest)
 
+	// First, resolve any environment replacement
+	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, config.Env, true)
+	if err != nil {
+		return err
+	}
+	dest = resolvedEnvs[len(resolvedEnvs)-1]
 	// Get a map of [src]:[files rooted at src]
-	srcMap, err := util.ResolveSources(c.cmd.SourcesAndDest, c.buildcontext)
+	srcMap, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
 		return err
 	}

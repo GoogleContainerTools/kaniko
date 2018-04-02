@@ -87,6 +87,14 @@ var fileTests = []struct {
 		kbuildContextBucket: true,
 		repo:                "test-bucket-buildcontext",
 	},
+	{
+		description:    "test workdir",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_workdir",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_workdir.json",
+		dockerContext:  buildcontextPath,
+		kbuildContext:  buildcontextPath,
+		repo:           "test-workdir",
+	},
 }
 
 var structureTests = []struct {
@@ -104,6 +112,22 @@ var structureTests = []struct {
 		dockerBuildContext:    dockerfilesPath,
 		kbuildContext:         dockerfilesPath,
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_env.yaml",
+	},
+	{
+		description:           "test metadata",
+		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_metadata",
+		repo:                  "test-metadata",
+		dockerBuildContext:    dockerfilesPath,
+		kbuildContext:         dockerfilesPath,
+		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_metadata.yaml",
+	},
+	{
+		description:           "test user command",
+		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_user_run",
+		repo:                  "test-user",
+		dockerBuildContext:    dockerfilesPath,
+		kbuildContext:         dockerfilesPath,
+		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_user.yaml",
 	},
 }
 
