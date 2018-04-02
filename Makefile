@@ -23,7 +23,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
 ORG := github.com/GoogleCloudPlatform
 PROJECT := k8s-container-builder
-REGISTRY?=gcr.io/kbuild-project
+REGISTRY?=gcr.io/kaniko-project
 
 REPOPATH ?= $(ORG)/$(PROJECT)
 
@@ -32,23 +32,23 @@ GO_LDFLAGS := '-extldflags "-static"'
 GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay"
 
 EXECUTOR_PACKAGE = $(REPOPATH)/executor
-KBUILD_PACKAGE = $(REPOPATH)/kbuild
+KANIKO_PROJECT = $(REPOPATH)/kaniko
 
 out/executor: $(GO_FILES)
 	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
 
 
-out/kbuild: $(GO_FILES)
-	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KBUILD_PACKAGE)
+out/kaniko: $(GO_FILES)
+	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KANIKO_PROJECT)
 
 .PHONY: test
-test: out/executor out/kbuild
+test: out/executor out/kaniko
 	@ ./test.sh
 
 .PHONY: integration-test
-integration-test: out/executor out/kbuild
+integration-test: out/executor out/kaniko
 	@ ./integration-test.sh
 
 .PHONY: images
-images: out/executor out/kbuild
+images: out/executor out/kaniko
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .

@@ -28,5 +28,5 @@ const (
 
 	WhitelistPath = "/proc/self/mountinfo"
 
-	Author = "kbuild"
+	Author = "kaniko"
 )

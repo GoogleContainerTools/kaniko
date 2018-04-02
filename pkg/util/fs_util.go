@@ -28,7 +28,7 @@ import (
 	"strings"
 )
 
-var whitelist = []string{"/kbuild"}
+var whitelist = []string{"/kaniko"}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {

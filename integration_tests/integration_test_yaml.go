@@ -93,12 +93,12 @@ type testyaml struct {
 }
 
 var executorImage = "executor-image"
-var executorCommand = "/kbuild/executor"
+var executorCommand = "/kaniko/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var ubuntuImage = "ubuntu"
-var testRepo = "gcr.io/kbuild-test/"
+var testRepo = "gcr.io/kaniko-test/"
 var dockerPrefix = "docker-"
-var kbuildPrefix = "kbuild-"
+var kanikoPrefix = "kaniko-"
 var daemonPrefix = "daemon://"
 var containerDiffOutputFile = "container-diff.json"
 
@@ -137,23 +137,23 @@ func main() {
 			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.context},
 		}
 
-		// Then, buld the image with kbuild
-		kbuildImage := testRepo + kbuildPrefix + test.repo
-		kbuild := step{
+		// Then, buld the image with kaniko
+		kanikoImage := testRepo + kanikoPrefix + test.repo
+		kaniko := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
+			Args: []string{executorCommand, "--destination", kanikoImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
 		}
 
-		// Pull the kbuild image
-		pullKbuildImage := step{
+		// Pull the kaniko image
+		pullKanikoImage := step{
 			Name: dockerImage,
-			Args: []string{"pull", kbuildImage},
+			Args: []string{"pull", kanikoImage},
 		}
 
 		daemonDockerImage := daemonPrefix + dockerImageTag
-		daemonKbuildImage := daemonPrefix + kbuildImage
+		daemonKanikoImage := daemonPrefix + kanikoImage
 		// Run container diff on the images
-		args := "container-diff-linux-amd64 diff " + daemonDockerImage + " " + daemonKbuildImage + " --type=file -j >" + containerDiffOutputFile
+		args := "container-diff-linux-amd64 diff " + daemonDockerImage + " " + daemonKanikoImage + " --type=file -j >" + containerDiffOutputFile
 		containerDiff := step{
 			Name: ubuntuImage,
 			Args: []string{"sh", "-c", args},
@@ -169,7 +169,7 @@ func main() {
 			Args: []string{"cmp", test.configPath, containerDiffOutputFile},
 		}
 
-		y.Steps = append(y.Steps, dockerBuild, kbuild, pullKbuildImage, containerDiff, catContainerDiffOutput, compareOutputs)
+		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, containerDiff, catContainerDiffOutput, compareOutputs)
 	}
 
 	for _, test := range structureTests {
@@ -181,19 +181,19 @@ func main() {
 			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerBuildContext},
 		}
 
-		// Build the image with kbuild
-		kbuildImage := testRepo + kbuildPrefix + test.repo
-		kbuild := step{
+		// Build the image with kaniko
+		kanikoImage := testRepo + kanikoPrefix + test.repo
+		kaniko := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
+			Args: []string{executorCommand, "--destination", kanikoImage, "--dockerfile", test.dockerfilePath},
 		}
-		// Pull the kbuild image
-		pullKbuildImage := step{
+		// Pull the kaniko image
+		pullKanikoImage := step{
 			Name: dockerImage,
-			Args: []string{"pull", kbuildImage},
+			Args: []string{"pull", kanikoImage},
 		}
-		// Run structure tests on the kbuild and docker image
-		args := "container-structure-test -image " + kbuildImage + " " + test.structureTestYamlPath
+		// Run structure tests on the kaniko and docker image
+		args := "container-structure-test -image " + kanikoImage + " " + test.structureTestYamlPath
 		structureTest := step{
 			Name: ubuntuImage,
 			Args: []string{"sh", "-c", args},
@@ -206,7 +206,7 @@ func main() {
 			Env:  []string{"PATH=/workspace:/bin"},
 		}
 
-		y.Steps = append(y.Steps, dockerBuild, kbuild, pullKbuildImage, structureTest, dockerStructureTest)
+		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, structureTest, dockerStructureTest)
 	}
 
 	d, _ := yaml.Marshal(&y)

@@ -15,7 +15,7 @@
 # Builds the static Go image to execute in a Kubernetes job
 
 FROM scratch
-ADD out/executor /kbuild/executor
+ADD out/executor /kaniko/executor
 ADD files/ca-certificates.crt /etc/ssl/certs/
 ADD files/docker-credential-gcr /usr/local/bin/
 ADD files/config.json /root/.docker/
