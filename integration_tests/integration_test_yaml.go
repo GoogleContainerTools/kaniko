@@ -57,6 +57,13 @@ var fileTests = []struct {
 		context:        "/workspace/integration_tests/",
 		repo:           "test-copy",
 	},
+	{
+		description:    "test workdir",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_workdir",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_workdir.json",
+		context:        "/workspace/integration_tests/",
+		repo:           "test-workdir",
+	},
 }
 
 var structureTests = []struct {
@@ -79,6 +86,13 @@ var structureTests = []struct {
 		repo:                  "test-metadata",
 		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_metadata.yaml",
+	},
+	{
+		description:           "test user command",
+		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_user_run",
+		repo:                  "test-user",
+		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
+		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_user.yaml",
 	},
 }
 
