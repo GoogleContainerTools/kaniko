@@ -64,6 +64,13 @@ var fileTests = []struct {
 		context:        "/workspace/integration_tests/",
 		repo:           "test-workdir",
 	},
+	{
+		description:    "test volume",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_volume",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_volume.json",
+		context:        "/workspace/integration_tests/",
+		repo:           "test-volume",
+	},
 }
 
 var structureTests = []struct {
@@ -110,7 +117,7 @@ var executorImage = "executor-image"
 var executorCommand = "/kbuild/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var ubuntuImage = "ubuntu"
-var testRepo = "gcr.io/kbuild-test/"
+var testRepo = "gcr.io/sharif-test/"
 var dockerPrefix = "docker-"
 var kbuildPrefix = "kbuild-"
 var daemonPrefix = "daemon://"

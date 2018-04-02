@@ -1,0 +1,6 @@
+FROM gcr.io/google-appengine/debian9
+RUN mkdir /foo
+RUN echo "hello" > /foo/hey
+VOLUME /foo/bar /tmp
+ENV VOL /baz/bat
+VOLUME ["${VOL}"]
