@@ -1,7 +1,7 @@
 [
   {
-    "Image1": "gcr.io/sharif-test/docker-test-volume:latest",
-    "Image2": "gcr.io/sharif-test/kbuild-test-volume:latest",
+    "Image1": "gcr.io/kbuild-test/docker-test-volume:latest",
+    "Image2": "gcr.io/kbuild-test/kbuild-test-volume:latest",
     "DiffType": "File",
     "Diff": {
       "Adds": null,
