@@ -37,11 +37,9 @@ func TestUpdateVolume(t *testing.T) {
 	}
 
 	volumeCmd := &VolumeCommand{
-		cmd: &instructions.VolumeCommand{
+		&instructions.VolumeCommand{
 			Volumes: volumes,
 		},
-		buildcontext:  "",
-		snapshotFiles: []string{},
 	}
 
 	expectedVolumes := map[string]struct{}{
