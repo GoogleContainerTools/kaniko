@@ -145,6 +145,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 
 // AddPathToWhitelist adds the given path to the whitelist
 func AddPathToWhitelist(path string) error {
+	logrus.Infof("adding %s to whitelist", path)
 	whitelist = append(whitelist, path)
 	return nil
 }
