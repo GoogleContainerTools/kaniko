@@ -142,3 +142,9 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 	}
 	return dest.Chmod(perm)
 }
+
+// AddPathToWhitelist adds the given path to the whitelist
+func AddPathToWhitelist(path string) error {
+	whitelist = append(whitelist, path)
+	return nil
+}

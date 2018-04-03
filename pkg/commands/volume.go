@@ -21,17 +21,15 @@ import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"os"
 	"strings"
 )
 
 type VolumeCommand struct {
-	cmd           *instructions.VolumeCommand
-	buildcontext  string
-	snapshotFiles []string
+	cmd *instructions.VolumeCommand
 }
 
 func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+	logrus.Info("cmd: VOLUME")
 	volumes := v.cmd.Volumes
 	resolvedVolumes, err := util.ResolveEnvironmentReplacementList(volumes, config.Env, true)
 	if err != nil {
@@ -42,19 +40,12 @@ func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		existingVolumes = map[string]struct{}{}
 	}
 	for _, volume := range resolvedVolumes {
-		// Add volume to the config
 		var x struct{}
 		existingVolumes[volume] = x
-
-		// Create any directories that don't already exist
-		destVolume := volume
-		logrus.Infof("Creating directory %s", destVolume)
-		if err := os.MkdirAll(destVolume, 0755); err != nil {
+		err := util.AddPathToWhitelist(volume)
+		if err != nil {
 			return err
 		}
-
-		// Check if directory already exists?
-		v.snapshotFiles = append(v.snapshotFiles, destVolume)
 	}
 	config.Volumes = existingVolumes
 
@@ -62,7 +53,7 @@ func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 }
 
 func (v *VolumeCommand) FilesToSnapshot() []string {
-	return v.snapshotFiles
+	return []string{}
 }
 
 func (v *VolumeCommand) CreatedBy() string {
