@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Builds the static Go image to execute in a Kubernetes job
+#!/bin/bash
+set -e
 
-FROM scratch
-ADD out/executor /kbuild/executor
-ADD files/ca-certificates.crt /etc/ssl/certs/
-ADD files/docker-credential-gcr /usr/local/bin/
-ADD files/config.json /root/.docker/
-ENV HOME /root
-ENV PATH /usr/local/bin
-ENTRYPOINT ["/kbuild/executor"]
+if [ $# -ne 2 ];
+    then echo "Usage: run_in_docker.sh <context directory> <image tag>"
+fi
+
+
+context=$1
+tag=$2
+
+if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
+    echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
+    exit 1
+fi
+
+docker run \
+    -v $HOME/.config/gcloud:/root/.config/gcloud \
+    -v ${context}:/workspace \
+    gcr.io/kbuild-project/executor:latest \
+    /kbuild/executor -d ${tag}

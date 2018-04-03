@@ -194,7 +194,7 @@ func main() {
 		}
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kbuildContext},
+			Args: []string{"--destination", kbuildImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kbuildContext},
 		}
 
 		// Pull the kbuild image
@@ -238,7 +238,7 @@ func main() {
 		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.kbuildContext},
+			Args: []string{"--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
 		}
 		// Pull the kbuild image
 		pullKbuildImage := step{
