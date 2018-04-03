@@ -170,7 +170,7 @@ func DestinationFilepath(filename, srcName, dest, cwd, buildcontext string) (str
 	return filepath.Join(cwd, dest), nil
 }
 
-// URLDestinationFilepath gives the destintion a file from a remote URL should be saved to
+// URLDestinationFilepath gives the destination a file from a remote URL should be saved to
 func URLDestinationFilepath(rawurl, dest, cwd string) string {
 	if !IsDestDir(dest) {
 		if !filepath.IsAbs(dest) {
