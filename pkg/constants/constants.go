@@ -33,8 +33,8 @@ const (
 
 	Author = "kbuild"
 
-	// KbuildTar is the default name of the tar uploaded to GCS buckets
-	KbuildTar = "kbuild.tar"
+	// ContextTar is the default name of the tar uploaded to GCS buckets
+	ContextTar = "context.tar.gz"
 
 	// BuildContextDir is the directory a build context will be unpacked into,
 	// for example, a tarball from a GCS bucket will be unpacked here

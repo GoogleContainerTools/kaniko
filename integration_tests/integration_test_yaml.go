@@ -24,7 +24,6 @@ import (
 
 const (
 	executorImage           = "executor-image"
-	executorCommand         = "/kbuild/executor"
 	dockerImage             = "gcr.io/cloud-builders/docker"
 	ubuntuImage             = "ubuntu"
 	testRepo                = "gcr.io/kbuild-test/"
@@ -163,11 +162,11 @@ func main() {
 
 	GCSBucketTarBuildContext := step{
 		Name: ubuntuImage,
-		Args: []string{"tar", "-C", "/workspace/integration_tests/", "-cf", "/workspace/kbuild.tar", "."},
+		Args: []string{"tar", "-C", "/workspace/integration_tests/", "-zcvf", "/workspace/context.tar.gz", "."},
 	}
 	uploadTarBuildContext := step{
 		Name: "gcr.io/cloud-builders/gsutil",
-		Args: []string{"cp", "/workspace/kbuild.tar", "gs://kbuild-test-bucket/"},
+		Args: []string{"cp", "/workspace/context.tar.gz", "gs://kbuild-test-bucket/"},
 	}
 
 	// Build executor image
@@ -238,7 +237,7 @@ func main() {
 		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{"--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
+			Args: []string{"--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.kbuildContext},
 		}
 		// Pull the kbuild image
 		pullKbuildImage := step{

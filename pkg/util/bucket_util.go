@@ -18,7 +18,6 @@ package util
 
 import (
 	"cloud.google.com/go/storage"
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -34,12 +33,7 @@ func UnpackTarFromGCSBucket(bucketName, directory string) error {
 		return err
 	}
 	logrus.Debug("Unpacking source context tar...")
-	// Now, unpack the tar to a build context, and return the path to the build context
-	file, err := os.Open(tarPath)
-	if err != nil {
-		return err
-	}
-	if err := pkgutil.UnTar(file, directory, nil); err != nil {
+	if err := UnpackCompressedTar(tarPath, directory); err != nil {
 		return err
 	}
 	// Remove the tar so it doesn't interfere with subsequent commands
@@ -57,15 +51,15 @@ func getTarFromBucket(bucketName, directory string) (string, error) {
 	}
 	bucket := client.Bucket(bucketName)
 	// Get the tarfile kbuild.tar from the GCS bucket, and save it to a tar object
-	reader, err := bucket.Object(constants.KbuildTar).NewReader(ctx)
+	reader, err := bucket.Object(constants.ContextTar).NewReader(ctx)
 	if err != nil {
 		return "", err
 	}
 	defer reader.Close()
-	tarPath := filepath.Join(directory, constants.KbuildTar)
+	tarPath := filepath.Join(directory, constants.ContextTar)
 	if err := CreateFile(tarPath, reader, 0600); err != nil {
 		return "", err
 	}
-	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", constants.KbuildTar, bucketName, tarPath)
+	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", constants.ContextTar, bucketName, tarPath)
 	return tarPath, nil
 }

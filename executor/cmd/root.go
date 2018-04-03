@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -39,7 +40,7 @@ var (
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "/workspace/Dockerfile", "Path to the dockerfile to be built.")
+	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
@@ -82,6 +83,11 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
 	srcContext = buildContextPath
+	// If path to dockerfile doesn't exist, assume it is in the unpacked tar
+	if !util.FilepathExists(dockerfilePath) {
+		logrus.Debugf("Expecting dockerfile to be located at %s within the tar build context", dockerfilePath)
+		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
+	}
 	return nil
 }
 
