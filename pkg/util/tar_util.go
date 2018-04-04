@@ -18,6 +18,8 @@ package util
 
 import (
 	"archive/tar"
+	"compress/gzip"
+	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -85,4 +87,19 @@ func checkHardlink(p string, i os.FileInfo) (bool, string) {
 		}
 	}
 	return hardlink, linkDst
+}
+
+// UnpackCompressedTar unpacks the compressed tar at path to dir
+func UnpackCompressedTar(path, dir string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+	return pkgutil.UnTar(gzr, dir, nil)
 }
