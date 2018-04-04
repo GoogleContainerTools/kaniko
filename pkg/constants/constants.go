@@ -26,8 +26,8 @@ const (
 	// WorkspaceDir is the path to the workspace directory
 	WorkspaceDir = "/workspace"
 
-	//KbuildDir is the path to the kbuild directory
-	KbuildDir = "/kbuild"
+	//KanikoDir is the path to the Kaniko directory
+	KanikoDir = "/kaniko"
 
 	WhitelistPath = "/proc/self/mountinfo"
 

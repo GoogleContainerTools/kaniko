@@ -3,7 +3,6 @@
 kaniko is a tool to build unpriviliged container images from a Dockerfile. It doesn't depend on a Docker daemon, which enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster. 
 
 The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
-* ADD
 * VOLUME
 * SHELL
 * HEALTHCHECK
