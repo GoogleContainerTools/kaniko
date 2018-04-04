@@ -134,7 +134,10 @@ func Test_RelativeFiles(t *testing.T) {
 func Test_AddToWhitelist(t *testing.T) {
 	path := "/foo/bar"
 
-	expectedWhitelist := []string{"/kbuild", "/foo/bar"}
 	err := AddPathToWhitelist(path)
-	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, whitelist)
+	actualWhitelist := whitelist
+	expectedWhitelist := []string{"/kbuild", "/proc", "/dev", "/dev/pts", "/sys", "/foo/bar"}
+	sort.Strings(actualWhitelist)
+	sort.Strings(expectedWhitelist)
+	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
 }
