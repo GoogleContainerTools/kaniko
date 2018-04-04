@@ -1,0 +1,18 @@
+FROM gcr.io/google-appengine/debian9:latest
+# First, try adding some regular files
+ADD context/foo foo
+ADD context/foo /foodir/
+ADD context/bar/b* bar/
+ADD . newdir
+ADD ["context/foo", "/tmp/foo" ]
+
+# Next, make sure environment replacement works
+ENV contextenv ./context
+ADD $contextenv/* /tmp/${contextenv}/
+
+# Now, test extracting local tar archives
+ADD context/tars/fil* /tars/
+ADD context/tars/file.tar /tars_again
+
+# Finally, test adding a remote URL, concurrently with a normal file
+ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3/docker-credential-gcr_linux_386-1.4.3.tar.gz context/foo /test/all/

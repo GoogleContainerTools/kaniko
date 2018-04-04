@@ -35,12 +35,14 @@ var (
 	dockerfilePath string
 	destination    string
 	srcContext     string
+	bucket         string
 	logLevel       string
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "/workspace/Dockerfile", "Path to the dockerfile to be built.")
+	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
+	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 }
@@ -49,6 +51,9 @@ var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := util.SetLogLevel(logLevel); err != nil {
+			return err
+		}
+		if err := resolveSourceContext(); err != nil {
 			return err
 		}
 		return checkDockerfilePath()
@@ -71,6 +76,28 @@ func checkDockerfilePath() error {
 		return nil
 	}
 	return errors.New("please provide a valid path to a Dockerfile within the build context")
+}
+
+// resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
+// it resets srcContext to be the path to the unpacked build context within the image
+func resolveSourceContext() error {
+	if srcContext == "" && bucket == "" {
+		return errors.New("please specify a path to the build context with the --context flag or a GCS bucket with the --bucket flag")
+	}
+	if srcContext != "" && bucket != "" {
+		return errors.New("please specify either --bucket or --context as the desired build context")
+	}
+	if srcContext != "" {
+		return nil
+	}
+	logrus.Infof("Using GCS bucket %s as source context", bucket)
+	buildContextPath := constants.BuildContextDir
+	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
+		return err
+	}
+	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
+	srcContext = buildContextPath
+	return nil
 }
 
 func execute() error {
@@ -140,5 +167,23 @@ func execute() error {
 		}
 	}
 	// Push the image
+	if err := setDefaultEnv(); err != nil {
+		return err
+	}
 	return image.PushImage(sourceImage, destination)
+}
+
+// setDefaultEnv sets default values for HOME and PATH so that
+// config.json and docker-credential-gcr can be accessed
+func setDefaultEnv() error {
+	defaultEnvs := map[string]string{
+		"HOME": "/root",
+		"PATH": "/usr/local/bin/",
+	}
+	for key, val := range defaultEnvs {
+		if err := os.Setenv(key, val); err != nil {
+			return err
+		}
+	}
+	return nil
 }

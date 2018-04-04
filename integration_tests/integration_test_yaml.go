@@ -22,47 +22,85 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const (
+	executorImage           = "executor-image"
+	dockerImage             = "gcr.io/cloud-builders/docker"
+	ubuntuImage             = "ubuntu"
+	testRepo                = "gcr.io/kaniko-test/"
+	dockerPrefix            = "docker-"
+	kanikoPrefix            = "kaniko-"
+	daemonPrefix            = "daemon://"
+	containerDiffOutputFile = "container-diff.json"
+	kanikoTestBucket        = "kaniko-test-bucket"
+	buildcontextPath        = "/workspace/integration_tests"
+	dockerfilesPath         = "/workspace/integration_tests/dockerfiles"
+)
+
 var fileTests = []struct {
-	description    string
-	dockerfilePath string
-	configPath     string
-	context        string
-	repo           string
+	description         string
+	dockerfilePath      string
+	configPath          string
+	dockerContext       string
+	kanikoContext       string
+	kanikoContextBucket bool
+	repo                string
 }{
 	{
 		description:    "test extract filesystem",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_extract_fs",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_extract_fs.json",
-		context:        "integration_tests/dockerfiles/",
+		dockerContext:  dockerfilesPath,
+		kanikoContext:  dockerfilesPath,
 		repo:           "extract-filesystem",
 	},
 	{
 		description:    "test run",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_run",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run.json",
-		context:        "integration_tests/dockerfiles/",
+		dockerContext:  dockerfilesPath,
+		kanikoContext:  dockerfilesPath,
 		repo:           "test-run",
 	},
 	{
 		description:    "test run no files changed",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_run_2",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_run_2.json",
-		context:        "integration_tests/dockerfiles/",
+		dockerContext:  dockerfilesPath,
+		kanikoContext:  dockerfilesPath,
 		repo:           "test-run-2",
 	},
 	{
 		description:    "test copy",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_copy",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_copy.json",
-		context:        "/workspace/integration_tests/",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
 		repo:           "test-copy",
+	},
+	{
+		description:         "test bucket build context",
+		dockerfilePath:      "/workspace/integration_tests/dockerfiles/Dockerfile_test_copy",
+		configPath:          "/workspace/integration_tests/dockerfiles/config_test_bucket_buildcontext.json",
+		dockerContext:       buildcontextPath,
+		kanikoContext:       kanikoTestBucket,
+		kanikoContextBucket: true,
+		repo:                "test-bucket-buildcontext",
 	},
 	{
 		description:    "test workdir",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_workdir",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_workdir.json",
-		context:        "/workspace/integration_tests/",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
 		repo:           "test-workdir",
+	},
+	{
+		description:    "test add",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_add",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_add.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-add",
 	},
 }
 
@@ -71,27 +109,31 @@ var structureTests = []struct {
 	dockerfilePath        string
 	structureTestYamlPath string
 	dockerBuildContext    string
+	kanikoContext         string
 	repo                  string
 }{
 	{
 		description:           "test env",
 		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_env",
 		repo:                  "test-env",
-		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
+		dockerBuildContext:    dockerfilesPath,
+		kanikoContext:         dockerfilesPath,
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_env.yaml",
 	},
 	{
 		description:           "test metadata",
 		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_metadata",
 		repo:                  "test-metadata",
-		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
+		dockerBuildContext:    dockerfilesPath,
+		kanikoContext:         dockerfilesPath,
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_metadata.yaml",
 	},
 	{
 		description:           "test user command",
 		dockerfilePath:        "/workspace/integration_tests/dockerfiles/Dockerfile_test_user_run",
 		repo:                  "test-user",
-		dockerBuildContext:    "/workspace/integration_tests/dockerfiles/",
+		dockerBuildContext:    dockerfilesPath,
+		kanikoContext:         dockerfilesPath,
 		structureTestYamlPath: "/workspace/integration_tests/dockerfiles/test_user.yaml",
 	},
 }
@@ -105,15 +147,6 @@ type step struct {
 type testyaml struct {
 	Steps []step
 }
-
-var executorImage = "executor-image"
-var dockerImage = "gcr.io/cloud-builders/docker"
-var ubuntuImage = "ubuntu"
-var testRepo = "gcr.io/kaniko-test/"
-var dockerPrefix = "docker-"
-var kanikoPrefix = "kaniko-"
-var daemonPrefix = "daemon://"
-var containerDiffOutputFile = "container-diff.json"
 
 func main() {
 
@@ -134,27 +167,41 @@ func main() {
 		Name: ubuntuImage,
 		Args: []string{"chmod", "+x", "container-structure-test"},
 	}
+
+	GCSBucketTarBuildContext := step{
+		Name: ubuntuImage,
+		Args: []string{"tar", "-C", "/workspace/integration_tests/", "-zcvf", "/workspace/context.tar.gz", "."},
+	}
+	uploadTarBuildContext := step{
+		Name: "gcr.io/cloud-builders/gsutil",
+		Args: []string{"cp", "/workspace/context.tar.gz", "gs://kaniko-test-bucket/"},
+	}
+
 	// Build executor image
 	buildExecutorImage := step{
 		Name: dockerImage,
 		Args: []string{"build", "-t", executorImage, "-f", "deploy/Dockerfile", "."},
 	}
 	y := testyaml{
-		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, buildExecutorImage},
+		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage},
 	}
 	for _, test := range fileTests {
 		// First, build the image with docker
 		dockerImageTag := testRepo + dockerPrefix + test.repo
 		dockerBuild := step{
 			Name: dockerImage,
-			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.context},
+			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerContext},
 		}
 
 		// Then, buld the image with kaniko
 		kanikoImage := testRepo + kanikoPrefix + test.repo
+		contextFlag := "--context"
+		if test.kanikoContextBucket {
+			contextFlag = "--bucket"
+		}
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
+			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext},
 		}
 
 		// Pull the kaniko image
@@ -198,7 +245,7 @@ func main() {
 		kanikoImage := testRepo + kanikoPrefix + test.repo
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath},
+			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, "--context", test.kanikoContext},
 		}
 		// Pull the kaniko image
 		pullKanikoImage := step{
