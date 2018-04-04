@@ -1,0 +1,12 @@
+[
+  {
+    "Image1": "gcr.io/kbuild-test/docker-test-bucket-buildcontext:latest",
+    "Image2": "gcr.io/kbuild-test/kbuild-test-bucket-buildcontext:latest",
+    "DiffType": "File",
+    "Diff": {
+      "Adds": null,
+      "Dels": null,
+      "Mods": null
+    }
+  }
+]
