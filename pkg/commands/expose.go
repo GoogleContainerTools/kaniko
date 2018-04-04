@@ -30,6 +30,7 @@ type ExposeCommand struct {
 }
 
 func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+	logrus.Info("cmd: EXPOSE")
 	// Grab the currently exposed ports
 	existingPorts := config.ExposedPorts
 	// Add any new ones in
