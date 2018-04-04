@@ -130,3 +130,11 @@ func Test_RelativeFiles(t *testing.T) {
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
 	}
 }
+
+func Test_AddToWhitelist(t *testing.T) {
+	path := "/foo/bar"
+
+	expectedWhitelist := []string{"/kbuild", "/foo/bar"}
+	err := AddPathToWhitelist(path)
+	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, whitelist)
+}
