@@ -107,7 +107,6 @@ type testyaml struct {
 }
 
 var executorImage = "executor-image"
-var executorCommand = "/kaniko/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var ubuntuImage = "ubuntu"
 var testRepo = "gcr.io/kaniko-test/"
@@ -155,7 +154,7 @@ func main() {
 		kanikoImage := testRepo + kanikoPrefix + test.repo
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kanikoImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
+			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
 		}
 
 		// Pull the kaniko image
@@ -199,7 +198,7 @@ func main() {
 		kanikoImage := testRepo + kanikoPrefix + test.repo
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kanikoImage, "--dockerfile", test.dockerfilePath},
+			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath},
 		}
 		// Pull the kaniko image
 		pullKanikoImage := step{

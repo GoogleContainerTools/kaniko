@@ -32,4 +32,4 @@ docker run \
     -v $HOME/.config/gcloud:/root/.config/gcloud \
     -v ${context}:/workspace \
     gcr.io/kaniko-project/executor:latest \
-    /kaniko/executor -d ${tag}
+    -f ${dockerfile} -d ${tag} -c /workspace/

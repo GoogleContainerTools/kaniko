@@ -52,11 +52,3 @@ integration-test: out/executor out/kaniko
 .PHONY: images
 images: out/executor out/kaniko
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-
-.PHONY: run-in-docker
-run-in-docker: images
-	docker run \
-		-v $(HOME)/.config/gcloud:/root/.config/gcloud \
-		-v $(GOOGLE_APPLICATION_CREDENTIALS):$(GOOGLE_APPLICATION_CREDENTIALS) \
-		-e GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) \
-		$(REGISTRY)/executor:latest

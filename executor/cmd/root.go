@@ -23,10 +23,12 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -46,7 +48,10 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return util.SetLogLevel(logLevel)
+		if err := util.SetLogLevel(logLevel); err != nil {
+			return err
+		}
+		return checkDockerfilePath()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := execute(); err != nil {
@@ -54,6 +59,18 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
+}
+
+func checkDockerfilePath() error {
+	if util.FilepathExists(dockerfilePath) {
+		return nil
+	}
+	// Otherwise, check if the path relative to the build context exists
+	if util.FilepathExists(filepath.Join(srcContext, dockerfilePath)) {
+		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
+		return nil
+	}
+	return errors.New("please provide a valid path to a Dockerfile within the build context")
 }
 
 func execute() error {
