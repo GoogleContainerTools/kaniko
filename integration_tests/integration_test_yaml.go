@@ -114,7 +114,6 @@ type testyaml struct {
 }
 
 var executorImage = "executor-image"
-var executorCommand = "/kbuild/executor"
 var dockerImage = "gcr.io/cloud-builders/docker"
 var ubuntuImage = "ubuntu"
 var testRepo = "gcr.io/kbuild-test/"
@@ -162,7 +161,7 @@ func main() {
 		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
+			Args: []string{"--destination", kbuildImage, "--dockerfile", test.dockerfilePath, "--context", test.context},
 		}
 
 		// Pull the kbuild image
@@ -206,7 +205,7 @@ func main() {
 		kbuildImage := testRepo + kbuildPrefix + test.repo
 		kbuild := step{
 			Name: executorImage,
-			Args: []string{executorCommand, "--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
+			Args: []string{"--destination", kbuildImage, "--dockerfile", test.dockerfilePath},
 		}
 		// Pull the kbuild image
 		pullKbuildImage := step{
