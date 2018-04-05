@@ -27,8 +27,10 @@ type OnBuildCommand struct {
 	cmd *instructions.OnbuildCommand
 }
 
+//ExecuteCommand adds the specified expression in Onbuild to the config
 func (o *OnBuildCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ONBUILD")
+	logrus.Infof("args: %s", o.cmd.Expression)
 	resolvedExpression, err := util.ResolveEnvironmentReplacement(o.cmd.Expression, config.Env, false)
 	if err != nil {
 		return err
@@ -41,7 +43,7 @@ func (o *OnBuildCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	return nil
 }
 
-// No files have changed, this command only touches metadata.
+// FilesToSnapshot returns that no files have changed, this command only touches metadata.
 func (o *OnBuildCommand) FilesToSnapshot() []string {
 	return []string{}
 }

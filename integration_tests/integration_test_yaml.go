@@ -34,6 +34,7 @@ const (
 	kanikoTestBucket        = "kaniko-test-bucket"
 	buildcontextPath        = "/workspace/integration_tests"
 	dockerfilesPath         = "/workspace/integration_tests/dockerfiles"
+	onbuildBaseImage        = testRepo + "onbuild-base:latest"
 )
 
 var fileTests = []struct {
@@ -101,6 +102,14 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-add",
+	},
+	{
+		description:    "test onbuild",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_onbuild",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_onbuild.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-onbuild",
 	},
 }
 
@@ -182,8 +191,19 @@ func main() {
 		Name: dockerImage,
 		Args: []string{"build", "-t", executorImage, "-f", "deploy/Dockerfile", "."},
 	}
+
+	// Build and push onbuild base images
+	buildOnbuildImage := step{
+		Name: dockerImage,
+		Args: []string{"build", "-t", onbuildBaseImage, "-f", "/workspace/integration_tests/dockerfiles/Dockerfile_onbuild_base", "."},
+	}
+	pushOnbuildBase := step{
+		Name: dockerImage,
+		Args: []string{"push", onbuildBaseImage},
+	}
 	y := testyaml{
-		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage},
+		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
+			buildOnbuildImage, pushOnbuildBase},
 	}
 	for _, test := range fileTests {
 		// First, build the image with docker
