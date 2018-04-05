@@ -177,9 +177,14 @@
     "builder/dockerfile/parser",
     "builder/dockerfile/shell",
     "client",
+    "pkg/archive",
+    "pkg/fileutils",
     "pkg/homedir",
     "pkg/idtools",
+    "pkg/ioutils",
+    "pkg/longpath",
     "pkg/mount",
+    "pkg/pools",
     "pkg/system"
   ]
   revision = "b1a1234c60cf87048814aa37da523b03a7b0d344"
@@ -620,6 +625,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "51fdf15812acb4ba731695ce038965ca38f136449addbebf03a6f13cd91d4077"
+  inputs-digest = "46a5e132ee4e288f54fbe425376c80ce19d01bce195ad56d0ff74602ace9402f"
   solver-name = "gps-cdcl"
   solver-version = 1
