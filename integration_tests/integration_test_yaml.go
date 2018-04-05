@@ -101,6 +101,14 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kbuildContext:  buildcontextPath,
 		repo:           "test-volume",
+  },
+  {
+		description:    "test add",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_add",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_add.json",
+		dockerContext:  buildcontextPath,
+		kbuildContext:  buildcontextPath,
+		repo:           "test-add",
 	},
 }
 
