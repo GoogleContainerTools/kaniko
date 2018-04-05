@@ -98,7 +98,8 @@ var fileTests = []struct {
 		description:    "test volume",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_volume",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_volume.json",
-		context:        "/workspace/integration_tests/",
+		dockerContext:  buildcontextPath,
+		kbuildContext:  buildcontextPath,
 		repo:           "test-volume",
 	},
 }

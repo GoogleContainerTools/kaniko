@@ -29,6 +29,7 @@ import (
 )
 
 var whitelist = []string{"/kbuild"}
+var volumeWhitelist = []string{}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {
@@ -143,9 +144,19 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 	return dest.Chmod(perm)
 }
 
-// AddPathToWhitelist adds the given path to the whitelist
-func AddPathToWhitelist(path string) error {
-	logrus.Infof("adding %s to whitelist", path)
-	whitelist = append(whitelist, path)
+// AddPathToVolumeWhitelist adds the given path to the volume whitelist
+// It will get snapshotted when the VOLUME command is run then ignored
+// for subsequent commands.
+func AddPathToVolumeWhitelist(path string) error {
+	logrus.Infof("adding %s to volume whitelist", path)
+	volumeWhitelist = append(volumeWhitelist, path)
+	return nil
+}
+
+func MoveVolumeWhitelistToWhitelist() error {
+	if len(volumeWhitelist) > 0 {
+		whitelist = append(whitelist, volumeWhitelist...)
+		volumeWhitelist = []string{}
+	}
 	return nil
 }

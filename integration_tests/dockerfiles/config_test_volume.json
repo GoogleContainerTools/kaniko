@@ -5,20 +5,7 @@
     "DiffType": "File",
     "Diff": {
       "Adds": null,
-      "Dels": [
-        {
-          "Name": "/baz",
-          "Size": 0
-        },
-        {
-          "Name": "/baz/bat",
-          "Size": 0
-        },
-        {
-          "Name": "/foo/bar",
-          "Size": 0
-        }
-      ],
+      "Dels": null,
       "Mods": null
     }
   }

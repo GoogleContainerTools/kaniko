@@ -21,11 +21,13 @@ import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
+	"os"
 	"strings"
 )
 
 type VolumeCommand struct {
-	cmd *instructions.VolumeCommand
+	cmd           *instructions.VolumeCommand
+	snapshotFiles []string
 }
 
 func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
@@ -42,10 +44,18 @@ func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	for _, volume := range resolvedVolumes {
 		var x struct{}
 		existingVolumes[volume] = x
-		err := util.AddPathToWhitelist(volume)
+		err := util.AddPathToVolumeWhitelist(volume)
 		if err != nil {
 			return err
 		}
+
+		logrus.Infof("Creating directory %s", volume)
+		if err := os.MkdirAll(volume, 0755); err != nil {
+			return err
+		}
+
+		//Check if directory already exists?
+		v.snapshotFiles = append(v.snapshotFiles, volume)
 	}
 	config.Volumes = existingVolumes
 
@@ -53,7 +63,7 @@ func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 }
 
 func (v *VolumeCommand) FilesToSnapshot() []string {
-	return []string{}
+	return v.snapshotFiles
 }
 
 func (v *VolumeCommand) CreatedBy() string {

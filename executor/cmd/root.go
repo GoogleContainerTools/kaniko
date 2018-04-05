@@ -146,6 +146,7 @@ func execute() error {
 			if err != nil {
 				return err
 			}
+			util.MoveVolumeWhitelistToWhitelist()
 			if contents == nil {
 				logrus.Info("No files were changed, appending empty layer to config.")
 				sourceImage.AppendConfigHistory(constants.Author, true)
