@@ -18,12 +18,59 @@ package util
 
 import (
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/docker/docker/builder/dockerfile/parser"
+	"github.com/docker/docker/builder/dockerfile/shell"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// ResolveEnvironmentReplacement resolves a list of values by calling resolveEnvironmentReplacement
+func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
+	var resolvedValues []string
+	for _, value := range values {
+		if IsSrcRemoteFileURL(value) {
+			resolvedValues = append(resolvedValues, value)
+			continue
+		}
+		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
+		logrus.Debugf("Resolved %s to %s", value, resolved)
+		if err != nil {
+			return nil, err
+		}
+		resolvedValues = append(resolvedValues, resolved)
+	}
+	return resolvedValues, nil
+}
+
+// ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
+// It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
+// Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
+// The dockerfile/shell package handles processing env values
+// It handles escape characters and supports expansion from the config.Env array
+// Shlex handles some of the following use cases (these and more are tested in integration tests)
+// ""a'b'c"" -> "a'b'c"
+// "Rex\ The\ Dog \" -> "Rex The Dog"
+// "a\"b" -> "a"b"
+func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool) (string, error) {
+	shlex := shell.NewLex(parser.DefaultEscapeToken)
+	fp, err := shlex.ProcessWord(value, envs)
+	if !isFilepath {
+		return fp, err
+	}
+	if err != nil {
+		return "", err
+	}
+	fp = filepath.Clean(fp)
+	if IsDestDir(value) {
+		fp = fp + "/"
+	}
+	return fp, nil
+}
 
 // ContainsWildcards returns true if any entry in paths contains wildcards
 func ContainsWildcards(paths []string) bool {
@@ -65,13 +112,17 @@ func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[s
 func matchSources(srcs, files []string) ([]string, error) {
 	var matchedSources []string
 	for _, src := range srcs {
+		if IsSrcRemoteFileURL(src) {
+			matchedSources = append(matchedSources, src)
+			continue
+		}
 		src = filepath.Clean(src)
 		for _, file := range files {
 			matched, err := filepath.Match(src, file)
 			if err != nil {
 				return nil, err
 			}
-			if matched {
+			if matched || src == file {
 				matchedSources = append(matchedSources, file)
 			}
 		}
@@ -119,10 +170,31 @@ func DestinationFilepath(filename, srcName, dest, cwd, buildcontext string) (str
 	return filepath.Join(cwd, dest), nil
 }
 
+// URLDestinationFilepath gives the destination a file from a remote URL should be saved to
+func URLDestinationFilepath(rawurl, dest, cwd string) string {
+	if !IsDestDir(dest) {
+		if !filepath.IsAbs(dest) {
+			return filepath.Join(cwd, dest)
+		}
+		return dest
+	}
+	urlBase := filepath.Base(rawurl)
+	destPath := filepath.Join(dest, urlBase)
+
+	if !filepath.IsAbs(dest) {
+		destPath = filepath.Join(cwd, destPath)
+	}
+	return destPath
+}
+
 // SourcesToFilesMap returns a map of [src]:[files rooted at source]
 func SourcesToFilesMap(srcs []string, root string) (map[string][]string, error) {
 	srcMap := make(map[string][]string)
 	for _, src := range srcs {
+		if IsSrcRemoteFileURL(src) {
+			srcMap[src] = []string{src}
+			continue
+		}
 		src = filepath.Clean(src)
 		files, err := RelativeFiles(src, root)
 		if err != nil {
@@ -160,4 +232,16 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, srcMap map[string][]st
 		return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 	}
 	return nil
+}
+
+func IsSrcRemoteFileURL(rawurl string) bool {
+	_, err := url.ParseRequestURI(rawurl)
+	if err != nil {
+		return false
+	}
+	_, err = http.Get(rawurl)
+	if err != nil {
+		return false
+	}
+	return true
 }

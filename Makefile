@@ -35,7 +35,7 @@ EXECUTOR_PACKAGE = $(REPOPATH)/executor
 KBUILD_PACKAGE = $(REPOPATH)/kbuild
 
 out/executor: $(GO_FILES)
-	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
+	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
 
 
 out/kbuild: $(GO_FILES)

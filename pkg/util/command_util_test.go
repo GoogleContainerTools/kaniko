@@ -22,6 +22,90 @@ import (
 	"testing"
 )
 
+var testUrl = "https://github.com/GoogleCloudPlatform/runtimes-common/blob/master/LICENSE"
+
+var testEnvReplacement = []struct {
+	path         string
+	command      string
+	envs         []string
+	isFilepath   bool
+	expectedPath string
+}{
+	{
+		path:    "/simple/path",
+		command: "WORKDIR /simple/path",
+		envs: []string{
+			"simple=/path/",
+		},
+		isFilepath:   true,
+		expectedPath: "/simple/path",
+	},
+	{
+		path:    "/simple/path/",
+		command: "WORKDIR /simple/path/",
+		envs: []string{
+			"simple=/path/",
+		},
+		isFilepath:   true,
+		expectedPath: "/simple/path/",
+	},
+	{
+		path:    "${a}/b",
+		command: "WORKDIR ${a}/b",
+		envs: []string{
+			"a=/path/",
+			"b=/path2/",
+		},
+		isFilepath:   true,
+		expectedPath: "/path/b",
+	},
+	{
+		path:    "/$a/b",
+		command: "COPY ${a}/b /c/",
+		envs: []string{
+			"a=/path/",
+			"b=/path2/",
+		},
+		isFilepath:   true,
+		expectedPath: "/path/b",
+	},
+	{
+		path:    "/$a/b/",
+		command: "COPY /${a}/b /c/",
+		envs: []string{
+			"a=/path/",
+			"b=/path2/",
+		},
+		isFilepath:   true,
+		expectedPath: "/path/b/",
+	},
+	{
+		path:    "\\$foo",
+		command: "COPY \\$foo /quux",
+		envs: []string{
+			"foo=/path/",
+		},
+		isFilepath:   true,
+		expectedPath: "$foo",
+	},
+	{
+		path:    "8080/$protocol",
+		command: "EXPOSE 8080/$protocol",
+		envs: []string{
+			"protocol=udp",
+		},
+		expectedPath: "8080/udp",
+	},
+}
+
+func Test_EnvReplacement(t *testing.T) {
+	for _, test := range testEnvReplacement {
+		actualPath, err := ResolveEnvironmentReplacement(test.path, test.envs, test.isFilepath)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedPath, actualPath)
+
+	}
+}
+
 var buildContextPath = "../../integration_tests/"
 
 var destinationFilepathTests = []struct {
@@ -125,6 +209,39 @@ func Test_DestinationFilepath(t *testing.T) {
 	}
 }
 
+var urlDestFilepathTests = []struct {
+	url          string
+	cwd          string
+	dest         string
+	expectedDest string
+}{
+	{
+		url:          "https://something/something",
+		cwd:          "/test",
+		dest:         ".",
+		expectedDest: "/test/something",
+	},
+	{
+		url:          "https://something/something",
+		cwd:          "/cwd",
+		dest:         "/test",
+		expectedDest: "/test",
+	},
+	{
+		url:          "https://something/something",
+		cwd:          "/test",
+		dest:         "/dest/",
+		expectedDest: "/dest/something",
+	},
+}
+
+func Test_UrlDestFilepath(t *testing.T) {
+	for _, test := range urlDestFilepathTests {
+		actualDest := URLDestinationFilepath(test.url, test.dest, test.cwd)
+		testutil.CheckErrorAndDeepEqual(t, false, nil, test.expectedDest, actualDest)
+	}
+}
+
 var matchSourcesTests = []struct {
 	srcs          []string
 	files         []string
@@ -133,6 +250,7 @@ var matchSourcesTests = []struct {
 	{
 		srcs: []string{
 			"pkg/*",
+			testUrl,
 		},
 		files: []string{
 			"pkg/a",
@@ -144,6 +262,7 @@ var matchSourcesTests = []struct {
 		expectedFiles: []string{
 			"pkg/a",
 			"pkg/b",
+			testUrl,
 		},
 	},
 }
@@ -298,6 +417,7 @@ var testResolveSources = []struct {
 		srcsAndDest: []string{
 			"context/foo",
 			"context/b*",
+			testUrl,
 			"dest/",
 		},
 		expectedMap: map[string][]string{
@@ -311,6 +431,9 @@ var testResolveSources = []struct {
 				"context/bar/bat",
 				"context/bar/baz",
 			},
+			testUrl: {
+				testUrl,
+			},
 		},
 	},
 }
@@ -320,4 +443,30 @@ func Test_ResolveSources(t *testing.T) {
 		actualMap, err := ResolveSources(test.srcsAndDest, buildContextPath)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedMap, actualMap)
 	}
+}
+
+var testRemoteUrls = []struct {
+	url   string
+	valid bool
+}{
+	{
+		url:   testUrl,
+		valid: true,
+	},
+	{
+		url:   "not/real/",
+		valid: false,
+	},
+	{
+		url:   "https://url.com/something/not/real",
+		valid: false,
+	},
+}
+
+func Test_RemoteUrls(t *testing.T) {
+	for _, test := range testRemoteUrls {
+		valid := IsSrcRemoteFileURL(test.url)
+		testutil.CheckErrorAndDeepEqual(t, false, nil, test.valid, valid)
+	}
+
 }

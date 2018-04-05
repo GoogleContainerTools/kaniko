@@ -17,9 +17,9 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/docker/docker/builder/dockerfile/shell"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
@@ -29,6 +29,7 @@ type LabelCommand struct {
 }
 
 func (r *LabelCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+	logrus.Info("cmd: LABEL")
 	return updateLabels(r.cmd.Labels, config)
 }
 
@@ -36,9 +37,8 @@ func updateLabels(labels []instructions.KeyValuePair, config *manifest.Schema2Co
 	existingLabels := config.Labels
 
 	// Let's unescape values before setting the label
-	shlex := shell.NewLex('\\')
 	for index, kvp := range labels {
-		unescaped, err := shlex.ProcessWord(kvp.Value, []string{})
+		unescaped, err := util.ResolveEnvironmentReplacement(kvp.Value, []string{}, false)
 		if err != nil {
 			return err
 		}

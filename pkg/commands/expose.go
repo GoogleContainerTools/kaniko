@@ -18,6 +18,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
@@ -29,25 +30,16 @@ type ExposeCommand struct {
 }
 
 func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
-	return updateExposedPorts(r.cmd.Ports, config)
-}
-
-func validProtocol(protocol string) bool {
-	validProtocols := [2]string{"tcp", "udp"}
-	for _, p := range validProtocols {
-		if protocol == p {
-			return true
-		}
-	}
-	return false
-}
-
-func updateExposedPorts(ports []string, config *manifest.Schema2Config) error {
+	logrus.Info("cmd: EXPOSE")
 	// Grab the currently exposed ports
 	existingPorts := config.ExposedPorts
-
 	// Add any new ones in
-	for _, p := range ports {
+	for _, p := range r.cmd.Ports {
+		// Resolve any environment variables
+		p, err := util.ResolveEnvironmentReplacement(p, config.Env, false)
+		if err != nil {
+			return err
+		}
 		// Add the default protocol if one isn't specified
 		if !strings.Contains(p, "/") {
 			p = p + "/tcp"
@@ -62,6 +54,16 @@ func updateExposedPorts(ports []string, config *manifest.Schema2Config) error {
 	}
 	config.ExposedPorts = existingPorts
 	return nil
+}
+
+func validProtocol(protocol string) bool {
+	validProtocols := [2]string{"tcp", "udp"}
+	for _, p := range validProtocols {
+		if protocol == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *ExposeCommand) FilesToSnapshot() []string {

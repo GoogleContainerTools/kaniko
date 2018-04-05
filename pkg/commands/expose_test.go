@@ -19,6 +19,7 @@ package commands
 import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
 	"github.com/containers/image/manifest"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 	"testing"
 )
 
@@ -27,6 +28,10 @@ func TestUpdateExposedPorts(t *testing.T) {
 		ExposedPorts: manifest.Schema2PortSet{
 			"8080/tcp": {},
 		},
+		Env: []string{
+			"port=udp",
+			"num=8085",
+		},
 	}
 
 	ports := []string{
@@ -34,6 +39,15 @@ func TestUpdateExposedPorts(t *testing.T) {
 		"8081/tcp",
 		"8082",
 		"8083/udp",
+		"8084/$port",
+		"$num",
+		"$num/$port",
+	}
+
+	exposeCmd := &ExposeCommand{
+		&instructions.ExposeCommand{
+			Ports: ports,
+		},
 	}
 
 	expectedPorts := manifest.Schema2PortSet{
@@ -41,9 +55,12 @@ func TestUpdateExposedPorts(t *testing.T) {
 		"8081/tcp": {},
 		"8082/tcp": {},
 		"8083/udp": {},
+		"8084/udp": {},
+		"8085/tcp": {},
+		"8085/udp": {},
 	}
 
-	err := updateExposedPorts(ports, cfg)
+	err := exposeCmd.ExecuteCommand(cfg)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedPorts, cfg.ExposedPorts)
 }
 
@@ -56,6 +73,12 @@ func TestInvalidProtocol(t *testing.T) {
 		"80/garbage",
 	}
 
-	err := updateExposedPorts(ports, cfg)
+	exposeCmd := &ExposeCommand{
+		&instructions.ExposeCommand{
+			Ports: ports,
+		},
+	}
+
+	err := exposeCmd.ExecuteCommand(cfg)
 	testutil.CheckErrorAndDeepEqual(t, true, err, nil, nil)
 }
