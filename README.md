@@ -136,4 +136,5 @@ orca-build depends on runC to build images from Dockerfiles; since kaniko doesn'
 
 buildah requires the same root privilges as a Docker daemon does to run, while kaniko runs without any special privileges or permissions.  
 
-FTL aims to achieve the fastest possible creation of Docker images for a subset of images. It can be thought of as a special-case "fast path" that can be used in conjunction with the support for general Dockerfiles kaniko provides.
+FTL aims to achieve the fastest possible creation of Docker images for a subset of images.
+It can be thought of as a special-case "fast path" that can be used in conjunction with the support for general Dockerfiles kaniko provides.

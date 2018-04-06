@@ -99,7 +99,7 @@ var fileTests = []struct {
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_volume",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_volume.json",
 		dockerContext:  buildcontextPath,
-		kbuildContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
 		repo:           "test-volume",
 	},
 	{
