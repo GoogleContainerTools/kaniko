@@ -1,0 +1,19 @@
+apiVersion: skaffold/v1alpha2
+kind: Config
+build:
+  artifacts:
+  - imageName: gcr.io/kbuild-project/executor
+    workspace: .
+    docker:
+      dockerfilePath: deploy/Dockerfile
+  - imageName: gcr.io/r2d4minikube/skaffold-example
+    workspace: examples/getting-started
+    kaniko:
+      gcsBucket: r2d4minikube
+      dockerfilePath: Dockerfile
+      pullSecret: /home/matt/Downloads/kaniko.json
+  local: {}
+deploy:
+  kubectl:
+    manifests:
+      - examples/getting-started/k8s-*
