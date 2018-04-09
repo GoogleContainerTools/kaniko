@@ -37,6 +37,9 @@ KBUILD_PACKAGE = $(REPOPATH)/kbuild
 out/executor: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
 
+.PHONY: install
+install: $(GO_FILES) $(BUILD_DIR)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go install -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) $(EXECUTOR_PACKAGE)
 
 out/kbuild: $(GO_FILES)
 	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KBUILD_PACKAGE)
@@ -50,5 +53,5 @@ integration-test: out/executor out/kbuild
 	@ ./integration-test.sh
 
 .PHONY: images
-images: out/executor out/kbuild
+images: $(GO_FILES)
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .

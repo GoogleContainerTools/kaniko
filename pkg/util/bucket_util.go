@@ -17,18 +17,18 @@ limitations under the License.
 package util
 
 import (
-	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	"os"
 	"path/filepath"
+
+	"cloud.google.com/go/storage"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 // UnpackTarFromGCSBucket unpacks the kbuild.tar file in the given bucket to the given directory
-func UnpackTarFromGCSBucket(bucketName, directory string) error {
+func UnpackTarFromGCSBucket(bucketName, contextFile, directory string) error {
 	// Get the tar from the bucket
-	tarPath, err := getTarFromBucket(bucketName, directory)
+	tarPath, err := getTarFromBucket(bucketName, contextFile, directory)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func UnpackTarFromGCSBucket(bucketName, directory string) error {
 
 // getTarFromBucket gets kbuild.tar from the GCS bucket and saves it to the filesystem
 // It returns the path to the tar file
-func getTarFromBucket(bucketName, directory string) (string, error) {
+func getTarFromBucket(bucketName, contextFile, directory string) (string, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -51,15 +51,15 @@ func getTarFromBucket(bucketName, directory string) (string, error) {
 	}
 	bucket := client.Bucket(bucketName)
 	// Get the tarfile kbuild.tar from the GCS bucket, and save it to a tar object
-	reader, err := bucket.Object(constants.ContextTar).NewReader(ctx)
+	reader, err := bucket.Object(contextFile).NewReader(ctx)
 	if err != nil {
 		return "", err
 	}
 	defer reader.Close()
-	tarPath := filepath.Join(directory, constants.ContextTar)
+	tarPath := filepath.Join(directory, contextFile)
 	if err := CreateFile(tarPath, reader, 0600); err != nil {
 		return "", err
 	}
-	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", constants.ContextTar, bucketName, tarPath)
+	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", contextFile, bucketName, tarPath)
 	return tarPath, nil
 }
