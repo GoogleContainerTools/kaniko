@@ -17,6 +17,10 @@ limitations under the License.
 package cmd
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/commands"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
@@ -26,17 +30,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 var (
-	dockerfilePath string
-	destination    string
-	srcContext     string
-	bucket         string
-	logLevel       string
+	dockerfilePath    string
+	destination       string
+	srcContext        string
+	bucket            string
+	logLevel          string
+	remoteContextPath string
 )
 
 func init() {
@@ -45,6 +47,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVar(&remoteContextPath, "remote-context-path", constants.ContextTar, "The remote path to the docker context tarball relative to the GCS bucket")
 }
 
 var RootCmd = &cobra.Command{
@@ -78,7 +81,7 @@ func resolveSourceContext() error {
 	}
 	logrus.Infof("Using GCS bucket %s as source context", bucket)
 	buildContextPath := constants.BuildContextDir
-	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
+	if err := util.UnpackTarFromGCSBucket(bucket, remoteContextPath, buildContextPath); err != nil {
 		return err
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
