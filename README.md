@@ -5,7 +5,6 @@ kaniko doesn't depend on a Docker daemon and executes each command within a Dock
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster. 
 
 The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
-* VOLUME
 * SHELL
 * HEALTHCHECK
 * STOPSIGNAL
@@ -77,36 +76,35 @@ To create the secret, run:
 kubectl create secret generic kaniko-secret --from-file=<path to kaniko-secret.json>
 ```
 
-The Kubernetes job.yaml should look similar to this, with the args parameters filled in:
+The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
 
 ```yaml
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
   name: kaniko
 spec:
-  template:
-    spec:
-      containers:
-      - name: kaniko
-        image: gcr.io/kaniko-project/executor:latest
-        args: ["--dockerfile=<path to Dockerfile>",
-               "--bucket=<GCS bucket>",
-               "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
-        volumeMounts:
-          - name: kaniko-secret
-            mountPath: /secret
-        env:
-          - name: GOOGLE_APPLICATION_CREDENTIALS
-            value: /secret/kaniko-secret.json
-      restartPolicy: Never
-      volumes:
-        - name: kaniko-secret
-          secret:
-            secretName: kaniko-secret
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<path to Dockerfile>",
+            "--bucket=<GCS bucket>",
+            "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
+    volumeMounts:
+      - name: kaniko-secret
+        mountPath: /secret
+    env:
+      - name: GOOGLE_APPLICATION_CREDENTIALS
+        value: /secret/kaniko-secret.json
+  restartPolicy: Never
+  volumes:
+    - name: kaniko-secret
+      secret:
+        secretName: kaniko-secret
 ```
 
-This example pulls the build context from a GCS bucket. To use a local directory build context, you could consider using configMaps to mount in small build contexts.
+This example pulls the build context from a GCS bucket.
+To use a local directory build context, you could consider using configMaps to mount in small build contexts.
 
 ## Running kaniko in Google Container Builder 
 To run kaniko in GCB, add it to your build config as a build step:
@@ -138,3 +136,7 @@ buildah requires the same root privilges as a Docker daemon does to run, while k
 
 FTL aims to achieve the fastest possible creation of Docker images for a subset of images.
 It can be thought of as a special-case "fast path" that can be used in conjunction with the support for general Dockerfiles kaniko provides.
+
+## Community
+
+[kaniko-users](https://groups.google.com/forum/#!forum/kaniko-users) Google group
