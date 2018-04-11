@@ -46,20 +46,6 @@ type View struct {
 	Aggregation *Aggregation
 }
 
-// Deprecated: Use &View{}.
-func New(name, description string, keys []tag.Key, measure stats.Measure, agg *Aggregation) (*View, error) {
-	if measure == nil {
-		panic("measure may not be nil")
-	}
-	return &View{
-		Name:        name,
-		Description: description,
-		TagKeys:     keys,
-		Measure:     measure,
-		Aggregation: agg,
-	}, nil
-}
-
 // WithName returns a copy of the View with a new name. This is useful for
 // renaming views to cope with limitations placed on metric names by various
 // backends.
@@ -176,7 +162,7 @@ func (r *Row) String() string {
 	return buffer.String()
 }
 
-// same returns true if both Rows are equal. Tags are expected to be ordered
+// Equal returns true if both rows are equal. Tags are expected to be ordered
 // by the key name. Even both rows have the same tags but the tags appear in
 // different orders it will return false.
 func (r *Row) Equal(other *Row) bool {

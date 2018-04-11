@@ -8,6 +8,11 @@
   revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
   source = "github.com/prometheus/client_golang"
 
+[[override]]
+  name = "github.com/containers/storage"
+  revision = "1e5ce40cdb84ab66e26186435b1273e04b879fef"
+  source = "github.com/containers/storage"
+
 [[constraint]]
   name = "github.com/GoogleCloudPlatform/container-diff"
   branch = "master"

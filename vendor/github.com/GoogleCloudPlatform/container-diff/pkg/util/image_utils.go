@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google, Inc. All rights reserved.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,10 +21,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/docker/docker/pkg/system"
 	"github.com/sirupsen/logrus"
 )
+
+const LatestTag string = ":latest"
 
 func GetImageLayers(pathToImage string) []string {
 	layers := []string{}
@@ -66,4 +69,10 @@ func copyToFile(outfile string, r io.Reader) error {
 	}
 
 	return nil
+}
+
+// checks to see if an image string contains a tag.
+func HasTag(image string) bool {
+	tagRegex := regexp.MustCompile(".*:[^/]+$")
+	return tagRegex.MatchString(image)
 }

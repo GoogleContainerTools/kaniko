@@ -44,7 +44,7 @@ func (o *ObjectHandle) NewReader(ctx context.Context) (*Reader, error) {
 // NewRangeReader reads part of an object, reading at most length bytes
 // starting at the given offset. If length is negative, the object is read
 // until the end.
-func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64) (_ *Reader, err error) {
+func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64) (r *Reader, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Object.NewRangeReader")
 	defer func() { trace.EndSpan(ctx, err) }()
 

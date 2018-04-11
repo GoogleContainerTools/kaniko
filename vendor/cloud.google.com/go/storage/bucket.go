@@ -146,7 +146,7 @@ func (b *BucketHandle) Object(name string) *ObjectHandle {
 }
 
 // Attrs returns the metadata for the bucket.
-func (b *BucketHandle) Attrs(ctx context.Context) (_ *BucketAttrs, err error) {
+func (b *BucketHandle) Attrs(ctx context.Context) (attrs *BucketAttrs, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Bucket.Attrs")
 	defer func() { trace.EndSpan(ctx, err) }()
 
@@ -180,7 +180,7 @@ func (b *BucketHandle) newGetCall() (*raw.BucketsGetCall, error) {
 	return req, nil
 }
 
-func (b *BucketHandle) Update(ctx context.Context, uattrs BucketAttrsToUpdate) (_ *BucketAttrs, err error) {
+func (b *BucketHandle) Update(ctx context.Context, uattrs BucketAttrsToUpdate) (attrs *BucketAttrs, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Bucket.Create")
 	defer func() { trace.EndSpan(ctx, err) }()
 
@@ -916,7 +916,7 @@ func (it *BucketIterator) Next() (*BucketAttrs, error) {
 // PageInfo supports pagination. See the google.golang.org/api/iterator package for details.
 func (it *BucketIterator) PageInfo() *iterator.PageInfo { return it.pageInfo }
 
-func (it *BucketIterator) fetch(pageSize int, pageToken string) (_ string, err error) {
+func (it *BucketIterator) fetch(pageSize int, pageToken string) (token string, err error) {
 	req := it.client.raw.Buckets.List(it.projectID)
 	setClientHeader(req.Header())
 	req.Projection("full")

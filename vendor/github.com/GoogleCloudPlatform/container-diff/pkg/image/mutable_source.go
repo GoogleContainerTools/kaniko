@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google, Inc. All rights reserved.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	img "github.com/containers/image/image"
+	"github.com/containers/image/types"
 	"io"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/containers/image/manifest"
-	"github.com/containers/image/types"
 	digest "github.com/opencontainers/go-digest"
 )
 
@@ -76,9 +77,33 @@ func (m *MutableSource) GetManifest(_ *digest.Digest) ([]byte, string, error) {
 
 // populateManifestAndConfig parses the raw manifest and configs, storing them on the struct.
 func (m *MutableSource) populateManifestAndConfig() error {
-	mfstBytes, _, err := m.ProxySource.GetManifest(nil)
+	context := &types.SystemContext{
+		OSChoice:           "linux",
+		ArchitectureChoice: "amd64",
+	}
+	image, err := m.ProxySource.Ref.NewImage(context)
 	if err != nil {
 		return err
+	}
+	defer image.Close()
+	// First get manifest
+	mfstBytes, mfstType, err := image.Manifest()
+	if err != nil {
+		return err
+	}
+
+	if mfstType == manifest.DockerV2ListMediaType {
+		// We need to select a manifest digest from the manifest list
+		unparsedImage := img.UnparsedInstance(m.ImageSource, nil)
+
+		mfstDigest, err := img.ChooseManifestInstanceFromManifestList(context, unparsedImage)
+		if err != nil {
+			return err
+		}
+		mfstBytes, _, err = m.ProxySource.GetManifest(&mfstDigest)
+		if err != nil {
+			return err
+		}
 	}
 
 	m.mfst, err = manifest.Schema2FromManifest(mfstBytes)
@@ -86,18 +111,12 @@ func (m *MutableSource) populateManifestAndConfig() error {
 		return err
 	}
 
-	bi := types.BlobInfo{Digest: m.mfst.ConfigDescriptor.Digest}
-	r, _, err := m.GetBlob(bi)
+	// Now, get config
+	configBlob, err := image.ConfigBlob()
 	if err != nil {
 		return err
 	}
-
-	cfgBytes, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(cfgBytes, &m.cfg)
+	return json.Unmarshal(configBlob, &m.cfg)
 }
 
 // GetBlob first checks the stored "extra" blobs, then proxies the call to the original source.

@@ -64,7 +64,7 @@ type Copier struct {
 }
 
 // Run performs the copy.
-func (c *Copier) Run(ctx context.Context) (_ *ObjectAttrs, err error) {
+func (c *Copier) Run(ctx context.Context) (attrs *ObjectAttrs, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Copier.Run")
 	defer func() { trace.EndSpan(ctx, err) }()
 
@@ -153,7 +153,7 @@ type Composer struct {
 }
 
 // Run performs the compose operation.
-func (c *Composer) Run(ctx context.Context) (_ *ObjectAttrs, err error) {
+func (c *Composer) Run(ctx context.Context) (attrs *ObjectAttrs, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Composer.Run")
 	defer func() { trace.EndSpan(ctx, err) }()
 

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opencensus.io/internal"
@@ -114,7 +115,7 @@ type StartOptions struct {
 	// If not provided, then the behavior differs based on whether
 	// the parent of this Span is remote, local, or there is no parent.
 	// In the case of a remote parent or no parent, the
-	// default sampler (see SetDefaultSampler) will be consulted. Otherwise,
+	// default sampler (see Config) will be consulted. Otherwise,
 	// when there is a non-remote parent, no new sampling decision will be made:
 	// we will preserve the sampling of the parent.
 	Sampler Sampler
@@ -157,13 +158,14 @@ func NewSpanWithRemoteParent(name string, parent SpanContext, o StartOptions) *S
 func startSpanInternal(name string, hasParent bool, parent SpanContext, remoteParent bool, o StartOptions) *Span {
 	span := &Span{}
 	span.spanContext = parent
-	mu.Lock()
+
+	cfg := config.Load().(*Config)
+
 	if !hasParent {
-		span.spanContext.TraceID = newTraceIDLocked()
+		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 	}
-	span.spanContext.SpanID = newSpanIDLocked()
-	sampler := defaultSampler
-	mu.Unlock()
+	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
+	sampler := cfg.DefaultSampler
 
 	if !hasParent || remoteParent || o.Sampler != nil {
 		// If this span is the child of a local span and no Sampler is set in the
@@ -404,47 +406,58 @@ func (s *Span) String() string {
 	return str
 }
 
-var (
-	mu             sync.Mutex // protects the variables below
-	traceIDRand    *rand.Rand
-	traceIDAdd     [2]uint64
-	nextSpanID     uint64
-	spanIDInc      uint64
-	defaultSampler Sampler
-)
+var config atomic.Value // access atomically
 
 func init() {
+	gen := &defaultIDGenerator{}
 	// initialize traceID and spanID generators.
 	var rngSeed int64
 	for _, p := range []interface{}{
-		&rngSeed, &traceIDAdd, &nextSpanID, &spanIDInc,
+		&rngSeed, &gen.traceIDAdd, &gen.nextSpanID, &gen.spanIDInc,
 	} {
 		binary.Read(crand.Reader, binary.LittleEndian, p)
 	}
-	traceIDRand = rand.New(rand.NewSource(rngSeed))
-	spanIDInc |= 1
+	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
+	gen.spanIDInc |= 1
+
+	config.Store(&Config{
+		DefaultSampler: ProbabilitySampler(defaultSamplingProbability),
+		IDGenerator:    gen,
+	})
 }
 
-// newSpanIDLocked returns a non-zero SpanID from a randomly-chosen sequence.
+type defaultIDGenerator struct {
+	sync.Mutex
+	traceIDRand *rand.Rand
+	traceIDAdd  [2]uint64
+	nextSpanID  uint64
+	spanIDInc   uint64
+}
+
+// NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 // mu should be held while this function is called.
-func newSpanIDLocked() SpanID {
-	id := nextSpanID
-	nextSpanID += spanIDInc
-	if nextSpanID == 0 {
-		nextSpanID += spanIDInc
+func (gen *defaultIDGenerator) NewSpanID() [8]byte {
+	gen.Lock()
+	id := gen.nextSpanID
+	gen.nextSpanID += gen.spanIDInc
+	if gen.nextSpanID == 0 {
+		gen.nextSpanID += gen.spanIDInc
 	}
-	var sid SpanID
+	gen.Unlock()
+	var sid [8]byte
 	binary.LittleEndian.PutUint64(sid[:], id)
 	return sid
 }
 
-// newTraceIDLocked returns a non-zero TraceID from a randomly-chosen sequence.
+// NewTraceID returns a non-zero trace ID from a randomly-chosen sequence.
 // mu should be held while this function is called.
-func newTraceIDLocked() TraceID {
-	var tid TraceID
+func (gen *defaultIDGenerator) NewTraceID() [16]byte {
+	var tid [16]byte
 	// Construct the trace ID from two outputs of traceIDRand, with a constant
 	// added to each half for additional entropy.
-	binary.LittleEndian.PutUint64(tid[0:8], traceIDRand.Uint64()+traceIDAdd[0])
-	binary.LittleEndian.PutUint64(tid[8:16], traceIDRand.Uint64()+traceIDAdd[1])
+	gen.Lock()
+	binary.LittleEndian.PutUint64(tid[0:8], gen.traceIDRand.Uint64()+gen.traceIDAdd[0])
+	binary.LittleEndian.PutUint64(tid[8:16], gen.traceIDRand.Uint64()+gen.traceIDAdd[1])
+	gen.Unlock()
 	return tid
 }

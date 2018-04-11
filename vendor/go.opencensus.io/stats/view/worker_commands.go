@@ -41,16 +41,21 @@ type getViewByNameResp struct {
 }
 
 func (cmd *getViewByNameReq) handleCommand(w *worker) {
-	cmd.c <- &getViewByNameResp{w.views[cmd.name].view}
+	v := w.views[cmd.name]
+	if v == nil {
+		cmd.c <- &getViewByNameResp{nil}
+		return
+	}
+	cmd.c <- &getViewByNameResp{v.view}
 }
 
-// subscribeToViewReq is the command to subscribe to a view.
-type subscribeToViewReq struct {
+// registerViewReq is the command to register a view.
+type registerViewReq struct {
 	views []*View
 	err   chan error
 }
 
-func (cmd *subscribeToViewReq) handleCommand(w *worker) {
+func (cmd *registerViewReq) handleCommand(w *worker) {
 	var errstr []string
 	for _, view := range cmd.views {
 		vi, err := w.tryRegisterView(view)

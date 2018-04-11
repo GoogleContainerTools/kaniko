@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google, Inc. All rights reserved.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,21 +32,25 @@ type CloudPrepper struct {
 	ImageSource types.ImageSource
 }
 
-func (p CloudPrepper) Name() string {
+func (p *CloudPrepper) Name() string {
 	return "Cloud Registry"
 }
 
-func (p CloudPrepper) GetSource() string {
+func (p *CloudPrepper) GetSource() string {
 	return p.Source
 }
 
-func (p CloudPrepper) GetImage() (Image, error) {
+func (p *CloudPrepper) SetSource(source string) {
+	p.Source = source
+}
+
+func (p *CloudPrepper) GetImage() (Image, error) {
 	image, err := getImage(p)
 	image.Type = ImageTypeCloud
 	return image, err
 }
 
-func (p CloudPrepper) GetFileSystem() (string, error) {
+func (p *CloudPrepper) GetFileSystem() (string, error) {
 	ref, err := docker.ParseReference("//" + p.Source)
 	if err != nil {
 		return "", err
@@ -62,7 +66,7 @@ func (p CloudPrepper) GetFileSystem() (string, error) {
 	return path, GetFileSystemFromReference(ref, p.ImageSource, path, nil)
 }
 
-func (p CloudPrepper) GetConfig() (ConfigSchema, error) {
+func (p *CloudPrepper) GetConfig() (ConfigSchema, error) {
 	ref, err := docker.ParseReference("//" + p.Source)
 	if err != nil {
 		return ConfigSchema{}, err
