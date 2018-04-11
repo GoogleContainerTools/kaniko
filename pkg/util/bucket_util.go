@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 )
 
-// UnpackTarFromGCSBucket unpacks the kbuild.tar file in the given bucket to the given directory
+// UnpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory
 func UnpackTarFromGCSBucket(bucketName, directory string) error {
 	// Get the tar from the bucket
 	tarPath, err := getTarFromBucket(bucketName, directory)
@@ -41,7 +41,7 @@ func UnpackTarFromGCSBucket(bucketName, directory string) error {
 	return os.Remove(tarPath)
 }
 
-// getTarFromBucket gets kbuild.tar from the GCS bucket and saves it to the filesystem
+// getTarFromBucket gets context.tar.gz from the GCS bucket and saves it to the filesystem
 // It returns the path to the tar file
 func getTarFromBucket(bucketName, directory string) (string, error) {
 	ctx := context.Background()
@@ -50,7 +50,7 @@ func getTarFromBucket(bucketName, directory string) (string, error) {
 		return "", err
 	}
 	bucket := client.Bucket(bucketName)
-	// Get the tarfile kbuild.tar from the GCS bucket, and save it to a tar object
+	// Get the tarfile context.tar.gz from the GCS bucket, and save it to a tar object
 	reader, err := bucket.Object(constants.ContextTar).NewReader(ctx)
 	if err != nil {
 		return "", err

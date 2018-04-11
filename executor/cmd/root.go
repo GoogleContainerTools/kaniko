@@ -50,18 +50,32 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return util.SetLogLevel(logLevel)
+		if err := util.SetLogLevel(logLevel); err != nil {
+			return err
+		}
+		if err := resolveSourceContext(); err != nil {
+			return err
+		}
+		return checkDockerfilePath()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := resolveSourceContext(); err != nil {
-			logrus.Error(err)
-			os.Exit(1)
-		}
 		if err := execute(); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
 	},
+}
+
+func checkDockerfilePath() error {
+	if util.FilepathExists(dockerfilePath) {
+		return nil
+	}
+	// Otherwise, check if the path relative to the build context exists
+	if util.FilepathExists(filepath.Join(srcContext, dockerfilePath)) {
+		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
+		return nil
+	}
+	return errors.New("please provide a valid path to a Dockerfile within the build context")
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
@@ -83,11 +97,6 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
 	srcContext = buildContextPath
-	// If path to dockerfile doesn't exist, assume it is in the unpacked tar
-	if !util.FilepathExists(dockerfilePath) {
-		logrus.Debugf("Expecting dockerfile to be located at %s within the tar build context", dockerfilePath)
-		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
-	}
 	return nil
 }
 

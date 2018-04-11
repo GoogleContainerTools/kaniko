@@ -39,7 +39,7 @@ func TestSnapshotFileChange(t *testing.T) {
 	newFiles := map[string]string{
 		"foo":        "newbaz1",
 		"bar/bat":    "baz",
-		"kbuild/bat": "bat",
+		"kaniko/bat": "bat",
 	}
 	if err := testutil.SetupFiles(testDir, newFiles); err != nil {
 		t.Fatalf("Error setting up fs: %s", err)
@@ -135,14 +135,14 @@ func TestSnapshotFiles(t *testing.T) {
 	// Make some changes to the filesystem
 	newFiles := map[string]string{
 		"foo":         "newbaz1",
-		"kbuild/file": "bat",
+		"kaniko/file": "bat",
 	}
 	if err := testutil.SetupFiles(testDir, newFiles); err != nil {
 		t.Fatalf("Error setting up fs: %s", err)
 	}
 	filesToSnapshot := []string{
 		filepath.Join(testDir, "foo"),
-		filepath.Join(testDir, "kbuild/file"),
+		filepath.Join(testDir, "kaniko/file"),
 	}
 	contents, err := snapshotter.TakeSnapshot(filesToSnapshot)
 	if err != nil {
@@ -199,7 +199,7 @@ func setUpTestDir() (string, *Snapshotter, error) {
 	files := map[string]string{
 		"foo":         "baz1",
 		"bar/bat":     "baz2",
-		"kbuild/file": "file",
+		"kaniko/file": "file",
 	}
 	// Set up initial files
 	if err := testutil.SetupFiles(testDir, files); err != nil {
