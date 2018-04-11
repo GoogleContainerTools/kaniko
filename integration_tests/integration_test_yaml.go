@@ -110,6 +110,14 @@ var fileTests = []struct {
 		kbuildContext:  buildcontextPath,
 		repo:           "test-add",
 	},
+	{
+		description:    "test registry",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_registry",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_registry.json",
+		dockerContext:  buildcontextPath,
+		kbuildContext:  buildcontextPath,
+		repo:           "test-registry",
+	},
 }
 
 var structureTests = []struct {

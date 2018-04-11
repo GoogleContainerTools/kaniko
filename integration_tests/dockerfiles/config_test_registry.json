@@ -1,0 +1,12 @@
+[
+  {
+    "Image1": "gcr.io/kbuild-test/docker-test-registry:latest",
+    "Image2": "gcr.io/kbuild-test/kbuild-test-registry:latest",
+    "DiffType": "File",
+    "Diff": {
+      "Adds": null,
+      "Dels": null,
+      "Mods": null
+    }
+  }
+]
