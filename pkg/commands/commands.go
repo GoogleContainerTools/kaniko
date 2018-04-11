@@ -58,6 +58,8 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &UserCommand{cmd: c}, nil
 	case *instructions.OnbuildCommand:
 		return &OnBuildCommand{cmd: c}, nil
+	case *instructions.VolumeCommand:
+		return &VolumeCommand{cmd: c}, nil
 	}
 	return nil, errors.Errorf("%s is not a supported command", cmd.Name())
 }
