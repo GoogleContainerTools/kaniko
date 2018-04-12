@@ -19,7 +19,7 @@ package snapshot
 import (
 	"archive/tar"
 	"bytes"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 
 	"io"

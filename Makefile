@@ -22,7 +22,7 @@ VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
 ORG := github.com/GoogleCloudPlatform
-PROJECT := k8s-container-builder
+PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
 
 REPOPATH ?= $(ORG)/$(PROJECT)

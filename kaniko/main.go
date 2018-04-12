@@ -18,7 +18,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/kaniko/cmd"
+	"github.com/GoogleCloudPlatform/kaniko/kaniko/cmd"
 	"os"
 )
 

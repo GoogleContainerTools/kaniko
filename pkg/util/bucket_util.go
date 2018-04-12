@@ -18,7 +18,7 @@ package util
 
 import (
 	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"os"

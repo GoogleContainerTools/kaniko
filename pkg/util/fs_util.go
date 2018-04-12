@@ -19,7 +19,7 @@ package util
 import (
 	"bufio"
 	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
 	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 	"io"
