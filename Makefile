@@ -50,5 +50,5 @@ integration-test: out/executor out/kaniko
 	@ ./integration-test.sh
 
 .PHONY: images
-images: out/executor out/kaniko
+images: $(GO_FILES)
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
