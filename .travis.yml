@@ -3,7 +3,7 @@ os: linux
 
 go:
   - 1.9.x
-go_import_path: github.com/GoogleCloudPlatform/k8s-container-builder
+go_import_path: github.com/GoogleCloudPlatform/kaniko
 
 script:
   - make test

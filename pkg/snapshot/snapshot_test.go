@@ -18,8 +18,8 @@ package snapshot
 import (
 	"archive/tar"
 	"bytes"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"github.com/GoogleCloudPlatform/kaniko/testutil"
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"

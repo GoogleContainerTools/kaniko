@@ -18,7 +18,7 @@ package commands
 
 import (
 	"fmt"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
