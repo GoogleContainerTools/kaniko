@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"github.com/containers/image/docker"
 	img "github.com/containers/image/image"
 	"github.com/containers/image/types"
 	"io"
@@ -40,6 +41,9 @@ type MutableSource struct {
 }
 
 func NewMutableSource(r types.ImageReference) (*MutableSource, error) {
+	if r == nil {
+		return MutableSourceFromScratch()
+	}
 	src, err := r.NewImageSource(nil)
 	if err != nil {
 		return nil, err
@@ -59,6 +63,36 @@ func NewMutableSource(r types.ImageReference) (*MutableSource, error) {
 	}
 	if err := ms.populateManifestAndConfig(); err != nil {
 		return nil, err
+	}
+	return ms, nil
+}
+
+func MutableSourceFromScratch() (*MutableSource, error) {
+	config := &manifest.Schema2Image{
+		Schema2V1Image: manifest.Schema2V1Image{
+			Config: &manifest.Schema2Config{},
+		},
+		RootFS:  &manifest.Schema2RootFS{},
+		History: []manifest.Schema2History{},
+	}
+	ref, err := docker.ParseReference("//scratch")
+	if err != nil {
+		return nil, err
+	}
+	src, err := ref.NewImageSource(nil)
+	if err != nil {
+		return nil, err
+	}
+	ms := &MutableSource{
+		ProxySource: ProxySource{
+			Ref: &ProxyReference{
+				ImageReference: ref,
+			},
+			ImageSource: src,
+		},
+		extraBlobs: make(map[string][]byte),
+		cfg:        config,
+		mfst:       &manifest.Schema2{},
 	}
 	return ms, nil
 }

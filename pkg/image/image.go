@@ -18,6 +18,7 @@ package image
 
 import (
 	img "github.com/GoogleCloudPlatform/container-diff/pkg/image"
+	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/containers/image/copy"
 	"github.com/containers/image/docker"
 	"github.com/containers/image/signature"
@@ -30,6 +31,9 @@ import (
 
 // InitializeSourceImage initializes the source image with the base image
 func NewSourceImage(srcImg string) (*img.MutableSource, error) {
+	if srcImg == constants.NoBaseImage {
+		return img.NewMutableSource(nil)
+	}
 	logrus.Infof("Initializing source image %s", srcImg)
 	ref, err := docker.ParseReference("//" + srcImg)
 	if err != nil {
