@@ -19,14 +19,7 @@ steps:
     dir: go/src/github.com/GoogleCloudPlatform/kaniko
     env: ["GOPATH=/workspace/go/"]
   # Then, build kaniko with kaniko
-  - name: "gcr.io/priya-wadhwa/executor:latest"
+  - name: "gcr.io/kaniko-project/executor:latest"
     args: ["--dockerfile=/workspace/deploy/Dockerfile",
            "--context=/workspace/go/src/github.com/GoogleCloudPlatform/kaniko/",
-           "--destination=gcr.io/priya-wadhwa/executor:${COMMIT_SHA}"]
-  # Pull the image down
-  - name: "gcr.io/cloud-builders/docker" 
-    args: ["pull", "gcr.io/priya-wadhwa/executor:${COMMIT_SHA}"]
-  # And tag it to latest
-  - name: "gcr.io/cloud-builders/docker" 
-    args: ["tag", "gcr.io/priya-wadhwa/executor:${COMMIT_SHA}", "gcr.io/priya-wadhwa/executor:latest"]
-images: ["gcr.io/priya-wadhwa/executor:latest"]
+           "--destination=gcr.io/kaniko-project/executor:${COMMIT_SHA}"]
