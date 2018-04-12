@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/commands"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
@@ -37,6 +38,7 @@ var (
 	dockerfilePath string
 	destination    string
 	srcContext     string
+	snapshotMode   string
 	bucket         string
 	logLevel       string
 )
@@ -46,6 +48,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
+	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 }
 
@@ -121,7 +124,11 @@ func execute() error {
 		return err
 	}
 
-	l := snapshot.NewLayeredMap(util.Hasher())
+	hasher, err := getHasher()
+	if err != nil {
+		return err
+	}
+	l := snapshot.NewLayeredMap(hasher)
 	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
 
 	// Take initial snapshot
@@ -177,6 +184,17 @@ func execute() error {
 		return err
 	}
 	return image.PushImage(sourceImage, destination)
+}
+
+func getHasher() (func(string) (string, error), error) {
+	if snapshotMode == constants.SnapshotModeTime {
+		logrus.Info("Only file modification time will be considered when snapshotting")
+		return util.MtimeHasher(), nil
+	}
+	if snapshotMode == constants.SnapshotModeFull {
+		return util.Hasher(), nil
+	}
+	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
 func resolveOnBuild(stage *instructions.Stage, config *manifest.Schema2Config) error {
