@@ -81,6 +81,7 @@ func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{})
 	w := tar.NewWriter(buf)
 	defer w.Close()
+	filesAdded := false
 	for _, file := range files {
 		info, err := os.Stat(file)
 		if err != nil {
@@ -96,8 +97,12 @@ func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
 			return nil, err
 		}
 		if maybeAdd {
+			filesAdded = true
 			util.AddToTar(file, info, w)
 		}
+	}
+	if !filesAdded {
+		return nil, nil
 	}
 	return ioutil.ReadAll(buf)
 }
