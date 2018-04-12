@@ -29,7 +29,7 @@
     "pkg/image",
     "pkg/util"
   ]
-  revision = "584702e972217657456b62c7697e34410e21df2f"
+  revision = "859166bbd7810e3c3fc072f1c33ad57b9f4acbd0"
   source = "github.com/GoogleCloudPlatform/container-diff"
 
 [[projects]]
@@ -136,7 +136,6 @@
   source = "github.com/containers/storage"
 
 [[projects]]
-  branch = "master"
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -152,6 +151,7 @@
     "registry/storage/cache/memory"
   ]
   revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
+  source = "github.com/docker/distribution"
 
 [[projects]]
   name = "github.com/docker/docker"
@@ -420,8 +420,8 @@
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/tchap/go-patricia"
@@ -546,7 +546,7 @@
     "storage/v1",
     "transport/http"
   ]
-  revision = "9f7560f3b05bd90f33f9d56a449e5afd4dab15b3"
+  revision = "dde16f2e838706995ab9946df55f5dc7c5564cc6"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -627,6 +627,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2d3f1ff18ab927782817d99b07dff1413f5c57fb79f10bbaaaef1cab56dfd8be"
+  inputs-digest = "9d9dcea86069309f0002357a58daae091899741c5c23ec056a37021c560facef"
   solver-name = "gps-cdcl"
   solver-version = 1

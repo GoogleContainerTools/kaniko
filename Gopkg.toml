@@ -13,6 +13,11 @@
   revision = "1e5ce40cdb84ab66e26186435b1273e04b879fef"
   source = "github.com/containers/storage"
 
+[[override]]
+  name = "github.com/docker/distribution"
+  revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
+  source = "github.com/docker/distribution"
+
 [[constraint]]
   name = "github.com/GoogleCloudPlatform/container-diff"
   branch = "master"
