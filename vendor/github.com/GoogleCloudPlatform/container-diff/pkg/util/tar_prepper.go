@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google, Inc. All rights reserved.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,25 +32,29 @@ type TarPrepper struct {
 	Client *client.Client
 }
 
-func (p TarPrepper) Name() string {
+func (p *TarPrepper) Name() string {
 	return "Tar Archive"
 }
 
-func (p TarPrepper) GetSource() string {
+func (p *TarPrepper) GetSource() string {
 	return p.Source
 }
 
-func (p TarPrepper) GetImage() (Image, error) {
+func (p *TarPrepper) SetSource(source string) {
+	p.Source = source
+}
+
+func (p *TarPrepper) GetImage() (Image, error) {
 	image, err := getImage(p)
 	image.Type = ImageTypeTar
 	return image, err
 }
 
-func (p TarPrepper) GetFileSystem() (string, error) {
+func (p *TarPrepper) GetFileSystem() (string, error) {
 	return getImageFromTar(p.Source)
 }
 
-func (p TarPrepper) GetConfig() (ConfigSchema, error) {
+func (p *TarPrepper) GetConfig() (ConfigSchema, error) {
 	tempDir, err := ioutil.TempDir("", ".container-diff")
 	if err != nil {
 		return ConfigSchema{}, nil

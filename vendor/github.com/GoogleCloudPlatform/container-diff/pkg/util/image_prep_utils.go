@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google, Inc. All rights reserved.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import (
 	"archive/tar"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/GoogleCloudPlatform/container-diff/cmd/util/output"
@@ -38,6 +40,7 @@ type Prepper interface {
 	GetFileSystem() (string, error)
 	GetImage() (Image, error)
 	GetSource() string
+	SetSource(string)
 }
 
 type ImageType int
@@ -84,13 +87,60 @@ type ImageHistoryItem struct {
 }
 
 type ConfigObject struct {
-	Env          []string            `json:"Env"`
-	Entrypoint   []string            `json:"Entrypoint"`
+	Hostname     string
+	Domainname   string
+	User         string
+	AttachStdin  bool
+	AttachStdout bool
+	AttachStderr bool
 	ExposedPorts map[string]struct{} `json:"ExposedPorts"`
-	Cmd          []string            `json:"Cmd"`
-	Volumes      map[string]struct{} `json:"Volumes"`
-	Workdir      string              `json:"WorkingDir"`
-	Labels       map[string]string   `json:"Labels"`
+	Tty          bool
+	OpenStdin    bool
+	StdinOnce    bool
+	Env          []string `json:"Env"`
+	Cmd          []string `json:"Cmd"`
+	// Healthcheck *HealthConfig
+	ArgsEscaped     bool `json:",omitempty"`
+	Image           string
+	Volumes         map[string]struct{} `json:"Volumes"`
+	Workdir         string              `json:"WorkingDir"`
+	Entrypoint      []string            `json:"Entrypoint"`
+	NetworkDisabled bool                `json:",omitempty"`
+	MacAddress      string              `json:",omitempty"`
+	OnBuild         []string
+	Labels          map[string]string `json:"Labels"`
+	StopSignal      string            `json:",omitempty"`
+	StopTimeout     *int              `json:",omitempty"`
+	Shell           []string          `json:",omitempty"`
+}
+
+func (c ConfigObject) AsList() []string {
+	return []string{
+		fmt.Sprintf("Hostname: %s", c.Hostname),
+		fmt.Sprintf("Domainname: %s", c.Domainname),
+		fmt.Sprintf("User: %s", c.User),
+		fmt.Sprintf("AttachStdin: %t", c.AttachStdin),
+		fmt.Sprintf("AttachStdout: %t", c.AttachStdout),
+		fmt.Sprintf("AttachStderr: %t", c.AttachStderr),
+		fmt.Sprintf("ExposedPorts: %v", sortMap(c.ExposedPorts)),
+		fmt.Sprintf("Tty: %t", c.Tty),
+		fmt.Sprintf("OpenStdin: %t", c.OpenStdin),
+		fmt.Sprintf("StdinOnce: %t", c.StdinOnce),
+		fmt.Sprintf("Env: %s", strings.Join(c.Env, ",")),
+		fmt.Sprintf("Cmd: %s", strings.Join(c.Cmd, ",")),
+		fmt.Sprintf("ArgsEscaped: %t", c.ArgsEscaped),
+		fmt.Sprintf("Image: %s", c.Image),
+		fmt.Sprintf("Volumes: %v", sortMap(c.Volumes)),
+		fmt.Sprintf("Workdir: %s", c.Workdir),
+		fmt.Sprintf("Entrypoint: %s", strings.Join(c.Entrypoint, ",")),
+		fmt.Sprintf("NetworkDisabled: %t", c.NetworkDisabled),
+		fmt.Sprintf("MacAddress: %s", c.MacAddress),
+		fmt.Sprintf("OnBuild: %s", strings.Join(c.OnBuild, ",")),
+		fmt.Sprintf("Labels: %v", c.Labels),
+		fmt.Sprintf("StopSignal: %s", c.StopSignal),
+		fmt.Sprintf("StopTimeout: %d", c.StopTimeout),
+		fmt.Sprintf("Shell: %s", strings.Join(c.Shell, ",")),
+	}
 }
 
 type ConfigSchema struct {
@@ -99,10 +149,17 @@ type ConfigSchema struct {
 }
 
 func getImage(p Prepper) (Image, error) {
+	// see if the image name has tag provided, if not add latest as tag
+	if !IsTar(p.GetSource()) && !HasTag(p.GetSource()) {
+		p.SetSource(p.GetSource() + LatestTag)
+	}
 	output.PrintToStdErr("Retrieving image %s from source %s\n", p.GetSource(), p.Name())
 	imgPath, err := p.GetFileSystem()
 	if err != nil {
-		return Image{}, err
+		// return image with FSPath so it can be cleaned up
+		return Image{
+			FSPath: imgPath,
+		}, err
 	}
 
 	config, err := p.GetConfig()
@@ -128,6 +185,14 @@ func getImageFromTar(tarPath string) (string, error) {
 }
 
 func GetFileSystemFromReference(ref types.ImageReference, imgSrc types.ImageSource, path string, whitelist []string) error {
+	var err error
+	if imgSrc == nil {
+		imgSrc, err = ref.NewImageSource(nil)
+	}
+	if err != nil {
+		return err
+	}
+	defer imgSrc.Close()
 	img, err := ref.NewImage(nil)
 	if err != nil {
 		return err
@@ -208,7 +273,16 @@ func CleanupImage(image Image) {
 	if image.FSPath != "" {
 		logrus.Infof("Removing image filesystem directory %s from system", image.FSPath)
 		if err := os.RemoveAll(image.FSPath); err != nil {
-			logrus.Error(err.Error())
+			logrus.Warn(err.Error())
 		}
 	}
+}
+
+func sortMap(m map[string]struct{}) string {
+	pairs := make([]string, 0)
+	for key := range m {
+		pairs = append(pairs, fmt.Sprintf("%s:%s", key, m[key]))
+	}
+	sort.Strings(pairs)
+	return strings.Join(pairs, " ")
 }

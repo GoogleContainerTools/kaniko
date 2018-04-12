@@ -393,6 +393,7 @@ const (
 	ETH_P_ECONET                         = 0x18
 	ETH_P_EDSA                           = 0xdada
 	ETH_P_ERSPAN                         = 0x88be
+	ETH_P_ERSPAN2                        = 0x22eb
 	ETH_P_FCOE                           = 0x8906
 	ETH_P_FIP                            = 0x8914
 	ETH_P_HDLC                           = 0x19
@@ -1118,6 +1119,7 @@ const (
 	PERF_EVENT_IOC_ID                    = 0x80082407
 	PERF_EVENT_IOC_PAUSE_OUTPUT          = 0x40042409
 	PERF_EVENT_IOC_PERIOD                = 0x40082404
+	PERF_EVENT_IOC_QUERY_BPF             = 0xc008240a
 	PERF_EVENT_IOC_REFRESH               = 0x2402
 	PERF_EVENT_IOC_RESET                 = 0x2403
 	PERF_EVENT_IOC_SET_BPF               = 0x40042408
@@ -1270,6 +1272,7 @@ const (
 	PTRACE_POKETEXT                      = 0x4
 	PTRACE_POKEUSR                       = 0x6
 	PTRACE_SECCOMP_GET_FILTER            = 0x420c
+	PTRACE_SECCOMP_GET_METADATA          = 0x420d
 	PTRACE_SEIZE                         = 0x4206
 	PTRACE_SETOPTIONS                    = 0x4200
 	PTRACE_SETREGS                       = 0xd
@@ -1872,6 +1875,7 @@ const (
 	TUNGETVNETHDRSZ                      = 0x800454d7
 	TUNGETVNETLE                         = 0x800454dd
 	TUNSETDEBUG                          = 0x400454c9
+	TUNSETFILTEREBPF                     = 0x800454e1
 	TUNSETGROUP                          = 0x400454ce
 	TUNSETIFF                            = 0x400454ca
 	TUNSETIFINDEX                        = 0x400454da
@@ -1882,6 +1886,7 @@ const (
 	TUNSETPERSIST                        = 0x400454cb
 	TUNSETQUEUE                          = 0x400454d9
 	TUNSETSNDBUF                         = 0x400454d4
+	TUNSETSTEERINGEBPF                   = 0x800454e0
 	TUNSETTXFILTER                       = 0x400454d1
 	TUNSETVNETBE                         = 0x400454de
 	TUNSETVNETHDRSZ                      = 0x400454d8

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google, Inc. All rights reserved.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,21 +32,25 @@ type DaemonPrepper struct {
 	Client *client.Client
 }
 
-func (p DaemonPrepper) Name() string {
+func (p *DaemonPrepper) Name() string {
 	return "Local Daemon"
 }
 
-func (p DaemonPrepper) GetSource() string {
+func (p *DaemonPrepper) GetSource() string {
 	return p.Source
 }
 
-func (p DaemonPrepper) GetImage() (Image, error) {
+func (p *DaemonPrepper) SetSource(source string) {
+	p.Source = source
+}
+
+func (p *DaemonPrepper) GetImage() (Image, error) {
 	image, err := getImage(p)
 	image.Type = ImageTypeDaemon
 	return image, err
 }
 
-func (p DaemonPrepper) GetFileSystem() (string, error) {
+func (p *DaemonPrepper) GetFileSystem() (string, error) {
 	ref, err := daemon.ParseReference(p.Source)
 	if err != nil {
 		return "", err
@@ -56,6 +60,7 @@ func (p DaemonPrepper) GetFileSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer src.Close()
 
 	sanitizedName := strings.Replace(p.Source, ":", "", -1)
 	sanitizedName = strings.Replace(sanitizedName, "/", "", -1)
@@ -67,7 +72,7 @@ func (p DaemonPrepper) GetFileSystem() (string, error) {
 	return path, GetFileSystemFromReference(ref, src, path, nil)
 }
 
-func (p DaemonPrepper) GetConfig() (ConfigSchema, error) {
+func (p *DaemonPrepper) GetConfig() (ConfigSchema, error) {
 	ref, err := daemon.ParseReference(p.Source)
 	if err != nil {
 		return ConfigSchema{}, err
@@ -75,7 +80,7 @@ func (p DaemonPrepper) GetConfig() (ConfigSchema, error) {
 	return getConfigFromReference(ref, p.Source)
 }
 
-func (p DaemonPrepper) GetHistory() []ImageHistoryItem {
+func (p *DaemonPrepper) GetHistory() []ImageHistoryItem {
 	history, err := p.Client.ImageHistory(context.Background(), p.Source)
 	if err != nil {
 		logrus.Errorf("Could not obtain image history for %s: %s", p.Source, err)

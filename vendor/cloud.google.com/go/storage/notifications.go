@@ -119,7 +119,7 @@ func toRawNotification(n *Notification) *raw.Notification {
 // AddNotification adds a notification to b. You must set n's TopicProjectID, TopicID
 // and PayloadFormat, and must not set its ID. The other fields are all optional. The
 // returned Notification's ID can be used to refer to it.
-func (b *BucketHandle) AddNotification(ctx context.Context, n *Notification) (_ *Notification, err error) {
+func (b *BucketHandle) AddNotification(ctx context.Context, n *Notification) (ret *Notification, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Bucket.AddNotification")
 	defer func() { trace.EndSpan(ctx, err) }()
 
@@ -146,7 +146,7 @@ func (b *BucketHandle) AddNotification(ctx context.Context, n *Notification) (_ 
 
 // Notifications returns all the Notifications configured for this bucket, as a map
 // indexed by notification ID.
-func (b *BucketHandle) Notifications(ctx context.Context) (_ map[string]*Notification, err error) {
+func (b *BucketHandle) Notifications(ctx context.Context) (n map[string]*Notification, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.Bucket.Notifications")
 	defer func() { trace.EndSpan(ctx, err) }()
 

@@ -112,6 +112,14 @@ var fileTests = []struct {
 		repo:           "test-add",
 	},
 	{
+		description:    "test registry",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_registry",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_registry.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-registry",
+	},
+	{
 		description:    "test onbuild",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_onbuild",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_onbuild.json",

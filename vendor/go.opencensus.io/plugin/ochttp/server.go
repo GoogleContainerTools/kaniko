@@ -15,7 +15,10 @@
 package ochttp
 
 import (
+	"bufio"
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -65,7 +68,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer traceEnd()
 	w, statsEnd = h.startStats(w, r)
 	defer statsEnd()
-
 	handler := h.Handler
 	if handler == nil {
 		handler = http.DefaultServeMux
@@ -140,6 +142,17 @@ type trackingResponseWriter struct {
 }
 
 var _ http.ResponseWriter = (*trackingResponseWriter)(nil)
+var _ http.Hijacker = (*trackingResponseWriter)(nil)
+
+var errHijackerUnimplemented = errors.New("ResponseWriter does not implement http.Hijacker")
+
+func (t *trackingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := t.writer.(http.Hijacker)
+	if !ok {
+		return nil, nil, errHijackerUnimplemented
+	}
+	return hj.Hijack()
+}
 
 func (t *trackingResponseWriter) end() {
 	t.endOnce.Do(func() {

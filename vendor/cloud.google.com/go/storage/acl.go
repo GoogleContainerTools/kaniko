@@ -92,7 +92,7 @@ func (a *ACLHandle) Set(ctx context.Context, entity ACLEntity, role ACLRole) (er
 }
 
 // List retrieves ACL entries.
-func (a *ACLHandle) List(ctx context.Context) (_ []ACLRule, err error) {
+func (a *ACLHandle) List(ctx context.Context) (rules []ACLRule, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/storage.ACL.List")
 	defer func() { trace.EndSpan(ctx, err) }()
 
