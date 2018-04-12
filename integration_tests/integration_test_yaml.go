@@ -127,6 +127,14 @@ var fileTests = []struct {
 		kanikoContext:  buildcontextPath,
 		repo:           "test-onbuild",
 	},
+	{
+		description:    "test scratch",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_scratch",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_scratch.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-scratch",
+	},
 }
 
 var structureTests = []struct {

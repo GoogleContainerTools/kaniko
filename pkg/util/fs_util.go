@@ -35,6 +35,15 @@ var volumeWhitelist = []string{}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
 func ExtractFileSystemFromImage(img string) error {
+	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Whitelisted directories are %s", whitelist)
+	if img == constants.NoBaseImage {
+		logrus.Info("No base image, nothing to extract")
+		return nil
+	}
 	ref, err := docker.ParseReference("//" + img)
 	if err != nil {
 		return err
@@ -43,11 +52,6 @@ func ExtractFileSystemFromImage(img string) error {
 	if err != nil {
 		return err
 	}
-	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
-	if err != nil {
-		return err
-	}
-	logrus.Infof("Whitelisted directories are %s", whitelist)
 	return pkgutil.GetFileSystemFromReference(ref, imgSrc, constants.RootDir, whitelist)
 }
 
