@@ -19,7 +19,7 @@ package util
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
+	"github.com/GoogleCloudPlatform/kaniko/testutil"
 	"io"
 	"io/ioutil"
 	"os"

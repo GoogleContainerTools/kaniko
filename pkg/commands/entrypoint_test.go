@@ -16,7 +16,7 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
+	"github.com/GoogleCloudPlatform/kaniko/testutil"
 	"github.com/containers/image/manifest"
 	"github.com/containers/image/pkg/strslice"
 	"github.com/docker/docker/builder/dockerfile/instructions"

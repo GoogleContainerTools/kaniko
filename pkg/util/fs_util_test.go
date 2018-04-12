@@ -17,7 +17,7 @@ limitations under the License.
 package util
 
 import (
-	"github.com/GoogleCloudPlatform/k8s-container-builder/testutil"
+	"github.com/GoogleCloudPlatform/kaniko/testutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"

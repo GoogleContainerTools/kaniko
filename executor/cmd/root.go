@@ -18,12 +18,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/commands"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/constants"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/dockerfile"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/commands"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/dockerfile"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/image"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/snapshot"
+	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/pkg/errors"
