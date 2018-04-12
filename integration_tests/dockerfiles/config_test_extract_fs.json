@@ -1,7 +1,7 @@
 [
   {
-    "Image1": "gcr.io/kbuild-test/docker-extract-filesystem:latest",
-    "Image2": "gcr.io/kbuild-test/kbuild-extract-filesystem:latest",
+    "Image1": "gcr.io/kaniko-test/docker-extract-filesystem:latest",
+    "Image2": "gcr.io/kaniko-test/kaniko-extract-filesystem:latest",
     "DiffType": "File",
     "Diff": {
       "Adds": null,

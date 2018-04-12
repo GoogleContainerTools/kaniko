@@ -1,7 +1,7 @@
 [
   {
-    "Image1": "gcr.io/kbuild-test/docker-test-workdir:latest",
-    "Image2": "gcr.io/kbuild-test/kbuild-test-workdir:latest",
+    "Image1": "gcr.io/kaniko-test/docker-test-workdir:latest",
+    "Image2": "gcr.io/kaniko-test/kaniko-test-workdir:latest",
     "DiffType": "File",
     "Diff": {
       "Adds": null,
