@@ -23,6 +23,8 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/containers/image/manifest"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -141,6 +143,9 @@ func execute() error {
 	imageConfig := sourceImage.Config()
 	// Currently only supports single stage builds
 	for _, stage := range stages {
+		if err := resolveOnBuild(&stage, imageConfig); err != nil {
+			return err
+		}
 		for _, cmd := range stage.Commands {
 			dockerCommand, err := commands.GetCommand(cmd, srcContext)
 			if err != nil {
@@ -172,6 +177,21 @@ func execute() error {
 		return err
 	}
 	return image.PushImage(sourceImage, destination)
+}
+
+func resolveOnBuild(stage *instructions.Stage, config *manifest.Schema2Config) error {
+	if config.OnBuild == nil {
+		return nil
+	}
+	// Otherwise, parse into commands
+	cmds, err := dockerfile.ParseCommands(config.OnBuild)
+	if err != nil {
+		return err
+	}
+	// Append to the beginning of the commands in the stage
+	stage.Commands = append(cmds, stage.Commands...)
+	logrus.Infof("Executing %v build triggers", len(cmds))
+	return nil
 }
 
 // setDefaultEnv sets default values for HOME and PATH so that

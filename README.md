@@ -8,7 +8,6 @@ The majority of Dockerfile commands can be executed with kaniko, but we're still
 * SHELL
 * HEALTHCHECK
 * STOPSIGNAL
-* ONBUILD
 * ARG
 
 We're currently in the process of building kaniko, so as of now it isn't production ready.
