@@ -39,4 +39,8 @@ const (
 	// BuildContextDir is the directory a build context will be unpacked into,
 	// for example, a tarball from a GCS bucket will be unpacked here
 	BuildContextDir = "/kaniko/buildcontext/"
+
+	// Various snapshot modes:
+	SnapshotModeTime = "time"
+	SnapshotModeFull = "full"
 )
