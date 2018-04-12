@@ -11,7 +11,7 @@ _<span style="color:#666666;">Authors: [priyawadhwa@google.com](mailto:priyawadh
 
 Kaniko aims to build container images, with enough Dockerfile support to be useful, without a dependency on a Docker daemon. There is nothing preventing us from adding full support other than the up-front engineering burden, but we'll know we're done when our customers are happy to use this in place of Docker.
 
-This will enable building container images in environments that cannot run a Docker daemon, such as a Kubernetes cluster (where kernel privileges are unappealing) or gvisor (where syscall support prevents running a full Docker daemon). 
+This will enable building container images in environments that cannot run a Docker daemon, such as a Kubernetes cluster (where kernel privileges are unappealing). 
 
 
 ## Background {#background}
@@ -28,7 +28,7 @@ Kaniko is an open source tool to build container images from a Dockerfile in a K
 
 
 1.  The user will provide a Dockerfile, source context and destination for the image via a command line tool or API
-1.  The builder executable will run inside a container with access to the Dockerfile and source context supplied by the user (either as an Container Builder build step, Kubernetes Job or inside gvisor)
+1.  The builder executable will run inside a container with access to the Dockerfile and source context supplied by the user (either as an Container Builder build step or Kubernetes Job)
 1.  The builder executable will parse the Dockerfile, and extract the filesystem of the base image (the image in the FROM line of the Dockerfile) to root. It will then execute each command in the Dockerfile, snapshotting the filesystem after each one. Snapshots will be saved as tarballs, and then appended to the base image as layers to build the final image and push it to a registry.
 
 
