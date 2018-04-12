@@ -30,7 +30,7 @@ import (
 	"time"
 )
 
-var whitelist = []string{"/kbuild"}
+var whitelist = []string{"/kaniko"}
 var volumeWhitelist = []string{}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root

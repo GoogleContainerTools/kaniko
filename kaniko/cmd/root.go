@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package cmd
 
 import (
-	"fmt"
-	"github.com/GoogleCloudPlatform/k8s-container-builder/kbuild/cmd"
-	"os"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	if err := cmd.RootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+var RootCmd = &cobra.Command{
+	Use:   "kaniko",
+	Short: "kaniko is a CLI tool for building container images with full Dockerfile support without the need for Docker",
+	Long: `kaniko is a CLI tool for building container images with full Dockerfile support. It doesn't require Docker,
+			and builds the images in a Kubernetes cluster before pushing the final image to a registry.`,
+	Run: func(cmd *cobra.Command, args []string) {
+	},
 }

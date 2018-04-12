@@ -23,6 +23,8 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/image"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/snapshot"
 	"github.com/GoogleCloudPlatform/k8s-container-builder/pkg/util"
+	"github.com/containers/image/manifest"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -50,18 +52,32 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return util.SetLogLevel(logLevel)
+		if err := util.SetLogLevel(logLevel); err != nil {
+			return err
+		}
+		if err := resolveSourceContext(); err != nil {
+			return err
+		}
+		return checkDockerfilePath()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := resolveSourceContext(); err != nil {
-			logrus.Error(err)
-			os.Exit(1)
-		}
 		if err := execute(); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
 	},
+}
+
+func checkDockerfilePath() error {
+	if util.FilepathExists(dockerfilePath) {
+		return nil
+	}
+	// Otherwise, check if the path relative to the build context exists
+	if util.FilepathExists(filepath.Join(srcContext, dockerfilePath)) {
+		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
+		return nil
+	}
+	return errors.New("please provide a valid path to a Dockerfile within the build context")
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
@@ -83,11 +99,6 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
 	srcContext = buildContextPath
-	// If path to dockerfile doesn't exist, assume it is in the unpacked tar
-	if !util.FilepathExists(dockerfilePath) {
-		logrus.Debugf("Expecting dockerfile to be located at %s within the tar build context", dockerfilePath)
-		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
-	}
 	return nil
 }
 
@@ -132,6 +143,9 @@ func execute() error {
 	imageConfig := sourceImage.Config()
 	// Currently only supports single stage builds
 	for _, stage := range stages {
+		if err := resolveOnBuild(&stage, imageConfig); err != nil {
+			return err
+		}
 		for _, cmd := range stage.Commands {
 			dockerCommand, err := commands.GetCommand(cmd, srcContext)
 			if err != nil {
@@ -163,6 +177,21 @@ func execute() error {
 		return err
 	}
 	return image.PushImage(sourceImage, destination)
+}
+
+func resolveOnBuild(stage *instructions.Stage, config *manifest.Schema2Config) error {
+	if config.OnBuild == nil {
+		return nil
+	}
+	// Otherwise, parse into commands
+	cmds, err := dockerfile.ParseCommands(config.OnBuild)
+	if err != nil {
+		return err
+	}
+	// Append to the beginning of the commands in the stage
+	stage.Commands = append(cmds, stage.Commands...)
+	logrus.Infof("Executing %v build triggers", len(cmds))
+	return nil
 }
 
 // setDefaultEnv sets default values for HOME and PATH so that

@@ -18,6 +18,7 @@ package dockerfile
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
@@ -34,4 +35,22 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 		return nil, err
 	}
 	return stages, err
+}
+
+// ParseCommands parses an array of commands into an array of instructions.Command; used for onbuild
+func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
+	var cmds []instructions.Command
+	cmdString := strings.Join(cmdArray, "\n")
+	ast, err := parser.Parse(strings.NewReader(cmdString))
+	if err != nil {
+		return nil, err
+	}
+	for _, child := range ast.AST.Children {
+		cmd, err := instructions.ParseCommand(child)
+		if err != nil {
+			return nil, err
+		}
+		cmds = append(cmds, cmd)
+	}
+	return cmds, nil
 }

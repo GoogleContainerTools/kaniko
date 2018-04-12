@@ -46,7 +46,7 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	}
 
 	actualWhitelist, err := fileSystemWhitelist(path)
-	expectedWhitelist := []string{"/kbuild", "/proc", "/dev", "/dev/pts", "/sys"}
+	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys"}
 	sort.Strings(actualWhitelist)
 	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
@@ -61,7 +61,7 @@ var tests = []struct {
 		files: map[string]string{
 			"/workspace/foo/a": "baz1",
 			"/workspace/foo/b": "baz2",
-			"/kbuild/file":     "file",
+			"/kaniko/file":     "file",
 		},
 		directory: "/workspace/foo/",
 		expectedFiles: []string{
@@ -84,7 +84,7 @@ var tests = []struct {
 			"/workspace/foo/a": "baz1",
 			"/workspace/foo/b": "baz2",
 			"/workspace/baz":   "hey",
-			"/kbuild/file":     "file",
+			"/kaniko/file":     "file",
 		},
 		directory: "/workspace",
 		expectedFiles: []string{
@@ -99,16 +99,16 @@ var tests = []struct {
 		files: map[string]string{
 			"/workspace/foo/a": "baz1",
 			"/workspace/foo/b": "baz2",
-			"/kbuild/file":     "file",
+			"/kaniko/file":     "file",
 		},
 		directory: "",
 		expectedFiles: []string{
 			"workspace/foo/a",
 			"workspace/foo/b",
-			"kbuild/file",
+			"kaniko/file",
 			"workspace",
 			"workspace/foo",
-			"kbuild",
+			"kaniko",
 			".",
 		},
 	},
