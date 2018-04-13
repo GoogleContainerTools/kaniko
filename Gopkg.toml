@@ -27,3 +27,7 @@
   name = "github.com/docker/docker"
   revision = "b1a1234c60cf87048814aa37da523b03a7b0d344"
   source = "github.com/docker/docker"
+
+[[constraint]]
+  name = "github.com/genuinetools/amicontained"
+  version = "0.4.0"

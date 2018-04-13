@@ -18,8 +18,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/GoogleCloudPlatform/kaniko/executor/cmd"
 	"os"
+
+	"github.com/GoogleCloudPlatform/kaniko/executor/cmd"
 )
 
 func main() {
