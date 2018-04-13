@@ -37,18 +37,14 @@ KANIKO_PROJECT = $(REPOPATH)/kaniko
 out/executor: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
 
-
-out/kaniko: $(GO_FILES)
-	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(KANIKO_PROJECT)
-
 .PHONY: test
-test: out/executor out/kaniko
+test: out/executor
 	@ ./test.sh
 
 .PHONY: integration-test
-integration-test: out/executor out/kaniko
+integration-test: out/executor
 	@ ./integration-test.sh
 
 .PHONY: images
-images: out/executor out/kaniko
+images: out/executor
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
