@@ -33,22 +33,6 @@
   source = "github.com/GoogleCloudPlatform/container-diff"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/GoogleCloudPlatform/kaniko"
-  packages = [
-    "executor/cmd",
-    "kaniko/cmd",
-    "pkg/commands",
-    "pkg/constants",
-    "pkg/dockerfile",
-    "pkg/image",
-    "pkg/snapshot",
-    "pkg/util",
-    "testutil"
-  ]
-  revision = "eb891c1ab9b051260b34f0d2f1a13438fabbd6f5"
-
-[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = [
     ".",
@@ -245,11 +229,7 @@
 
 [[projects]]
   name = "github.com/genuinetools/amicontained"
-  packages = [
-    ".",
-    "container",
-    "version"
-  ]
+  packages = ["container"]
   revision = "fcae88544f0212fbb1e20699c41566655b68679b"
   version = "v0.4.0"
 
@@ -659,6 +639,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "94d3267001478b2c4cff40adbfb2219ebbca52d2ce8957b178b7ed38ba4ab91a"
+  inputs-digest = "73e91b49fe7ddd3b2189053fca5e81f748ace00c33c3c66dc63a68dd0c067dca"
   solver-name = "gps-cdcl"
   solver-version = 1
