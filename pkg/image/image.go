@@ -17,6 +17,12 @@ limitations under the License.
 package image
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/GoogleCloudPlatform/kaniko/pkg/version"
+	"github.com/containers/image/types"
+
 	img "github.com/GoogleCloudPlatform/container-diff/pkg/image"
 	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
 	"github.com/containers/image/copy"
@@ -24,7 +30,6 @@ import (
 	"github.com/containers/image/signature"
 	"github.com/containers/image/transports/alltransports"
 	"github.com/sirupsen/logrus"
-	"os"
 )
 
 // sourceImage is the image that will be modified by the executor
@@ -57,7 +62,13 @@ func PushImage(ms *img.MutableSource, destImg string) error {
 		return err
 	}
 	logrus.Infof("Pushing image to %s", destImg)
-	return copy.Image(policyContext, destRef, srcRef, nil)
+
+	opts := &copy.Options{
+		DestinationCtx: &types.SystemContext{
+			DockerRegistryUserAgent: fmt.Sprintf("kaniko/executor-%s", version.Version()),
+		},
+	}
+	return copy.Image(policyContext, destRef, srcRef, opts)
 }
 
 // SetEnvVariables sets environment variables as specified in the image
