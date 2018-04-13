@@ -18,6 +18,12 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
+	"github.com/genuinetools/amicontained/container"
+
 	"github.com/GoogleCloudPlatform/kaniko/pkg/commands"
 	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
 	"github.com/GoogleCloudPlatform/kaniko/pkg/dockerfile"
@@ -29,9 +35,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 var (
@@ -41,6 +44,7 @@ var (
 	snapshotMode   string
 	bucket         string
 	logLevel       string
+	force          bool
 )
 
 func init() {
@@ -50,6 +54,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
 	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force running outside of a container.")
 }
 
 var RootCmd = &cobra.Command{
@@ -105,7 +110,21 @@ func resolveSourceContext() error {
 	return nil
 }
 
+func checkContained() bool {
+	_, err := container.DetectRuntime()
+	return err == nil
+}
+
 func execute() error {
+
+	if !checkContained() {
+		if !force {
+			logrus.Error("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue.")
+			return errors.New("kaniko should only be run inside of a container")
+		}
+		logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
+	}
+
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {

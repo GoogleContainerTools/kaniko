@@ -33,6 +33,22 @@
   source = "github.com/GoogleCloudPlatform/container-diff"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/GoogleCloudPlatform/kaniko"
+  packages = [
+    "executor/cmd",
+    "kaniko/cmd",
+    "pkg/commands",
+    "pkg/constants",
+    "pkg/dockerfile",
+    "pkg/image",
+    "pkg/snapshot",
+    "pkg/util",
+    "testutil"
+  ]
+  revision = "eb891c1ab9b051260b34f0d2f1a13438fabbd6f5"
+
+[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = [
     ".",
@@ -226,6 +242,16 @@
   name = "github.com/docker/libtrust"
   packages = ["."]
   revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
+
+[[projects]]
+  name = "github.com/genuinetools/amicontained"
+  packages = [
+    ".",
+    "container",
+    "version"
+  ]
+  revision = "fcae88544f0212fbb1e20699c41566655b68679b"
+  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -422,6 +448,12 @@
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/gocapability"
+  packages = ["capability"]
+  revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
   name = "github.com/tchap/go-patricia"
@@ -627,6 +659,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9d9dcea86069309f0002357a58daae091899741c5c23ec056a37021c560facef"
+  inputs-digest = "94d3267001478b2c4cff40adbfb2219ebbca52d2ce8957b178b7ed38ba4ab91a"
   solver-name = "gps-cdcl"
   solver-version = 1
