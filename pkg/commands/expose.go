@@ -33,6 +33,9 @@ func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: EXPOSE")
 	// Grab the currently exposed ports
 	existingPorts := config.ExposedPorts
+	if existingPorts == nil {
+		existingPorts = make(map[manifest.Schema2Port]struct{})
+	}
 	// Add any new ones in
 	for _, p := range r.cmd.Ports {
 		// Resolve any environment variables

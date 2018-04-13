@@ -35,7 +35,9 @@ func (r *LabelCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 
 func updateLabels(labels []instructions.KeyValuePair, config *manifest.Schema2Config) error {
 	existingLabels := config.Labels
-
+	if existingLabels == nil {
+		existingLabels = make(map[string]string)
+	}
 	// Let's unescape values before setting the label
 	for index, kvp := range labels {
 		unescaped, err := util.ResolveEnvironmentReplacement(kvp.Value, []string{}, false)
