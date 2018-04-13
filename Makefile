@@ -18,6 +18,7 @@ VERSION_MINOR ?= 1
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
+VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
@@ -28,7 +29,10 @@ REGISTRY?=gcr.io/kaniko-project
 REPOPATH ?= $(ORG)/$(PROJECT)
 
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-GO_LDFLAGS := '-extldflags "-static"'
+GO_LDFLAGS := '-extldflags "-static"
+GO_LDFLAGS += -X $(VERSION_PACKAGE).version=$(VERSION)
+GO_LDFLAGS += '
+
 GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay"
 
 EXECUTOR_PACKAGE = $(REPOPATH)/executor

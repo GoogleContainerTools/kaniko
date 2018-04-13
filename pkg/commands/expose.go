@@ -18,11 +18,12 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 type ExposeCommand struct {
