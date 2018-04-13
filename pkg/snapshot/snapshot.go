@@ -82,7 +82,7 @@ func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
 	w := tar.NewWriter(buf)
 	defer w.Close()
 	for _, file := range files {
-		info, err := os.Stat(file)
+		info, err := os.Lstat(file)
 		if err != nil {
 			return nil, err
 		}

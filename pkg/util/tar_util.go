@@ -148,7 +148,7 @@ func fileIsUncompressedTar(src string) bool {
 	if err != nil {
 		return false
 	}
-	fi, err := os.Stat(src)
+	fi, err := os.Lstat(src)
 	if err != nil {
 		return false
 	}

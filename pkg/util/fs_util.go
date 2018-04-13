@@ -137,7 +137,7 @@ func Files(root string) ([]string, error) {
 
 // FilepathExists returns true if the path exists
 func FilepathExists(path string) bool {
-	_, err := os.Stat(path)
+	_, err := os.Lstat(path)
 	return !os.IsNotExist(err)
 }
 
@@ -145,7 +145,7 @@ func FilepathExists(path string) bool {
 func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
-	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
