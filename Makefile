@@ -35,7 +35,7 @@ GO_LDFLAGS += '
 
 GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay"
 
-EXECUTOR_PACKAGE = $(REPOPATH)/executor
+EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 KANIKO_PROJECT = $(REPOPATH)/kaniko
 
 out/executor: $(GO_FILES)
