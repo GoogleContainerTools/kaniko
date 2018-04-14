@@ -142,11 +142,11 @@ func IsDestDir(path string) bool {
 //	Assume dest is also a dir, and copy to dest/relpath
 // If dest is not an absolute filepath, add /cwd to the beginning
 func DestinationFilepath(filename, srcName, dest, cwd, buildcontext string) (string, error) {
-	fi, err := os.Stat(filepath.Join(buildcontext, filename))
+	fi, err := os.Lstat(filepath.Join(buildcontext, filename))
 	if err != nil {
 		return "", err
 	}
-	src, err := os.Stat(filepath.Join(buildcontext, srcName))
+	src, err := os.Lstat(filepath.Join(buildcontext, srcName))
 	if err != nil {
 		return "", err
 	}

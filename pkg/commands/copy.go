@@ -53,7 +53,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	// For each source, iterate through each file within and copy it over
 	for src, files := range srcMap {
 		for _, file := range files {
-			fi, err := os.Stat(filepath.Join(c.buildcontext, file))
+			fi, err := os.Lstat(filepath.Join(c.buildcontext, file))
 			if err != nil {
 				return err
 			}
@@ -65,6 +65,17 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 			if fi.IsDir() {
 				logrus.Infof("Creating directory %s", destPath)
 				if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
+					return err
+				}
+			} else if fi.Mode()&os.ModeSymlink != 0 {
+				// If file is a symlink, we want to create the same relative symlink
+				link, err := os.Readlink(filepath.Join(c.buildcontext, file))
+				if err != nil {
+					return err
+				}
+				linkDst := filepath.Join(destPath, link)
+				if err := os.Symlink(linkDst, destPath); err != nil {
+					logrus.Errorf("unable to symlink %s to %s", linkDst, destPath)
 					return err
 				}
 			} else {
