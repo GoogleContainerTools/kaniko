@@ -1,14 +1,9 @@
-# kaniko
+# kaniko - Build Images In Kubernetes
 
-kaniko is a tool to build unpriviliged container images from a Dockerfile.
+kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster.
+
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster. 
-
-The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
-* SHELL
-* HEALTHCHECK
-* STOPSIGNAL
-* ARG
 
 We're currently in the process of building kaniko, so as of now it isn't production ready.
 Please let us know if you have any feature requests or find any bugs!
@@ -19,6 +14,17 @@ The kaniko executor image is responsible for building an image from a Dockerfile
 Within the executor image, we extract the filesystem of the base image (the FROM image in the Dockerfile).
 We then execute the commands in the Dockerfile, snapshotting the filesystem in userspace after each one.
 After each command, we append a layer of changed files to the base image (if there are any) and update image metadata.
+
+## Known Issues
+
+The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
+
+* SHELL
+* HEALTHCHECK
+* STOPSIGNAL
+* ARG
+
+Multi-State Dockerfiles are also unsupported currently, but will be ready soon.
 
 ## kaniko Build Contexts
 kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
@@ -39,24 +45,6 @@ We can copy over the compressed tar to a GCS bucket with gsutil:
 
 ```
 gsutil cp context.tar.gz gs://<bucket name>
-```
-
-## Running kaniko locally
-
-Requirements:
-* Docker
-* gcloud
-
-We can run the kaniko executor image locally in a Docker daemon to build and push an image from a Dockerfile.
-
-First, we want to load the executor image into the Docker daemon by running
-```shell
-make images
-```
-
-To run kaniko in Docker, run the following command:
-```shell
-./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
 ```
 
 ## Running kaniko in a Kubernetes cluster
@@ -117,6 +105,24 @@ steps:
 ```
 kaniko will build and push the final image in this build step.
 
+## Running kaniko locally
+
+Requirements:
+* Docker
+* gcloud
+
+We can run the kaniko executor image locally in a Docker daemon to build and push an image from a Dockerfile.
+
+First, we want to load the executor image into the Docker daemon by running
+```shell
+make images
+```
+
+To run kaniko in Docker, run the following command:
+```shell
+./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
+```
+
 ## Comparison with Other Tools
 
 Similar tools include:
@@ -124,17 +130,19 @@ Similar tools include:
 * [orca-build](https://github.com/cyphar/orca-build)
 * [buildah](https://github.com/projectatomic/buildah)
 * [FTL](https://github.com/GoogleCloudPlatform/runtimes-common/tree/master/ftl)
+* [Bazel rules_docker](https://github.com/bazelbuild/rules_docker)
 
 All of these tools build container images with different approaches.
-Both kaniko and img build unprivileged images, but they interpret “unprivileged” differently.
-img builds as a non root user from within the container, while kaniko is run in an unprivileged environment with root access inside the container. 
 
-orca-build depends on runC to build images from Dockerfiles; since kaniko doesn't use runC it doesn't require the use of kernel namespacing techniques.
+`img` can perform as a non root user from within a container, but requires that the `img` container has `RawProc` access to create nested containers.
+`kaniko` does not actually create nested containers, so it does not require `RawProc` access.
 
-buildah requires the same root privilges as a Docker daemon does to run, while kaniko runs without any special privileges or permissions.  
+`orca-build` depends on `runC` to build images from Dockerfiles, which can not run inside a container. `kaniko` doesn't use runC so it doesn't require the use of kernel namespacing techniques.
 
-FTL aims to achieve the fastest possible creation of Docker images for a subset of images.
-It can be thought of as a special-case "fast path" that can be used in conjunction with the support for general Dockerfiles kaniko provides.
+`buildah` requires the same privileges as a Docker daemon does to run, while `kaniko` runs without any special privileges or permissions.  
+
+`FTL` and `Bazel` aim to achieve the fastest possible creation of Docker images for a subset of images.
+These can be thought of as a special-case "fast path" that can be used in conjunction with the support for general Dockerfiles kaniko provides.
 
 ## Community
 
