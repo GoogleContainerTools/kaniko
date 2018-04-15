@@ -17,12 +17,12 @@ limitations under the License.
 package commands
 
 import (
+	"strings"
+
 	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"os"
-	"strings"
 )
 
 type EnvCommand struct {
@@ -44,10 +44,6 @@ func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		newEnvs[index] = instructions.KeyValuePair{
 			Key:   expandedKey,
 			Value: expandedValue,
-		}
-		logrus.Infof("Setting environment variable %s=%s", pair.Key, expandedValue)
-		if err := os.Setenv(pair.Key, expandedValue); err != nil {
-			return err
 		}
 	}
 	return updateConfigEnv(newEnvs, config)
