@@ -17,14 +17,15 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/containers/image/manifest"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 type RunCommand struct {
@@ -48,6 +49,8 @@ func (r *RunCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 	cmd.Dir = config.WorkingDir
 	cmd.Stdout = os.Stdout
+	cmd.Env = config.Env
+
 	// If specified, run the command as a specific user
 	if config.User != "" {
 		userAndGroup := strings.Split(config.User, ":")
