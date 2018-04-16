@@ -29,11 +29,6 @@ const (
 	//KanikoDir is the path to the Kaniko directory
 	KanikoDir = "/kaniko"
 
-	// KanikoExecutor is the path to the kaniko executor
-	KanikoExecutor = "/kaniko/executor"
-	// KanikoCerts is the path to the kaniko certs
-	KanikoCerts = "/kaniko/ssl/certs/ca-certificates.crt"
-
 	WhitelistPath = "/proc/self/mountinfo"
 
 	Author = "kaniko"
@@ -52,3 +47,6 @@ const (
 	// NoBaseImage is the scratch image
 	NoBaseImage = "scratch"
 )
+
+// KanikoBuildFiles is the list of files required to build kaniko
+var KanikoBuildFiles = []string{"/kaniko/executor", "/kaniko/ssl/certs/ca-certificates.crt"}
