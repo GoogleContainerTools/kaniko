@@ -18,7 +18,9 @@ set -ex
 if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     echo "Installing dependencies..."
     source "$KOKORO_GFILE_DIR/common.sh"
-    pushd github/kaniko
+    mkdir -p /usr/local/go/src/github.com/GoogleCloudPlatform/
+    cp -r github/kaniko /usr/local/go/src/github.com/GoogleCloudPlatform/
+    pushd /usr/local/go/src/github.com/GoogleCloudPlatform/kaniko
 fi
 
 echo "Running integration tests..."
