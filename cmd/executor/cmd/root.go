@@ -100,10 +100,7 @@ func resolveSourceContext() error {
 	if srcContext == "" && bucket == "" {
 		return errors.New("please specify a path to the build context with the --context flag or a GCS bucket with the --bucket flag")
 	}
-	if srcContext != "" && bucket != "" {
-		return errors.New("please specify either --bucket or --context as the desired build context")
-	}
-	if srcContext != "" {
+	if bucket == "" {
 		return nil
 	}
 	logrus.Infof("Using GCS bucket %s as source context", bucket)

@@ -31,6 +31,8 @@ const (
 
 	// KanikoExecutor is the path to the kaniko executor
 	KanikoExecutor = "/kaniko/executor"
+	// KanikoCerts is the path to the kaniko certs
+	KanikoCerts = "/kaniko/ssl/certs/ca-certificates.crt"
 
 	WhitelistPath = "/proc/self/mountinfo"
 

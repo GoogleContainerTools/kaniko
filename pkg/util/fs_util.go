@@ -57,7 +57,7 @@ func ExtractFileSystemFromImage(img string) error {
 
 // PathInWhitelist returns true if the path is whitelisted
 func PathInWhitelist(path, directory string) bool {
-	if path == constants.KanikoExecutor {
+	if path == constants.KanikoExecutor || path == constants.KanikoCerts {
 		return false
 	}
 	for _, d := range whitelist {
