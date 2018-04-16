@@ -29,6 +29,9 @@ const (
 	//KanikoDir is the path to the Kaniko directory
 	KanikoDir = "/kaniko"
 
+	// KanikoExecutor is the path to the kaniko executor
+	KanikoExecutor = "/kaniko/executor"
+
 	WhitelistPath = "/proc/self/mountinfo"
 
 	Author = "kaniko"

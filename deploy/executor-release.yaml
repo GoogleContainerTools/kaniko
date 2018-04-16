@@ -1,0 +1,25 @@
+steps:
+  # First, install make
+  - name: "gcr.io/google-appengine/debian9"
+    args: ["sh", "-c", "apt-get update && apt-get install -y make"]
+    volumes:
+    - name: "make"
+      path: "/usr/bin"
+  - name: "gcr.io/google-appengine/debian9"
+    args: ["sh", "-c", "cp -r . /kaniko/ && mkdir -p /workspace/go/src/github.com/GoogleCloudPlatform/ && cp -r /kaniko/ /workspace/go/src/github.com/GoogleCloudPlatform/"]
+    volumes:
+    - name: "make"
+      path: "/usr/bin"
+  # Then, build the binary
+  - name: "gcr.io/google-appengine/golang"
+    args: ["sh", "-c", "make"]
+    volumes:
+    - name: "make"
+      path: "/usr/bin"
+    dir: go/src/github.com/GoogleCloudPlatform/kaniko
+    env: ["GOPATH=/workspace/go/"]
+  # Then, build kaniko with kaniko
+  - name: "gcr.io/kaniko-project/executor:latest"
+    args: ["--dockerfile=/workspace/deploy/Dockerfile",
+           "--context=/workspace/go/src/github.com/GoogleCloudPlatform/kaniko/",
+           "--destination=gcr.io/kaniko-project/executor:${COMMIT_SHA}"]
