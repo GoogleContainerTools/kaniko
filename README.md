@@ -24,7 +24,7 @@ The majority of Dockerfile commands can be executed with kaniko, but we're still
 * STOPSIGNAL
 * ARG
 
-Multi-State Dockerfiles are also unsupported currently, but will be ready soon.
+Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
 
 ## kaniko Build Contexts
 kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
