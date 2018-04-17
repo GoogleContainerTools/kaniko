@@ -19,9 +19,9 @@
   source = "github.com/docker/distribution"
 
 [[constraint]]
-  name = "github.com/GoogleCloudPlatform/container-diff"
+  name = "github.com/GoogleContainerTools/container-diff"
   branch = "master"
-  source = "github.com/GoogleCloudPlatform/container-diff"
+  source = "github.com/GoogleContainerTools/container-diff"
 
 [[constraint]]
   name = "github.com/docker/docker"
