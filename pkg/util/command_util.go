@@ -29,7 +29,7 @@ import (
 	"strings"
 )
 
-// ResolveEnvironmentReplacement resolves a list of values by calling resolveEnvironmentReplacement
+// ResolveEnvironmentReplacementList resolves a list of values by calling resolveEnvironmentReplacement
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {

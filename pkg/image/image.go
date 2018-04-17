@@ -34,7 +34,7 @@ import (
 
 // sourceImage is the image that will be modified by the executor
 
-// InitializeSourceImage initializes the source image with the base image
+// NewSourceImage initializes the source image with the base image
 func NewSourceImage(srcImg string) (*img.MutableSource, error) {
 	if srcImg == constants.NoBaseImage {
 		return img.NewMutableSource(nil)

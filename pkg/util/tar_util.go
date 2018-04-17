@@ -94,7 +94,7 @@ func checkHardlink(p string, i os.FileInfo) (bool, string) {
 }
 
 // UnpackLocalTarArchive unpacks the tar archive at path to the directory dest
-// Returns true if the path was acutally unpacked
+// Returns true if the path was actually unpacked
 func UnpackLocalTarArchive(path, dest string) error {
 	// First, we need to check if the path is a local tar archive
 	if compressed, compressionLevel := fileIsCompressedTar(path); compressed {

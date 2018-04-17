@@ -61,7 +61,7 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	// 	1. Unpack them to the specified destination
 	// 	2. Remove it as a source that needs to be copied over
 	// If any of the sources is a remote file URL:
-	//	1. Download and copy it to the specifed dest
+	//	1. Download and copy it to the specified dest
 	//  2. Remove it as a source that needs to be copied
 	for src, files := range srcMap {
 		for _, file := range files {
