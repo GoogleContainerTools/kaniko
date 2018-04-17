@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
    Copyright The containerd Authors.
 
@@ -14,11 +15,17 @@
    limitations under the License.
 */
 
+=======
+>>>>>>> WIP: set the docker default seccomp profile in the executor process.
 package log
 
 import (
 	"context"
+<<<<<<< HEAD
 	"sync/atomic"
+=======
+	"path"
+>>>>>>> WIP: set the docker default seccomp profile in the executor process.
 
 	"github.com/sirupsen/logrus"
 )
@@ -36,6 +43,7 @@ var (
 
 type (
 	loggerKey struct{}
+<<<<<<< HEAD
 )
 
 // TraceLevel is the log level for tracing. Trace level is lower than debug level,
@@ -51,6 +59,11 @@ func ParseLevel(lvl string) (logrus.Level, error) {
 	return logrus.ParseLevel(lvl)
 }
 
+=======
+	moduleKey struct{}
+)
+
+>>>>>>> WIP: set the docker default seccomp profile in the executor process.
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.
 func WithLogger(ctx context.Context, logger *logrus.Entry) context.Context {
@@ -69,6 +82,7 @@ func GetLogger(ctx context.Context) *logrus.Entry {
 	return logger.(*logrus.Entry)
 }
 
+<<<<<<< HEAD
 // Trace logs a message at level Trace with the log entry passed-in.
 func Trace(e *logrus.Entry, args ...interface{}) {
 	level := logrus.Level(atomic.LoadUint32((*uint32)(&e.Logger.Level)))
@@ -83,4 +97,43 @@ func Tracef(e *logrus.Entry, format string, args ...interface{}) {
 	if level >= TraceLevel {
 		e.Debugf(format, args...)
 	}
+=======
+// WithModule adds the module to the context, appending it with a slash if a
+// module already exists. A module is just an roughly correlated defined by the
+// call tree for a given context.
+//
+// As an example, we might have a "node" module already part of a context. If
+// this function is called with "tls", the new value of module will be
+// "node/tls".
+//
+// Modules represent the call path. If the new module and last module are the
+// same, a new module entry will not be created. If the new module and old
+// older module are the same but separated by other modules, the cycle will be
+// represented by the module path.
+func WithModule(ctx context.Context, module string) context.Context {
+	parent := GetModulePath(ctx)
+
+	if parent != "" {
+		// don't re-append module when module is the same.
+		if path.Base(parent) == module {
+			return ctx
+		}
+
+		module = path.Join(parent, module)
+	}
+
+	ctx = WithLogger(ctx, GetLogger(ctx).WithField("module", module))
+	return context.WithValue(ctx, moduleKey{}, module)
+}
+
+// GetModulePath returns the module path for the provided context. If no module
+// is set, an empty string is returned.
+func GetModulePath(ctx context.Context) string {
+	module := ctx.Value(moduleKey{})
+	if module == nil {
+		return ""
+	}
+
+	return module.(string)
+>>>>>>> WIP: set the docker default seccomp profile in the executor process.
 }

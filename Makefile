@@ -35,15 +35,18 @@ GO_LDFLAGS += -X $(VERSION_PACKAGE).version=$(VERSION)
 GO_LDFLAGS += -w -s # Drop debugging symbols.
 GO_LDFLAGS += '
 
+GO_BUILD_TAGS := "seccomp"
+
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
 
 out/executor: $(GO_FILES)
-	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(EXECUTOR_PACKAGE)
+	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=1 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
 
 out/warmer: $(GO_FILES)
-	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(WARMER_PACKAGE)
+	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=1 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(WARMER_PACKAGE)
+
 
 .PHONY: test
 test: out/executor

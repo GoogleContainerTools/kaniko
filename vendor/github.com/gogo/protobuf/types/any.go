@@ -129,6 +129,7 @@ func UnmarshalAny(any *Any, pb proto.Message) error {
 
 // Is returns true if any value contains a given message type.
 func Is(any *Any, pb proto.Message) bool {
+<<<<<<< HEAD
 	// The following is equivalent to AnyMessageName(any) == proto.MessageName(pb),
 	// but it avoids scanning TypeUrl for the slash.
 	if any == nil {
@@ -137,4 +138,12 @@ func Is(any *Any, pb proto.Message) bool {
 	name := proto.MessageName(pb)
 	prefix := len(any.TypeUrl) - len(name)
 	return prefix >= 1 && any.TypeUrl[prefix-1] == '/' && any.TypeUrl[prefix:] == name
+=======
+	aname, err := AnyMessageName(any)
+	if err != nil {
+		return false
+	}
+
+	return aname == proto.MessageName(pb)
+>>>>>>> WIP: set the docker default seccomp profile in the executor process.
 }

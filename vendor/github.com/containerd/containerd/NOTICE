@@ -1,5 +1,9 @@
 Docker
+<<<<<<< HEAD
 Copyright 2012-2015 Docker, Inc.
+=======
+Copyright 2012-2017 Docker, Inc.
+>>>>>>> WIP: set the docker default seccomp profile in the executor process.
 
 This product includes software developed at Docker, Inc. (https://www.docker.com).
 

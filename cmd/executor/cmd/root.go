@@ -26,8 +26,10 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	sc "github.com/GoogleContainerTools/kaniko/pkg/seccomp"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -39,8 +41,15 @@ import (
 
 var (
 	opts     = &config.KanikoOptions{}
-	logLevel string
-	force    bool
+	dockerfilePath              string
+	destination                 string
+	srcContext                  string
+	snapshotMode                string
+	bucket                      string
+	dockerInsecureSkipTLSVerify bool
+	logLevel                    string
+	force                       bool
+	useSeccomp     bool
 )
 
 func init() {
@@ -48,6 +57,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 	addKanikoOptionsFlags(RootCmd)
 	addHiddenFlags(RootCmd)
+	RootCmd.PersistentFlags().BoolVarP(&useSeccomp, "use-seccomp", "", true, "Use seccomp")
 }
 
 // RootCmd is the kaniko command that is run
@@ -77,6 +87,10 @@ var RootCmd = &cobra.Command{
 				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
+		}
+		if err := initSeccomp(); err != nil {
+			logrus.Error(err)
+			os.Exit(1)
 		}
 		if err := executor.CheckPushPermissions(opts); err != nil {
 			exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
@@ -110,6 +124,15 @@ var RootCmd = &cobra.Command{
 			f.WriteString(s)
 		}
 	},
+}
+
+func initSeccomp() error {
+	if useSeccomp {
+		logrus.Info("Applying default seccomp profile")
+		return sc.InitSeccomp()
+	}
+	logrus.Info("Not applying default seccomp profile")
+	return nil
 }
 
 // addKanikoOptionsFlags configures opts

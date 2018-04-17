@@ -1,1 +1,2 @@
-vendor/
+vendor/**/fixtures/
+vendor/github.com/docker/docker/project/
