@@ -155,7 +155,7 @@ The minimum permissions kaniko needs inside your container are governed by a few
 * The permissions required to unpack your base image into it's container
 * The permissions required to execute the RUN commands inside the container
  
-If you have a minimal base image (SCRATCH or similar) that doesn't require permissions to unpack, and don't execute any commands as the root user,
+If you have a minimal base image (SCRATCH or similar) that doesn't require permissions to unpack, and your Dockerfile doesn't execute any commands as the root user,
 you can run Kaniko without root permissions.
 
 You may be able to achieve the same default seccomp profile that Docker uses in your Pod by setting [seccomp](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp) profiles with annotations on a [PodSecurityPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/pod-security-policies) to create or update security policies on your cluster.
