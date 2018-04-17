@@ -3,7 +3,7 @@ os: linux
 
 go:
   - 1.9.x
-go_import_path: github.com/GoogleCloudPlatform/kaniko
+go_import_path: github.com/GoogleContainerTools/kaniko
 
 script:
   - make test

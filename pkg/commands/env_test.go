@@ -16,10 +16,11 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/testutil"
+	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"testing"
 )
 
 func TestUpdateEnvConfig(t *testing.T) {

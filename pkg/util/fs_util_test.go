@@ -17,12 +17,13 @@ limitations under the License.
 package util
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/testutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
 func Test_fileSystemWhitelist(t *testing.T) {

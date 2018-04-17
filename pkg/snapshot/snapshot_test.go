@@ -18,14 +18,15 @@ package snapshot
 import (
 	"archive/tar"
 	"bytes"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
-	"github.com/GoogleCloudPlatform/kaniko/testutil"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/pkg/errors"
 )
 
 func TestSnapshotFileChange(t *testing.T) {

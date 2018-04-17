@@ -17,13 +17,14 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/containers/image/manifest"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 type CopyCommand struct {

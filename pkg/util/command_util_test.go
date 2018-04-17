@@ -17,12 +17,13 @@ limitations under the License.
 package util
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/testutil"
 	"sort"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-var testUrl = "https://github.com/GoogleCloudPlatform/runtimes-common/blob/master/LICENSE"
+var testUrl = "https://github.com/GoogleContainerTools/runtimes-common/blob/master/LICENSE"
 
 var testEnvReplacement = []struct {
 	path         string
