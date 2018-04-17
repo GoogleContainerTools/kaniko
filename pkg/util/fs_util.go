@@ -160,6 +160,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
+	defer dest.Close()
 	if _, err := io.Copy(dest, reader); err != nil {
 		return err
 	}

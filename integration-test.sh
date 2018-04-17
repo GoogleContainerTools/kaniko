@@ -13,7 +13,16 @@
 # limitations under the License.
 
 #!/bin/bash
-set -e
+set -ex
+
+if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
+    echo "Installing dependencies..."
+    source "$KOKORO_GFILE_DIR/common.sh"
+    mkdir -p /usr/local/go/src/github.com/GoogleCloudPlatform/
+    cp -r github/kaniko /usr/local/go/src/github.com/GoogleCloudPlatform/
+    pushd /usr/local/go/src/github.com/GoogleCloudPlatform/kaniko
+fi
 
 echo "Running integration tests..."
+make out/executor
 go run integration_tests/integration_test_yaml.go | gcloud container builds submit --config /dev/fd/0 .

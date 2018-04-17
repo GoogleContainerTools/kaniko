@@ -55,7 +55,7 @@ Requirements:
 
 To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image. 
 
-To create the secret, first you will need to create a service account in the Pantheon project you want to push the final image to, with `Storage Admin` permissions.
+To create the secret, first you will need to create a service account in the Google Cloud Console project you want to push the final image to, with `Storage Admin` permissions.
 You can download a JSON key for this service account, and rename it `kaniko-secret.json`.
 To create the secret, run:
 
