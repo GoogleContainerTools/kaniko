@@ -19,7 +19,8 @@ package snapshot
 import (
 	"archive/tar"
 	"bytes"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 
 	"io"

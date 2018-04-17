@@ -23,10 +23,10 @@ import (
 
 	"github.com/genuinetools/amicontained/container"
 
-	"github.com/GoogleCloudPlatform/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 
-	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

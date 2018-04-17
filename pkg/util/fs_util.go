@@ -18,16 +18,17 @@ package util
 
 import (
 	"bufio"
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
-	"github.com/containers/image/docker"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	pkgutil "github.com/GoogleContainerTools/container-diff/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/containers/image/docker"
+	"github.com/sirupsen/logrus"
 )
 
 var whitelist = []string{"/kaniko"}

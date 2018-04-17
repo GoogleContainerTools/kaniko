@@ -20,14 +20,15 @@ import (
 	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
 	"syscall"
+
+	pkgutil "github.com/GoogleContainerTools/container-diff/pkg/util"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var hardlinks = make(map[uint64]string)

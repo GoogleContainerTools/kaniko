@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/kaniko/pkg/version"
+	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/containers/image/types"
 
-	img "github.com/GoogleCloudPlatform/container-diff/pkg/image"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
+	img "github.com/GoogleContainerTools/container-diff/pkg/image"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/containers/image/copy"
 	"github.com/containers/image/docker"
 	"github.com/containers/image/signature"
