@@ -182,7 +182,8 @@ type step struct {
 }
 
 type testyaml struct {
-	Steps []step
+	Steps   []step
+	Timeout string
 }
 
 func main() {
@@ -232,6 +233,7 @@ func main() {
 	y := testyaml{
 		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
 			buildOnbuildImage, pushOnbuildBase},
+		Timeout: "1200s",
 	}
 	for _, test := range fileTests {
 		// First, build the image with docker

@@ -85,6 +85,9 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string) error
 			if err != nil {
 				return err
 			}
+			if dockerCommand == nil {
+				continue
+			}
 			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
 				return err
 			}

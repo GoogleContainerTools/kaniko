@@ -20,6 +20,7 @@ import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type DockerCommand interface {
@@ -60,6 +61,9 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &OnBuildCommand{cmd: c}, nil
 	case *instructions.VolumeCommand:
 		return &VolumeCommand{cmd: c}, nil
+	case *instructions.MaintainerCommand:
+		logrus.Warnf("%s is deprecated, skipping", cmd.Name())
+		return nil, nil
 	}
 	return nil, errors.Errorf("%s is not a supported command", cmd.Name())
 }
