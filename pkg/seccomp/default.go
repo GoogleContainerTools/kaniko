@@ -20,12 +20,17 @@ package seccomp
 
 import (
 	"context"
+	"io/ioutil"
+	"strings"
+
+	"github.com/opencontainers/runc/libcontainer/specconv"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/containerd/containerd/namespaces"
 
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/oci"
-	"github.com/opencontainers/runtime-spec/specs-go"
 
 	sc "github.com/containerd/containerd/contrib/seccomp"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -47,81 +52,33 @@ func init() {
 		panic(err)
 	}
 	cfg := sc.DefaultProfile(s)
-	if DefaultProfile, err = setupSeccomp(cfg); err != nil {
+	if DefaultProfile, err = specconv.SetupSeccomp(cfg); err != nil {
 		panic(err)
 	}
 }
 
 func InitSeccomp() error {
-	if seccomp.IsEnabled() {
+	// Make sure the binary was compiled with support for seccomp, and the process isn't already running with seccomp.
+	if seccomp.IsEnabled() && !IsProcessSeccommped() {
 		return seccomp.InitSeccomp(DefaultProfile)
 	}
+	logrus.Infof("Not enabling seccomp because it isn't supported or is already enabled.")
 	return nil
 }
 
-func setupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
-	if config == nil {
-		return nil, nil
-	}
-
-	// No default action specified, no syscalls listed, assume seccomp disabled
-	if config.DefaultAction == "" && len(config.Syscalls) == 0 {
-		return nil, nil
-	}
-
-	newConfig := new(configs.Seccomp)
-	newConfig.Syscalls = []*configs.Syscall{}
-
-	if len(config.Architectures) > 0 {
-		newConfig.Architectures = []string{}
-		for _, arch := range config.Architectures {
-			newArch, err := seccomp.ConvertStringToArch(string(arch))
-			if err != nil {
-				return nil, err
-			}
-			newConfig.Architectures = append(newConfig.Architectures, newArch)
-		}
-	}
-
-	// Convert default action from string representation
-	newDefaultAction, err := seccomp.ConvertStringToAction(string(config.DefaultAction))
+func IsProcessSeccommped() bool {
+	// There will be a line in proc/self/status like:
+	// Seccomp: 0|1|2
+	// http://man7.org/linux/man-pages/man5/proc.5.html
+	b, err := ioutil.ReadFile("/proc/self/status")
 	if err != nil {
-		return nil, err
+		return false
 	}
-	newConfig.DefaultAction = newDefaultAction
-
-	// Loop through all syscall blocks and convert them to libcontainer format
-	for _, call := range config.Syscalls {
-		newAction, err := seccomp.ConvertStringToAction(string(call.Action))
-		if err != nil {
-			return nil, err
-		}
-
-		for _, name := range call.Names {
-			newCall := configs.Syscall{
-				Name:   name,
-				Action: newAction,
-				Args:   []*configs.Arg{},
-			}
-			// Loop through all the arguments of the syscall and convert them
-			for _, arg := range call.Args {
-				newOp, err := seccomp.ConvertStringToOperator(string(arg.Op))
-				if err != nil {
-					return nil, err
-				}
-
-				newArg := configs.Arg{
-					Index:    arg.Index,
-					Value:    arg.Value,
-					ValueTwo: arg.ValueTwo,
-					Op:       newOp,
-				}
-
-				newCall.Args = append(newCall.Args, &newArg)
-			}
-			newConfig.Syscalls = append(newConfig.Syscalls, &newCall)
+	for _, line := range strings.Split(string(b), "\n") {
+		split := strings.SplitN(line, "\t", 2)
+		if split[0] == "Seccomp:" {
+			return split[1] != "0"
 		}
 	}
-
-	return newConfig, nil
+	return false
 }

@@ -26,10 +26,8 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	sc "github.com/GoogleContainerTools/kaniko/pkg/seccomp"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -40,24 +38,18 @@ import (
 )
 
 var (
-	opts     = &config.KanikoOptions{}
-	dockerfilePath              string
-	destination                 string
-	srcContext                  string
-	snapshotMode                string
-	bucket                      string
-	dockerInsecureSkipTLSVerify bool
-	logLevel                    string
-	force                       bool
-	useSeccomp     bool
+	opts       = &config.KanikoOptions{}
+	logLevel   string
+	force      bool
+	useSeccomp bool
 )
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
+	RootCmd.PersistentFlags().BoolVarP(&useSeccomp, "use-seccomp", "", true, "Use seccomp")
 	addKanikoOptionsFlags(RootCmd)
 	addHiddenFlags(RootCmd)
-	RootCmd.PersistentFlags().BoolVarP(&useSeccomp, "use-seccomp", "", true, "Use seccomp")
 }
 
 // RootCmd is the kaniko command that is run
@@ -124,15 +116,6 @@ var RootCmd = &cobra.Command{
 			f.WriteString(s)
 		}
 	},
-}
-
-func initSeccomp() error {
-	if useSeccomp {
-		logrus.Info("Applying default seccomp profile")
-		return sc.InitSeccomp()
-	}
-	logrus.Info("Not applying default seccomp profile")
-	return nil
 }
 
 // addKanikoOptionsFlags configures opts
@@ -282,6 +265,15 @@ func resolveRelativePaths() error {
 		}
 		logrus.Debugf("Resolved relative path %s to %s", relp, *p)
 	}
+	return nil
+}
+
+func initSeccomp() error {
+	if useSeccomp {
+		logrus.Info("Applying default seccomp profile")
+		return sc.InitSeccomp()
+	}
+	logrus.Info("Not applying default seccomp profile")
 	return nil
 }
 

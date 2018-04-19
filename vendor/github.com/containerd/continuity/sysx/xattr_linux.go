@@ -1,6 +1,7 @@
 package sysx
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import "golang.org/x/sys/unix"
 =======
 import "syscall"
@@ -14,37 +15,53 @@ import "syscall"
 //    $ GOOS=linux GOARCH=ppc64le ./generate.sh xattr
 //    $ GOOS=linux GOARCH=s390x ./generate.sh xattr
 >>>>>>> WIP: set the docker default seccomp profile in the executor process.
+=======
+import "golang.org/x/sys/unix"
+>>>>>>> Check if seccomp is enabled before enabling.
 
 // Listxattr calls syscall listxattr and reads all content
 // and returns a string array
 func Listxattr(path string) ([]string, error) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	return listxattrAll(path, unix.Listxattr)
 =======
 	return listxattrAll(path, syscall.Listxattr)
 >>>>>>> WIP: set the docker default seccomp profile in the executor process.
+=======
+	return listxattrAll(path, unix.Listxattr)
+>>>>>>> Check if seccomp is enabled before enabling.
 }
 
 // Removexattr calls syscall removexattr
 func Removexattr(path string, attr string) (err error) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	return unix.Removexattr(path, attr)
 =======
 	return syscall.Removexattr(path, attr)
 >>>>>>> WIP: set the docker default seccomp profile in the executor process.
+=======
+	return unix.Removexattr(path, attr)
+>>>>>>> Check if seccomp is enabled before enabling.
 }
 
 // Setxattr calls syscall setxattr
 func Setxattr(path string, attr string, data []byte, flags int) (err error) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	return unix.Setxattr(path, attr, data, flags)
 =======
 	return syscall.Setxattr(path, attr, data, flags)
 >>>>>>> WIP: set the docker default seccomp profile in the executor process.
+=======
+	return unix.Setxattr(path, attr, data, flags)
+>>>>>>> Check if seccomp is enabled before enabling.
 }
 
 // Getxattr calls syscall getxattr
 func Getxattr(path, attr string) ([]byte, error) {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	return getxattrAll(path, attr, unix.Getxattr)
 }
@@ -69,33 +86,32 @@ func LGetxattr(path, attr string) ([]byte, error) {
 	return getxattrAll(path, attr, unix.Lgetxattr)
 =======
 	return getxattrAll(path, attr, syscall.Getxattr)
+=======
+	return getxattrAll(path, attr, unix.Getxattr)
+>>>>>>> Check if seccomp is enabled before enabling.
 }
-
-//sys llistxattr(path string, dest []byte) (sz int, err error)
 
 // LListxattr lists xattrs, not following symlinks
 func LListxattr(path string) ([]string, error) {
-	return listxattrAll(path, llistxattr)
+	return listxattrAll(path, unix.Llistxattr)
 }
-
-//sys lremovexattr(path string, attr string) (err error)
 
 // LRemovexattr removes an xattr, not following symlinks
 func LRemovexattr(path string, attr string) (err error) {
-	return lremovexattr(path, attr)
+	return unix.Lremovexattr(path, attr)
 }
-
-//sys lsetxattr(path string, attr string, data []byte, flags int) (err error)
 
 // LSetxattr sets an xattr, not following symlinks
 func LSetxattr(path string, attr string, data []byte, flags int) (err error) {
-	return lsetxattr(path, attr, data, flags)
+	return unix.Lsetxattr(path, attr, data, flags)
 }
-
-//sys lgetxattr(path string, attr string, dest []byte) (sz int, err error)
 
 // LGetxattr gets an xattr, not following symlinks
 func LGetxattr(path, attr string) ([]byte, error) {
+<<<<<<< HEAD
 	return getxattrAll(path, attr, lgetxattr)
 >>>>>>> WIP: set the docker default seccomp profile in the executor process.
+=======
+	return getxattrAll(path, attr, unix.Lgetxattr)
+>>>>>>> Check if seccomp is enabled before enabling.
 }

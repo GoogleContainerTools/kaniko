@@ -126,12 +126,42 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+<<<<<<< HEAD
   digest = "1:a12d94258c5298ead75e142e8001224bf029f302fed9e96cd39c0eaf90f3954d"
   name = "github.com/boltdb/bolt"
   packages = ["."]
   pruneopts = "NUT"
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
   version = "v1.3.1"
+=======
+  name = "github.com/containerd/containerd"
+  packages = [
+    "containers",
+    "content",
+    "contrib/seccomp",
+    "errdefs",
+    "fs",
+    "images",
+    "log",
+    "mount",
+    "namespaces",
+    "oci",
+    "platforms",
+    "snapshots",
+    "sys"
+  ]
+  revision = "773c489c9c1b21a6d78b5c538cd395416ec50f88"
+  version = "v1.0.3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/containerd/continuity"
+  packages = [
+    "pathdriver",
+    "sysx"
+  ]
+  revision = "c6cef34830231743494fe2969284df7b82cc0ad0"
+>>>>>>> Check if seccomp is enabled before enabling.
 
 [[projects]]
   digest = "1:e33e5ee8f3ae693a3c6894d3a45bef0261c6bd153c2bca2fcee11a657b189ffd"
@@ -390,6 +420,7 @@
   digest = "1:983cb7d70588854e2706e32c61698bbf0eab4956fca89e86c1c10d7213679a0e"
   name = "github.com/gogo/protobuf"
   packages = [
+<<<<<<< HEAD
     "gogoproto",
     "proto",
     "protoc-gen-gogo/descriptor",
@@ -407,6 +438,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+=======
+    "proto",
+    "sortkeys",
+    "types"
+  ]
+  revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
+  version = "v1.0.0"
+>>>>>>> Check if seccomp is enabled before enabling.
 
 [[projects]]
   digest = "1:698b57d2e177534bca3e8ee5eee05968dd14dc4fe1d015e3fb6237ff10e8826a"
@@ -692,12 +731,28 @@
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
+<<<<<<< HEAD
     "libcontainer/devices",
     "libcontainer/system",
     "libcontainer/user",
   ]
   pruneopts = "NUT"
   revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
+=======
+    "libcontainer/seccomp",
+    "libcontainer/specconv",
+    "libcontainer/system",
+    "libcontainer/user",
+    "libcontainer/utils"
+  ]
+  revision = "1f11dc5dba5213400482cd974db20ee1408d2c7f"
+
+[[projects]]
+  name = "github.com/opencontainers/runtime-spec"
+  packages = ["specs-go"]
+  revision = "4e3b9264a330d094b0386c3703c5f379119711e8"
+  version = "v1.0.1"
+>>>>>>> Check if seccomp is enabled before enabling.
 
 [[projects]]
   digest = "1:57234a321bf1f8f98a8a9a5122a2404cc60d0800516f4ab7a7b2375e4b2d19ea"
@@ -814,6 +869,7 @@
   revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
+<<<<<<< HEAD
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -823,6 +879,14 @@
 
 [[projects]]
   digest = "1:b2339e83ce9b5c4f79405f949429a7f68a9a904fed903c672aac1e7ceb7f5f02"
+=======
+  name = "github.com/seccomp/libseccomp-golang"
+  packages = ["."]
+  revision = "e3496e3a417d1dc9ecdceca5af2513271fed37a0"
+  version = "v0.9.0"
+
+[[projects]]
+>>>>>>> Check if seccomp is enabled before enabling.
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "NUT"
@@ -991,7 +1055,16 @@
 
 [[projects]]
   branch = "master"
+<<<<<<< HEAD
   digest = "1:2d5f7cd5c2bc42a4d5b18f711d482f14689a30212bbe0e398e151b3e2147cb86"
+=======
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
+>>>>>>> Check if seccomp is enabled before enabling.
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -1359,6 +1432,7 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
+<<<<<<< HEAD
   input-imports = [
     "cloud.google.com/go/storage",
     "github.com/aws/aws-sdk-go/aws",
@@ -1401,5 +1475,8 @@
     "gopkg.in/src-d/go-git.v4/plumbing",
     "k8s.io/client-go/discovery",
   ]
+=======
+  inputs-digest = "630b12ad0f985351d3909fc63810e903ac0ea41237a9c13e4b0b3fd0017616e7"
+>>>>>>> Check if seccomp is enabled before enabling.
   solver-name = "gps-cdcl"
   solver-version = 1

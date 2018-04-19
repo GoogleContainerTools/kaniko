@@ -12,6 +12,7 @@ required = [
   revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
 
 [[override]]
+<<<<<<< HEAD
   name = "github.com/opencontainers/runc"
   revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
 
@@ -19,6 +20,12 @@ required = [
   name = "github.com/ishidawataru/sctp"
   revision = "07191f837fedd2f13d1ec7b5f885f0f3ec54b1cb"
 
+=======
+  name = "github.com/containers/storage"
+  revision = "1e5ce40cdb84ab66e26186435b1273e04b879fef"
+  source = "github.com/containers/storage"
+  
+>>>>>>> Check if seccomp is enabled before enabling.
 [[override]]
   name = "github.com/vishvananda/netlink"
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
@@ -48,5 +55,18 @@ required = [
   version = "4.6.0"
 
 [[constraint]]
+<<<<<<< HEAD
   name = "github.com/minio/HighwayHash"
   version = "1.0.0"
+=======
+  name = "github.com/genuinetools/amicontained"
+  version = "0.4.0"
+
+[[override]]
+  name = "github.com/containers/image"
+  revision = "495da41bd26c50be62fa07ae903ea2ee54c00283"
+
+[[override]]
+  name = "github.com/opencontainers/runc"
+  revision = "1f11dc5dba5213400482cd974db20ee1408d2c7f"
+>>>>>>> Check if seccomp is enabled before enabling.
