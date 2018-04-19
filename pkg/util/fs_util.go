@@ -210,3 +210,59 @@ func DownloadFileToDest(rawurl, dest string) error {
 	}
 	return os.Chtimes(dest, mTime, mTime)
 }
+
+// CopyDir copies the file or directory at src to dest
+func CopyDir(src, dest string) error {
+	files, err := RelativeFiles("", src)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		fullPath := filepath.Join(src, file)
+		fi, err := os.Stat(fullPath)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(dest, file)
+		if fi.IsDir() {
+			logrus.Infof("Creating directory %s", destPath)
+			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
+				return err
+			}
+		} else if fi.Mode()&os.ModeSymlink != 0 {
+			// If file is a symlink, we want to create the same relative symlink
+			if err := CopySymlink(fullPath, destPath); err != nil {
+				return err
+			}
+		} else {
+			// ... Else, we want to copy over a file
+			if err := CopyFile(fullPath, destPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func CopySymlink(src, dest string) error {
+	link, err := os.Readlink(src)
+	if err != nil {
+		return err
+	}
+	linkDst := filepath.Join(dest, link)
+	return os.Symlink(linkDst, dest)
+}
+
+func CopyFile(src, dest string) error {
+	fi, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Copying file %s to %s", src, dest)
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+	return CreateFile(dest, srcFile, fi.Mode())
+}

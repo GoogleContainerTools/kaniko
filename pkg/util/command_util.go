@@ -84,7 +84,7 @@ func ContainsWildcards(paths []string) bool {
 
 // ResolveSources resolves the given sources if the sources contains wildcards
 // It returns a map of [src]:[files rooted at src]
-func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[string][]string, error) {
+func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) ([]string, error) {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	// If sources contain wildcards, we first need to resolve them to actual paths
 	if ContainsWildcards(srcs) {
@@ -99,13 +99,8 @@ func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[s
 		}
 		logrus.Debugf("Resolved sources to %v", srcs)
 	}
-	// Now, get a map of [src]:[files rooted at src]
-	srcMap, err := SourcesToFilesMap(srcs, root)
-	if err != nil {
-		return nil, err
-	}
 	// Check to make sure the sources are valid
-	return srcMap, IsSrcsValid(srcsAndDest, srcMap)
+	return srcs, IsSrcsValid(srcsAndDest, srcs, root)
 }
 
 // matchSources returns a list of sources that match wildcards
@@ -206,9 +201,15 @@ func SourcesToFilesMap(srcs []string, root string) (map[string][]string, error) 
 }
 
 // IsSrcsValid returns an error if the sources provided are invalid, or nil otherwise
-func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, srcMap map[string][]string) error {
+func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSrcs []string, root string) error {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	dest := srcsAndDest[len(srcsAndDest)-1]
+
+	// Now, get a map of [src]:[files rooted at src]
+	srcMap, err := SourcesToFilesMap(resolvedSrcs, root)
+	if err != nil {
+		return err
+	}
 
 	totalFiles := 0
 	for _, files := range srcMap {
