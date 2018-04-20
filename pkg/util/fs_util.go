@@ -35,7 +35,7 @@ var whitelist = []string{"/kaniko"}
 var volumeWhitelist = []string{}
 
 // ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
-func ExtractFileSystemFromImage(img string) error {
+func ExtractFileSystemFromImage(img, directory string) error {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func ExtractFileSystemFromImage(img string) error {
 	if err != nil {
 		return err
 	}
-	return pkgutil.GetFileSystemFromReference(ref, imgSrc, constants.RootDir, whitelist)
+	return pkgutil.GetFileSystemFromReference(ref, imgSrc, directory, whitelist)
 }
 
 // PathInWhitelist returns true if the path is whitelisted
@@ -70,6 +70,28 @@ func PathInWhitelist(path, directory string) bool {
 		}
 	}
 	return false
+}
+
+// CopyWhitelist copies all directories in whitelist to dest
+func CopyWhitelist(dest string) error {
+	list := []string{"/dev/null", "/etc/hosts", "/etc/resolv.conf"}
+	for _, dir := range list {
+		fi, err := os.Stat(dir)
+		if err != nil {
+			logrus.Error(err)
+		}
+		if fi.IsDir() {
+			logrus.Infof("copying %s to %s", dir, filepath.Join(dest, dir))
+			if err := CopyDir(dir, filepath.Join(dest, dir)); err != nil {
+				logrus.Error(err)
+			}
+		} else {
+			if err := CopyFile(dir, filepath.Join(dest, dir)); err != nil {
+				logrus.Error(err)
+			}
+		}
+	}
+	return nil
 }
 
 // Get whitelist from roots of mounted files
@@ -117,6 +139,7 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		logrus.Infof("Looking at %s", path)
 		if err != nil {
 			return err
 		}
@@ -219,13 +242,13 @@ func CopyDir(src, dest string) error {
 	}
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
-		fi, err := os.Stat(fullPath)
+		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return err
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
-			logrus.Infof("Creating directory %s", destPath)
+			logrus.Debugf("Creating directory %s", destPath)
 			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
 				return err
 			}

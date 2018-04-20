@@ -18,9 +18,7 @@ package executor
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-
+	img "github.com/GoogleContainerTools/container-diff/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -30,72 +28,102 @@ import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
+	"syscall"
 )
 
-func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, dockerInsecureSkipTLSVerify bool) error {
-	// Parse dockerfile and unpack base image to root
+func SetupBuild(dockerfilePath, srcContext string) error {
+	// Copy over source context
+	logrus.Infof("Copying build context from %s to %s", srcContext, filepath.Join(constants.KanikoBuildDir, srcContext))
+	if err := util.CopyDir(srcContext, filepath.Join(constants.KanikoBuildDir, srcContext)); err != nil {
+		return err
+	}
+	// Then, extract the image
+	dockerfilePath = path.Join(constants.KanikoBuildDir, dockerfilePath)
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
 		return err
 	}
-
 	stages, err := dockerfile.Parse(d)
 	if err != nil {
 		return err
 	}
 	baseImage := stages[0].BaseName
-
-	// Unpack file system to root
-	logrus.Infof("Unpacking filesystem of %s...", baseImage)
-	if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
+	logrus.Infof("Unpacking filesystem of %s to %s...", baseImage, constants.KanikoBuildDir)
+	if err := util.ExtractFileSystemFromImage(baseImage, constants.KanikoBuildDir); err != nil {
 		return err
+	}
+	return util.CopyWhitelist(constants.KanikoBuildDir)
+}
+
+func DoBuild(dockerfilePath, srcContext, snapshotMode string) (*img.MutableSource, error) {
+	// Parse dockerfile and unpack base image to root
+	d, err := ioutil.ReadFile(dockerfilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	stages, err := dockerfile.Parse(d)
+	if err != nil {
+		return nil, err
+	}
+	baseImage := stages[0].BaseName
+	// Initialize source image
+	sourceImage, err := image.NewSourceImage(baseImage)
+	if err != nil {
+		return nil, err
+	}
+	// Change directory and set chroot
+	// Set the chroot
+	if err := os.Chdir(constants.KanikoBuildDir); err != nil {
+		return nil, err
+	}
+	if err := syscall.Chroot("."); err != nil {
+		return nil, err
 	}
 
 	hasher, err := getHasher(snapshotMode)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	l := snapshot.NewLayeredMap(hasher)
 	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
 
 	// Take initial snapshot
 	if err := snapshotter.Init(); err != nil {
-		return err
-	}
-
-	// Initialize source image
-	sourceImage, err := image.NewSourceImage(baseImage)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Set environment variables within the image
 	if err := image.SetEnvVariables(sourceImage); err != nil {
-		return err
+		return nil, err
 	}
 
 	imageConfig := sourceImage.Config()
 	// Currently only supports single stage builds
 	for _, stage := range stages {
 		if err := resolveOnBuild(&stage, imageConfig); err != nil {
-			return err
+			return nil, err
 		}
 		for _, cmd := range stage.Commands {
 			dockerCommand, err := commands.GetCommand(cmd, srcContext)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if dockerCommand == nil {
-				continue
+				return nil, err
 			}
 			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
-				return err
+				return nil, err
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot
 			snapshotFiles := dockerCommand.FilesToSnapshot()
 			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			util.MoveVolumeWhitelistToWhitelist()
 			if contents == nil {
@@ -105,15 +133,11 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 			}
 			// Append the layer to the image
 			if err := sourceImage.AppendLayer(contents, constants.Author); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	// Push the image
-	if err := setDefaultEnv(); err != nil {
-		return err
-	}
-	return image.PushImage(sourceImage, destination, dockerInsecureSkipTLSVerify)
+	return sourceImage, nil
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {

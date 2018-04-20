@@ -21,9 +21,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/genuinetools/amicontained/container"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/image"
+	"github.com/genuinetools/amicontained/container"
+	"syscall"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -72,11 +73,33 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
-		if err := executor.DoBuild(dockerfilePath, srcContext, destination, snapshotMode, dockerInsecureSkipTLSVerify); err != nil {
+		if err := execute(); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
 	},
+}
+
+func execute() error {
+	root, err := os.Open(constants.RootDir)
+	defer root.Close()
+	if err != nil {
+		return err
+	}
+	if err := executor.SetupBuild(dockerfilePath, srcContext); err != nil {
+		return err
+	}
+	builtImage, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode)
+	if err != nil {
+		return err
+	}
+	if err := root.Chdir(); err != nil {
+		return err
+	}
+	if err := syscall.Chroot("."); err != nil {
+		return err
+	}
+	return image.PushImage(builtImage, destination, dockerInsecureSkipTLSVerify)
 }
 
 func checkContained() bool {
