@@ -45,7 +45,6 @@ var fileTests = []struct {
 	kanikoContext       string
 	kanikoContextBucket bool
 	repo                string
-	snapshotMode        string
 }{
 	{
 		description:    "test extract filesystem",
@@ -54,7 +53,6 @@ var fileTests = []struct {
 		dockerContext:  dockerfilesPath,
 		kanikoContext:  dockerfilesPath,
 		repo:           "extract-filesystem",
-		snapshotMode:   "time",
 	},
 	{
 		description:    "test run",
@@ -71,7 +69,6 @@ var fileTests = []struct {
 		dockerContext:  dockerfilesPath,
 		kanikoContext:  dockerfilesPath,
 		repo:           "test-run-2",
-		snapshotMode:   "time",
 	},
 	{
 		description:    "test copy",
@@ -80,7 +77,6 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-copy",
-		snapshotMode:   "time",
 	},
 	{
 		description:         "test bucket build context",
@@ -130,14 +126,6 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-onbuild",
-	},
-	{
-		description:    "test scratch",
-		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_scratch",
-		configPath:     "/workspace/integration_tests/dockerfiles/config_test_scratch.json",
-		dockerContext:  buildcontextPath,
-		kanikoContext:  buildcontextPath,
-		repo:           "test-scratch",
 	},
 }
 
@@ -243,17 +231,13 @@ func main() {
 
 		// Then, buld the image with kaniko
 		kanikoImage := testRepo + kanikoPrefix + test.repo
-		snapshotMode := ""
-		if test.snapshotMode != "" {
-			snapshotMode = "--snapshotMode=" + test.snapshotMode
-		}
 		contextFlag := "--context"
 		if test.kanikoContextBucket {
 			contextFlag = "--bucket"
 		}
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext, snapshotMode},
+			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext},
 		}
 
 		// Pull the kaniko image
