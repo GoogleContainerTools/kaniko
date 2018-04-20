@@ -166,7 +166,7 @@ Similar tools include:
 * [img](https://github.com/genuinetools/img)
 * [orca-build](https://github.com/cyphar/orca-build)
 * [buildah](https://github.com/projectatomic/buildah)
-* [FTL](https://github.com/GoogleContainerTools/runtimes-common/tree/master/ftl)
+* [FTL](https://github.com/GoogleCloudPlatform/runtimes-common/tree/master/ftl)
 * [Bazel rules_docker](https://github.com/bazelbuild/rules_docker)
 
 All of these tools build container images with different approaches.
