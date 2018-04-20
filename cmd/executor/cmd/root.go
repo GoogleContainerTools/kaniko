@@ -32,14 +32,14 @@ import (
 )
 
 var (
-	dockerfilePath string
-	destination    string
-	srcContext     string
-	snapshotMode   string
-	bucket         string
+	dockerfilePath              string
+	destination                 string
+	srcContext                  string
+	snapshotMode                string
+	bucket                      string
 	dockerInsecureSkipTLSVerify bool
-	logLevel       string
-	force          bool
+	logLevel                    string
+	force                       bool
 )
 
 func init() {

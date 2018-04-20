@@ -65,7 +65,7 @@ func PushImage(ms *img.MutableSource, destImg string, dockerInsecureSkipTLSVerif
 
 	opts := &copy.Options{
 		DestinationCtx: &types.SystemContext{
-			DockerRegistryUserAgent: fmt.Sprintf("kaniko/executor-%s", version.Version()),
+			DockerRegistryUserAgent:     fmt.Sprintf("kaniko/executor-%s", version.Version()),
 			DockerInsecureSkipTLSVerify: dockerInsecureSkipTLSVerify,
 		},
 	}
