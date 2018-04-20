@@ -92,7 +92,10 @@ func MutableSourceFromScratch() (*MutableSource, error) {
 		},
 		extraBlobs: make(map[string][]byte),
 		cfg:        config,
-		mfst:       &manifest.Schema2{},
+		mfst: &manifest.Schema2{
+			SchemaVersion: 2,
+			MediaType:     manifest.DockerV2Schema2MediaType,
+		},
 	}
 	return ms, nil
 }

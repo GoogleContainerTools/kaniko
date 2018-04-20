@@ -22,19 +22,14 @@
   version = "v0.3.0"
 
 [[projects]]
-  name = "github.com/GoogleCloudPlatform/container-diff"
-  packages = ["cmd/util/output"]
-  revision = "9eb30146e04ed241c8d5be4e0b9383efaa60a395"
-  version = "v0.9.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/GoogleContainerTools/container-diff"
   packages = [
+    "cmd/util/output",
     "pkg/image",
     "pkg/util"
   ]
-  revision = "859166bbd7810e3c3fc072f1c33ad57b9f4acbd0"
+  revision = "564361979f3124dd3e6d8bbec027279539c8e08b"
   source = "github.com/GoogleContainerTools/container-diff"
 
 [[projects]]
@@ -63,7 +58,7 @@
   branch = "master"
   name = "github.com/containerd/continuity"
   packages = ["pathdriver"]
-  revision = "3e8f2ea4b190484acb976a5b378d373429639a1a"
+  revision = "c6cef34830231743494fe2969284df7b82cc0ad0"
 
 [[projects]]
   name = "github.com/containers/image"
@@ -403,7 +398,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
+  revision = "d0f7cd64bda49e08b22ae8a730aa57aa0db125d6"
 
 [[projects]]
   branch = "master"
@@ -488,7 +483,7 @@
     "openpgp/s2k",
     "ssh/terminal"
   ]
-  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
+  revision = "e73bf333ef8920dbb52ad18d4bd38ad9d9bc76d7"
 
 [[projects]]
   branch = "master"
@@ -496,6 +491,7 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
@@ -505,7 +501,7 @@
     "proxy",
     "trace"
   ]
-  revision = "61147c48b25b599e5b561d2e9c4f3e1ef489ca41"
+  revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
 
 [[projects]]
   branch = "master"
@@ -517,7 +513,7 @@
     "jws",
     "jwt"
   ]
-  revision = "921ae394b9430ed4fb549668d7b087601bd60a81"
+  revision = "6881fee410a5daf86371371f9ad451b95e168b71"
 
 [[projects]]
   branch = "master"
@@ -526,7 +522,7 @@
     "unix",
     "windows"
   ]
-  revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
+  revision = "79b0c6888797020a994db17c8510466c72fe75d9"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -563,7 +559,7 @@
     "storage/v1",
     "transport/http"
   ]
-  revision = "dde16f2e838706995ab9946df55f5dc7c5564cc6"
+  revision = "b08f8989af4899034b9816f5291a5bbb1bd576bb"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -591,7 +587,7 @@
     "googleapis/rpc/code",
     "googleapis/rpc/status"
   ]
-  revision = "51d0944304c3cbce4afe9e5247e21100037bff78"
+  revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
 
 [[projects]]
   name = "google.golang.org/grpc"
