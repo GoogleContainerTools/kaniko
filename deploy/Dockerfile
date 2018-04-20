@@ -17,9 +17,7 @@
 FROM scratch
 ADD out/executor /kaniko/executor
 ADD files/ca-certificates.crt /kaniko/ssl/certs/
-ADD files/docker-credential-gcr /usr/local/bin/
-ADD files/config.json /root/.docker/
-RUN ["docker-credential-gcr", "config", "--token-source=env"]
+ADD files/docker-credential-pass /usr/local/bin/
 ENV HOME /root
 ENV PATH /usr/local/bin
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
