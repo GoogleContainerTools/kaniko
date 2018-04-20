@@ -48,7 +48,7 @@ func NewSourceImage(srcImg string) (*img.MutableSource, error) {
 }
 
 // PushImage pushes the final image
-func PushImage(ms *img.MutableSource, destImg string) error {
+func PushImage(ms *img.MutableSource, destImg string, dockerInsecureSkipTLSVerify bool) error {
 	srcRef := &img.ProxyReference{
 		ImageReference: nil,
 		Src:            ms,
@@ -65,7 +65,8 @@ func PushImage(ms *img.MutableSource, destImg string) error {
 
 	opts := &copy.Options{
 		DestinationCtx: &types.SystemContext{
-			DockerRegistryUserAgent: fmt.Sprintf("kaniko/executor-%s", version.Version()),
+			DockerRegistryUserAgent:     fmt.Sprintf("kaniko/executor-%s", version.Version()),
+			DockerInsecureSkipTLSVerify: dockerInsecureSkipTLSVerify,
 		},
 	}
 	return copy.Image(policyContext, destRef, srcRef, opts)
