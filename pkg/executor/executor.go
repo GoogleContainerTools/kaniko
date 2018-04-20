@@ -32,7 +32,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string) error {
+func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, dockerInsecureSkipTLSVerify bool) error {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
@@ -113,7 +113,7 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string) error
 	if err := setDefaultEnv(); err != nil {
 		return err
 	}
-	return image.PushImage(sourceImage, destination)
+	return image.PushImage(sourceImage, destination, dockerInsecureSkipTLSVerify)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {
