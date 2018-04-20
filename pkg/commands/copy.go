@@ -45,7 +45,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		return err
 	}
 	dest = resolvedEnvs[len(resolvedEnvs)-1]
-	// Get a map of [src]:[files rooted at src]
+	// Resolve wildcards and get a list of resolved sources
 	srcs, err = util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		if err != nil {
 			return err
 		}
-		destPath, err := util.DestinationFilepath(src, src, dest, config.WorkingDir, c.buildcontext)
+		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
 		if err != nil {
 			return err
 		}

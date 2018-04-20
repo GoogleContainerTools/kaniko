@@ -110,93 +110,61 @@ func Test_EnvReplacement(t *testing.T) {
 var buildContextPath = "../../integration_tests/"
 
 var destinationFilepathTests = []struct {
-	srcName          string
-	filename         string
+	src              string
 	dest             string
 	cwd              string
-	buildcontext     string
 	expectedFilepath string
 }{
 	{
-		srcName:          "context/foo",
-		filename:         "context/foo",
+		src:              "context/foo",
 		dest:             "/foo",
 		cwd:              "/",
 		expectedFilepath: "/foo",
 	},
 	{
-		srcName:          "context/foo",
-		filename:         "context/foo",
+		src:              "context/foo",
 		dest:             "/foodir/",
 		cwd:              "/",
 		expectedFilepath: "/foodir/foo",
 	},
 	{
-		srcName:          "context/foo",
-		filename:         "./context/foo",
+		src:              "context/foo",
 		cwd:              "/",
 		dest:             "foo",
 		expectedFilepath: "/foo",
 	},
 	{
-		srcName:          "context/bar/",
-		filename:         "context/bar/bam/bat",
+		src:              "context/bar/",
 		cwd:              "/",
 		dest:             "pkg/",
-		expectedFilepath: "/pkg/bam/bat",
+		expectedFilepath: "/pkg/bar",
 	},
 	{
-		srcName:          "context/bar/",
-		filename:         "context/bar/bam/bat",
+		src:              "context/bar/",
 		cwd:              "/newdir",
 		dest:             "pkg/",
-		expectedFilepath: "/newdir/pkg/bam/bat",
+		expectedFilepath: "/newdir/pkg/bar",
 	},
 	{
-		srcName:          "./context/empty",
-		filename:         "context/empty",
+		src:              "./context/empty",
 		cwd:              "/",
 		dest:             "/empty",
 		expectedFilepath: "/empty",
 	},
 	{
-		srcName:          "./context/empty",
-		filename:         "context/empty",
+		src:              "./context/empty",
 		cwd:              "/dir",
 		dest:             "/empty",
 		expectedFilepath: "/empty",
 	},
 	{
-		srcName:          "./",
-		filename:         "./",
+		src:              "./",
 		cwd:              "/",
 		dest:             "/dir",
 		expectedFilepath: "/dir",
 	},
 	{
-		srcName:          "./",
-		filename:         "context/foo",
-		cwd:              "/",
-		dest:             "/dir",
-		expectedFilepath: "/dir/context/foo",
-	},
-	{
-		srcName:          ".",
-		filename:         "context/bar",
-		cwd:              "/",
-		dest:             "/dir",
-		expectedFilepath: "/dir/context/bar",
-	},
-	{
-		srcName:          ".",
-		filename:         "context/bar",
-		cwd:              "/",
-		dest:             "/dir",
-		expectedFilepath: "/dir/context/bar",
-	},
-	{
-		srcName:          "context/foo",
-		filename:         "context/foo",
+		src:              "context/foo",
 		cwd:              "/test",
 		dest:             ".",
 		expectedFilepath: "/test/foo",
@@ -205,7 +173,7 @@ var destinationFilepathTests = []struct {
 
 func Test_DestinationFilepath(t *testing.T) {
 	for _, test := range destinationFilepathTests {
-		actualFilepath, err := DestinationFilepath(test.filename, test.srcName, test.dest, test.cwd, buildContextPath)
+		actualFilepath, err := DestinationFilepath(test.src, test.dest, test.cwd)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFilepath, actualFilepath)
 	}
 }
@@ -278,141 +246,111 @@ func Test_MatchSources(t *testing.T) {
 }
 
 var isSrcValidTests = []struct {
-	srcsAndDest []string
-	files       map[string][]string
-	shouldErr   bool
+	srcsAndDest     []string
+	resolvedSources []string
+	shouldErr       bool
 }{
 	{
 		srcsAndDest: []string{
-			"src1",
-			"src2",
+			"context/foo",
+			"context/bar",
 			"dest",
 		},
-		files: map[string][]string{
-			"src1": {
-				"file1",
-			},
-			"src2:": {
-				"file2",
-			},
+		resolvedSources: []string{
+			"context/foo",
+			"context/bar",
 		},
 		shouldErr: true,
 	},
 	{
 		srcsAndDest: []string{
-			"src1",
-			"src2",
+			"context/foo",
+			"context/bar",
 			"dest/",
 		},
-		files: map[string][]string{
-			"src1": {
-				"file1",
-			},
-			"src2:": {
-				"file2",
-			},
+		resolvedSources: []string{
+			"context/foo",
+			"context/bar",
 		},
 		shouldErr: false,
 	},
 	{
 		srcsAndDest: []string{
-			"src2/",
+			"context/bar/bam",
 			"dest",
 		},
-		files: map[string][]string{
-			"src1": {
-				"file1",
-			},
-			"src2:": {
-				"file2",
-			},
+		resolvedSources: []string{
+			"context/bar/bam",
 		},
 		shouldErr: false,
 	},
 	{
 		srcsAndDest: []string{
-			"src2",
+			"context/foo",
 			"dest",
 		},
-		files: map[string][]string{
-			"src1": {
-				"file1",
-			},
-			"src2:": {
-				"file2",
-			},
+		resolvedSources: []string{
+			"context/foo",
 		},
 		shouldErr: false,
 	},
 	{
 		srcsAndDest: []string{
-			"src2",
-			"src*",
+			"context/foo",
+			"context/b*",
 			"dest/",
 		},
-		files: map[string][]string{
-			"src1": {
-				"file1",
-			},
-			"src2:": {
-				"file2",
-			},
+		resolvedSources: []string{
+			"context/foo",
+			"context/bar",
 		},
 		shouldErr: false,
 	},
 	{
 		srcsAndDest: []string{
-			"src2",
-			"src*",
+			"context/foo",
+			"context/b*",
 			"dest",
 		},
-		files: map[string][]string{
-			"src2": {
-				"src2/a",
-				"src2/b",
-			},
-			"src*": {},
+		resolvedSources: []string{
+			"context/foo",
+			"context/bar",
 		},
 		shouldErr: true,
 	},
 	{
 		srcsAndDest: []string{
-			"src2",
-			"src*",
+			"context/foo",
+			"context/doesntexist*",
 			"dest",
 		},
-		files: map[string][]string{
-			"src2": {
-				"src2/a",
-			},
-			"src*": {},
+		resolvedSources: []string{
+			"context/foo",
 		},
 		shouldErr: false,
 	},
 	{
 		srcsAndDest: []string{
-			"src2",
-			"src*",
+			"context/",
 			"dest",
 		},
-		files: map[string][]string{
-			"src2": {},
-			"src*": {},
+		resolvedSources: []string{
+			"context/",
 		},
-		shouldErr: true,
+		shouldErr: false,
 	},
 }
 
 func Test_IsSrcsValid(t *testing.T) {
 	for _, test := range isSrcValidTests {
-		err := IsSrcsValid(test.srcsAndDest, test.files)
+		err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
 		testutil.CheckError(t, test.shouldErr, err)
 	}
 }
 
 var testResolveSources = []struct {
-	srcsAndDest []string
-	expectedMap map[string][]string
+	srcsAndDest  []string
+	expectedList []string
 }{
 	{
 		srcsAndDest: []string{
@@ -421,28 +359,18 @@ var testResolveSources = []struct {
 			testUrl,
 			"dest/",
 		},
-		expectedMap: map[string][]string{
-			"context/foo": {
-				"context/foo",
-			},
-			"context/bar": {
-				"context/bar",
-				"context/bar/bam",
-				"context/bar/bam/bat",
-				"context/bar/bat",
-				"context/bar/baz",
-			},
-			testUrl: {
-				testUrl,
-			},
+		expectedList: []string{
+			"context/foo",
+			"context/bar",
+			testUrl,
 		},
 	},
 }
 
 func Test_ResolveSources(t *testing.T) {
 	for _, test := range testResolveSources {
-		actualMap, err := ResolveSources(test.srcsAndDest, buildContextPath)
-		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedMap, actualMap)
+		actualList, err := ResolveSources(test.srcsAndDest, buildContextPath)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedList, actualList)
 	}
 }
 

@@ -244,6 +244,7 @@ func CopyDir(src, dest string) error {
 	return nil
 }
 
+// CopySymlink copies the symlink at src to dest
 func CopySymlink(src, dest string) error {
 	link, err := os.Readlink(src)
 	if err != nil {
@@ -253,6 +254,7 @@ func CopySymlink(src, dest string) error {
 	return os.Symlink(linkDst, dest)
 }
 
+// CopyFile copies the file at src to dest
 func CopyFile(src, dest string) error {
 	fi, err := os.Stat(src)
 	if err != nil {

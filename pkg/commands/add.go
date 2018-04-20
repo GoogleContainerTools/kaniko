@@ -53,7 +53,7 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		return err
 	}
 	dest = resolvedEnvs[len(resolvedEnvs)-1]
-	// Get a map of [src]:[files rooted at src]
+	// Resolve wildcards and get a list of resolved sources
 	srcs, err = util.ResolveSources(resolvedEnvs, a.buildcontext)
 	if err != nil {
 		return err
@@ -61,10 +61,9 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	var unresolvedSrcs []string
 	// If any of the sources are local tar archives:
 	// 	1. Unpack them to the specified destination
-	// 	2. Remove it as a source that needs to be copied over
 	// If any of the sources is a remote file URL:
 	//	1. Download and copy it to the specified dest
-	//  2. Remove it as a source that needs to be copied
+	// Else, add to the list of unresolved sources
 	for _, src := range srcs {
 		fullPath := filepath.Join(a.buildcontext, src)
 		if util.IsSrcRemoteFileURL(src) {
