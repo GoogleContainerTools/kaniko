@@ -83,8 +83,8 @@ func ContainsWildcards(paths []string) bool {
 }
 
 // ResolveSources resolves the given sources if the sources contains wildcards
-// It returns a map of [src]:[files rooted at src]
-func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[string][]string, error) {
+// It returns a list of resolved sources
+func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) ([]string, error) {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	// If sources contain wildcards, we first need to resolve them to actual paths
 	if ContainsWildcards(srcs) {
@@ -99,13 +99,8 @@ func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) (map[s
 		}
 		logrus.Debugf("Resolved sources to %v", srcs)
 	}
-	// Now, get a map of [src]:[files rooted at src]
-	srcMap, err := SourcesToFilesMap(srcs, root)
-	if err != nil {
-		return nil, err
-	}
 	// Check to make sure the sources are valid
-	return srcMap, IsSrcsValid(srcsAndDest, srcMap)
+	return srcs, IsSrcsValid(srcsAndDest, srcs, root)
 }
 
 // matchSources returns a list of sources that match wildcards
@@ -141,24 +136,9 @@ func IsDestDir(path string) bool {
 // If source is a dir:
 //	Assume dest is also a dir, and copy to dest/relpath
 // If dest is not an absolute filepath, add /cwd to the beginning
-func DestinationFilepath(filename, srcName, dest, cwd, buildcontext string) (string, error) {
-	fi, err := os.Lstat(filepath.Join(buildcontext, filename))
-	if err != nil {
-		return "", err
-	}
-	src, err := os.Lstat(filepath.Join(buildcontext, srcName))
-	if err != nil {
-		return "", err
-	}
-	if src.IsDir() || IsDestDir(dest) {
-		relPath, err := filepath.Rel(srcName, filename)
-		if err != nil {
-			return "", err
-		}
-		if relPath == "." && !fi.IsDir() {
-			relPath = filepath.Base(filename)
-		}
-		destPath := filepath.Join(dest, relPath)
+func DestinationFilepath(src, dest, cwd string) (string, error) {
+	if IsDestDir(dest) {
+		destPath := filepath.Join(dest, filepath.Base(src))
 		if filepath.IsAbs(dest) {
 			return destPath, nil
 		}
@@ -187,45 +167,42 @@ func URLDestinationFilepath(rawurl, dest, cwd string) string {
 	return destPath
 }
 
-// SourcesToFilesMap returns a map of [src]:[files rooted at source]
-func SourcesToFilesMap(srcs []string, root string) (map[string][]string, error) {
-	srcMap := make(map[string][]string)
-	for _, src := range srcs {
+func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string) error {
+	srcs := srcsAndDest[:len(srcsAndDest)-1]
+	dest := srcsAndDest[len(srcsAndDest)-1]
+
+	if !ContainsWildcards(srcs) {
+		if len(srcs) > 1 && !IsDestDir(dest) {
+			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+		}
+	}
+
+	if len(resolvedSources) == 1 {
+		fi, err := os.Stat(filepath.Join(root, resolvedSources[0]))
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			return nil
+		}
+	}
+
+	totalFiles := 0
+	for _, src := range resolvedSources {
 		if IsSrcRemoteFileURL(src) {
-			srcMap[src] = []string{src}
+			totalFiles++
 			continue
 		}
 		src = filepath.Clean(src)
 		files, err := RelativeFiles(src, root)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		srcMap[src] = files
-	}
-	return srcMap, nil
-}
-
-// IsSrcsValid returns an error if the sources provided are invalid, or nil otherwise
-func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, srcMap map[string][]string) error {
-	srcs := srcsAndDest[:len(srcsAndDest)-1]
-	dest := srcsAndDest[len(srcsAndDest)-1]
-
-	totalFiles := 0
-	for _, files := range srcMap {
 		totalFiles += len(files)
 	}
 	if totalFiles == 0 {
 		return errors.New("copy failed: no source files specified")
 	}
-
-	if !ContainsWildcards(srcs) {
-		// If multiple sources and destination isn't a directory, return an error
-		if len(srcs) > 1 && !IsDestDir(dest) {
-			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
-		}
-		return nil
-	}
-
 	// If there are wildcards, and the destination is a file, there must be exactly one file to copy over,
 	// Otherwise, return an error
 	if !IsDestDir(dest) && totalFiles > 1 {

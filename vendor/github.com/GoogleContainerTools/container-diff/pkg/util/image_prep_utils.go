@@ -26,7 +26,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/container-diff/cmd/util/output"
+	"github.com/GoogleContainerTools/container-diff/cmd/util/output"
 	"github.com/containers/image/docker"
 	"github.com/containers/image/manifest"
 	"github.com/containers/image/pkg/compression"
