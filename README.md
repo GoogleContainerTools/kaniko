@@ -141,7 +141,29 @@ To run kaniko in Docker, run the following command:
 
 kaniko uses Docker credential helpers to push images to a registry.
 
-kaniko comes with support for GCR, but configuring another credential helper should allow pushing to a different registry.
+kaniko comes with support for Docker `config.json` and GCR, but configuring another credential helper should allow pushing to a different registry.
+
+#### Pushing to Docker Hub
+
+Get your docker registry user and password encoded in base64
+
+    echo USER:PASSWORD | base64
+
+Create a `config.json` file with your Docker registry url and the previous generated base64 string
+
+```
+{
+	"auths": {
+		"https://index.docker.io/v1/": {
+			"auth": "xxxxxxxxxxxxxxx"
+		}
+	}
+}
+```
+
+Run kaniko with the `config.json` inside `/root/.docker/config.json`
+
+    docker run -ti --rm -v `pwd`:/workspace -v config.json:/root/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
 
 
 ## Security
