@@ -10,7 +10,7 @@ Please let us know if you have any feature requests or find any bugs!
 
 
 - [Kaniko](#kaniko)
-  - [How does kaniko work?](#how-does-kaniko-work?)
+  - [How does kaniko work?](#how-does-kaniko-work)
   - [Known Issues](#known-issues)
 - [Development](#development)
   - [kaniko Build Contexts](#kaniko-build-contexts) 
