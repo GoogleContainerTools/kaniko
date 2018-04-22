@@ -46,6 +46,9 @@ const (
 
 	// NoBaseImage is the scratch image
 	NoBaseImage = "scratch"
+
+	// KanikoBuildDir is the directory commands are executed in
+	KanikoBuildDir = "/kaniko-build"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko
