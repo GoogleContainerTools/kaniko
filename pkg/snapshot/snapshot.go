@@ -33,6 +33,7 @@ import (
 type Snapshotter struct {
 	l         *LayeredMap
 	directory string
+	hardlinks map[uint64]string
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
@@ -60,10 +61,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	contents, err := ioutil.ReadAll(buf)
-	if err != nil {
-		return nil, err
-	}
+	contents := buf.Bytes()
 	if !filesAdded {
 		return nil, nil
 	}
@@ -99,7 +97,7 @@ func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
 		}
 		if maybeAdd {
 			filesAdded = true
-			util.AddToTar(file, info, w)
+			util.AddToTar(file, info, s.hardlinks, w)
 		}
 	}
 	if !filesAdded {
@@ -109,27 +107,55 @@ func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
 }
 
 func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
+	s.hardlinks = map[uint64]string{}
 	s.l.Snapshot()
+	existingPaths := s.l.GetFlattenedPathsForWhiteOut()
 	filesAdded := false
 	w := tar.NewWriter(f)
 	defer w.Close()
 
-	err := filepath.Walk(s.directory, func(path string, info os.FileInfo, err error) error {
+	// Save the fs state in a map to iterate over later.
+	memFs := map[string]os.FileInfo{}
+	filepath.Walk(s.directory, func(path string, info os.FileInfo, err error) error {
+		memFs[path] = info
+		return nil
+	})
+
+	// First handle whiteouts
+	for p := range memFs {
+		delete(existingPaths, p)
+	}
+	for path := range existingPaths {
+		// Only add the whiteout if the directory for the file still exists.
+		dir := filepath.Dir(path)
+		if _, ok := memFs[dir]; ok {
+			logrus.Infof("Adding whiteout for %s", path)
+			filesAdded = true
+			if err := util.Whiteout(path, w); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	// Now create the tar.
+	for path, info := range memFs {
 		if util.PathInWhitelist(path, s.directory) {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
-			return nil
+			continue
 		}
 
 		// Only add to the tar if we add it to the layeredmap.
 		maybeAdd, err := s.l.MaybeAdd(path)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if maybeAdd {
 			filesAdded = true
-			return util.AddToTar(path, info, w)
+			if err := util.AddToTar(path, info, s.hardlinks, w); err != nil {
+				return false, err
+			}
 		}
-		return nil
-	})
-	return filesAdded, err
+	}
+
+	return filesAdded, nil
 }

@@ -1,0 +1,3 @@
+FROM busybox
+ADD context/tars /tmp/tars
+RUN mv /tmp/tars /foo
