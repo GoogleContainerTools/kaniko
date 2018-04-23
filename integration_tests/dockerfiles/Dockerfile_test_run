@@ -17,3 +17,10 @@ RUN echo "hey" > /etc/foo
 RUN apt-get update && apt-get install -y \
   bzr \
   cvs \
+RUN rm /var/log/dpkg.log \
+  /var/log/apt/term.log \
+  /var/cache/ldconfig/aux-cache \
+  /var/log/apt/history.log \
+  /var/log/alternatives.log \
+  /usr/lib/python2.7/dist-packages/keyrings/__init__.pyc \
+  /usr/lib/python2.7/dist-packages/lazr/__init__.pyc

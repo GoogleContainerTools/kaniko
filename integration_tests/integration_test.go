@@ -69,7 +69,15 @@ func TestRun(t *testing.T) {
 
 			// build kaniko image
 			kanikoImage := testRepo + kanikoPrefix + dockerfile.Name()
-			kanikoCmd := exec.Command("./run_in_docker.sh", path.Join(dockerfilesPath, dockerfile.Name()), buildcontextPath, kanikoImage)
+			// kanikoCmd := exec.Command("./run_in_docker.sh", path.Join(dockerfilesPath, dockerfile.Name()), buildcontextPath, kanikoImage)
+			kanikoCmd := exec.Command("docker", "run",
+				"-v", "$HOME/.config/gcloud:/root/.config/gcloud",
+				"-v", buildcontextPath+":/workspace",
+				executorImage,
+				"-f", dockerfile.Name(),
+				"-d", kanikoImage,
+				"-c", "/workspace",
+			)
 			err = kanikoCmd.Run()
 			if err != nil {
 				t.Error(err)
