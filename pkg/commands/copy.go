@@ -17,13 +17,14 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type CopyCommand struct {
@@ -32,7 +33,7 @@ type CopyCommand struct {
 	snapshotFiles []string
 }
 
-func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 	srcs := c.cmd.SourcesAndDest[:len(c.cmd.SourcesAndDest)-1]
 	dest := c.cmd.SourcesAndDest[len(c.cmd.SourcesAndDest)-1]
 

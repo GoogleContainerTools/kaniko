@@ -47,7 +47,7 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	}
 
 	actualWhitelist, err := fileSystemWhitelist(path)
-	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys"}
+	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys", "/var/run"}
 	sort.Strings(actualWhitelist)
 	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
@@ -129,5 +129,109 @@ func Test_RelativeFiles(t *testing.T) {
 		sort.Strings(actualFiles)
 		sort.Strings(test.expectedFiles)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
+	}
+}
+
+func Test_checkWhiteouts(t *testing.T) {
+	type args struct {
+		path      string
+		whiteouts map[string]struct{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "file whited out",
+			args: args{
+				path:      "/foo",
+				whiteouts: map[string]struct{}{"/foo": {}},
+			},
+			want: true,
+		},
+		{
+			name: "directory whited out",
+			args: args{
+				path:      "/foo/bar",
+				whiteouts: map[string]struct{}{"/foo": {}},
+			},
+			want: true,
+		},
+		{
+			name: "grandparent whited out",
+			args: args{
+				path:      "/foo/bar/baz",
+				whiteouts: map[string]struct{}{"/foo": {}},
+			},
+			want: true,
+		},
+		{
+			name: "sibling whited out",
+			args: args{
+				path:      "/foo/bar/baz",
+				whiteouts: map[string]struct{}{"/foo/bat": {}},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := checkWhiteouts(tt.args.path, tt.args.whiteouts); got != tt.want {
+				t.Errorf("checkWhiteouts() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_checkWhitelist(t *testing.T) {
+	type args struct {
+		path      string
+		whitelist []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "file whitelisted",
+			args: args{
+				path:      "/foo",
+				whitelist: []string{"/foo"},
+			},
+			want: true,
+		},
+		{
+			name: "directory whitelisted",
+			args: args{
+				path:      "/foo/bar",
+				whitelist: []string{"/foo"},
+			},
+			want: true,
+		},
+		{
+			name: "grandparent whitelisted",
+			args: args{
+				path:      "/foo/bar/baz",
+				whitelist: []string{"/foo"},
+			},
+			want: true,
+		},
+		{
+			name: "sibling whitelisted",
+			args: args{
+				path:      "/foo/bar/baz",
+				whitelist: []string{"/foo/bat"},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := checkWhitelist(tt.args.path, tt.args.whitelist); got != tt.want {
+				t.Errorf("checkWhitelist() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
