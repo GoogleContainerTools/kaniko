@@ -40,6 +40,8 @@ The majority of Dockerfile commands can be executed with kaniko, but we're still
 
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
 
+kaniko also does not support building Windows containers.
+
 ## Development
 ### kaniko Build Contexts
 kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
