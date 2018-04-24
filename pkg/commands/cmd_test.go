@@ -16,11 +16,12 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/testutil"
+	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/containers/image/manifest"
 	"github.com/containers/image/pkg/strslice"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"testing"
 )
 
 var cmdTests = []struct {

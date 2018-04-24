@@ -62,7 +62,7 @@ func Hasher() func(string) (string, error) {
 	return hasher
 }
 
-// Hasher returns a hash function, which only looks at mtime to determine if a file has changed
+// MtimeHasher returns a hash function, which only looks at mtime to determine if a file has changed
 func MtimeHasher() func(string) (string, error) {
 	hasher := func(p string) (string, error) {
 		h := md5.New()

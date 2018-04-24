@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/kaniko/cmd/executor/cmd"
+	"github.com/GoogleContainerTools/kaniko/cmd/executor/cmd"
 )
 
 func main() {

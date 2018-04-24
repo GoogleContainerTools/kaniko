@@ -80,7 +80,7 @@ func (r *RunCommand) FilesToSnapshot() []string {
 	return nil
 }
 
-// Author returns some information about the command for the image config
+// CreatedBy returns some information about the command for the image config
 func (r *RunCommand) CreatedBy() string {
 	cmdLine := strings.Join(r.cmd.CmdLine, " ")
 	if r.cmd.PrependShell {

@@ -17,12 +17,13 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"path/filepath"
+	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"path/filepath"
-	"strings"
 )
 
 type AddCommand struct {
@@ -52,60 +53,50 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		return err
 	}
 	dest = resolvedEnvs[len(resolvedEnvs)-1]
-	// Get a map of [src]:[files rooted at src]
-	srcMap, err := util.ResolveSources(resolvedEnvs, a.buildcontext)
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err = util.ResolveSources(resolvedEnvs, a.buildcontext)
 	if err != nil {
 		return err
 	}
+	var unresolvedSrcs []string
 	// If any of the sources are local tar archives:
 	// 	1. Unpack them to the specified destination
-	// 	2. Remove it as a source that needs to be copied over
 	// If any of the sources is a remote file URL:
-	//	1. Download and copy it to the specifed dest
-	//  2. Remove it as a source that needs to be copied
-	for src, files := range srcMap {
-		for _, file := range files {
-			// If file is a local tar archive, then we unpack it to dest
-			filePath := filepath.Join(a.buildcontext, file)
-			isFilenameSource, err := isFilenameSource(srcMap, file)
+	//	1. Download and copy it to the specified dest
+	// Else, add to the list of unresolved sources
+	for _, src := range srcs {
+		fullPath := filepath.Join(a.buildcontext, src)
+		if util.IsSrcRemoteFileURL(src) {
+			urlDest := util.URLDestinationFilepath(src, dest, config.WorkingDir)
+			logrus.Infof("Adding remote URL %s to %s", src, urlDest)
+			if err := util.DownloadFileToDest(src, urlDest); err != nil {
+				return err
+			}
+			a.snapshotFiles = append(a.snapshotFiles, urlDest)
+		} else if util.IsFileLocalTarArchive(fullPath) {
+			logrus.Infof("Unpacking local tar archive %s to %s", src, dest)
+			if err := util.UnpackLocalTarArchive(fullPath, dest); err != nil {
+				return err
+			}
+			// Add the unpacked files to the snapshotter
+			filesAdded, err := util.Files(dest)
 			if err != nil {
 				return err
 			}
-			if util.IsSrcRemoteFileURL(file) {
-				urlDest := util.URLDestinationFilepath(file, dest, config.WorkingDir)
-				logrus.Infof("Adding remote URL %s to %s", file, urlDest)
-				if err := util.DownloadFileToDest(file, urlDest); err != nil {
-					return err
-				}
-				a.snapshotFiles = append(a.snapshotFiles, urlDest)
-				delete(srcMap, src)
-			} else if isFilenameSource && util.IsFileLocalTarArchive(filePath) {
-				logrus.Infof("Unpacking local tar archive %s to %s", file, dest)
-				if err := util.UnpackLocalTarArchive(filePath, dest); err != nil {
-					return err
-				}
-				// Add the unpacked files to the snapshotter
-				filesAdded, err := util.Files(dest)
-				if err != nil {
-					return err
-				}
-				logrus.Debugf("Added %v from local tar archive %s", filesAdded, file)
-				a.snapshotFiles = append(a.snapshotFiles, filesAdded...)
-				delete(srcMap, src)
-			}
+			logrus.Debugf("Added %v from local tar archive %s", filesAdded, src)
+			a.snapshotFiles = append(a.snapshotFiles, filesAdded...)
+		} else {
+			unresolvedSrcs = append(unresolvedSrcs, src)
 		}
 	}
 	// With the remaining "normal" sources, create and execute a standard copy command
-	if len(srcMap) == 0 {
+	if len(unresolvedSrcs) == 0 {
 		return nil
 	}
-	var regularSrcs []string
-	for src := range srcMap {
-		regularSrcs = append(regularSrcs, src)
-	}
+
 	copyCmd := CopyCommand{
 		cmd: &instructions.CopyCommand{
-			SourcesAndDest: append(regularSrcs, dest),
+			SourcesAndDest: append(unresolvedSrcs, dest),
 		},
 		buildcontext: a.buildcontext,
 	}
@@ -114,19 +105,6 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	}
 	a.snapshotFiles = append(a.snapshotFiles, copyCmd.snapshotFiles...)
 	return nil
-}
-
-func isFilenameSource(srcMap map[string][]string, fileName string) (bool, error) {
-	for src := range srcMap {
-		matched, err := filepath.Match(src, fileName)
-		if err != nil {
-			return false, err
-		}
-		if matched || (src == fileName) {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 // FilesToSnapshot should return an empty array if still nil; no files were changed

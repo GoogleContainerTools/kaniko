@@ -20,20 +20,20 @@ import (
 	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"syscall"
+
+	pkgutil "github.com/GoogleContainerTools/container-diff/pkg/util"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
-var hardlinks = make(map[uint64]string)
-
 // AddToTar adds the file i to tar w at path p
-func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
+func AddToTar(p string, i os.FileInfo, hardlinks map[uint64]string, w *tar.Writer) error {
 	linkDst := ""
 	if i.Mode()&os.ModeSymlink != 0 {
 		var err error
@@ -48,7 +48,7 @@ func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
 	}
 	hdr.Name = p
 
-	hardlink, linkDst := checkHardlink(p, i)
+	hardlink, linkDst := checkHardlink(p, hardlinks, i)
 	if hardlink {
 		hdr.Linkname = linkDst
 		hdr.Typeflag = tar.TypeLink
@@ -71,8 +71,23 @@ func AddToTar(p string, i os.FileInfo, w *tar.Writer) error {
 	return nil
 }
 
+func Whiteout(p string, w *tar.Writer) error {
+	dir := filepath.Dir(p)
+	name := ".wh." + filepath.Base(p)
+
+	th := &tar.Header{
+		Name: filepath.Join(dir, name),
+		Size: 0,
+	}
+	if err := w.WriteHeader(th); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Returns true if path is hardlink, and the link destination
-func checkHardlink(p string, i os.FileInfo) (bool, string) {
+func checkHardlink(p string, hardlinks map[uint64]string, i os.FileInfo) (bool, string) {
 	hardlink := false
 	linkDst := ""
 	if sys := i.Sys(); sys != nil {
@@ -94,7 +109,7 @@ func checkHardlink(p string, i os.FileInfo) (bool, string) {
 }
 
 // UnpackLocalTarArchive unpacks the tar archive at path to the directory dest
-// Returns true if the path was acutally unpacked
+// Returns true if the path was actually unpacked
 func UnpackLocalTarArchive(path, dest string) error {
 	// First, we need to check if the path is a local tar archive
 	if compressed, compressionLevel := fileIsCompressedTar(path); compressed {

@@ -19,7 +19,7 @@ package commands
 import (
 	"strings"
 
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"

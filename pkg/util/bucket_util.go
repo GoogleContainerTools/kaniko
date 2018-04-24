@@ -17,12 +17,13 @@ limitations under the License.
 package util
 
 import (
-	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	"os"
 	"path/filepath"
+
+	"cloud.google.com/go/storage"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 // UnpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory

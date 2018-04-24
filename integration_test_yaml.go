@@ -112,6 +112,14 @@ var fileTests = []struct {
 		repo:           "test-add",
 	},
 	{
+		description:    "test mv add",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_mv_add",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_mv_add.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-mv-add",
+	},
+	{
 		description:    "test registry",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_registry",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_registry.json",
@@ -170,7 +178,8 @@ type step struct {
 }
 
 type testyaml struct {
-	Steps []step
+	Steps   []step
+	Timeout string
 }
 
 func main() {
@@ -220,6 +229,7 @@ func main() {
 	y := testyaml{
 		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
 			buildOnbuildImage, pushOnbuildBase},
+		Timeout: "1200s",
 	}
 	for _, test := range fileTests {
 		// First, build the image with docker
@@ -262,7 +272,7 @@ func main() {
 		}
 		compareOutputs := step{
 			Name: ubuntuImage,
-			Args: []string{"cmp", test.configPath, containerDiffOutputFile},
+			Args: []string{"cmp", "-b", test.configPath, containerDiffOutputFile},
 		}
 
 		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, containerDiff, catContainerDiffOutput, compareOutputs)

@@ -31,7 +31,7 @@ install_dep() {
 }
 
 if [ -z "$VALIDATE_UPSTREAM" ]; then
-	VALIDATE_REPO='git@github.com:GoogleCloudPlatform/kaniko.git'
+	VALIDATE_REPO='git@github.com:GoogleContainerTools/kaniko.git'
 	VALIDATE_BRANCH='master'
 
 	VALIDATE_HEAD="$(git rev-parse --verify HEAD)"

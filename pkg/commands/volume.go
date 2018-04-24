@@ -17,12 +17,13 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"os"
+	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"os"
-	"strings"
 )
 
 type VolumeCommand struct {

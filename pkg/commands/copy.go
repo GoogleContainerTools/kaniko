@@ -17,7 +17,7 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
@@ -45,52 +45,42 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		return err
 	}
 	dest = resolvedEnvs[len(resolvedEnvs)-1]
-	// Get a map of [src]:[files rooted at src]
-	srcMap, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err = util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
 		return err
 	}
-	// For each source, iterate through each file within and copy it over
-	for src, files := range srcMap {
-		for _, file := range files {
-			fi, err := os.Lstat(filepath.Join(c.buildcontext, file))
+	// For each source, iterate through and copy it over
+	for _, src := range srcs {
+		fullPath := filepath.Join(c.buildcontext, src)
+		fi, err := os.Lstat(fullPath)
+		if err != nil {
+			return err
+		}
+		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			if err := util.CopyDir(fullPath, dest); err != nil {
+				return err
+			}
+			copiedFiles, err := util.Files(dest)
 			if err != nil {
 				return err
 			}
-			destPath, err := util.DestinationFilepath(file, src, dest, config.WorkingDir, c.buildcontext)
-			if err != nil {
+			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
+		} else if fi.Mode()&os.ModeSymlink != 0 {
+			// If file is a symlink, we want to create the same relative symlink
+			if err := util.CopySymlink(fullPath, destPath); err != nil {
 				return err
 			}
-			// If source file is a directory, we want to create a directory ...
-			if fi.IsDir() {
-				logrus.Infof("Creating directory %s", destPath)
-				if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
-					return err
-				}
-			} else if fi.Mode()&os.ModeSymlink != 0 {
-				// If file is a symlink, we want to create the same relative symlink
-				link, err := os.Readlink(filepath.Join(c.buildcontext, file))
-				if err != nil {
-					return err
-				}
-				linkDst := filepath.Join(destPath, link)
-				if err := os.Symlink(linkDst, destPath); err != nil {
-					logrus.Errorf("unable to symlink %s to %s", linkDst, destPath)
-					return err
-				}
-			} else {
-				// ... Else, we want to copy over a file
-				logrus.Infof("Copying file %s to %s", file, destPath)
-				srcFile, err := os.Open(filepath.Join(c.buildcontext, file))
-				if err != nil {
-					return err
-				}
-				defer srcFile.Close()
-				if err := util.CreateFile(destPath, srcFile, fi.Mode()); err != nil {
-					return err
-				}
+			c.snapshotFiles = append(c.snapshotFiles, destPath)
+		} else {
+			// ... Else, we want to copy over a file
+			if err := util.CopyFile(fullPath, destPath); err != nil {
+				return err
 			}
-			// Append the destination file to the list of files that should be snapshotted later
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		}
 	}

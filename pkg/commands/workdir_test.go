@@ -16,10 +16,11 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleCloudPlatform/kaniko/testutil"
+	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"testing"
 )
 
 // Each test here changes the same WorkingDir field in the config

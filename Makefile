@@ -22,7 +22,7 @@ VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
-ORG := github.com/GoogleCloudPlatform
+ORG := github.com/GoogleContainerTools
 PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
 
@@ -31,6 +31,7 @@ REPOPATH ?= $(ORG)/$(PROJECT)
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_LDFLAGS := '-extldflags "-static"
 GO_LDFLAGS += -X $(VERSION_PACKAGE).version=$(VERSION)
+GO_LDFLAGS += -w -s # Drop debugging symbols.
 GO_LDFLAGS += '
 
 GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay"
@@ -46,7 +47,7 @@ test: out/executor
 	@ ./test.sh
 
 .PHONY: integration-test
-integration-test: out/executor
+integration-test:
 	@ ./integration-test.sh
 
 .PHONY: images

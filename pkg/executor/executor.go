@@ -21,18 +21,18 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/GoogleCloudPlatform/kaniko/pkg/commands"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/dockerfile"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/image"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/snapshot"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/commands"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/image"
+	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 )
 
-func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string) error {
+func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, dockerInsecureSkipTLSVerify bool) error {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
@@ -85,6 +85,9 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string) error
 			if err != nil {
 				return err
 			}
+			if dockerCommand == nil {
+				continue
+			}
 			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
 				return err
 			}
@@ -110,7 +113,7 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string) error
 	if err := setDefaultEnv(); err != nil {
 		return err
 	}
-	return image.PushImage(sourceImage, destination)
+	return image.PushImage(sourceImage, destination, dockerInsecureSkipTLSVerify)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {

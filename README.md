@@ -8,14 +8,28 @@ This enables building container images in environments that can't easily or secu
 We're currently in the process of building kaniko, so as of now it isn't production ready.
 Please let us know if you have any feature requests or find any bugs!
 
-## How does kaniko work?
+
+- [Kaniko](#kaniko)
+  - [How does kaniko work?](#how-does-kaniko-work)
+  - [Known Issues](#known-issues)
+- [Development](#development)
+  - [kaniko Build Contexts](#kaniko-build-contexts) 
+  - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+  - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
+  - [Running kaniko locally](#running-kaniko-locally)
+  - [Pushing to Different Registries](#pushing-to-different-registries)
+- [Security](#security)
+- [Comparison with Other Tools](#comparison-with-other-tools)
+- [Community](#community)
+
+### How does kaniko work?
 
 The kaniko executor image is responsible for building an image from a Dockerfile and pushing it to a registry.
 Within the executor image, we extract the filesystem of the base image (the FROM image in the Dockerfile).
 We then execute the commands in the Dockerfile, snapshotting the filesystem in userspace after each one.
 After each command, we append a layer of changed files to the base image (if there are any) and update image metadata.
 
-## Known Issues
+### Known Issues
 
 The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
 
@@ -26,7 +40,8 @@ The majority of Dockerfile commands can be executed with kaniko, but we're still
 
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
 
-## kaniko Build Contexts
+## Development
+### kaniko Build Contexts
 kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
 To specify a GCS bucket, pass in the `--bucket` flag.
 The GCS bucket should contain a compressed tar of the build context called `context.tar.gz`, which kaniko will unpack and use as the build context. 
@@ -36,7 +51,7 @@ To create `context.tar.gz`, run the following command:
 tar -C <path to build context> -zcvf context.tar.gz .
 ```
 
-Or, you can use [skaffold](https://github.com/GoogleCloudPlatform/skaffold) to create `context.tar.gz` by running
+Or, you can use [skaffold](https://github.com/GoogleContainerTools/skaffold) to create `context.tar.gz` by running
 ```
 skaffold docker context
 ```
@@ -47,7 +62,7 @@ We can copy over the compressed tar to a GCS bucket with gsutil:
 gsutil cp context.tar.gz gs://<bucket name>
 ```
 
-## Running kaniko in a Kubernetes cluster
+### Running kaniko in a Kubernetes cluster
 
 Requirements:
 * Standard Kubernetes cluster
@@ -55,7 +70,7 @@ Requirements:
 
 To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image. 
 
-To create the secret, first you will need to create a service account in the Pantheon project you want to push the final image to, with `Storage Admin` permissions.
+To create the secret, first you will need to create a service account in the Google Cloud Console project you want to push the final image to, with `Storage Admin` permissions.
 You can download a JSON key for this service account, and rename it `kaniko-secret.json`.
 To create the secret, run:
 
@@ -93,7 +108,7 @@ spec:
 This example pulls the build context from a GCS bucket.
 To use a local directory build context, you could consider using configMaps to mount in small build contexts.
 
-## Running kaniko in Google Container Builder 
+### Running kaniko in Google Container Builder 
 To run kaniko in GCB, add it to your build config as a build step:
 
 ```yaml
@@ -105,7 +120,7 @@ steps:
 ```
 kaniko will build and push the final image in this build step.
 
-## Running kaniko locally
+### Running kaniko locally
 
 Requirements:
 * Docker
@@ -122,6 +137,28 @@ To run kaniko in Docker, run the following command:
 ```shell
 ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
 ```
+### Pushing to Different Registries
+
+kaniko uses Docker credential helpers to push images to a registry.
+
+kaniko comes with support for GCR, but configuring another credential helper should allow pushing to a different registry.
+
+
+## Security
+ 
+kaniko by itself **does not** make it safe to run untrusted builds inside your cluster, or anywhere else.
+ 
+kaniko relies on the security features of your container runtime to provide build security.
+ 
+The minimum permissions kaniko needs inside your container are governed by a few things:
+ 
+* The permissions required to unpack your base image into it's container
+* The permissions required to execute the RUN commands inside the container
+ 
+If you have a minimal base image (SCRATCH or similar) that doesn't require permissions to unpack, and your Dockerfile doesn't execute any commands as the root user,
+you can run Kaniko without root permissions.
+
+You may be able to achieve the same default seccomp profile that Docker uses in your Pod by setting [seccomp](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp) profiles with annotations on a [PodSecurityPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/pod-security-policies) to create or update security policies on your cluster.
 
 ## Comparison with Other Tools
 

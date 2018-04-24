@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/kaniko/pkg/version"
+	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/containers/image/types"
 
-	img "github.com/GoogleCloudPlatform/container-diff/pkg/image"
-	"github.com/GoogleCloudPlatform/kaniko/pkg/constants"
+	img "github.com/GoogleContainerTools/container-diff/pkg/image"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/containers/image/copy"
 	"github.com/containers/image/docker"
 	"github.com/containers/image/signature"
@@ -34,7 +34,7 @@ import (
 
 // sourceImage is the image that will be modified by the executor
 
-// InitializeSourceImage initializes the source image with the base image
+// NewSourceImage initializes the source image with the base image
 func NewSourceImage(srcImg string) (*img.MutableSource, error) {
 	if srcImg == constants.NoBaseImage {
 		return img.NewMutableSource(nil)
@@ -48,7 +48,7 @@ func NewSourceImage(srcImg string) (*img.MutableSource, error) {
 }
 
 // PushImage pushes the final image
-func PushImage(ms *img.MutableSource, destImg string) error {
+func PushImage(ms *img.MutableSource, destImg string, dockerInsecureSkipTLSVerify bool) error {
 	srcRef := &img.ProxyReference{
 		ImageReference: nil,
 		Src:            ms,
@@ -65,7 +65,8 @@ func PushImage(ms *img.MutableSource, destImg string) error {
 
 	opts := &copy.Options{
 		DestinationCtx: &types.SystemContext{
-			DockerRegistryUserAgent: fmt.Sprintf("kaniko/executor-%s", version.Version()),
+			DockerRegistryUserAgent:     fmt.Sprintf("kaniko/executor-%s", version.Version()),
+			DockerInsecureSkipTLSVerify: dockerInsecureSkipTLSVerify,
 		},
 	}
 	return copy.Image(policyContext, destRef, srcRef, opts)
