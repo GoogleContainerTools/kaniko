@@ -131,3 +131,35 @@ func Test_RelativeFiles(t *testing.T) {
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
 	}
 }
+
+func Test_ParentDirectories(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected []string
+	}{
+		{
+			name: "regular path",
+			path: "/path/to/dir",
+			expected: []string{
+				"/path",
+				"/path/to",
+				"/path/to/dir",
+			},
+		},
+		{
+			name: "current directory",
+			path: ".",
+			expected: []string{
+				"/",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ParentDirectories(tt.path)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
+		})
+	}
+}

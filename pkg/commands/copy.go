@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -57,11 +58,19 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		if err != nil {
 			return err
 		}
-		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
+		cwd := config.WorkingDir
+		if cwd == "" {
+			cwd = constants.RootDir
+		}
+		destPath, err := util.DestinationFilepath(src, dest, cwd)
 		if err != nil {
 			return err
 		}
 		if fi.IsDir() {
+			if !filepath.IsAbs(dest) {
+				// we need to add '/' to the end to indicate the destination is a directory
+				dest = filepath.Join(cwd, dest) + "/"
+			}
 			if err := util.CopyDir(fullPath, dest); err != nil {
 				return err
 			}
