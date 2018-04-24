@@ -106,10 +106,8 @@ var tests = []struct {
 		expectedFiles: []string{
 			"workspace/foo/a",
 			"workspace/foo/b",
-			"kaniko/file",
 			"workspace",
 			"workspace/foo",
-			"kaniko",
 			".",
 		},
 	},

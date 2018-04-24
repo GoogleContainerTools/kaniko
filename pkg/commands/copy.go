@@ -73,7 +73,8 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		}
 		if fi.IsDir() {
 			if !filepath.IsAbs(dest) {
-				dest = filepath.Join(cwd, dest)
+				// we need to add '/' to the end to indicate the destination is a directory
+				dest = filepath.Join(cwd, dest) + "/"
 			}
 			if err := util.CopyDir(fullPath, dest); err != nil {
 				return err

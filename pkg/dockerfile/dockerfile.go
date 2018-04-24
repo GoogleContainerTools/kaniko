@@ -42,7 +42,7 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 	return stages, err
 }
 
-// ResolveStages resolves any calls to previous stages to the number value of that stage
+// ResolveStages resolves any calls to previous stages with names to indices
 // Ex. --from=second_stage should be --from=1 for easier processing later on
 func ResolveStages(stages []instructions.Stage) {
 	nameToIndex := make(map[string]string)
