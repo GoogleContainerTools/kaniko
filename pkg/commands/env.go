@@ -29,6 +29,12 @@ type EnvCommand struct {
 	cmd *instructions.EnvCommand
 }
 
+func NewEnvCommand(cmd *instructions.EnvCommand) EnvCommand {
+	return EnvCommand{
+		cmd: cmd,
+	}
+}
+
 func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env

@@ -18,10 +18,15 @@ package dockerfile
 
 import (
 	"bytes"
-	"strings"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/commands"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/image"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
@@ -35,6 +40,25 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 		return nil, err
 	}
 	return stages, err
+}
+
+// ResolveStages resolves any calls to previous stages to the number value of that stage
+// Ex. --from=second_stage should be --from=1 for easier processing later on
+func ResolveStages(stages []instructions.Stage) {
+	nameToIndex := make(map[string]string)
+	for i, stage := range stages {
+		index := strconv.Itoa(i)
+		nameToIndex[stage.Name] = index
+		nameToIndex[index] = index
+		for _, cmd := range stage.Commands {
+			switch c := cmd.(type) {
+			case *instructions.CopyCommand:
+				if c.From != "" {
+					c.From = nameToIndex[c.From]
+				}
+			}
+		}
+	}
 }
 
 // ParseCommands parses an array of commands into an array of instructions.Command; used for onbuild
@@ -53,4 +77,48 @@ func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 		cmds = append(cmds, cmd)
 	}
 	return cmds, nil
+}
+
+// Dependencies returns a list of files in this stage that will be needed in later stages
+func Dependencies(index int, stages []instructions.Stage) ([]string, error) {
+	var dependencies []string
+	for stageIndex, stage := range stages {
+		if stageIndex <= index {
+			continue
+		}
+		ms, err := image.NewSourceImage(stage.BaseName)
+		if err != nil {
+			return nil, err
+		}
+		for _, cmd := range stage.Commands {
+			switch c := cmd.(type) {
+			case *instructions.EnvCommand:
+				envCommand := commands.NewEnvCommand(c)
+				if err := envCommand.ExecuteCommand(ms.Config()); err != nil {
+					return nil, err
+				}
+			case *instructions.CopyCommand:
+				if c.From != strconv.Itoa(index) {
+					continue
+				}
+				// First, resolve any environment replacement
+				resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.SourcesAndDest, ms.Config().Env, true)
+				if err != nil {
+					return nil, err
+				}
+				// Resolve wildcards and get a list of resolved sources
+				srcs, err := util.ResolveSources(resolvedEnvs, constants.RootDir)
+				if err != nil {
+					return nil, err
+				}
+				for index, src := range srcs {
+					if !filepath.IsAbs(src) {
+						srcs[index] = filepath.Join(constants.RootDir, src)
+					}
+				}
+				dependencies = append(dependencies, srcs...)
+			}
+		}
+	}
+	return dependencies, nil
 }

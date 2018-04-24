@@ -23,9 +23,9 @@ import (
 
 	"github.com/genuinetools/amicontained/container"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/executor"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -72,7 +72,12 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
-		if err := executor.DoBuild(dockerfilePath, srcContext, destination, snapshotMode, dockerInsecureSkipTLSVerify); err != nil {
+		buildImage, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode)
+		if err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
+		if err := image.PushImage(buildImage, destination, dockerInsecureSkipTLSVerify); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}

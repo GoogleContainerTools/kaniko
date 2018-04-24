@@ -18,9 +18,7 @@ package executor
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-
+	img "github.com/GoogleContainerTools/container-diff/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -30,72 +28,76 @@ import (
 	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
 )
 
-func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, dockerInsecureSkipTLSVerify bool) error {
+// DoBuild executes each stage of the build
+func DoBuild(dockerfilePath, srcContext, snapshotMode string) (*img.MutableSource, error) {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	stages, err := dockerfile.Parse(d)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	baseImage := stages[0].BaseName
-
-	// Unpack file system to root
-	logrus.Infof("Unpacking filesystem of %s...", baseImage)
-	if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
-		return err
-	}
+	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(snapshotMode)
 	if err != nil {
-		return err
-	}
-	l := snapshot.NewLayeredMap(hasher)
-	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
-
-	// Take initial snapshot
-	if err := snapshotter.Init(); err != nil {
-		return err
+		return nil, err
 	}
 
-	// Initialize source image
-	sourceImage, err := image.NewSourceImage(baseImage)
-	if err != nil {
-		return err
-	}
-
-	// Set environment variables within the image
-	if err := image.SetEnvVariables(sourceImage); err != nil {
-		return err
-	}
-
-	imageConfig := sourceImage.Config()
-	// Currently only supports single stage builds
-	for _, stage := range stages {
-		if err := resolveOnBuild(&stage, imageConfig); err != nil {
-			return err
+	for index, stage := range stages {
+		baseImage := stage.BaseName
+		finalStage := index == len(stages)-1
+		// Unpack file system to root
+		logrus.Infof("Unpacking filesystem of %s...", baseImage)
+		if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
+			return nil, err
 		}
+
+		l := snapshot.NewLayeredMap(hasher)
+		snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
+
+		// Take initial snapshot
+		if err := snapshotter.Init(); err != nil {
+			return nil, err
+		}
+		// Initialize source image
+		sourceImage, err := image.NewSourceImage(baseImage)
+		if err != nil {
+			return nil, err
+		}
+		imageConfig := sourceImage.Config()
+		if err := resolveOnBuild(&stage, imageConfig); err != nil {
+			return nil, err
+		}
+
 		for _, cmd := range stage.Commands {
 			dockerCommand, err := commands.GetCommand(cmd, srcContext)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if dockerCommand == nil {
 				continue
 			}
 			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
-				return err
+				return nil, err
+			}
+			if !finalStage {
+				continue
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot
 			snapshotFiles := dockerCommand.FilesToSnapshot()
 			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			util.MoveVolumeWhitelistToWhitelist()
 			if contents == nil {
@@ -105,15 +107,58 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 			}
 			// Append the layer to the image
 			if err := sourceImage.AppendLayer(contents, constants.Author); err != nil {
+				return nil, err
+			}
+		}
+		if finalStage {
+			return sourceImage, nil
+		}
+		if err := saveStageDependencies(index, stages); err != nil {
+			return nil, err
+		}
+		// Delete the filesystem
+		if err := util.DeleteFilesystem(); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+func saveStageDependencies(index int, stages []instructions.Stage) error {
+	// First, get the files in this stage later stages will need
+	dependencies, err := dockerfile.Dependencies(index, stages)
+	logrus.Infof("saving dependencies %s", dependencies)
+	if err != nil {
+		return err
+	}
+	// Then, create the directory they will exist in
+	i := strconv.Itoa(index)
+	dependencyDir := filepath.Join(constants.BuildContextDir, i)
+	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
+		return err
+	}
+	// Now, copy over dependencies to this dir
+	for _, d := range dependencies {
+		fi, err := os.Lstat(d)
+		if err != nil {
+			return err
+		}
+		dest := filepath.Join(dependencyDir, d)
+		if fi.IsDir() {
+			if err := util.CopyDir(d, dest); err != nil {
+				return err
+			}
+		} else if fi.Mode()&os.ModeSymlink != 0 {
+			if err := util.CopySymlink(d, dest); err != nil {
+				return err
+			}
+		} else {
+			if err := util.CopyFile(d, dest); err != nil {
 				return err
 			}
 		}
 	}
-	// Push the image
-	if err := setDefaultEnv(); err != nil {
-		return err
-	}
-	return image.PushImage(sourceImage, destination, dockerInsecureSkipTLSVerify)
+	return nil
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {
@@ -139,20 +184,5 @@ func resolveOnBuild(stage *instructions.Stage, config *manifest.Schema2Config) e
 	// Append to the beginning of the commands in the stage
 	stage.Commands = append(cmds, stage.Commands...)
 	logrus.Infof("Executing %v build triggers", len(cmds))
-	return nil
-}
-
-// setDefaultEnv sets default values for HOME and PATH so that
-// config.json and docker-credential-gcr can be accessed
-func setDefaultEnv() error {
-	defaultEnvs := map[string]string{
-		"HOME": "/root",
-		"PATH": "/usr/local/bin/",
-	}
-	for key, val := range defaultEnvs {
-		if err := os.Setenv(key, val); err != nil {
-			return err
-		}
-	}
 	return nil
 }
