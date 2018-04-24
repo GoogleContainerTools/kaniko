@@ -1,4 +1,4 @@
-package integrationtests
+package integration
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"testing"
 )
 
@@ -19,8 +20,8 @@ const (
 	daemonPrefix            = "daemon://"
 	containerDiffOutputFile = "container-diff.json"
 	kanikoTestBucket        = "kaniko-test-bucket"
-	buildcontextPath        = "integration_tests"
-	dockerfilesPath         = "integration_tests/dockerfiles"
+	buildcontextPath        = "."
+	dockerfilesPath         = "dockerfiles"
 	onbuildBaseImage        = testRepo + "onbuild-base:latest"
 	emptyContainerDiff      = `[
 	{
@@ -37,9 +38,11 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "deploy/Dockerfile")
-	err := buildKaniko.Run()
+	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
+	output, err := buildKaniko.CombinedOutput()
 	if err != nil {
+		fmt.Printf("output=%s\n", output)
+		fmt.Printf("err=%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(m.Run())
@@ -48,11 +51,15 @@ func TestMain(m *testing.M) {
 func TestRun(t *testing.T) {
 	dockerfiles, err := ioutil.ReadDir(dockerfilesPath)
 	if err != nil {
+		fmt.Printf("err=%s", err)
 		t.FailNow()
 	}
 
 	for _, dockerfile := range dockerfiles {
-		t.Run("test"+dockerfile.Name(), func(t *testing.T) {
+		if strings.HasSuffix(dockerfile.Name(), ".yaml") {
+			continue
+		}
+		t.Run("test_"+dockerfile.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			// We probably want to run these in container builder instead
@@ -61,8 +68,9 @@ func TestRun(t *testing.T) {
 			// build docker image
 			dockerImage := testRepo + dockerPrefix + dockerfile.Name()
 			dockerCmd := exec.Command("docker", "build", "-t", dockerImage, "-f", path.Join(dockerfilesPath, dockerfile.Name()), buildcontextPath)
-			err := dockerCmd.Run()
+			output, err := dockerCmd.CombinedOutput()
 			if err != nil {
+				fmt.Printf("output=%s", output)
 				t.Error(err)
 				t.Fail()
 			}
@@ -88,7 +96,7 @@ func TestRun(t *testing.T) {
 			daemonDockerImage := daemonPrefix + dockerImage
 			daemonKanikoImage := daemonPrefix + kanikoImage
 			containerdiffCmd := exec.Command("container-diff", "diff", daemonDockerImage, daemonKanikoImage)
-			diff, err := containerdiffCmd.Output()
+			diff, err := containerdiffCmd.CombinedOutput()
 			if err != nil {
 				t.Error(err)
 				t.Fail()
