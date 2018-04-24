@@ -17,9 +17,12 @@ limitations under the License.
 package util
 
 import (
+	"archive/tar"
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"testing"
 
@@ -231,6 +234,194 @@ func Test_checkWhitelist(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := checkWhitelist(tt.args.path, tt.args.whitelist); got != tt.want {
 				t.Errorf("checkWhitelist() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHasFilepathPrefix(t *testing.T) {
+	type args struct {
+		path   string
+		prefix string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "parent",
+			args: args{
+				path:   "/foo/bar",
+				prefix: "/foo",
+			},
+			want: true,
+		},
+		{
+			name: "nested parent",
+			args: args{
+				path:   "/foo/bar/baz",
+				prefix: "/foo/bar",
+			},
+			want: true,
+		},
+		{
+			name: "sibling",
+			args: args{
+				path:   "/foo/bar",
+				prefix: "/bar",
+			},
+			want: false,
+		},
+		{
+			name: "nested sibling",
+			args: args{
+				path:   "/foo/bar/baz",
+				prefix: "/foo/bar",
+			},
+			want: true,
+		},
+		{
+			name: "name prefix",
+			args: args{
+				path:   "/foo2/bar",
+				prefix: "/foo",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix); got != tt.want {
+				t.Errorf("HasFilepathPrefix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+type checker func(root string, t *testing.T)
+
+func fileExists(p string) checker {
+	return func(root string, t *testing.T) {
+		_, err := os.Stat(filepath.Join(root, p))
+		if err != nil {
+			t.Fatalf("File does not exist")
+		}
+	}
+}
+
+func fileMatches(p string, c []byte) checker {
+	return func(root string, t *testing.T) {
+		actual, err := ioutil.ReadFile(filepath.Join(root, p))
+		if err != nil {
+			t.Fatalf("error reading file: %s", p)
+		}
+		if !reflect.DeepEqual(actual, c) {
+			t.Errorf("file contents do not match. %v!=%v", actual, c)
+		}
+	}
+}
+
+func permissionsMatch(p string, perms int64) checker {
+	return func(root string, t *testing.T) {
+		fi, err := os.Stat(filepath.Join(root, p))
+		if err != nil {
+			t.Fatalf("error statting file %s", p)
+		}
+		if int64(fi.Mode()) != perms {
+			t.Errorf("Permissions do not match. %d != %d", fi.Mode(), perms)
+		}
+	}
+}
+
+func symlinkPointsTo(src, dst string) checker {
+	return func(root string, t *testing.T) {
+		link := filepath.Join(root, src)
+		got, err := os.Readlink(link)
+		if err != nil {
+			t.Fatalf("error reading link %s: %s", link, err)
+		}
+		if got != dst {
+			t.Errorf("link destination does not match: %s != %s", got, dst)
+		}
+	}
+}
+
+func fileHeader(name string, contents string, mode int64) *tar.Header {
+	return &tar.Header{
+		Name:     name,
+		Size:     int64(len(contents)),
+		Mode:     mode,
+		Typeflag: tar.TypeReg,
+	}
+}
+
+func linkHeader(name, linkname string) *tar.Header {
+	return &tar.Header{
+		Name:     name,
+		Size:     0,
+		Typeflag: tar.TypeLink,
+		Linkname: linkname,
+	}
+}
+
+func TestExtractFile(t *testing.T) {
+	type tc struct {
+		name     string
+		hdr      *tar.Header
+		contents []byte
+		checkers []checker
+	}
+
+	tcs := []tc{
+		{
+			name:     "normal file",
+			contents: []byte("helloworld"),
+			hdr:      fileHeader("./bar", "helloworld", 0644),
+			checkers: []checker{
+				fileExists("/bar"),
+				fileMatches("/bar", []byte("helloworld")),
+				permissionsMatch("/bar", 0644),
+			},
+		},
+		{
+			name:     "normal file, directory does not exist",
+			contents: []byte("helloworld"),
+			hdr:      fileHeader("./foo/bar", "helloworld", 0644),
+			checkers: []checker{
+				fileExists("/foo/bar"),
+				fileMatches("/foo/bar", []byte("helloworld")),
+				permissionsMatch("/foo/bar", 0644),
+			},
+		},
+		{
+			name: "symlink",
+			hdr:  linkHeader("./foo/bar", "../foo"),
+			checkers: []checker{
+				symlinkPointsTo("/foo/bar", "/foo"),
+			},
+		},
+		{
+			name: "symlink",
+			hdr:  linkHeader("./foo/bar", "../foo"),
+			checkers: []checker{
+				symlinkPointsTo("/foo/bar", "/foo"),
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(r)
+			if err := extractFile(r, tc.hdr, bytes.NewReader(tc.contents)); err != nil {
+				t.Fatal(err)
+			}
+			for _, checker := range tc.checkers {
+				checker(r, t)
 			}
 		})
 	}

@@ -28,7 +28,6 @@ import (
 
 	"github.com/google/go-containerregistry/v1"
 
-	pkgutil "github.com/GoogleContainerTools/container-diff/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
 )
@@ -97,61 +96,88 @@ func GetFSFromImage(img v1.Image) error {
 			}
 			fs[path] = struct{}{}
 
-			mode := hdr.FileInfo().Mode()
-			switch hdr.Typeflag {
-			case tar.TypeReg:
-				logrus.Debugf("creating file %s", path)
-				// It's possible a file is in the tar before it's directory.
-				if _, err := os.Stat(dir); os.IsNotExist(err) {
-					logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
-					if err := os.MkdirAll(dir, 0755); err != nil {
-						return err
-					}
-				}
-				currFile, err := os.Create(path)
-				if err != nil {
-					return err
-				}
-				// manually set permissions on file, since the default umask (022) will interfere
-				if err = os.Chmod(path, mode); err != nil {
-					return err
-				}
-				if _, err = io.Copy(currFile, tr); err != nil {
-					return err
-				}
-				currFile.Close()
-
-			case tar.TypeDir:
-				logrus.Debugf("creating dir %s", path)
-				if err := os.MkdirAll(path, mode); err != nil {
-					return err
-				}
-				// In some cases, MkdirAll doesn't change the permissions, so run Chmod
-				if err := os.Chmod(path, mode); err != nil {
-					return err
-				}
-
-			case tar.TypeLink:
-				logrus.Debugf("link from %s to %s", hdr.Linkname, path)
-				// The base directory for a link may not exist before it is created.
-				dir := filepath.Dir(path)
-				if err := os.MkdirAll(dir, 0755); err != nil {
-					return err
-				}
-				if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
-					return err
-				}
-			case tar.TypeSymlink:
-				logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
-				// The base directory for a symlink may not exist before it is created.
-				dir := filepath.Dir(path)
-				if err := os.MkdirAll(dir, 0755); err != nil {
-					return err
-				}
-				if err := os.Symlink(hdr.Linkname, path); err != nil {
-					return err
-				}
+			if err := extractFile("/", hdr, tr); err != nil {
+				return err
 			}
+		}
+	}
+	return nil
+}
+
+func unTar(r io.Reader, dest string) error {
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if err := extractFile(dest, hdr, tr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
+	path := filepath.Join(dest, filepath.Clean(hdr.Name))
+	base := filepath.Base(path)
+	dir := filepath.Dir(path)
+	mode := hdr.FileInfo().Mode()
+	switch hdr.Typeflag {
+	case tar.TypeReg:
+		logrus.Debugf("creating file %s", path)
+		// It's possible a file is in the tar before it's directory.
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return err
+			}
+		}
+		currFile, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		// manually set permissions on file, since the default umask (022) will interfere
+		if err = os.Chmod(path, mode); err != nil {
+			return err
+		}
+		if _, err = io.Copy(currFile, tr); err != nil {
+			return err
+		}
+		currFile.Close()
+
+	case tar.TypeDir:
+		logrus.Debugf("creating dir %s", path)
+		if err := os.MkdirAll(path, mode); err != nil {
+			return err
+		}
+		// In some cases, MkdirAll doesn't change the permissions, so run Chmod
+		if err := os.Chmod(path, mode); err != nil {
+			return err
+		}
+
+	case tar.TypeLink:
+		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
+		// The base directory for a link may not exist before it is created.
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+		if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+			return err
+		}
+	case tar.TypeSymlink:
+		logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
+		// The base directory for a symlink may not exist before it is created.
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+		if err := os.Symlink(hdr.Linkname, path); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -165,7 +191,7 @@ func PathInWhitelist(path, directory string) bool {
 	}
 	for _, d := range whitelist {
 		dirPath := filepath.Join(directory, d)
-		if pkgutil.HasFilepathPrefix(path, dirPath) {
+		if HasFilepathPrefix(path, dirPath) {
 			return true
 		}
 	}
@@ -178,7 +204,7 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 		return true
 	}
 	for wd := range whiteouts {
-		if pkgutil.HasFilepathPrefix(path, wd) {
+		if HasFilepathPrefix(path, wd) {
 			logrus.Infof("Not adding %s because it's directory is whited out", path)
 			return true
 		}
@@ -188,7 +214,7 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 
 func checkWhitelist(path string, whitelist []string) bool {
 	for _, wl := range whitelist {
-		if pkgutil.HasFilepathPrefix(path, wl) {
+		if HasFilepathPrefix(path, wl) {
 			return true
 		}
 	}
@@ -390,4 +416,23 @@ func CopyFile(src, dest string) error {
 	}
 	defer srcFile.Close()
 	return CreateFile(dest, srcFile, fi.Mode())
+}
+
+// HasFilepathPrefix checks if the given file path begins with prefix
+func HasFilepathPrefix(path, prefix string) bool {
+	path = filepath.Clean(path)
+	prefix = filepath.Clean(prefix)
+	pathArray := strings.Split(path, "/")
+	prefixArray := strings.Split(prefix, "/")
+
+	if len(pathArray) < len(prefixArray) {
+		return false
+	}
+	for index := range prefixArray {
+		if prefixArray[index] == pathArray[index] {
+			continue
+		}
+		return false
+	}
+	return true
 }
