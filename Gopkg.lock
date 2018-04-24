@@ -16,26 +16,10 @@
   version = "v0.21.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/GoogleContainerTools/container-diff"
-  packages = [
-    "cmd/util/output",
-    "pkg/util"
-  ]
-  revision = "564361979f3124dd3e6d8bbec027279539c8e08b"
-  source = "github.com/GoogleContainerTools/container-diff"
-
-[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
   version = "v0.4.7"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/beorn7/perks"
-  packages = ["quantile"]
-  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
   branch = "master"
@@ -44,70 +28,18 @@
   revision = "c6cef34830231743494fe2969284df7b82cc0ad0"
 
 [[projects]]
-  name = "github.com/containers/image"
-  packages = [
-    "docker",
-    "docker/daemon",
-    "docker/policyconfiguration",
-    "docker/reference",
-    "docker/tarfile",
-    "image",
-    "internal/tmpdir",
-    "manifest",
-    "pkg/compression",
-    "pkg/docker/config",
-    "pkg/strslice",
-    "pkg/tlsclientconfig",
-    "transports",
-    "types"
-  ]
-  revision = "495da41bd26c50be62fa07ae903ea2ee54c00283"
-
-[[projects]]
-  name = "github.com/docker/distribution"
-  packages = [
-    ".",
-    "digestset",
-    "metrics",
-    "reference",
-    "registry/api/errcode",
-    "registry/api/v2",
-    "registry/client",
-    "registry/client/auth/challenge",
-    "registry/client/transport",
-    "registry/storage/cache",
-    "registry/storage/cache/memory"
-  ]
-  revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
-  source = "github.com/docker/distribution"
-
-[[projects]]
   name = "github.com/docker/docker"
   packages = [
-    "api",
-    "api/types",
     "api/types/blkiodev",
     "api/types/container",
-    "api/types/events",
-    "api/types/filters",
-    "api/types/image",
     "api/types/mount",
-    "api/types/network",
-    "api/types/registry",
     "api/types/strslice",
-    "api/types/swarm",
-    "api/types/swarm/runtime",
-    "api/types/time",
-    "api/types/versions",
-    "api/types/volume",
     "builder/dockerfile/command",
     "builder/dockerfile/instructions",
     "builder/dockerfile/parser",
     "builder/dockerfile/shell",
-    "client",
     "pkg/archive",
     "pkg/fileutils",
-    "pkg/homedir",
     "pkg/idtools",
     "pkg/ioutils",
     "pkg/longpath",
@@ -119,29 +51,10 @@
   source = "github.com/docker/docker"
 
 [[projects]]
-  name = "github.com/docker/docker-credential-helpers"
-  packages = [
-    "client",
-    "credentials"
-  ]
-  revision = "d68f9aeca33f5fd3f08eeae5e9d175edf4e731d1"
-  version = "v0.6.0"
-
-[[projects]]
   name = "github.com/docker/go-connections"
-  packages = [
-    "nat",
-    "sockets",
-    "tlsconfig"
-  ]
+  packages = ["nat"]
   revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
   version = "v0.3.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/docker/go-metrics"
-  packages = ["."]
-  revision = "399ea8c73916000c64c2c76e8da00ca82f8387ab"
 
 [[projects]]
   name = "github.com/docker/go-units"
@@ -150,28 +63,10 @@
   version = "v0.3.3"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/docker/libtrust"
-  packages = ["."]
-  revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
-
-[[projects]]
   name = "github.com/genuinetools/amicontained"
   packages = ["container"]
   revision = "fcae88544f0212fbb1e20699c41566655b68679b"
   version = "v0.4.0"
-
-[[projects]]
-  name = "github.com/ghodss/yaml"
-  packages = ["."]
-  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
-  version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/gogo/protobuf"
-  packages = ["proto"]
-  revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
-  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -212,28 +107,10 @@
   version = "v2.0.0"
 
 [[projects]]
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
-
-[[projects]]
-  name = "github.com/gorilla/mux"
-  packages = ["."]
-  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
-  version = "v1.6.1"
-
-[[projects]]
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
-
-[[projects]]
-  name = "github.com/matttproud/golang_protobuf_extensions"
-  packages = ["pbutil"]
-  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
-  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -264,42 +141,6 @@
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
-
-[[projects]]
-  name = "github.com/prometheus/client_golang"
-  packages = [
-    "prometheus",
-    "prometheus/promhttp"
-  ]
-  revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
-  source = "github.com/prometheus/client_golang"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/prometheus/client_model"
-  packages = ["go"]
-  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/prometheus/common"
-  packages = [
-    "expfmt",
-    "internal/bitbucket.org/ww/goautoneg",
-    "model"
-  ]
-  revision = "d0f7cd64bda49e08b22ae8a730aa57aa0db125d6"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/prometheus/procfs"
-  packages = [
-    ".",
-    "internal/util",
-    "nfs",
-    "xfs"
-  ]
-  revision = "8b1c2da0d56deffdbb9e48d4414b4e674bd8083e"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -360,10 +201,8 @@
     "http2",
     "http2/hpack",
     "idna",
-    "internal/socks",
     "internal/timeseries",
     "lex/httplex",
-    "proxy",
     "trace"
   ]
   revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
@@ -493,6 +332,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7b70db85d7c590e7340cdb73bdfe26f2890ae94aac03ac16a354dd931d9cd311"
+  inputs-digest = "9ed51a63daab2be9e4864e4d97d90ccc0f540d076f891b80f01bd3f161c9ef7a"
   solver-name = "gps-cdcl"
   solver-version = 1
