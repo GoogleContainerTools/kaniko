@@ -23,3 +23,8 @@ steps:
     args: ["--dockerfile=/workspace/deploy/Dockerfile",
            "--context=/workspace/go/src/github.com/GoogleContainerTools/kaniko/",
            "--destination=gcr.io/kaniko-project/executor:${COMMIT_SHA}"]
+  # Then, build kaniko:debug
+  - name: "gcr.io/kaniko-project/executor:latest"
+    args: ["--dockerfile=/workspace/deploy/Dockerfile_debug",
+           "--context=/workspace/go/src/github.com/GoogleContainerTools/kaniko/",
+           "--destination=gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}"]
