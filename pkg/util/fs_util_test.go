@@ -322,19 +322,19 @@ func fileMatches(p string, c []byte) checker {
 	}
 }
 
-func permissionsMatch(p string, perms int64) checker {
+func permissionsMatch(p string, perms os.FileMode) checker {
 	return func(root string, t *testing.T) {
 		fi, err := os.Stat(filepath.Join(root, p))
 		if err != nil {
 			t.Fatalf("error statting file %s", p)
 		}
-		if int64(fi.Mode()) != perms {
-			t.Errorf("Permissions do not match. %d != %d", fi.Mode(), perms)
+		if fi.Mode() != perms {
+			t.Errorf("Permissions do not match. %s != %s", fi.Mode(), perms)
 		}
 	}
 }
 
-func symlinkPointsTo(src, dst string) checker {
+func linkPointsTo(src, dst string) checker {
 	return func(root string, t *testing.T) {
 		link := filepath.Join(root, src)
 		got, err := os.Readlink(link)
@@ -360,15 +360,33 @@ func linkHeader(name, linkname string) *tar.Header {
 	return &tar.Header{
 		Name:     name,
 		Size:     0,
+		Typeflag: tar.TypeSymlink,
+		Linkname: linkname,
+	}
+}
+
+func hardlinkHeader(name, linkname string) *tar.Header {
+	return &tar.Header{
+		Name:     name,
+		Size:     0,
 		Typeflag: tar.TypeLink,
 		Linkname: linkname,
+	}
+}
+
+func dirHeader(name string, mode int64) *tar.Header {
+	return &tar.Header{
+		Name:     name,
+		Size:     0,
+		Typeflag: tar.TypeDir,
+		Mode:     mode,
 	}
 }
 
 func TestExtractFile(t *testing.T) {
 	type tc struct {
 		name     string
-		hdr      *tar.Header
+		hdrs     []*tar.Header
 		contents []byte
 		checkers []checker
 	}
@@ -377,7 +395,7 @@ func TestExtractFile(t *testing.T) {
 		{
 			name:     "normal file",
 			contents: []byte("helloworld"),
-			hdr:      fileHeader("./bar", "helloworld", 0644),
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0644)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
@@ -387,38 +405,83 @@ func TestExtractFile(t *testing.T) {
 		{
 			name:     "normal file, directory does not exist",
 			contents: []byte("helloworld"),
-			hdr:      fileHeader("./foo/bar", "helloworld", 0644),
+			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0644)},
 			checkers: []checker{
 				fileExists("/foo/bar"),
 				fileMatches("/foo/bar", []byte("helloworld")),
 				permissionsMatch("/foo/bar", 0644),
+				permissionsMatch("/foo", 0755|os.ModeDir),
+			},
+		},
+		{
+			name:     "normal file, directory is created after",
+			contents: []byte("helloworld"),
+			hdrs: []*tar.Header{
+				fileHeader("./foo/bar", "helloworld", 0644),
+				dirHeader("./foo", 0722),
+			},
+			checkers: []checker{
+				fileExists("/foo/bar"),
+				fileMatches("/foo/bar", []byte("helloworld")),
+				permissionsMatch("/foo/bar", 0644),
+				permissionsMatch("/foo", 0722|os.ModeDir),
 			},
 		},
 		{
 			name: "symlink",
-			hdr:  linkHeader("./foo/bar", "../foo"),
+			hdrs: []*tar.Header{linkHeader("./bar", "bar/bat")},
 			checkers: []checker{
-				symlinkPointsTo("/foo/bar", "/foo"),
+				linkPointsTo("/bar", "bar/bat"),
 			},
 		},
 		{
-			name: "symlink",
-			hdr:  linkHeader("./foo/bar", "../foo"),
+			name: "symlink relative path",
+			hdrs: []*tar.Header{linkHeader("./bar", "./foo/bar/baz")},
 			checkers: []checker{
-				symlinkPointsTo("/foo/bar", "/foo"),
+				linkPointsTo("/bar", "./foo/bar/baz"),
+			},
+		},
+		{
+			name: "symlink parent does not exist",
+			hdrs: []*tar.Header{linkHeader("./foo/bar/baz", "../../bat")},
+			checkers: []checker{
+				linkPointsTo("/foo/bar/baz", "../../bat"),
+			},
+		},
+		{
+			name: "symlink parent does not exist",
+			hdrs: []*tar.Header{linkHeader("./foo/bar/baz", "../../bat")},
+			checkers: []checker{
+				linkPointsTo("/foo/bar/baz", "../../bat"),
+				permissionsMatch("/foo", 0755|os.ModeDir),
+				permissionsMatch("/foo/bar", 0755|os.ModeDir),
+			},
+		},
+		{
+			name: "hardlink",
+			hdrs: []*tar.Header{
+				fileHeader("/bin/gzip", "gzip-binary", 0751),
+				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
+			},
+			checkers: []checker{
+				linkPointsTo("/bin/uncompress", "/bin/gzip"),
 			},
 		},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
 			r, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(r)
-			if err := extractFile(r, tc.hdr, bytes.NewReader(tc.contents)); err != nil {
-				t.Fatal(err)
+			for _, hdr := range tc.hdrs {
+				if err := extractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
+					t.Fatal(err)
+				}
 			}
 			for _, checker := range tc.checkers {
 				checker(r, t)
