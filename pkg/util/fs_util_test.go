@@ -144,15 +144,12 @@ func Test_ParentDirectories(t *testing.T) {
 			expected: []string{
 				"/path",
 				"/path/to",
-				"/path/to/dir",
 			},
 		},
 		{
-			name: "current directory",
-			path: ".",
-			expected: []string{
-				"/",
-			},
+			name:     "current directory",
+			path:     ".",
+			expected: nil,
 		},
 	}
 

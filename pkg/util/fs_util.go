@@ -148,8 +148,8 @@ func ParentDirectories(path string) []string {
 	dirs := strings.Split(path, "/")
 	dirPath := constants.RootDir
 	var paths []string
-	for _, dir := range dirs {
-		if dir == "" {
+	for index, dir := range dirs {
+		if dir == "" || index == (len(dirs)-1) {
 			continue
 		}
 		dirPath = filepath.Join(dirPath, dir)
