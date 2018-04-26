@@ -178,7 +178,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	}
 
 	if len(resolvedSources) == 1 {
-		fi, err := os.Stat(filepath.Join(root, resolvedSources[0]))
+		fi, err := os.Lstat(filepath.Join(root, resolvedSources[0]))
 		if err != nil {
 			return err
 		}

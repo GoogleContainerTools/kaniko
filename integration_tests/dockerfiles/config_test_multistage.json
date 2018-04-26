@@ -1,0 +1,12 @@
+[
+  {
+    "Image1": "gcr.io/kaniko-test/docker-test-multistage:latest",
+    "Image2": "gcr.io/kaniko-test/kaniko-test-multistage:latest",
+    "DiffType": "File",
+    "Diff": {
+      "Adds": null,
+      "Dels": null,
+      "Mods": null
+    }
+  }
+]

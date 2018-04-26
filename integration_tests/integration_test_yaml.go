@@ -116,14 +116,6 @@ var fileTests = []struct {
 		repo:           "test-add",
 	},
 	{
-		description:    "test mv add",
-		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_mv_add",
-		configPath:     "/workspace/integration_tests/dockerfiles/config_test_mv_add.json",
-		dockerContext:  buildcontextPath,
-		kanikoContext:  buildcontextPath,
-		repo:           "test-mv-add",
-	},
-	{
 		description:    "test registry",
 		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_registry",
 		configPath:     "/workspace/integration_tests/dockerfiles/config_test_registry.json",
@@ -146,6 +138,14 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-scratch",
+	},
+	{
+		description:    "test multistage",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_multistage",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_multistage.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-multistage",
 	},
 }
 
@@ -288,7 +288,7 @@ func main() {
 		}
 		compareOutputs := step{
 			Name: ubuntuImage,
-			Args: []string{"cmp", "-b", test.configPath, containerDiffOutputFile},
+			Args: []string{"cmp", test.configPath, containerDiffOutputFile},
 		}
 
 		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, containerDiff, catContainerDiffOutput, compareOutputs)

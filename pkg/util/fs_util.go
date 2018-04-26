@@ -104,6 +104,33 @@ func GetFSFromImage(img v1.Image) error {
 	return nil
 }
 
+// DeleteFilesystem deletes the extracted image file system
+func DeleteFilesystem() error {
+	logrus.Info("Deleting filesystem...")
+	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
+		if PathInWhitelist(path, constants.RootDir) || ChildDirInWhitelist(path, constants.RootDir) {
+			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
+			return nil
+		}
+		if path == constants.RootDir {
+			return nil
+		}
+		return os.RemoveAll(path)
+	})
+	return err
+}
+
+// ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
+func ChildDirInWhitelist(path, directory string) bool {
+	for _, d := range whitelist {
+		dirPath := filepath.Join(directory, d)
+		if HasFilepathPrefix(dirPath, path) {
+			return true
+		}
+	}
+	return false
+}
+
 func unTar(r io.Reader, dest string) error {
 	tr := tar.NewReader(r)
 	for {
@@ -269,6 +296,9 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		if err != nil {
 			return err
 		}
+		if PathInWhitelist(path, root) {
+			return nil
+		}
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
@@ -284,6 +314,9 @@ func Files(root string) ([]string, error) {
 	var files []string
 	logrus.Debugf("Getting files and contents at root %s", root)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if PathInWhitelist(path, root) {
+			return nil
+		}
 		files = append(files, path)
 		return err
 	})
@@ -368,7 +401,7 @@ func CopyDir(src, dest string) error {
 	}
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
-		fi, err := os.Stat(fullPath)
+		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return err
 		}

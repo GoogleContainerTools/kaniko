@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,10 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Infof("cmd: copy %s", srcs)
 	logrus.Infof("dest: %s", dest)
 
+	// Resolve from
+	if c.cmd.From != "" {
+		c.buildcontext = filepath.Join(constants.BuildContextDir, c.cmd.From)
+	}
 	// First, resolve any environment replacement
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, config.Env, true)
 	if err != nil {
@@ -58,11 +63,19 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 		if err != nil {
 			return err
 		}
+		cwd := config.WorkingDir
+		if cwd == "" {
+			cwd = constants.RootDir
+		}
 		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
 		if err != nil {
 			return err
 		}
 		if fi.IsDir() {
+			if !filepath.IsAbs(dest) {
+				// we need to add '/' to the end to indicate the destination is a directory
+				dest = filepath.Join(cwd, dest) + "/"
+			}
 			if err := util.CopyDir(fullPath, dest); err != nil {
 				return err
 			}
