@@ -15,11 +15,11 @@
 # Builds the executor from debian
 
 FROM gcr.io/google-appengine/debian9:latest
-ADD out/executor /kaniko/executor
-ADD files/ca-certificates.crt /kaniko/ssl/certs/
-ADD files/docker-credential-gcr /usr/local/bin/
-ADD files/config.json /root/.docker/
+COPY out/executor /kaniko/executor
+COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY files/docker-credential-gcr /usr/local/bin/
+COPY files/config.json /root/.docker/
+RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV HOME /root
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
-RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENTRYPOINT ["/kaniko/executor"]
