@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,7 +35,7 @@ func NewEnvCommand(cmd *instructions.EnvCommand) EnvCommand {
 	}
 }
 
-func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (e *EnvCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env
 	for index, pair := range newEnvs {
@@ -55,7 +55,7 @@ func (e *EnvCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	return updateConfigEnv(newEnvs, config)
 }
 
-func updateConfigEnv(newEnvs []instructions.KeyValuePair, config *manifest.Schema2Config) error {
+func updateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config) error {
 	// First, convert config.Env array to []instruction.KeyValuePair
 	var kvps []instructions.KeyValuePair
 	for _, env := range config.Env {

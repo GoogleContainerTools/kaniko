@@ -16,6 +16,11 @@ limitations under the License.
 
 package snapshot
 
+import (
+	"path/filepath"
+	"strings"
+)
+
 type LayeredMap struct {
 	layers []map[string]string
 	hasher func(string) (string, error)
@@ -31,6 +36,21 @@ func NewLayeredMap(h func(string) (string, error)) *LayeredMap {
 
 func (l *LayeredMap) Snapshot() {
 	l.layers = append(l.layers, map[string]string{})
+}
+
+func (l *LayeredMap) GetFlattenedPathsForWhiteOut() map[string]struct{} {
+	paths := map[string]struct{}{}
+	for _, l := range l.layers {
+		for p := range l {
+			if strings.HasPrefix(filepath.Base(p), ".wh.") {
+				delete(paths, p)
+			} else {
+				paths[p] = struct{}{}
+			}
+			paths[p] = struct{}{}
+		}
+	}
+	return paths
 }
 
 func (l *LayeredMap) Get(s string) (string, bool) {

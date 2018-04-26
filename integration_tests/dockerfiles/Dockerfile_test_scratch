@@ -1,4 +1,0 @@
-FROM scratch
-ADD context/foo /foo
-ENV hello hello
-ADD context/foo /$hello

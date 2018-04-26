@@ -17,78 +17,103 @@ limitations under the License.
 package executor
 
 import (
+	"bytes"
 	"fmt"
-	img "github.com/GoogleContainerTools/container-diff/pkg/image"
-	"github.com/GoogleContainerTools/kaniko/pkg/commands"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/GoogleContainerTools/kaniko/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
-	"io/ioutil"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/google/go-containerregistry/v1/empty"
+
+	"github.com/google/go-containerregistry/v1/tarball"
+
+	"github.com/google/go-containerregistry/authn"
+	"github.com/google/go-containerregistry/name"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/google/go-containerregistry/v1/mutate"
+	"github.com/google/go-containerregistry/v1/remote"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/commands"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
+	"io/ioutil"
 )
 
-// DoBuild executes each stage of the build
-func DoBuild(dockerfilePath, srcContext, snapshotMode string) (*img.MutableSource, error) {
+func DoBuild(dockerfilePath, srcContext, snapshotMode string) (name.Reference, v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	stages, err := dockerfile.Parse(d)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(snapshotMode)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
 	for index, stage := range stages {
 		baseImage := stage.BaseName
 		finalStage := index == len(stages)-1
 		// Unpack file system to root
 		logrus.Infof("Unpacking filesystem of %s...", baseImage)
-		if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
-			return nil, err
+		var sourceImage v1.Image
+		var ref name.Reference
+		if baseImage == constants.NoBaseImage {
+			logrus.Info("No base image, nothing to extract")
+			sourceImage = empty.Image
+		} else {
+			// Initialize source image
+			ref, err = name.ParseReference(baseImage, name.WeakValidation)
+			if err != nil {
+				return nil, nil, err
+			}
+			auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
+			if err != nil {
+				return nil, nil, err
+			}
+			sourceImage, err = remote.Image(ref, auth, http.DefaultTransport)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
-
+		if err := util.GetFSFromImage(sourceImage); err != nil {
+			return nil, nil, err
+		}
 		l := snapshot.NewLayeredMap(hasher)
 		snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
-
 		// Take initial snapshot
 		if err := snapshotter.Init(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		// Initialize source image
-		sourceImage, err := image.NewSourceImage(baseImage)
+		imageConfig, err := sourceImage.ConfigFile()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		imageConfig := sourceImage.Config()
-		if err := resolveOnBuild(&stage, imageConfig); err != nil {
-			return nil, err
+		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
+			return nil, nil, err
 		}
 
 		for _, cmd := range stage.Commands {
 			dockerCommand, err := commands.GetCommand(cmd, srcContext)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if dockerCommand == nil {
 				continue
 			}
-			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
-				return nil, err
+			if err := dockerCommand.ExecuteCommand(&imageConfig.Config); err != nil {
+				return nil, nil, err
 			}
 			if !finalStage {
 				continue
@@ -97,33 +122,67 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string) (*img.MutableSourc
 			snapshotFiles := dockerCommand.FilesToSnapshot()
 			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			util.MoveVolumeWhitelistToWhitelist()
 			if contents == nil {
 				logrus.Info("No files were changed, appending empty layer to config.")
-				sourceImage.AppendConfigHistory(constants.Author, true)
 				continue
 			}
 			// Append the layer to the image
-			if err := sourceImage.AppendLayer(contents, constants.Author); err != nil {
-				return nil, err
+			opener := func() (io.ReadCloser, error) {
+				return ioutil.NopCloser(bytes.NewReader(contents)), nil
+			}
+			layer, err := tarball.LayerFromOpener(opener)
+			if err != nil {
+				return nil, nil, err
+			}
+			sourceImage, err = mutate.Append(sourceImage,
+				mutate.Addendum{
+					Layer: layer,
+					History: v1.History{
+						Author: constants.Author,
+					},
+				},
+			)
+			if err != nil {
+				return nil, nil, err
 			}
 		}
 		if finalStage {
-			return sourceImage, nil
+			sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
+			if err != nil {
+				return nil, nil, err
+			}
+			return ref, sourceImage, nil
 		}
 		if err := saveStageDependencies(index, stages); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return nil, nil
+	return nil, nil, err
 }
 
+func DoPush(ref name.Reference, image v1.Image, destination string) error {
+	// Push the image
+	destRef, err := name.ParseReference(destination, name.WeakValidation)
+	if err != nil {
+		return err
+	}
+	wo := remote.WriteOptions{}
+	if ref != nil {
+		wo.MountPaths = []name.Repository{ref.Context()}
+	}
+	pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
+	if err != nil {
+		return err
+	}
+	return remote.Write(destRef, image, pushAuth, http.DefaultTransport, wo)
+}
 func saveStageDependencies(index int, stages []instructions.Stage) error {
 	// First, get the files in this stage later stages will need
 	dependencies, err := dockerfile.Dependencies(index, stages)
@@ -172,7 +231,7 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
-func resolveOnBuild(stage *instructions.Stage, config *manifest.Schema2Config) error {
+func resolveOnBuild(stage *instructions.Stage, config *v1.Config) error {
 	if config.OnBuild == nil {
 		return nil
 	}

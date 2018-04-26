@@ -20,10 +20,15 @@ import (
 	"bytes"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
+	"github.com/google/go-containerregistry/authn"
+	"github.com/google/go-containerregistry/name"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/google/go-containerregistry/v1/empty"
+	"github.com/google/go-containerregistry/v1/remote"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -86,7 +91,26 @@ func Dependencies(index int, stages []instructions.Stage) ([]string, error) {
 		if stageIndex <= index {
 			continue
 		}
-		ms, err := image.NewSourceImage(stage.BaseName)
+		var sourceImage v1.Image
+		if stage.BaseName == constants.NoBaseImage {
+			sourceImage = empty.Image
+		} else {
+			// Initialize source image
+			ref, err := name.ParseReference(stage.BaseName, name.WeakValidation)
+			if err != nil {
+				return nil, err
+
+			}
+			auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
+			if err != nil {
+				return nil, err
+			}
+			sourceImage, err = remote.Image(ref, auth, http.DefaultTransport)
+			if err != nil {
+				return nil, err
+			}
+		}
+		imageConfig, err := sourceImage.ConfigFile()
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +118,7 @@ func Dependencies(index int, stages []instructions.Stage) ([]string, error) {
 			switch c := cmd.(type) {
 			case *instructions.EnvCommand:
 				envCommand := commands.NewEnvCommand(c)
-				if err := envCommand.ExecuteCommand(ms.Config()); err != nil {
+				if err := envCommand.ExecuteCommand(&imageConfig.Config); err != nil {
 					return nil, err
 				}
 			case *instructions.CopyCommand:
@@ -102,7 +126,7 @@ func Dependencies(index int, stages []instructions.Stage) ([]string, error) {
 					continue
 				}
 				// First, resolve any environment replacement
-				resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.SourcesAndDest, ms.Config().Env, true)
+				resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.SourcesAndDest, imageConfig.Config.Env, true)
 				if err != nil {
 					return nil, err
 				}

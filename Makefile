@@ -47,7 +47,7 @@ test: out/executor
 	@ ./test.sh
 
 .PHONY: integration-test
-integration-test: out/executor
+integration-test:
 	@ ./integration-test.sh
 
 .PHONY: images

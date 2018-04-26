@@ -18,32 +18,32 @@ package commands
 import (
 	"testing"
 
+	"github.com/google/go-containerregistry/v1"
+
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/containers/image/manifest"
-	"github.com/containers/image/pkg/strslice"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 )
 
 var cmdTests = []struct {
 	prependShell bool
 	cmdLine      []string
-	expectedCmd  strslice.StrSlice
+	expectedCmd  []string
 }{
 	{
 		prependShell: true,
 		cmdLine:      []string{"echo", "cmd1"},
-		expectedCmd:  strslice.StrSlice{"/bin/sh", "-c", "echo cmd1"},
+		expectedCmd:  []string{"/bin/sh", "-c", "echo cmd1"},
 	},
 	{
 		prependShell: false,
 		cmdLine:      []string{"echo", "cmd2"},
-		expectedCmd:  strslice.StrSlice{"echo", "cmd2"},
+		expectedCmd:  []string{"echo", "cmd2"},
 	},
 }
 
 func TestExecuteCmd(t *testing.T) {
 
-	cfg := &manifest.Schema2Config{
+	cfg := &v1.Config{
 		Cmd: nil,
 	}
 

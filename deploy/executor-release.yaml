@@ -18,8 +18,14 @@ steps:
       path: "/usr/bin"
     dir: go/src/github.com/GoogleContainerTools/kaniko
     env: ["GOPATH=/workspace/go/"]
-  # Then, build kaniko with kaniko
-  - name: "gcr.io/kaniko-project/executor:latest"
-    args: ["--dockerfile=/workspace/deploy/Dockerfile",
-           "--context=/workspace/go/src/github.com/GoogleContainerTools/kaniko/",
-           "--destination=gcr.io/kaniko-project/executor:${COMMIT_SHA}"]
+  # First, build kaniko
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile",
+           "-t", "gcr.io/kaniko-project/executor:${COMMIT_SHA}", "."]
+    dir: go/src/github.com/GoogleContainerTools/kaniko  
+  # Then, build kaniko:debug
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile_debug",
+           "-t", "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}", "."] 
+    dir: go/src/github.com/GoogleContainerTools/kaniko
+images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}", "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}"]

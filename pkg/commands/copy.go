@@ -18,13 +18,14 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type CopyCommand struct {
@@ -33,7 +34,7 @@ type CopyCommand struct {
 	snapshotFiles []string
 }
 
-func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 	srcs := c.cmd.SourcesAndDest[:len(c.cmd.SourcesAndDest)-1]
 	dest := c.cmd.SourcesAndDest[len(c.cmd.SourcesAndDest)-1]
 
@@ -44,7 +45,6 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(constants.BuildContextDir, c.cmd.From)
 	}
-
 	// First, resolve any environment replacement
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, config.Env, true)
 	if err != nil {
@@ -67,7 +67,7 @@ func (c *CopyCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		if cwd == "" {
 			cwd = constants.RootDir
 		}
-		destPath, err := util.DestinationFilepath(src, dest, cwd)
+		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
 		if err != nil {
 			return err
 		}

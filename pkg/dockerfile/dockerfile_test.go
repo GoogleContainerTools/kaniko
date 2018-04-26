@@ -27,18 +27,17 @@ import (
 	"testing"
 )
 
-var dockerfile = `
-FROM scratch
-RUN echo hi > /hi
-
-FROM scratch AS second
-COPY --from=0 /hi /hi2
-
-FROM scratch
-COPY --from=second /hi2 /hi3
-`
-
 func Test_ResolveStages(t *testing.T) {
+	dockerfile := `
+	FROM scratch
+	RUN echo hi > /hi
+	
+	FROM scratch AS second
+	COPY --from=0 /hi /hi2
+	
+	FROM scratch
+	COPY --from=second /hi2 /hi3
+	`
 	stages, err := Parse([]byte(dockerfile))
 	if err != nil {
 		t.Fatal(err)
