@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 )
 
 var userTests = []struct {
@@ -82,7 +82,7 @@ var userTests = []struct {
 
 func TestUpdateUser(t *testing.T) {
 	for _, test := range userTests {
-		cfg := &manifest.Schema2Config{
+		cfg := &v1.Config{
 			Env: []string{
 				"envuser=root",
 				"envgroup=root",

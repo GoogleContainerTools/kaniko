@@ -17,10 +17,11 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 	"strings"
+
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type CmdCommand struct {
@@ -29,7 +30,7 @@ type CmdCommand struct {
 
 // ExecuteCommand executes the CMD command
 // Argument handling is the same as RUN.
-func (c *CmdCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (c *CmdCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: CMD")
 	var newCommand []string
 	if c.cmd.PrependShell {

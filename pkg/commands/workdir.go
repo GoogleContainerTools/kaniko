@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +31,7 @@ type WorkdirCommand struct {
 	snapshotFiles []string
 }
 
-func (w *WorkdirCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (w *WorkdirCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: workdir")
 	workdirPath := w.cmd.Path
 	resolvedWorkingDir, err := util.ResolveEnvironmentReplacement(workdirPath, config.Env, true)

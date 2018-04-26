@@ -19,12 +19,12 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 )
 
 func TestUpdateVolume(t *testing.T) {
-	cfg := &manifest.Schema2Config{
+	cfg := &v1.Config{
 		Env: []string{
 			"VOLUME=/etc",
 		},

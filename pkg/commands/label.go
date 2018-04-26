@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,12 +29,12 @@ type LabelCommand struct {
 	cmd *instructions.LabelCommand
 }
 
-func (r *LabelCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (r *LabelCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: LABEL")
 	return updateLabels(r.cmd.Labels, config)
 }
 
-func updateLabels(labels []instructions.KeyValuePair, config *manifest.Schema2Config) error {
+func updateLabels(labels []instructions.KeyValuePair, config *v1.Config) error {
 	existingLabels := config.Labels
 	if existingLabels == nil {
 		existingLabels = make(map[string]string)

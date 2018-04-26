@@ -21,6 +21,7 @@ ADD files/docker-credential-gcr /usr/local/bin/
 ADD files/config.json /root/.docker/
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV HOME /root
+ENV USER /root
 ENV PATH /usr/local/bin
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENTRYPOINT ["/kaniko/executor"]

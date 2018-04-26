@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"syscall"
 
-	pkgutil "github.com/GoogleContainerTools/container-diff/pkg/util"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -122,7 +121,7 @@ func UnpackLocalTarArchive(path, dest string) error {
 			return UnpackCompressedTar(path, dest)
 		} else if compressionLevel == archive.Bzip2 {
 			bzr := bzip2.NewReader(file)
-			return pkgutil.UnTar(bzr, dest, nil)
+			return unTar(bzr, dest)
 		}
 	}
 	if fileIsUncompressedTar(path) {
@@ -131,7 +130,7 @@ func UnpackLocalTarArchive(path, dest string) error {
 			return err
 		}
 		defer file.Close()
-		return pkgutil.UnTar(file, dest, nil)
+		return unTar(file, dest)
 	}
 	return errors.New("path does not lead to local tar archive")
 }
@@ -195,5 +194,5 @@ func UnpackCompressedTar(path, dir string) error {
 		return err
 	}
 	defer gzr.Close()
-	return pkgutil.UnTar(gzr, dir, nil)
+	return unTar(gzr, dir)
 }
