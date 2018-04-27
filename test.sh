@@ -21,7 +21,7 @@ GREEN='\033[0;32m'
 RESET='\033[0m'
 
 echo "Running go tests..."
-go test -cover -v -tags "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay" -timeout 60s `go list ./... | grep -v vendor` | sed ''/PASS/s//$(printf "${GREEN}PASS${RESET}")/'' | sed ''/FAIL/s//$(printf "${RED}FAIL${RESET}")/''
+go test -cover -v -timeout 60s `go list ./... | grep -v vendor` | sed ''/PASS/s//$(printf "${GREEN}PASS${RESET}")/'' | sed ''/FAIL/s//$(printf "${RED}FAIL${RESET}")/''
 GO_TEST_EXIT_CODE=${PIPESTATUS[0]}
 if [[ $GO_TEST_EXIT_CODE -ne 0 ]]; then
     exit $GO_TEST_EXIT_CODE
