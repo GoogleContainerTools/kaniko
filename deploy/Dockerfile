@@ -14,11 +14,10 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
-FROM golang
+FROM golang:1.10
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
-RUN apt-get update && apt-get install -y make
 COPY . .
-RUN make -B
+RUN make
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
