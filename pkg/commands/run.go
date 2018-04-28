@@ -36,8 +36,13 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config) error {
 	var newCommand []string
 	if r.cmd.PrependShell {
 		// This is the default shell on Linux
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
+		var shell []string
+		if len(config.Shell) > 0 {
+			shell = config.Shell
+		} else {
+			shell = append(shell, "/bin/sh", "-c")
+		}
+
 		newCommand = append(shell, strings.Join(r.cmd.CmdLine, " "))
 	} else {
 		newCommand = r.cmd.CmdLine
