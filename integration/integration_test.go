@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,7 +21,6 @@ const (
 	daemonPrefix            = "daemon://"
 	containerDiffOutputFile = "container-diff.json"
 	kanikoTestBucket        = "kaniko-test-bucket"
-	buildcontextPath        = "."
 	dockerfilesPath         = "dockerfiles"
 	onbuildBaseImage        = testRepo + "onbuild-base:latest"
 	emptyContainerDiff      = `[
@@ -55,39 +55,48 @@ func TestRun(t *testing.T) {
 		t.FailNow()
 	}
 
+	ex, err := os.Executable()
+	if err != nil {
+		fmt.Printf("err=%s", err)
+		t.FailNow()
+	}
+
+	buildcontextPath := filepath.Dir(ex)
+
 	for _, dockerfile := range dockerfiles {
 		if strings.HasSuffix(dockerfile.Name(), ".yaml") {
 			continue
 		}
 		t.Run("test_"+dockerfile.Name(), func(t *testing.T) {
-			t.Parallel()
-
-			// We probably want to run these in container builder instead
-			// of shelling out to docker directly.
+			// Parallelization is broken
+			// t.Parallel()
 
 			// build docker image
-			dockerImage := testRepo + dockerPrefix + dockerfile.Name()
-			dockerCmd := exec.Command("docker", "build", "-t", dockerImage, "-f", path.Join(dockerfilesPath, dockerfile.Name()), buildcontextPath)
+			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile.Name())
+			dockerCmd := exec.Command("docker", "build", "-t", dockerImage, "-f", path.Join(dockerfilesPath, dockerfile.Name()), ".")
 			output, err := dockerCmd.CombinedOutput()
 			if err != nil {
-				fmt.Printf("output=%s", output)
+				t.Logf("output=%s", output)
 				t.Error(err)
 				t.Fail()
 			}
 
 			// build kaniko image
-			kanikoImage := testRepo + kanikoPrefix + dockerfile.Name()
+			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile.Name())
 			// kanikoCmd := exec.Command("./run_in_docker.sh", path.Join(dockerfilesPath, dockerfile.Name()), buildcontextPath, kanikoImage)
 			kanikoCmd := exec.Command("docker", "run",
-				"-v", "$HOME/.config/gcloud:/root/.config/gcloud",
+				"-v", os.Getenv("HOME")+"/.config/gcloud:/root/.config/gcloud",
 				"-v", buildcontextPath+":/workspace",
 				executorImage,
-				"-f", dockerfile.Name(),
+				"-f", path.Join(buildcontextPath, "integration", dockerfilesPath, dockerfile.Name()),
 				"-d", kanikoImage,
 				"-c", "/workspace",
 			)
-			err = kanikoCmd.Run()
+
+			t.Logf("args=%s", kanikoCmd.Args)
+			output, err = kanikoCmd.CombinedOutput()
 			if err != nil {
+				t.Logf(string(output))
 				t.Error(err)
 				t.Fail()
 			}
@@ -101,6 +110,8 @@ func TestRun(t *testing.T) {
 				t.Error(err)
 				t.Fail()
 			}
+
+			t.Logf("diff = %s", string(diff))
 
 			// make sure the json is empty
 			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage)
