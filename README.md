@@ -18,6 +18,7 @@ Please let us know if you have any feature requests or find any bugs!
   - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
   - [Running kaniko locally](#running-kaniko-locally)
   - [Pushing to Different Registries](#pushing-to-different-registries)
+  - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
 - [Community](#community)
@@ -39,6 +40,8 @@ The majority of Dockerfile commands can be executed with kaniko, but we're still
 * ARG
 
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
+
+kaniko also does not support building Windows containers.
 
 ## Development
 ### kaniko Build Contexts
@@ -143,6 +146,10 @@ kaniko uses Docker credential helpers to push images to a registry.
 
 kaniko comes with support for GCR, but configuring another credential helper should allow pushing to a different registry.
 
+### Debug Image
+
+We provide `gcr.io/kaniko-project/executor:debug` as a a version of the executor image based off a Debian image. 
+This provides a shell and can be useful for debugging.
 
 ## Security
  

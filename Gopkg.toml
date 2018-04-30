@@ -19,11 +19,6 @@
   source = "github.com/docker/distribution"
 
 [[constraint]]
-  name = "github.com/GoogleContainerTools/container-diff"
-  branch = "master"
-  source = "github.com/GoogleContainerTools/container-diff"
-
-[[constraint]]
   name = "github.com/docker/docker"
   revision = "b1a1234c60cf87048814aa37da523b03a7b0d344"
   source = "github.com/docker/docker"

@@ -34,13 +34,11 @@ GO_LDFLAGS += -X $(VERSION_PACKAGE).version=$(VERSION)
 GO_LDFLAGS += -w -s # Drop debugging symbols.
 GO_LDFLAGS += '
 
-GO_BUILD_TAGS := "containers_image_ostree_stub containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs exclude_graphdriver_overlay"
-
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 KANIKO_PROJECT = $(REPOPATH)/kaniko
 
 out/executor: $(GO_FILES)
-	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -tags $(GO_BUILD_TAGS) -o $@ $(EXECUTOR_PACKAGE)
+	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(EXECUTOR_PACKAGE)
 
 .PHONY: test
 test: out/executor
@@ -51,5 +49,5 @@ integration-test:
 	@ ./integration-test.sh
 
 .PHONY: images
-images: out/executor
+images:
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .

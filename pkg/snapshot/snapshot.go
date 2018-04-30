@@ -150,6 +150,7 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 			return false, err
 		}
 		if maybeAdd {
+			logrus.Debugf("Adding %s to layer, because it was changed.", path)
 			filesAdded = true
 			if err := util.AddToTar(path, info, s.hardlinks, w); err != nil {
 				return false, err

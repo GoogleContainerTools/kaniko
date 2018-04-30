@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +31,7 @@ type VolumeCommand struct {
 	snapshotFiles []string
 }
 
-func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (v *VolumeCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: VOLUME")
 	volumes := v.cmd.Volumes
 	resolvedVolumes, err := util.ResolveEnvironmentReplacementList(volumes, config.Env, true)

@@ -14,13 +14,19 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
+FROM golang:1.10
+WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
+COPY . .
+RUN make
+
 FROM scratch
-ADD out/executor /kaniko/executor
-ADD files/ca-certificates.crt /kaniko/ssl/certs/
-ADD files/docker-credential-gcr /usr/local/bin/
-ADD files/config.json /root/.docker/
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY files/docker-credential-gcr /usr/local/bin/
+COPY files/config.json /root/.docker/
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV HOME /root
+ENV USER /root
 ENV PATH /usr/local/bin
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENTRYPOINT ["/kaniko/executor"]
