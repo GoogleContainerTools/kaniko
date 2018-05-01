@@ -53,13 +53,16 @@ func ResolveStages(stages []instructions.Stage) {
 	nameToIndex := make(map[string]string)
 	for i, stage := range stages {
 		index := strconv.Itoa(i)
-		nameToIndex[stage.Name] = index
-		nameToIndex[index] = index
+		if stage.Name != index {
+			nameToIndex[stage.Name] = index
+		}
 		for _, cmd := range stage.Commands {
 			switch c := cmd.(type) {
 			case *instructions.CopyCommand:
 				if c.From != "" {
-					c.From = nameToIndex[c.From]
+					if val, ok := nameToIndex[c.From]; ok {
+						c.From = val
+					}
 				}
 			}
 		}
