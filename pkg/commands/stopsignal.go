@@ -39,7 +39,7 @@ func (s *StopSignalCommand) ExecuteCommand(config *v1.Config) error {
 	if err != nil {
 		return err
 	}
-	stopsignal := resolvedEnvs[len(resolvedEnvs)-1]
+	stopsignal := resolvedEnvs[0]
 
 	// validate stopsignal
 	_, err = signal.ParseSignal(stopsignal)
