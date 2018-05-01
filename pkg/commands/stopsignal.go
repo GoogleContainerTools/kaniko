@@ -21,6 +21,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/docker/docker/pkg/signal"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -34,14 +35,20 @@ func (s *StopSignalCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: STOPSIGNAL")
 
 	// resolve possible environment variables
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList([]string{s.cmd.Signal}, config.Env, true)
+	resolvedEnvs, err := util.ResolveEnvironmentReplacementList([]string{s.cmd.Signal}, config.Env, false)
 	if err != nil {
 		return err
 	}
-	signal := resolvedEnvs[len(resolvedEnvs)-1]
+	stopsignal := resolvedEnvs[len(resolvedEnvs)-1]
 
-	logrus.Infof("Replacing StopSignal in config with %v", signal)
-	config.StopSignal = signal
+	// validate stopsignal
+	_, err = signal.ParseSignal(stopsignal)
+	if err != nil {
+		return err
+	}
+
+	logrus.Infof("Replacing StopSignal in config with %v", stopsignal)
+	config.StopSignal = stopsignal
 	return nil
 }
 
