@@ -26,6 +26,7 @@ const (
 	executorImage           = "executor-image"
 	dockerImage             = "gcr.io/cloud-builders/docker"
 	ubuntuImage             = "ubuntu"
+	structureTestImage      = "gcr.io/gcp-runtimes/container-structure-test"
 	testRepo                = "gcr.io/kaniko-test/"
 	dockerPrefix            = "docker-"
 	kanikoPrefix            = "kaniko-"
@@ -205,15 +206,6 @@ func main() {
 		Name: ubuntuImage,
 		Args: []string{"chmod", "+x", "container-diff-linux-amd64"},
 	}
-	structureTestsStep := step{
-		Name: "gcr.io/cloud-builders/gsutil",
-		Args: []string{"cp", "gs://container-structure-test/latest/container-structure-test", "."},
-	}
-	structureTestPermissions := step{
-		Name: ubuntuImage,
-		Args: []string{"chmod", "+x", "container-structure-test"},
-	}
-
 	GCSBucketTarBuildContext := step{
 		Name: ubuntuImage,
 		Args: []string{"tar", "-C", "/workspace/integration_tests/", "-zcvf", "/workspace/context.tar.gz", "."},
@@ -239,7 +231,7 @@ func main() {
 		Args: []string{"push", onbuildBaseImage},
 	}
 	y := testyaml{
-		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
+		Steps: []step{containerDiffStep, containerDiffPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
 			buildOnbuildImage, pushOnbuildBase},
 		Timeout: "1200s",
 	}
@@ -315,20 +307,15 @@ func main() {
 			Args: []string{"pull", kanikoImage},
 		}
 		// Run structure tests on the kaniko and docker image
-		args := "container-structure-test -image " + kanikoImage + " " + test.structureTestYamlPath
-		structureTest := step{
-			Name: ubuntuImage,
-			Args: []string{"sh", "-c", args},
-			Env:  []string{"PATH=/workspace:/bin"},
+		kanikoStructureTest := step{
+			Name: structureTestImage,
+			Args: []string{"test", "--image", kanikoImage, "--config", test.structureTestYamlPath},
 		}
-		args = "container-structure-test -image " + dockerImageTag + " " + test.structureTestYamlPath
 		dockerStructureTest := step{
-			Name: ubuntuImage,
-			Args: []string{"sh", "-c", args},
-			Env:  []string{"PATH=/workspace:/bin"},
+			Name: structureTestImage,
+			Args: []string{"test", "--image", dockerImageTag, "--config", test.structureTestYamlPath},
 		}
-
-		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, structureTest, dockerStructureTest)
+		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, kanikoStructureTest, dockerStructureTest)
 	}
 
 	d, _ := yaml.Marshal(&y)
