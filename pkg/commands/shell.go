@@ -24,47 +24,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type EntrypointCommand struct {
-	cmd *instructions.EntrypointCommand
+type ShellCommand struct {
+	cmd *instructions.ShellCommand
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (e *EntrypointCommand) ExecuteCommand(config *v1.Config) error {
-	logrus.Info("cmd: ENTRYPOINT")
-	var newCommand []string
-	if e.cmd.PrependShell {
-		// This is the default shell on Linux
-		var shell []string
-		if len(config.Shell) > 0 {
-			shell = config.Shell
-		} else {
-			shell = append(shell, "/bin/sh", "-c")
-		}
+func (s *ShellCommand) ExecuteCommand(config *v1.Config) error {
+	logrus.Info("cmd: SHELL")
+	var newShell []string
 
-		newCommand = append(shell, strings.Join(e.cmd.CmdLine, " "))
-	} else {
-		newCommand = e.cmd.CmdLine
-	}
+	newShell = s.cmd.Shell
 
-	logrus.Infof("Replacing Entrypoint in config with %v", newCommand)
-	config.Entrypoint = newCommand
+	logrus.Infof("Replacing Shell in config with %v", newShell)
+	config.Shell = newShell
 	return nil
 }
 
 // FilesToSnapshot returns an empty array since this is a metadata command
-func (e *EntrypointCommand) FilesToSnapshot() []string {
+func (s *ShellCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
 // CreatedBy returns some information about the command for the image config history
-func (e *EntrypointCommand) CreatedBy() string {
-	entrypoint := []string{"ENTRYPOINT"}
-	cmdLine := strings.Join(e.cmd.CmdLine, " ")
-	if e.cmd.PrependShell {
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
-		appendedShell := append(entrypoint, shell...)
-		return strings.Join(append(appendedShell, cmdLine), " ")
-	}
+func (s *ShellCommand) CreatedBy() string {
+	entrypoint := []string{"SHELL"}
+	cmdLine := strings.Join(s.cmd.Shell, " ")
+
 	return strings.Join(append(entrypoint, cmdLine), " ")
 }
