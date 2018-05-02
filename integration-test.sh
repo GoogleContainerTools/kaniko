@@ -25,4 +25,5 @@ fi
 
 echo "Running integration tests..."
 make out/executor
-go run integration_tests/integration_test_yaml.go | gcloud container builds submit --config /dev/fd/0 .
+pushd integration
+go test
