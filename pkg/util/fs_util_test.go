@@ -449,7 +449,7 @@ func TestExtractFile(t *testing.T) {
 			},
 		},
 		{
-			name: "symlink parent does not exist",
+			name: "symlink parent does not exist 2",
 			hdrs: []*tar.Header{linkHeader("./foo/bar/baz", "../../bat")},
 			checkers: []checker{
 				linkPointsTo("/foo/bar/baz", "../../bat"),

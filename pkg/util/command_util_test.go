@@ -107,7 +107,7 @@ func Test_EnvReplacement(t *testing.T) {
 	}
 }
 
-var buildContextPath = "../../integration_tests/"
+var buildContextPath = "../../integration/"
 
 var destinationFilepathTests = []struct {
 	src              string
