@@ -68,6 +68,8 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &ArgCommand{cmd: c}, nil
 	case *instructions.ShellCommand:
 		return &ShellCommand{cmd: c}, nil
+	case *instructions.HealthCheckCommand:
+		return &HealthCheckCommand{cmd: c}, nil
 	case *instructions.MaintainerCommand:
 		logrus.Warnf("%s is deprecated, skipping", cmd.Name())
 		return nil, nil
