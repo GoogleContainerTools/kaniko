@@ -61,6 +61,8 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &OnBuildCommand{cmd: c}, nil
 	case *instructions.VolumeCommand:
 		return &VolumeCommand{cmd: c}, nil
+	case *instructions.StopSignalCommand:
+		return &StopSignalCommand{cmd: c}, nil
 	case *instructions.MaintainerCommand:
 		logrus.Warnf("%s is deprecated, skipping", cmd.Name())
 		return nil, nil

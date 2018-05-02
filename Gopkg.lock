@@ -45,6 +45,7 @@
     "pkg/longpath",
     "pkg/mount",
     "pkg/pools",
+    "pkg/signal",
     "pkg/system"
   ]
   revision = "b1a1234c60cf87048814aa37da523b03a7b0d344"
@@ -332,6 +333,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9ed51a63daab2be9e4864e4d97d90ccc0f540d076f891b80f01bd3f161c9ef7a"
+  inputs-digest = "18d970ab8a3487013ef13e0aed686929d30bcebc1b9adaa329e9db414189fcf6"
   solver-name = "gps-cdcl"
   solver-version = 1

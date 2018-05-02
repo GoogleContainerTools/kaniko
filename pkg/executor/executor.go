@@ -147,7 +147,8 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 				mutate.Addendum{
 					Layer: layer,
 					History: v1.History{
-						Author: constants.Author,
+						Author:    constants.Author,
+						CreatedBy: dockerCommand.CreatedBy(),
 					},
 				},
 			)
