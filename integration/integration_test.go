@@ -3,7 +3,6 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -16,27 +15,26 @@ import (
 )
 
 const (
-	executorImage           = "executor-image"
-	dockerImage             = "gcr.io/cloud-builders/docker"
-	ubuntuImage             = "ubuntu"
-	testRepo                = "gcr.io/kaniko-test/"
-	dockerPrefix            = "docker-"
-	kanikoPrefix            = "kaniko-"
-	daemonPrefix            = "daemon://"
-	containerDiffOutputFile = "container-diff.json"
-	kanikoTestBucket        = "kaniko-test-bucket"
-	dockerfilesPath         = "dockerfiles"
-	onbuildBaseImage        = testRepo + "onbuild-base:latest"
-	buildContextPath        = "/workspace"
-	emptyContainerDiff      = `[
+	executorImage      = "executor-image"
+	dockerImage        = "gcr.io/cloud-builders/docker"
+	ubuntuImage        = "ubuntu"
+	testRepo           = "gcr.io/kaniko-test/"
+	dockerPrefix       = "docker-"
+	kanikoPrefix       = "kaniko-"
+	daemonPrefix       = "daemon://"
+	kanikoTestBucket   = "kaniko-test-bucket"
+	dockerfilesPath    = "dockerfiles"
+	onbuildBaseImage   = testRepo + "onbuild-base:latest"
+	buildContextPath   = "/workspace"
+	emptyContainerDiff = `[
      {
        "Image1": "%s:latest",
        "Image2": "%s:latest",
        "DiffType": "File",
        "Diff": {
-	 "Adds": null,
-	 "Dels": null,
-	 "Mods": null
+	 	"Adds": null,
+	 	"Dels": null,
+	 	"Mods": null
        }
      }
    ]`
@@ -44,85 +42,67 @@ const (
 
 func TestMain(m *testing.M) {
 	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
-	output, err := buildKaniko.CombinedOutput()
+	err := buildKaniko.Run()
 	if err != nil {
-		fmt.Printf("output=%s\n", output)
-		fmt.Printf("err=%s\n", err)
+		fmt.Print("Building kaniko failed.")
 		os.Exit(1)
 	}
+
+	// Make sure container-diff is on user's PATH
+	err = exec.Command("container-diff").Run()
+	if err != nil {
+		fmt.Print("Make sure you have container-diff installed and on your PATH")
+		os.Exit(1)
+	}
+
 	os.Exit(m.Run())
 }
 
 func TestRun(t *testing.T) {
-	dockerfiles, err := ioutil.ReadDir(dockerfilesPath)
+	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile*"))
 	if err != nil {
-		fmt.Printf("err=%s", err)
+		t.Error(err)
 		t.FailNow()
 	}
 
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
-	// Grab the latest container-diff binary
-	getContainerDiff := exec.Command("gsutil", "cp", "gs://container-diff/latest/container-diff-linux-amd64", ".")
-	err = getContainerDiff.Run()
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-
-	containerDiffPerms := exec.Command("chmod", "+x", "container-diff-linux-amd64")
-	err = containerDiffPerms.Run()
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-
-
 	for _, dockerfile := range dockerfiles {
-		if strings.HasSuffix(dockerfile.Name(), ".yaml") {
-			continue
-		}
-		t.Run("test_"+dockerfile.Name(), func(t *testing.T) {
+		t.Run("test_"+dockerfile, func(t *testing.T) {
+			fmt.Printf("%s\n", dockerfile)
 			// Parallelization is broken
 			// t.Parallel()
 
 			// build docker image
-			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile.Name())
-			dockerCmd := exec.Command("docker", "build", "-t", dockerImage, "-f", path.Join(dockerfilesPath, dockerfile.Name()), ".")
-			err = dockerCmd.Run()
-			if err != nil {
-				t.Error(err)
-				t.Fail()
-			}
+			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
+			dockerCmd := exec.Command("docker", "build",
+				"-t", dockerImage,
+				"-f", dockerfile,
+				".")
+			RunCommand(dockerCmd, t)
 
 			// build kaniko image
-			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile.Name())
+			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			kanikoCmd := exec.Command("docker", "run",
 				"-v", os.Getenv("HOME")+"/.config/gcloud:/root/.config/gcloud",
-				"-v", cwd + ":/workspace",
+				"-v", cwd+":/workspace",
 				executorImage,
-				"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile.Name()),
+				"-f", path.Join(buildContextPath, dockerfile),
 				"-d", kanikoImage,
 				"-c", buildContextPath,
 			)
 
-			err = kanikoCmd.Run()
-			if err != nil {
-				t.Error(err)
-				t.Fail()
-			}
+			RunCommand(kanikoCmd, t)
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
 			//daemonKanikoImage := daemonPrefix + kanikoImage
 
-			containerdiffCmd := exec.Command("./container-diff-linux-amd64", "diff", daemonDockerImage, kanikoImage, "-q", "--type=file", "--json")
-			diff, err := containerdiffCmd.CombinedOutput()
-			if err != nil {
-				t.Error(err)
-				t.Fail()
-			}
+			containerdiffCmd := exec.Command("container-diff", "diff",
+				daemonDockerImage, kanikoImage,
+				"-q", "--type=file", "--json")
+			diff := RunCommand(containerdiffCmd, t)
 			t.Logf("diff = %s", string(diff))
 
 			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage)
@@ -147,4 +127,16 @@ func TestRun(t *testing.T) {
 			testutil.CheckErrorAndDeepEqual(t, false, nil, expectedInt, diffInt)
 		})
 	}
+}
+
+func RunCommand(cmd *exec.Cmd, t *testing.T) []byte {
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Log(cmd.Args)
+		t.Log(output)
+		t.Error(err)
+		t.Fail()
+	}
+
+	return output
 }
