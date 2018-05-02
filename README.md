@@ -35,7 +35,6 @@ After each command, we append a layer of changed files to the base image (if the
 The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
 
 * HEALTHCHECK
-* STOPSIGNAL
 * ARG
 
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
