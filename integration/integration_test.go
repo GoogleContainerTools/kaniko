@@ -42,8 +42,10 @@ const (
 
 func TestMain(m *testing.M) {
 	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
-	err := buildKaniko.Run()
+	out, err := buildKaniko.Run()
 	if err != nil {
+		fmt.Print(out)
+		fmt.Print(err)
 		fmt.Print("Building kaniko failed.")
 		os.Exit(1)
 	}
