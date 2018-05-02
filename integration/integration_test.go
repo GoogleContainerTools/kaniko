@@ -1,14 +1,18 @@
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
 const (
@@ -23,18 +27,19 @@ const (
 	kanikoTestBucket        = "kaniko-test-bucket"
 	dockerfilesPath         = "dockerfiles"
 	onbuildBaseImage        = testRepo + "onbuild-base:latest"
+	buildContextPath        = "/workspace"
 	emptyContainerDiff      = `[
-	{
-	  "Image1": %s,
-	  "Image2": %s,
-	  "DiffType": "File",
-	  "Diff": {
-		"Adds": null,
-		"Dels": null,
-		"Mods": null
-	  }
-	}
-  ]`
+     {
+       "Image1": "%s:latest",
+       "Image2": "%s:latest",
+       "DiffType": "File",
+       "Diff": {
+	 "Adds": null,
+	 "Dels": null,
+	 "Mods": null
+       }
+     }
+   ]`
 )
 
 func TestMain(m *testing.M) {
@@ -55,13 +60,24 @@ func TestRun(t *testing.T) {
 		t.FailNow()
 	}
 
-	ex, err := os.Executable()
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	// Grab the latest container-diff binary
+	getContainerDiff := exec.Command("gsutil", "cp", "gs://container-diff/latest/container-diff-linux-amd64", ".")
+	err = getContainerDiff.Run()
 	if err != nil {
-		fmt.Printf("err=%s", err)
+		t.Error(err)
 		t.FailNow()
 	}
 
-	buildcontextPath := filepath.Dir(ex)
+	containerDiffPerms := exec.Command("chmod", "+x", "container-diff-linux-amd64")
+	err = containerDiffPerms.Run()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
 
 	for _, dockerfile := range dockerfiles {
 		if strings.HasSuffix(dockerfile.Name(), ".yaml") {
@@ -74,51 +90,61 @@ func TestRun(t *testing.T) {
 			// build docker image
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile.Name())
 			dockerCmd := exec.Command("docker", "build", "-t", dockerImage, "-f", path.Join(dockerfilesPath, dockerfile.Name()), ".")
-			output, err := dockerCmd.CombinedOutput()
+			err = dockerCmd.Run()
 			if err != nil {
-				t.Logf("output=%s", output)
 				t.Error(err)
 				t.Fail()
 			}
 
 			// build kaniko image
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile.Name())
-			// kanikoCmd := exec.Command("./run_in_docker.sh", path.Join(dockerfilesPath, dockerfile.Name()), buildcontextPath, kanikoImage)
 			kanikoCmd := exec.Command("docker", "run",
 				"-v", os.Getenv("HOME")+"/.config/gcloud:/root/.config/gcloud",
-				"-v", buildcontextPath+":/workspace",
+				"-v", cwd + ":/workspace",
 				executorImage,
-				"-f", path.Join(buildcontextPath, "integration", dockerfilesPath, dockerfile.Name()),
+				"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile.Name()),
 				"-d", kanikoImage,
-				"-c", "/workspace",
+				"-c", buildContextPath,
 			)
 
-			t.Logf("args=%s", kanikoCmd.Args)
-			output, err = kanikoCmd.CombinedOutput()
+			err = kanikoCmd.Run()
 			if err != nil {
-				t.Logf(string(output))
 				t.Error(err)
 				t.Fail()
 			}
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
-			daemonKanikoImage := daemonPrefix + kanikoImage
-			containerdiffCmd := exec.Command("container-diff", "diff", daemonDockerImage, daemonKanikoImage)
+			//daemonKanikoImage := daemonPrefix + kanikoImage
+
+			containerdiffCmd := exec.Command("./container-diff-linux-amd64", "diff", daemonDockerImage, kanikoImage, "-q", "--type=file", "--json")
 			diff, err := containerdiffCmd.CombinedOutput()
 			if err != nil {
 				t.Error(err)
 				t.Fail()
 			}
-
 			t.Logf("diff = %s", string(diff))
 
-			// make sure the json is empty
 			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage)
-			if expected != string(diff) {
-				t.Errorf("container-diff produced unexpected output: %s", string(diff))
+
+			// Let's compare the json objects themselves instead of strings to avoid
+			// issues with spaces and indents
+			var diffInt interface{}
+			var expectedInt interface{}
+
+			err = json.Unmarshal(diff, &diffInt)
+			if err != nil {
+				t.Error(err)
 				t.Fail()
 			}
+
+			err = json.Unmarshal([]byte(expected), &expectedInt)
+			if err != nil {
+				t.Error(err)
+				t.Fail()
+			}
+
+			testutil.CheckErrorAndDeepEqual(t, false, nil, expectedInt, diffInt)
 		})
 	}
 }
