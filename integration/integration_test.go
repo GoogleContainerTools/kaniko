@@ -98,9 +98,6 @@ func TestRun(t *testing.T) {
 				"-f", dockerfile,
 				".")
 			RunCommand(dockerCmd, t)
-			if t.Failed() {
-				continue
-			}
 
 			// build kaniko image
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
@@ -114,9 +111,6 @@ func TestRun(t *testing.T) {
 			)
 
 			RunCommand(kanikoCmd, t)
-			if t.Failed() {
-				continue
-			}
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
@@ -158,7 +152,7 @@ func RunCommand(cmd *exec.Cmd, t *testing.T) []byte {
 		t.Log(cmd.Args)
 		t.Log(string(output))
 		t.Error(err)
-		t.Fail()
+		t.FailNow()
 	}
 
 	return output
