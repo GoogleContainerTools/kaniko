@@ -1,3 +1,19 @@
+/*
+Copyright 2018 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package integration
 
 import (
@@ -42,9 +58,8 @@ const (
 
 func TestMain(m *testing.M) {
 	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
-	out, err := buildKaniko.CombinedOutput()
+	err := buildKaniko.Run()
 	if err != nil {
-		fmt.Print(string(out))
 		fmt.Print(err)
 		fmt.Print("Building kaniko failed.")
 		os.Exit(1)
