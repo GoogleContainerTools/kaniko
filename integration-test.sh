@@ -21,7 +21,10 @@ if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     mkdir -p /usr/local/go/src/github.com/GoogleContainerTools/
     cp -r github/kaniko /usr/local/go/src/github.com/GoogleContainerTools/
     pushd /usr/local/go/src/github.com/GoogleContainerTools/kaniko
-fi
+    echo "Installing container-diff..."
+    mv $KOKORO_GFILE_DIR/container-diff-linux-amd64 $KOKORO_GFILE_DIR/container-diff
+    chmod +x $KOKORO_GFILE_DIR/container-diff
+    export PATH=$PATH:$KOKORO_GFILE_DIR
 
 echo "Running integration tests..."
 make out/executor
