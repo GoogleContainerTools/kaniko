@@ -12,6 +12,7 @@ Please let us know if you have any feature requests or find any bugs!
 - [Kaniko](#kaniko)
   - [How does kaniko work?](#how-does-kaniko-work)
   - [Known Issues](#known-issues)
+- [Demo](#demo)
 - [Development](#development)
   - [kaniko Build Contexts](#kaniko-build-contexts) 
   - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
@@ -40,6 +41,10 @@ The majority of Dockerfile commands can be executed with kaniko, but we're still
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
 
 kaniko also does not support building Windows containers.
+
+## Demo
+
+![Demo](/docs/demo.gif)
 
 ## Development
 ### kaniko Build Contexts
