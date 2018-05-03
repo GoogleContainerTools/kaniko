@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
 	out, err := buildKaniko.CombinedOutput()
 	if err != nil {
-		fmt.Print(out)
+		fmt.Print(string(out))
 		fmt.Print(err)
 		fmt.Print("Building kaniko failed.")
 		os.Exit(1)
@@ -135,7 +135,7 @@ func RunCommand(cmd *exec.Cmd, t *testing.T) []byte {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Log(cmd.Args)
-		t.Log(output)
+		t.Log(string(output))
 		t.Error(err)
 		t.Fail()
 	}
