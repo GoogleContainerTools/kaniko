@@ -88,7 +88,7 @@ func TestRun(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			fmt.Printf("%s\n", dockerfile)
-			// Parallelization is broken
+			// Parallelization is broken, we can reevaluate if we really need it.
 			// t.Parallel()
 
 			// build docker image
@@ -98,6 +98,9 @@ func TestRun(t *testing.T) {
 				"-f", dockerfile,
 				".")
 			RunCommand(dockerCmd, t)
+			if t.Failed() {
+				continue
+			}
 
 			// build kaniko image
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
@@ -111,6 +114,9 @@ func TestRun(t *testing.T) {
 			)
 
 			RunCommand(kanikoCmd, t)
+			if t.Failed() {
+				continue
+			}
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
