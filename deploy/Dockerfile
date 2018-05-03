@@ -18,13 +18,12 @@ FROM golang:1.10
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 COPY . .
 RUN make
-WORKDIR /usr/local/bin
-ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3-static/docker-credential-gcr_linux_amd64-1.4.3.tar.gz .
-RUN tar -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-1.4.3.tar.gz
+# Get GCR credential helper
+ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3-static/docker-credential-gcr_linux_amd64-1.4.3.tar.gz /usr/local/bin/
+RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-1.4.3.tar.gz
 # Get Amazon ECR credential helper
 RUN go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
-WORKDIR /go/src/github.com/awslabs/amazon-ecr-credential-helper
-RUN make linux-amd64
+RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
