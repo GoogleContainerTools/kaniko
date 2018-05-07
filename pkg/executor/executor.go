@@ -17,9 +17,22 @@ limitations under the License.
 package executor
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
+
+	"github.com/google/go-containerregistry/v1/empty"
+
+	"github.com/google/go-containerregistry/v1/tarball"
+
+	"github.com/google/go-containerregistry/authn"
+	"github.com/google/go-containerregistry/name"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/google/go-containerregistry/v1/mutate"
+	"github.com/google/go-containerregistry/v1/remote"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -27,7 +40,6 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 )
@@ -46,8 +58,28 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 	baseImage := stages[0].BaseName
 
 	// Unpack file system to root
+	var sourceImage v1.Image
+	var ref name.Reference
 	logrus.Infof("Unpacking filesystem of %s...", baseImage)
-	if err := util.ExtractFileSystemFromImage(baseImage); err != nil {
+	if baseImage == constants.NoBaseImage {
+		logrus.Info("No base image, nothing to extract")
+		sourceImage = empty.Image
+	} else {
+		// Initialize source image
+		ref, err = name.ParseReference(baseImage, name.WeakValidation)
+		if err != nil {
+			return err
+		}
+		auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
+		if err != nil {
+			return err
+		}
+		sourceImage, err = remote.Image(ref, auth, http.DefaultTransport)
+		if err != nil {
+			return err
+		}
+	}
+	if err := util.GetFSFromImage(sourceImage); err != nil {
 		return err
 	}
 
@@ -63,21 +95,22 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 		return err
 	}
 
-	// Initialize source image
-	sourceImage, err := image.NewSourceImage(baseImage)
+	destRef, err := name.ParseReference(destination, name.WeakValidation)
 	if err != nil {
 		return err
 	}
-
 	// Set environment variables within the image
 	if err := image.SetEnvVariables(sourceImage); err != nil {
 		return err
 	}
 
-	imageConfig := sourceImage.Config()
+	imageConfig, err := sourceImage.ConfigFile()
+	if err != nil {
+		return err
+	}
 	// Currently only supports single stage builds
 	for _, stage := range stages {
-		if err := resolveOnBuild(&stage, imageConfig); err != nil {
+		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
 			return err
 		}
 		for _, cmd := range stage.Commands {
@@ -88,7 +121,7 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 			if dockerCommand == nil {
 				continue
 			}
-			if err := dockerCommand.ExecuteCommand(imageConfig); err != nil {
+			if err := dockerCommand.ExecuteCommand(&imageConfig.Config); err != nil {
 				return err
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot
@@ -100,11 +133,26 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 			util.MoveVolumeWhitelistToWhitelist()
 			if contents == nil {
 				logrus.Info("No files were changed, appending empty layer to config.")
-				sourceImage.AppendConfigHistory(constants.Author, true)
 				continue
 			}
 			// Append the layer to the image
-			if err := sourceImage.AppendLayer(contents, constants.Author); err != nil {
+			opener := func() (io.ReadCloser, error) {
+				return ioutil.NopCloser(bytes.NewReader(contents)), nil
+			}
+			layer, err := tarball.LayerFromOpener(opener)
+			if err != nil {
+				return err
+			}
+			sourceImage, err = mutate.Append(sourceImage,
+				mutate.Addendum{
+					Layer: layer,
+					History: v1.History{
+						Author:    constants.Author,
+						CreatedBy: dockerCommand.CreatedBy(),
+					},
+				},
+			)
+			if err != nil {
 				return err
 			}
 		}
@@ -113,7 +161,21 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 	if err := setDefaultEnv(); err != nil {
 		return err
 	}
-	return image.PushImage(sourceImage, destination, dockerInsecureSkipTLSVerify)
+
+	wo := remote.WriteOptions{}
+	if ref != nil {
+		wo.MountPaths = []name.Repository{ref.Context()}
+	}
+	pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
+	if err != nil {
+		return err
+	}
+	sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
+	if err != nil {
+		return err
+	}
+
+	return remote.Write(destRef, sourceImage, pushAuth, http.DefaultTransport, wo)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {
@@ -127,7 +189,7 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
-func resolveOnBuild(stage *instructions.Stage, config *manifest.Schema2Config) error {
+func resolveOnBuild(stage *instructions.Stage, config *v1.Config) error {
 	if config.OnBuild == nil {
 		return nil
 	}

@@ -19,12 +19,12 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 )
 
 func TestUpdateEnvConfig(t *testing.T) {
-	cfg := &manifest.Schema2Config{
+	cfg := &v1.Config{
 		Env: []string{
 			"PATH=/path/to/dir",
 			"hey=hey",
@@ -55,7 +55,7 @@ func TestUpdateEnvConfig(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedEnvArray, cfg.Env)
 }
 func Test_EnvExecute(t *testing.T) {
-	cfg := &manifest.Schema2Config{
+	cfg := &v1.Config{
 		Env: []string{
 			"path=/usr/",
 			"home=/root",

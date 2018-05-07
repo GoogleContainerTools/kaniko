@@ -72,6 +72,10 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
+		if err := os.Chdir("/"); err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
 		if err := executor.DoBuild(dockerfilePath, srcContext, destination, snapshotMode, dockerInsecureSkipTLSVerify); err != nil {
 			logrus.Error(err)
 			os.Exit(1)

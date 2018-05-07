@@ -17,8 +17,8 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -28,7 +28,7 @@ type DockerCommand interface {
 	// 	1. Making required changes to the filesystem (ex. copying files for ADD/COPY or setting ENV variables)
 	//  2. Updating metadata fields in the config
 	// It should not change the config history.
-	ExecuteCommand(*manifest.Schema2Config) error
+	ExecuteCommand(*v1.Config) error
 	// The config history has a "created by" field, should return information about the command
 	CreatedBy() string
 	// A list of files to snapshot, empty for metadata commands or nil if we don't know
@@ -61,6 +61,8 @@ func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, e
 		return &OnBuildCommand{cmd: c}, nil
 	case *instructions.VolumeCommand:
 		return &VolumeCommand{cmd: c}, nil
+	case *instructions.StopSignalCommand:
+		return &StopSignalCommand{cmd: c}, nil
 	case *instructions.MaintainerCommand:
 		logrus.Warnf("%s is deprecated, skipping", cmd.Name())
 		return nil, nil

@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +30,7 @@ type UserCommand struct {
 	cmd *instructions.UserCommand
 }
 
-func (r *UserCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (r *UserCommand) ExecuteCommand(config *v1.Config) error {
 	logrus.Info("cmd: USER")
 	u := r.cmd.User
 	userAndGroup := strings.Split(u, ":")
