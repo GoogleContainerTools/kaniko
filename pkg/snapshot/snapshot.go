@@ -19,10 +19,8 @@ package snapshot
 import (
 	"archive/tar"
 	"bytes"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
-
 	"io"
 	"io/ioutil"
 	"os"
@@ -52,12 +50,14 @@ func (s *Snapshotter) Init() error {
 // TakeSnapshot takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string) ([]byte, error) {
-	if files != nil {
-		return s.TakeSnapshotOfFiles(files)
-	}
-	logrus.Info("Taking snapshot of full filesystem...")
 	buf := bytes.NewBuffer([]byte{})
-	filesAdded, err := s.snapShotFS(buf)
+	var filesAdded bool
+	var err error
+	if files == nil {
+		filesAdded, err = s.snapShotFS(buf)
+	} else {
+		filesAdded, err = s.snapshotFiles(buf, files)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -68,45 +68,57 @@ func (s *Snapshotter) TakeSnapshot(files []string) ([]byte, error) {
 	return contents, err
 }
 
-// TakeSnapshotOfFiles takes a snapshot of specific files
+// snapshotFiles takes a snapshot of specific files
 // Used for ADD/COPY commands, when we know which files have changed
-func (s *Snapshotter) TakeSnapshotOfFiles(files []string) ([]byte, error) {
-	logrus.Infof("Taking snapshot of files %v...", files)
+func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
+	s.hardlinks = map[uint64]string{}
 	s.l.Snapshot()
 	if len(files) == 0 {
 		logrus.Info("No files changed in this command, skipping snapshotting.")
-		return nil, nil
+		return false, nil
 	}
-	buf := bytes.NewBuffer([]byte{})
-	w := tar.NewWriter(buf)
-	defer w.Close()
-	filesAdded := false
+	logrus.Infof("Taking snapshot of files %v...", files)
+	snapshottedFiles := make(map[string]bool)
 	for _, file := range files {
-		info, err := os.Lstat(file)
-		if err != nil {
-			return nil, err
+		parentDirs := util.ParentDirectories(file)
+		files = append(parentDirs, files...)
+	}
+	filesAdded := false
+	w := tar.NewWriter(f)
+	defer w.Close()
+
+	// Now create the tar.
+	for _, file := range files {
+		file = filepath.Clean(file)
+		if val, ok := snapshottedFiles[file]; ok && val {
+			continue
 		}
 		if util.PathInWhitelist(file, s.directory) {
-			logrus.Debugf("Not adding %s to layer, as it is whitelisted", file)
+			logrus.Debugf("Not adding %s to layer, as it's whitelisted", file)
 			continue
+		}
+		snapshottedFiles[file] = true
+		info, err := os.Lstat(file)
+		if err != nil {
+			return false, err
 		}
 		// Only add to the tar if we add it to the layeredmap.
 		maybeAdd, err := s.l.MaybeAdd(file)
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 		if maybeAdd {
 			filesAdded = true
-			util.AddToTar(file, info, s.hardlinks, w)
+			if err := util.AddToTar(file, info, s.hardlinks, w); err != nil {
+				return false, err
+			}
 		}
 	}
-	if !filesAdded {
-		return nil, nil
-	}
-	return ioutil.ReadAll(buf)
+	return filesAdded, nil
 }
 
 func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
+	logrus.Info("Taking snapshot of full filesystem...")
 	s.hardlinks = map[uint64]string{}
 	s.l.Snapshot()
 	existingPaths := s.l.GetFlattenedPathsForWhiteOut()

@@ -290,6 +290,23 @@ func Files(root string) ([]string, error) {
 	return files, err
 }
 
+// ParentDirectories returns a list of paths to all parent directories
+// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
+func ParentDirectories(path string) []string {
+	path = filepath.Clean(path)
+	dirs := strings.Split(path, "/")
+	dirPath := constants.RootDir
+	var paths []string
+	for index, dir := range dirs {
+		if dir == "" || index == (len(dirs)-1) {
+			continue
+		}
+		dirPath = filepath.Join(dirPath, dir)
+		paths = append(paths, dirPath)
+	}
+	return paths
+}
+
 // FilepathExists returns true if the path exists
 func FilepathExists(path string) bool {
 	_, err := os.Lstat(path)

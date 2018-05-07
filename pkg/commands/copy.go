@@ -17,14 +17,14 @@ limitations under the License.
 package commands
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 type CopyCommand struct {
@@ -58,11 +58,19 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 		if err != nil {
 			return err
 		}
-		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
+		cwd := config.WorkingDir
+		if cwd == "" {
+			cwd = constants.RootDir
+		}
+		destPath, err := util.DestinationFilepath(src, dest, cwd)
 		if err != nil {
 			return err
 		}
 		if fi.IsDir() {
+			if !filepath.IsAbs(dest) {
+				// we need to add '/' to the end to indicate the destination is a directory
+				dest = filepath.Join(cwd, dest) + "/"
+			}
 			if err := util.CopyDir(fullPath, dest); err != nil {
 				return err
 			}
