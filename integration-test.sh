@@ -25,7 +25,7 @@ if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     mv $KOKORO_GFILE_DIR/container-diff-linux-amd64 $KOKORO_GFILE_DIR/container-diff
     chmod +x $KOKORO_GFILE_DIR/container-diff
     export PATH=$PATH:$KOKORO_GFILE_DIR
-    ls $HOME/.config/gcloud
+    gcloud auth application-default login -q
 fi
 
 echo "Running integration tests..."
