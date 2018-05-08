@@ -18,14 +18,13 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 type CopyCommand struct {
@@ -43,7 +42,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 
 	// Resolve from
 	if c.cmd.From != "" {
-		c.buildcontext = filepath.Join(constants.BuildContextDir, c.cmd.From)
+		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
 	}
 	// First, resolve any environment replacement
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, config.Env, true)
@@ -67,7 +66,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config) error {
 		if cwd == "" {
 			cwd = constants.RootDir
 		}
-		destPath, err := util.DestinationFilepath(src, dest, config.WorkingDir)
+		destPath, err := util.DestinationFilepath(src, dest, cwd)
 		if err != nil {
 			return err
 		}

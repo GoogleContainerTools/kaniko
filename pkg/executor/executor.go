@@ -141,7 +141,8 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string) (name.Reference, v
 				mutate.Addendum{
 					Layer: layer,
 					History: v1.History{
-						Author: constants.Author,
+						Author:    constants.Author,
+						CreatedBy: dockerCommand.CreatedBy(),
 					},
 				},
 			)
@@ -192,7 +193,7 @@ func saveStageDependencies(index int, stages []instructions.Stage) error {
 	}
 	// Then, create the directory they will exist in
 	i := strconv.Itoa(index)
-	dependencyDir := filepath.Join(constants.BuildContextDir, i)
+	dependencyDir := filepath.Join(constants.KanikoDir, i)
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}

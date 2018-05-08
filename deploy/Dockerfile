@@ -18,11 +18,14 @@ FROM golang:1.10
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 COPY . .
 RUN make
+WORKDIR /usr/local/bin
+ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3-static/docker-credential-gcr_linux_amd64-1.4.3.tar.gz .
+RUN tar -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-1.4.3.tar.gz
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY --from=0 /usr/local/bin/docker-credential-gcr /usr/local/bin/docker-credential-gcr
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY files/docker-credential-gcr /usr/local/bin/
 COPY files/config.json /root/.docker/
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV HOME /root
