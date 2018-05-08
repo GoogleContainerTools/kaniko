@@ -88,8 +88,6 @@ func TestRun(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			fmt.Printf("%s\n", dockerfile)
-			// Parallelization is broken, we can reevaluate if we really need it.
-			// t.Parallel()
 
 			// build docker image
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
