@@ -17,3 +17,7 @@ RUN echo "hey" > /etc/foo
 RUN echo "baz" > /etc/baz
 RUN cp /etc/baz /etc/bar
 RUN rm /etc/baz
+
+# Test with ARG
+ARG file
+RUN echo "run" > $file

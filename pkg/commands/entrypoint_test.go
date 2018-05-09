@@ -55,7 +55,7 @@ func TestEntrypointExecuteCmd(t *testing.T) {
 				},
 			},
 		}
-		err := cmd.ExecuteCommand(cfg)
+		err := cmd.ExecuteCommand(cfg, nil)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedCmd, cfg.Entrypoint)
 	}
 }

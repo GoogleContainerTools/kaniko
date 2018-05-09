@@ -21,9 +21,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/genuinetools/amicontained/container"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/genuinetools/amicontained/container"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -40,6 +40,7 @@ var (
 	dockerInsecureSkipTLSVerify bool
 	logLevel                    string
 	force                       bool
+	buildArgs                   buildArg
 )
 
 func init() {
@@ -49,6 +50,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
 	RootCmd.MarkPersistentFlagRequired("destination")
 	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
+	RootCmd.PersistentFlags().VarP(&buildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&dockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
@@ -77,11 +79,31 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		if err := executor.DoBuild(dockerfilePath, srcContext, destination, snapshotMode, dockerInsecureSkipTLSVerify); err != nil {
+		if err := executor.DoBuild(dockerfilePath, srcContext, destination, snapshotMode, dockerInsecureSkipTLSVerify, buildArgs); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
 	},
+}
+
+type buildArg []string
+
+// Now, for our new type, implement the two methods of
+// the flag.Value interface...
+// The first method is String() string
+func (b *buildArg) String() string {
+	return strings.Join(*b, ",")
+}
+
+// The second method is Set(value string) error
+func (b *buildArg) Set(value string) error {
+	logrus.Infof("appending to build args %s", value)
+	*b = append(*b, value)
+	return nil
+}
+
+func (b *buildArg) Type() string {
+	return "Build ARG Type"
 }
 
 func checkContained() bool {

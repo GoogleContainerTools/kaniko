@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -62,8 +63,8 @@ func TestExecuteOnbuild(t *testing.T) {
 				Expression: test.expression,
 			},
 		}
-
-		err := onbuildCmd.ExecuteCommand(cfg)
+		buildArgs := dockerfile.NewBuildArgs([]string{})
+		err := onbuildCmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedArray, cfg.OnBuild)
 	}
 

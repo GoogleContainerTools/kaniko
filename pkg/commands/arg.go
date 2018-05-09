@@ -24,31 +24,23 @@ import (
 	"strings"
 )
 
-type ShellCommand struct {
-	cmd *instructions.ShellCommand
+type ArgCommand struct {
+	cmd *instructions.ArgCommand
 }
 
-// ExecuteCommand handles command processing similar to CMD and RUN,
-func (s *ShellCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: SHELL")
-	var newShell []string
-
-	newShell = s.cmd.Shell
-
-	logrus.Infof("Replacing Shell in config with %v", newShell)
-	config.Shell = newShell
+// ExecuteCommand only needs to add this ARG key/value as seen
+func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Info("ARG")
+	buildArgs.AddArg(r.cmd.Key, r.cmd.Value)
 	return nil
 }
 
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (s *ShellCommand) FilesToSnapshot() []string {
+// FilesToSnapshot returns an empty array since this command only touches metadata.
+func (r *ArgCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
 // CreatedBy returns some information about the command for the image config history
-func (s *ShellCommand) CreatedBy() string {
-	entrypoint := []string{"SHELL"}
-	cmdLine := strings.Join(s.cmd.Shell, " ")
-
-	return strings.Join(append(entrypoint, cmdLine), " ")
+func (r *ArgCommand) CreatedBy() string {
+	return strings.Join([]string{r.cmd.Name(), r.cmd.Key}, " ")
 }

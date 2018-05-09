@@ -11,3 +11,7 @@ ENV dir /another/new/dir
 WORKDIR $dir/newdir
 WORKDIR $dir/$doesntexist
 WORKDIR /
+
+# Test with ARG
+ARG workdir
+WORKDIR $workdir

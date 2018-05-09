@@ -16,12 +16,10 @@ limitations under the License.
 package commands
 
 import (
-	"testing"
-
-	"github.com/google/go-containerregistry/v1"
-
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
+	"testing"
 )
 
 var cmdTests = []struct {
@@ -56,7 +54,7 @@ func TestExecuteCmd(t *testing.T) {
 				},
 			},
 		}
-		err := cmd.ExecuteCommand(cfg)
+		err := cmd.ExecuteCommand(cfg, nil)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedCmd, cfg.Cmd)
 	}
 }

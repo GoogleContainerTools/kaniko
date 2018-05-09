@@ -44,7 +44,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, dockerInsecureSkipTLSVerify bool) error {
+func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, dockerInsecureSkipTLSVerify bool, args []string) error {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
@@ -108,6 +108,7 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 	if err != nil {
 		return err
 	}
+	buildArgs := dockerfile.NewBuildArgs(args)
 	// Currently only supports single stage builds
 	for _, stage := range stages {
 		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
@@ -121,7 +122,7 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 			if dockerCommand == nil {
 				continue
 			}
-			if err := dockerCommand.ExecuteCommand(&imageConfig.Config); err != nil {
+			if err := dockerCommand.ExecuteCommand(&imageConfig.Config, buildArgs); err != nil {
 				return err
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot

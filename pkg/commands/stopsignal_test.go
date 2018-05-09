@@ -16,11 +16,11 @@ limitations under the License.
 package commands
 
 import (
-	"testing"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
+	"testing"
 )
 
 var stopsignalTests = []struct {
@@ -54,7 +54,8 @@ func TestStopsignalExecuteCmd(t *testing.T) {
 				Signal: test.signal,
 			},
 		}
-		err := cmd.ExecuteCommand(cfg)
+		b := dockerfile.NewBuildArgs([]string{})
+		err := cmd.ExecuteCommand(cfg, b)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedSignal, cfg.StopSignal)
 	}
 }
