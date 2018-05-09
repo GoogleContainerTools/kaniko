@@ -15,7 +15,7 @@
 // Package b3 contains a propagation.HTTPFormat implementation
 // for B3 propagation. See https://github.com/openzipkin/b3-propagation
 // for more details.
-package b3
+package b3 // import "go.opencensus.io/plugin/ochttp/propagation/b3"
 
 import (
 	"encoding/hex"

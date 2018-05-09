@@ -110,11 +110,7 @@ func DiffIDs(i WithConfigFile) ([]v1.Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	dids := make([]v1.Hash, len(cfg.RootFS.DiffIDs))
-	for i, did := range cfg.RootFS.DiffIDs {
-		dids[len(dids)-i-1] = did
-	}
-	return dids, nil
+	return cfg.RootFS.DiffIDs, nil
 }
 
 // RawConfigFile is a helper for implementing v1.Image
