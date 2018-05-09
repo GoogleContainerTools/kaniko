@@ -25,7 +25,7 @@ if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     mv $KOKORO_GFILE_DIR/container-diff-linux-amd64 $KOKORO_GFILE_DIR/container-diff
     chmod +x $KOKORO_GFILE_DIR/container-diff
     export PATH=$PATH:$KOKORO_GFILE_DIR
-    locate application_default_credentials.json
+    cp $KOKORO_ROOT/src/keystore/72508-gcr_application_creds $HOME/.config/gcloud/application_default_credentials.json
 fi
 
 echo "Running integration tests..."
