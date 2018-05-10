@@ -94,6 +94,12 @@ func GetFSFromImage(img v1.Image) error {
 				logrus.Infof("Not adding %s because it is whitelisted", path)
 				continue
 			}
+			if hdr.Typeflag == tar.TypeSymlink {
+				if checkWhitelist(hdr.Linkname, whitelist) {
+					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
+					continue
+				}
+			}
 			fs[path] = struct{}{}
 
 			if err := extractFile("/", hdr, tr); err != nil {
