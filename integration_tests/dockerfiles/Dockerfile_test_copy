@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/base
+FROM alpine:3.7
 COPY context/foo foo
 COPY context/foo /foodir/
 COPY context/bar/b* bar/
