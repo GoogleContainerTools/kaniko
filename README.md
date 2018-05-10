@@ -201,9 +201,13 @@ spec:
 ```
 ### Debug Image
 
-We provide `gcr.io/kaniko-project/executor:debug` as a a version of the executor image based off a Debian image. 
-This provides a shell and can be useful for debugging.
+The kaniko executor image is based off of scratch and doesn't contain a shell.
+We provide `gcr.io/kaniko-project/executor:debug`, a debug image which consists of the kaniko executor image along with a busybox shell to enter.
 
+You can launch the debug image with a shell entrypoint:
+```shell
+docker run -it --entrypoint=/busybox/sh gcr.io/kaniko-project/executor:debug
+```
 ## Security
  
 kaniko by itself **does not** make it safe to run untrusted builds inside your cluster, or anywhere else.
