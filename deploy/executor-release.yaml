@@ -3,15 +3,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile",
            "-t", "gcr.io/kaniko-project/executor:${COMMIT_SHA}", "."]
-  # Then, we want to clone the distroless repo and build busybox.tar
-  - name: "gcr.io/cloud-builders/git"
-    args: ["clone", "https://github.com/GoogleContainerTools/distroless.git"]
-  - name: "gcr.io/cloud-builders/bazel"
-    args: ["build", "busybox:busybox_tar"]
-    dir: distroless
-  - name: ubuntu
-    args: ["mv", "distroless/bazel-genfiles/busybox/busybox.tar", "files/busybox.tar"]
-  # Then, we want to build the kaniko:debug image with the busybox shell
+  # Then, we want to build kaniko:debug
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
            "-t", "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}", "."]
