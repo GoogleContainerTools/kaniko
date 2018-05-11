@@ -43,6 +43,6 @@ COPY files/config.json /root/.docker/
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV HOME /root
 ENV USER /root
-ENV PATH /usr/local/bin
+ENV PATH /usr/local/bin:/busybox
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENTRYPOINT ["/kaniko/executor"]
