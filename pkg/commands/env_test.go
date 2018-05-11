@@ -18,7 +18,6 @@ package commands
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	docker "github.com/docker/docker/builder/dockerfile"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"testing"
@@ -98,7 +97,7 @@ func Test_EnvExecute(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedEnvs, cfg.Env)
 }
 
-func setUpBuildArgs() *docker.BuildArgs {
+func setUpBuildArgs() *dockerfile.BuildArgs {
 	buildArgs := dockerfile.NewBuildArgs([]string{
 		"buildArg1=foo",
 		"buildArg2=foo2",

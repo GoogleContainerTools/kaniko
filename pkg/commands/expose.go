@@ -18,7 +18,7 @@ package commands
 
 import (
 	"fmt"
-	"github.com/docker/docker/builder/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"

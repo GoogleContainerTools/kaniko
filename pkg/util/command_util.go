@@ -17,7 +17,7 @@ limitations under the License.
 package util
 
 import (
-	"github.com/docker/docker/builder/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
 	"github.com/docker/docker/builder/dockerfile/shell"

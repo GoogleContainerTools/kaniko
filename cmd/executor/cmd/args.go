@@ -14,28 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dockerfile
+package cmd
 
 import (
-	d "github.com/docker/docker/builder/dockerfile"
+	"github.com/sirupsen/logrus"
 	"strings"
 )
 
-type BuildArgs struct {
-	d.BuildArgs
+// The buildArg type is used to pass in multiple --build-arg flags
+type buildArg []string
+
+// Now, for our new type, implement the two methods of
+// the flag.Value interface...
+// The first method is String() string
+func (b *buildArg) String() string {
+	return strings.Join(*b, ",")
 }
 
-func NewBuildArgs(args []string) *BuildArgs {
-	argsFromOptions := make(map[string]*string)
-	for _, a := range args {
-		s := strings.Split(a, "=")
-		if len(s) == 1 {
-			argsFromOptions[s[0]] = nil
-		} else {
-			argsFromOptions[s[0]] = &s[1]
-		}
-	}
-	return &BuildArgs{
-		*d.NewBuildArgs(argsFromOptions),
-	}
+// The second method is Set(value string) error
+func (b *buildArg) Set(value string) error {
+	logrus.Infof("appending to build args %s", value)
+	*b = append(*b, value)
+	return nil
+}
+
+func (b *buildArg) Type() string {
+	return "build-arg type"
 }

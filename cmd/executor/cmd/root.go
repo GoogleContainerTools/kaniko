@@ -23,7 +23,6 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/genuinetools/amicontained/container"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -84,26 +83,6 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-}
-
-type buildArg []string
-
-// Now, for our new type, implement the two methods of
-// the flag.Value interface...
-// The first method is String() string
-func (b *buildArg) String() string {
-	return strings.Join(*b, ",")
-}
-
-// The second method is Set(value string) error
-func (b *buildArg) Set(value string) error {
-	logrus.Infof("appending to build args %s", value)
-	*b = append(*b, value)
-	return nil
-}
-
-func (b *buildArg) Type() string {
-	return "Build ARG Type"
 }
 
 func checkContained() bool {

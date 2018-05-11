@@ -17,7 +17,7 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/docker/docker/builder/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"os"
 	"path/filepath"
 
