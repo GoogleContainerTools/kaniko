@@ -20,8 +20,28 @@
 
 [[constraint]]
   name = "github.com/docker/docker"
-  revision = "b1a1234c60cf87048814aa37da523b03a7b0d344"
+  revision = "dfde597fbbb5de4a7559a68980401c8c405aa9af"
   source = "github.com/docker/docker"
+
+[[override]]
+  name = "github.com/opencontainers/runc"
+  revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
+  source = "github.com/opencontainers/runc"
+
+[[override]]
+  name = "github.com/ishidawataru/sctp"
+  revision = "07191f837fedd2f13d1ec7b5f885f0f3ec54b1cb"
+  source = "github.com/ishidawataru/sctp"
+
+[[override]]
+  name = "github.com/vishvananda/netlink"
+  revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
+  source = "github.com/vishvananda/netlink"
+
+[[override]]
+  name = "google.golang.org/grpc"
+  revision = "8124abf74e7633d82a5b96585b0da487d0e6eed0"
+  source = "google.golang.org/grpc"
 
 [[constraint]]
   name = "github.com/genuinetools/amicontained"

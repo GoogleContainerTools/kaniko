@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -30,7 +31,7 @@ type CmdCommand struct {
 
 // ExecuteCommand executes the CMD command
 // Argument handling is the same as RUN.
-func (c *CmdCommand) ExecuteCommand(config *v1.Config) error {
+func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: CMD")
 	var newCommand []string
 	if c.cmd.PrependShell {

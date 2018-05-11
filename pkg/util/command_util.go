@@ -17,9 +17,11 @@ limitations under the License.
 package util
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
 	"github.com/docker/docker/builder/dockerfile/shell"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -221,4 +223,11 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 		return false
 	}
 	return true
+}
+
+// ReplacementEnvs returns a list of all variables that can be used for
+// environment replacement
+func ReplacementEnvs(config *v1.Config, buildArgs *dockerfile.BuildArgs) []string {
+	filtered := buildArgs.FilterAllowed(config.Env)
+	return append(config.Env, filtered...)
 }

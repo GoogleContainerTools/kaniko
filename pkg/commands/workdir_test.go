@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -78,7 +79,8 @@ func TestWorkdirCommand(t *testing.T) {
 			},
 			snapshotFiles: []string{},
 		}
-		cmd.ExecuteCommand(cfg)
+		buildArgs := dockerfile.NewBuildArgs([]string{})
+		cmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, nil, test.expectedPath, cfg.WorkingDir)
 	}
 }

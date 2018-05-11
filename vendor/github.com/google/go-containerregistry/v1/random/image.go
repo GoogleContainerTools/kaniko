@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/go-containerregistry/v1"
 	"github.com/google/go-containerregistry/v1/partial"
@@ -69,6 +70,15 @@ func Image(byteSize, layers int64) (v1.Image, error) {
 	// It is ok that iteration order is random in Go, because this is the random image anyways.
 	for k := range layerz {
 		cfg.RootFS.DiffIDs = append(cfg.RootFS.DiffIDs, k)
+	}
+
+	for i := int64(0); i < layers; i++ {
+		cfg.History = append(cfg.History, v1.History{
+			Author:    "random.Image",
+			Comment:   fmt.Sprintf("this is a random history %d", i),
+			CreatedBy: "random",
+			Created:   v1.Time{time.Now()},
+		})
 	}
 
 	return partial.UncompressedToImage(&image{

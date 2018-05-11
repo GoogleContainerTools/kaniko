@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
@@ -53,11 +54,7 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 	if err != nil {
 		return err
 	}
-	cfg, err := img.ConfigFile()
-	if err != nil {
-		return err
-	}
-	cfgBlob, err := json.Marshal(cfg)
+	cfgBlob, err := img.RawConfigFile()
 	if err != nil {
 		return err
 	}
@@ -70,14 +67,24 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 	if err != nil {
 		return err
 	}
-	digests := make([]string, len(layers))
+	layerFiles := make([]string, len(layers))
 	for i, l := range layers {
 		d, err := l.Digest()
 		if err != nil {
 			return err
 		}
 
-		digests[i] = d.String()
+		// Munge the file name to appease ancient technology.
+		//
+		// tar assumes anything with a colon is a remote tape drive:
+		// https://www.gnu.org/software/tar/manual/html_section/tar_45.html
+		// Drop the algorithm prefix, e.g. "sha256:"
+		hex := d.Hex
+
+		// gunzip expects certain file extensions:
+		// https://www.gnu.org/software/gzip/manual/html_node/Overview.html
+		layerFiles[i] = fmt.Sprintf("%s.tar.gz", hex)
+
 		r, err := l.Compressed()
 		if err != nil {
 			return err
@@ -87,9 +94,10 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 			return err
 		}
 
-		if err := writeFile(tf, d.String(), r, blobSize); err != nil {
+		if err := writeFile(tf, layerFiles[i], r, blobSize); err != nil {
 			return err
 		}
+
 	}
 
 	// Generate the tar descriptor and write it.
@@ -97,7 +105,7 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 		singleImageTarDescriptor{
 			Config:   cfgName.String(),
 			RepoTags: []string{tag.String()},
-			Layers:   digests,
+			Layers:   layerFiles,
 		},
 	}
 	tdBytes, err := json.Marshal(td)

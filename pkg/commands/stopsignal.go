@@ -17,13 +17,13 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/pkg/signal"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 type StopSignalCommand struct {
@@ -31,11 +31,12 @@ type StopSignalCommand struct {
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (s *StopSignalCommand) ExecuteCommand(config *v1.Config) error {
+func (s *StopSignalCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: STOPSIGNAL")
 
 	// resolve possible environment variables
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList([]string{s.cmd.Signal}, config.Env, false)
+	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	resolvedEnvs, err := util.ResolveEnvironmentReplacementList([]string{s.cmd.Signal}, replacementEnvs, false)
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -29,15 +30,16 @@ type EnvCommand struct {
 	cmd *instructions.EnvCommand
 }
 
-func (e *EnvCommand) ExecuteCommand(config *v1.Config) error {
+func (e *EnvCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env
+	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
 	for index, pair := range newEnvs {
-		expandedKey, err := util.ResolveEnvironmentReplacement(pair.Key, config.Env, false)
+		expandedKey, err := util.ResolveEnvironmentReplacement(pair.Key, replacementEnvs, false)
 		if err != nil {
 			return err
 		}
-		expandedValue, err := util.ResolveEnvironmentReplacement(pair.Value, config.Env, false)
+		expandedValue, err := util.ResolveEnvironmentReplacement(pair.Value, replacementEnvs, false)
 		if err != nil {
 			return err
 		}

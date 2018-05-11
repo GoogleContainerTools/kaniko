@@ -109,7 +109,7 @@ func computeDigest(opener Opener, compressed bool) (v1.Hash, int64, error) {
 		return v1.Hash{}, 0, err
 	}
 	defer rc.Close()
-	
+
 	if compressed {
 		return v1.SHA256(rc)
 	}
