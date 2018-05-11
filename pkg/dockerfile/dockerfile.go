@@ -123,12 +123,15 @@ func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) 
 				if err := util.UpdateConfigEnv(c.Env, &imageConfig.Config, replacementEnvs); err != nil {
 					return nil, err
 				}
+			case *instructions.ArgCommand:
+				buildArgs.AddArg(c.Key, c.Value)
 			case *instructions.CopyCommand:
 				if c.From != strconv.Itoa(index) {
 					continue
 				}
 				// First, resolve any environment replacement
-				resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.SourcesAndDest, imageConfig.Config.Env, true)
+				replacementEnvs := buildArgs.ReplacementEnvs(imageConfig.Config.Env)
+				resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.SourcesAndDest, replacementEnvs, true)
 				if err != nil {
 					return nil, err
 				}

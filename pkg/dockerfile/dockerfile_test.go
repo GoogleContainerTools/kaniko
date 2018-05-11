@@ -89,7 +89,48 @@ func Test_Dependencies(t *testing.T) {
 	}
 
 	for index := range stages {
-		actualDeps, err := Dependencies(index, stages)
+		buildArgs := NewBuildArgs([]string{})
+		actualDeps, err := Dependencies(index, stages, buildArgs)
+		testutil.CheckErrorAndDeepEqual(t, false, err, expectedDependencies[index], actualDeps)
+	}
+}
+
+func Test_DependenciesWithArg(t *testing.T) {
+	testDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	helloPath := filepath.Join(testDir, "hello")
+	if err := os.Mkdir(helloPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	dockerfile := fmt.Sprintf(`
+	FROM scratch
+	COPY %s %s
+	
+	FROM scratch AS second
+	ARG hienv
+	COPY a b
+	COPY --from=0 /$hienv %s /hi2/
+	`, helloPath, helloPath, testDir)
+
+	stages, err := Parse([]byte(dockerfile))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDependencies := [][]string{
+		{
+			helloPath,
+			testDir,
+		},
+		nil,
+	}
+	buildArgs := NewBuildArgs([]string{fmt.Sprintf("hienv=%s", helloPath)})
+
+	for index := range stages {
+		actualDeps, err := Dependencies(index, stages, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, err, expectedDependencies[index], actualDeps)
 	}
 }
