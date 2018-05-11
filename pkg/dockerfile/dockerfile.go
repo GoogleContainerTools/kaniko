@@ -18,7 +18,6 @@ package dockerfile
 
 import (
 	"bytes"
-	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -88,7 +87,7 @@ func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 }
 
 // Dependencies returns a list of files in this stage that will be needed in later stages
-func Dependencies(index int, stages []instructions.Stage) ([]string, error) {
+func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) ([]string, error) {
 	var dependencies []string
 	for stageIndex, stage := range stages {
 		if stageIndex <= index {
@@ -120,8 +119,8 @@ func Dependencies(index int, stages []instructions.Stage) ([]string, error) {
 		for _, cmd := range stage.Commands {
 			switch c := cmd.(type) {
 			case *instructions.EnvCommand:
-				envCommand := commands.NewEnvCommand(c)
-				if err := envCommand.ExecuteCommand(&imageConfig.Config); err != nil {
+				replacementEnvs := buildArgs.ReplacementEnvs(imageConfig.Config.Env)
+				if err := util.UpdateConfigEnv(c.Env, &imageConfig.Config, replacementEnvs); err != nil {
 					return nil, err
 				}
 			case *instructions.CopyCommand:

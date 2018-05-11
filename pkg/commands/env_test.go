@@ -16,11 +16,11 @@ limitations under the License.
 package commands
 
 import (
-	"testing"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
+	"testing"
 )
 
 func TestUpdateEnvConfig(t *testing.T) {
@@ -77,6 +77,10 @@ func Test_EnvExecute(t *testing.T) {
 					Key:   "$path",
 					Value: "$home/",
 				},
+				{
+					Key:   "$buildArg1",
+					Value: "$buildArg2",
+				},
 			},
 		},
 	}
@@ -86,7 +90,20 @@ func Test_EnvExecute(t *testing.T) {
 		"home=/root",
 		"HOME=/root",
 		"/usr/=/root/",
+		"foo=foo2",
 	}
-	err := envCmd.ExecuteCommand(cfg)
+	buildArgs := setUpBuildArgs()
+	err := envCmd.ExecuteCommand(cfg, buildArgs)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedEnvs, cfg.Env)
+}
+
+func setUpBuildArgs() *dockerfile.BuildArgs {
+	buildArgs := dockerfile.NewBuildArgs([]string{
+		"buildArg1=foo",
+		"buildArg2=foo2",
+	})
+	buildArgs.AddArg("buildArg1", nil)
+	d := "default"
+	buildArgs.AddArg("buildArg2", &d)
+	return buildArgs
 }

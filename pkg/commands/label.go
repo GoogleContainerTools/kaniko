@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -29,24 +30,29 @@ type LabelCommand struct {
 	cmd *instructions.LabelCommand
 }
 
-func (r *LabelCommand) ExecuteCommand(config *v1.Config) error {
+func (r *LabelCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: LABEL")
-	return updateLabels(r.cmd.Labels, config)
+	return updateLabels(r.cmd.Labels, config, buildArgs)
 }
 
-func updateLabels(labels []instructions.KeyValuePair, config *v1.Config) error {
+func updateLabels(labels []instructions.KeyValuePair, config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	existingLabels := config.Labels
 	if existingLabels == nil {
 		existingLabels = make(map[string]string)
 	}
 	// Let's unescape values before setting the label
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	for index, kvp := range labels {
-		unescaped, err := util.ResolveEnvironmentReplacement(kvp.Value, []string{}, false)
+		key, err := util.ResolveEnvironmentReplacement(kvp.Key, replacementEnvs, false)
+		if err != nil {
+			return err
+		}
+		unescaped, err := util.ResolveEnvironmentReplacement(kvp.Value, replacementEnvs, false)
 		if err != nil {
 			return err
 		}
 		labels[index] = instructions.KeyValuePair{
-			Key:   kvp.Key,
+			Key:   key,
 			Value: unescaped,
 		}
 	}

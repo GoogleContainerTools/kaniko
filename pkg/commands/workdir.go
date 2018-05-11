@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"os"
 	"path/filepath"
 
@@ -31,10 +32,11 @@ type WorkdirCommand struct {
 	snapshotFiles []string
 }
 
-func (w *WorkdirCommand) ExecuteCommand(config *v1.Config) error {
+func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: workdir")
 	workdirPath := w.cmd.Path
-	resolvedWorkingDir, err := util.ResolveEnvironmentReplacement(workdirPath, config.Env, true)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	resolvedWorkingDir, err := util.ResolveEnvironmentReplacement(workdirPath, replacementEnvs, true)
 	if err != nil {
 		return err
 	}

@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -49,7 +50,7 @@ func TestUpdateVolume(t *testing.T) {
 		"/var/lib": {},
 		"/etc":     {},
 	}
-
-	err := volumeCmd.ExecuteCommand(cfg)
+	buildArgs := dockerfile.NewBuildArgs([]string{})
+	err := volumeCmd.ExecuteCommand(cfg, buildArgs)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedVolumes, cfg.Volumes)
 }

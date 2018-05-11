@@ -21,23 +21,24 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/genuinetools/amicontained/container"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/genuinetools/amicontained/container"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	dockerfilePath string
-	destination    string
-	srcContext     string
-	snapshotMode   string
-	bucket         string
-	logLevel       string
-	force          bool
+	dockerfilePath              string
+	destination                 string
+	srcContext                  string
+	snapshotMode                string
+	bucket                      string
+	dockerInsecureSkipTLSVerify bool
+	logLevel                    string
+	force                       bool
+	buildArgs                   buildArg
 )
 
 func init() {
@@ -45,7 +46,10 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
+	RootCmd.MarkPersistentFlagRequired("destination")
 	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
+	RootCmd.PersistentFlags().VarP(&buildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
+	RootCmd.PersistentFlags().BoolVarP(&dockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 }
@@ -73,7 +77,7 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		ref, image, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode)
+		ref, image, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode, buildArgs)
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)

@@ -3,4 +3,9 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile",
            "-t", "gcr.io/kaniko-project/executor:${COMMIT_SHA}", "."]
-images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}"]
+  # Then, we want to build kaniko:debug
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile_debug",
+           "-t", "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}", "."]
+images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}",
+         "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}"]

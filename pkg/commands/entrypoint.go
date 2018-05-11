@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -29,7 +30,7 @@ type EntrypointCommand struct {
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (e *EntrypointCommand) ExecuteCommand(config *v1.Config) error {
+func (e *EntrypointCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: ENTRYPOINT")
 	var newCommand []string
 	if e.cmd.PrependShell {

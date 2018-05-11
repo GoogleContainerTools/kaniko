@@ -39,7 +39,7 @@ type bearerTransport struct {
 	realm string
 	// See https://docs.docker.com/registry/spec/auth/token/
 	service string
-	scope   string
+	scopes  []string
 }
 
 var _ http.RoundTripper = (*bearerTransport)(nil)
@@ -77,7 +77,7 @@ func (bt *bearerTransport) refresh() error {
 	client := http.Client{Transport: b}
 
 	u.RawQuery = url.Values{
-		"scope":   []string{bt.scope},
+		"scope":   bt.scopes,
 		"service": []string{bt.service},
 	}.Encode()
 

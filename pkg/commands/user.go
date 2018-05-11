@@ -17,30 +17,31 @@ limitations under the License.
 package commands
 
 import (
-	"os/user"
-	"strings"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
+	"os/user"
+	"strings"
 )
 
 type UserCommand struct {
 	cmd *instructions.UserCommand
 }
 
-func (r *UserCommand) ExecuteCommand(config *v1.Config) error {
+func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: USER")
 	u := r.cmd.User
 	userAndGroup := strings.Split(u, ":")
-	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], config.Env, false)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
 	if err != nil {
 		return err
 	}
 	var groupStr string
 	if len(userAndGroup) > 1 {
-		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], config.Env, false)
+		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
 		if err != nil {
 			return err
 		}
