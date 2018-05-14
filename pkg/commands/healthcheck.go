@@ -33,13 +33,8 @@ type HealthCheckCommand struct {
 func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: HEALTHCHECK")
 
-	config.Healthcheck = &v1.HealthConfig{
-		Test:        h.cmd.Health.Test,
-		Interval:    h.cmd.Health.Interval,
-		Timeout:     h.cmd.Health.Timeout,
-		StartPeriod: h.cmd.Health.StartPeriod,
-		Retries:     h.cmd.Health.Retries,
-	}
+	check := v1.HealthConfig(*h.cmd.Health)
+	config.Healthcheck = &check
 
 	return nil
 }
