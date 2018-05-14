@@ -157,7 +157,7 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 			}
 			return ref, sourceImage, nil
 		}
-		if err := saveStageDependencies(index, stages, buildArgs); err != nil {
+		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
 			return nil, nil, err
 		}
 		// Delete the filesystem
