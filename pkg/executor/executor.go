@@ -158,6 +158,12 @@ func DoBuild(dockerfilePath, srcContext, destination, snapshotMode string, docke
 			}
 		}
 	}
+
+	if destination == "" {
+		// Skip pushing the image
+		return nil
+	}
+
 	// Push the image
 	if err := setDefaultEnv(); err != nil {
 		return err
