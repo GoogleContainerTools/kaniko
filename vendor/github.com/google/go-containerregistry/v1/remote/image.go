@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -115,7 +114,6 @@ func (r *remoteImage) RawManifest() ([]byte, error) {
 		err := fmt.Errorf("manifest digest: %q does not match Docker-Content-Digest: %q for %q", digest, checksum, r.ref)
 		if r.ref.Context().RegistryStr() == name.DefaultRegistry {
 			// TODO(docker/distribution#2395): Remove this check.
-			log.Println(err)
 		} else {
 			// When pulling by tag, we can only validate that the digest matches what the registry told us it should be.
 			return nil, err
