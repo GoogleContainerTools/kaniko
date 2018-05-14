@@ -32,20 +32,24 @@ type WriteOptions struct {
 	// TODO(mattmoor): Whether to store things compressed?
 }
 
-// Write saves the image as the given tag in a tarball at the given path.
-func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
-	// Write in the compressed format.
-	// This is a tarball, on-disk, with:
-	// One manifest.json file at the top level containing information about several images.
-	// One file for each layer, named after the layer's SHA.
-	// One file for the config blob, named after its SHA.
-
+// WriteToFile writes in the compressed format to a tarball, on disk.
+// This is just syntactic sugar wrapping tarball.Write with a new file.
+func WriteToFile(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 	w, err := os.Create(p)
 	if err != nil {
 		return err
 	}
 	defer w.Close()
 
+	return Write(tag, img, wo, w)
+}
+
+// Write the contents of the image to the provided reader, in the compressed format.
+// The contents are written in the following format:
+// One manifest.json file at the top level containing information about several images.
+// One file for each layer, named after the layer's SHA.
+// One file for the config blob, named after its SHA.
+func Write(tag name.Tag, img v1.Image, wo *WriteOptions, w io.Writer) error {
 	tf := tar.NewWriter(w)
 	defer tf.Close()
 
@@ -58,7 +62,7 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 	if err != nil {
 		return err
 	}
-	if err := writeFile(tf, cfgName.String(), bytes.NewReader(cfgBlob), int64(len(cfgBlob))); err != nil {
+	if err := writeTarEntry(tf, cfgName.String(), bytes.NewReader(cfgBlob), int64(len(cfgBlob))); err != nil {
 		return err
 	}
 
@@ -94,10 +98,9 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 			return err
 		}
 
-		if err := writeFile(tf, layerFiles[i], r, blobSize); err != nil {
+		if err := writeTarEntry(tf, layerFiles[i], r, blobSize); err != nil {
 			return err
 		}
-
 	}
 
 	// Generate the tar descriptor and write it.
@@ -112,10 +115,11 @@ func Write(p string, tag name.Tag, img v1.Image, wo *WriteOptions) error {
 	if err != nil {
 		return err
 	}
-	return writeFile(tf, "manifest.json", bytes.NewReader(tdBytes), int64(len(tdBytes)))
+	return writeTarEntry(tf, "manifest.json", bytes.NewReader(tdBytes), int64(len(tdBytes)))
 }
 
-func writeFile(tf *tar.Writer, path string, r io.Reader, size int64) error {
+// write a file to the provided writer with a corresponding tar header
+func writeTarEntry(tf *tar.Writer, path string, r io.Reader, size int64) error {
 	hdr := &tar.Header{
 		Mode:     0644,
 		Typeflag: tar.TypeReg,

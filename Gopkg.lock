@@ -393,7 +393,7 @@
     "v1/types",
     "v1/v1util"
   ]
-  revision = "71d387b23c8c5488e8a70a39b0b214af1ac01f30"
+  revision = "ee5a6c257df843b47a2666ff0fff3d31d484ebda"
 
 [[projects]]
   name = "github.com/googleapis/gax-go"
