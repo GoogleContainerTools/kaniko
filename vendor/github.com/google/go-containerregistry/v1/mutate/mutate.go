@@ -15,13 +15,20 @@
 package mutate
 
 import (
+	"archive/tar"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/go-containerregistry/v1"
 	"github.com/google/go-containerregistry/v1/partial"
 	"github.com/google/go-containerregistry/v1/types"
 )
+
+const whiteoutPrefix = ".wh."
 
 // Addendum contains layers and history to be appended
 // to a base image
@@ -148,7 +155,7 @@ type image struct {
 }
 
 // Layers returns the ordered collection of filesystem layers that comprise this image.
-// The order of the list is most-recent first, and oldest base layer last.
+// The order of the list is oldest/base layer first, and most-recent/top layer last.
 func (i *image) Layers() ([]v1.Layer, error) {
 	diffIDs, err := partial.DiffIDs(i)
 	if err != nil {
@@ -230,4 +237,108 @@ func validate(adds []Addendum) error {
 		}
 	}
 	return nil
+}
+
+// Extract takes an image and returns an io.ReadCloser containing the image's
+// flattened filesystem.
+//
+// Callers can read the filesystem contents by passing the reader to
+// tar.NewReader, or io.Copy it directly to some output.
+//
+// If a caller doesn't read the full contents, they should Close it to free up
+// resources used during extraction.
+//
+// Adapted from https://github.com/google/containerregistry/blob/master/client/v2_2/docker_image_.py#L731
+func Extract(img v1.Image) io.ReadCloser {
+	pr, pw := io.Pipe()
+
+	go func() {
+		// Close the writer with any errors encountered during
+		// extraction. These errors will be returned by the reader end
+		// on subsequent reads. If err == nil, the reader will return
+		// EOF.
+		pw.CloseWithError(extract(img, pw))
+	}()
+
+	return pr
+}
+
+func extract(img v1.Image, w io.Writer) error {
+	tarWriter := tar.NewWriter(w)
+	defer tarWriter.Close()
+
+	fileMap := map[string]bool{}
+
+	layers, err := img.Layers()
+	if err != nil {
+		return fmt.Errorf("retrieving image layers: %v", err)
+	}
+	// we iterate through the layers in reverse order because it makes handling
+	// whiteout layers more efficient, since we can just keep track of the removed
+	// files as we see .wh. layers and ignore those in previous layers.
+	for i := len(layers) - 1; i >= 0; i-- {
+		layer := layers[i]
+		layerReader, err := layer.Uncompressed()
+		if err != nil {
+			return fmt.Errorf("reading layer contents: %v", err)
+		}
+		tarReader := tar.NewReader(layerReader)
+		for {
+			header, err := tarReader.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return fmt.Errorf("reading tar: %v", err)
+			}
+
+			basename := filepath.Base(header.Name)
+			dirname := filepath.Dir(header.Name)
+			tombstone := strings.HasPrefix(basename, whiteoutPrefix)
+			if tombstone {
+				basename = basename[len(whiteoutPrefix):]
+			}
+
+			// check if we have seen value before
+			name := filepath.Join(dirname, basename)
+			if _, ok := fileMap[name]; ok {
+				continue
+			}
+
+			// check for a whited out parent directory
+			if inWhiteoutDir(fileMap, name) {
+				continue
+			}
+
+			// mark file as handled. non-directory implicitly tombstones
+			// any entries with a matching (or child) name
+			fileMap[name] = tombstone || !(header.Typeflag == tar.TypeDir)
+			if !tombstone {
+				tarWriter.WriteHeader(header)
+				if header.Size > 0 {
+					if _, err := io.Copy(tarWriter, tarReader); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func inWhiteoutDir(fileMap map[string]bool, file string) bool {
+	for {
+		if file == "" {
+			break
+		}
+		dirname := filepath.Dir(file)
+		if file == dirname {
+			break
+		}
+		if val, ok := fileMap[dirname]; ok && val {
+			return true
+		}
+		file = dirname
+	}
+	return false
 }

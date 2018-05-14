@@ -17,11 +17,11 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 type ShellCommand struct {
@@ -29,7 +29,7 @@ type ShellCommand struct {
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (s *ShellCommand) ExecuteCommand(config *v1.Config) error {
+func (s *ShellCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: SHELL")
 	var newShell []string
 

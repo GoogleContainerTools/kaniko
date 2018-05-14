@@ -47,6 +47,7 @@ var fileTests = []struct {
 	kanikoContextBucket bool
 	repo                string
 	snapshotMode        string
+	args                []string
 }{
 	{
 		description:    "test extract filesystem",
@@ -64,6 +65,9 @@ var fileTests = []struct {
 		dockerContext:  dockerfilesPath,
 		kanikoContext:  dockerfilesPath,
 		repo:           "test-run",
+		args: []string{
+			"file=/file",
+		},
 	},
 	{
 		description:    "test run no files changed",
@@ -99,6 +103,9 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-workdir",
+		args: []string{
+			"workdir=/arg/workdir",
+		},
 	},
 	{
 		description:    "test volume",
@@ -115,6 +122,9 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-add",
+		args: []string{
+			"file=context/foo",
+		},
 	},
 	{
 		description:    "test mv add",
@@ -139,6 +149,9 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-onbuild",
+		args: []string{
+			"file=/tmp/onbuild",
+		},
 	},
 	{
 		description:    "test scratch",
@@ -147,6 +160,11 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-scratch",
+		args: []string{
+			"hello=hello-value",
+			"file=context/foo",
+			"file3=context/b*",
+		},
 	},
 }
 
@@ -231,18 +249,23 @@ func main() {
 		Args: []string{"push", onbuildBaseImage},
 	}
 	y := testyaml{
-		Steps: []step{containerDiffStep, containerDiffPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
-			buildOnbuildImage, pushOnbuildBase},
+		Steps: []step{containerDiffStep, containerDiffPermissions, GCSBucketTarBuildContext,
+			uploadTarBuildContext, buildExecutorImage, buildOnbuildImage, pushOnbuildBase},
 		Timeout: "1200s",
 	}
 	for _, test := range fileTests {
 		// First, build the image with docker
 		dockerImageTag := testRepo + dockerPrefix + test.repo
+		var buildArgs []string
+		buildArgFlag := "--build-arg"
+		for _, arg := range test.args {
+			buildArgs = append(buildArgs, buildArgFlag)
+			buildArgs = append(buildArgs, arg)
+		}
 		dockerBuild := step{
 			Name: dockerImage,
-			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerContext},
+			Args: append([]string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerContext}, buildArgs...),
 		}
-
 		// Then, buld the image with kaniko
 		kanikoImage := testRepo + kanikoPrefix + test.repo
 		snapshotMode := ""
@@ -255,7 +278,7 @@ func main() {
 		}
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext, snapshotMode},
+			Args: append([]string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext, snapshotMode}, buildArgs...),
 		}
 
 		// Pull the kaniko image

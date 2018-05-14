@@ -22,7 +22,7 @@ import (
 
 // The following client HTTP measures are supported for use in custom views.
 var (
-	ClientRequestCount  = stats.Int64("opencensus.io/http/client/request_count", "Number of HTTP requests started", stats.UnitNone)
+	ClientRequestCount  = stats.Int64("opencensus.io/http/client/request_count", "Number of HTTP requests started", stats.UnitDimensionless)
 	ClientRequestBytes  = stats.Int64("opencensus.io/http/client/request_bytes", "HTTP request body size if set as ContentLength (uncompressed)", stats.UnitBytes)
 	ClientResponseBytes = stats.Int64("opencensus.io/http/client/response_bytes", "HTTP response body size (uncompressed)", stats.UnitBytes)
 	ClientLatency       = stats.Float64("opencensus.io/http/client/latency", "End-to-end latency", stats.UnitMilliseconds)
@@ -30,7 +30,7 @@ var (
 
 // The following server HTTP measures are supported for use in custom views:
 var (
-	ServerRequestCount  = stats.Int64("opencensus.io/http/server/request_count", "Number of HTTP requests started", stats.UnitNone)
+	ServerRequestCount  = stats.Int64("opencensus.io/http/server/request_count", "Number of HTTP requests started", stats.UnitDimensionless)
 	ServerRequestBytes  = stats.Int64("opencensus.io/http/server/request_bytes", "HTTP request body size if set as ContentLength (uncompressed)", stats.UnitBytes)
 	ServerResponseBytes = stats.Int64("opencensus.io/http/server/response_bytes", "HTTP response body size (uncompressed)", stats.UnitBytes)
 	ServerLatency       = stats.Float64("opencensus.io/http/server/latency", "End-to-end latency", stats.UnitMilliseconds)

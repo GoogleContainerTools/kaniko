@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -60,8 +61,8 @@ func TestUpdateExposedPorts(t *testing.T) {
 		"8085/tcp": {},
 		"8085/udp": {},
 	}
-
-	err := exposeCmd.ExecuteCommand(cfg)
+	buildArgs := dockerfile.NewBuildArgs([]string{})
+	err := exposeCmd.ExecuteCommand(cfg, buildArgs)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedPorts, cfg.ExposedPorts)
 }
 
@@ -79,7 +80,7 @@ func TestInvalidProtocol(t *testing.T) {
 			Ports: ports,
 		},
 	}
-
-	err := exposeCmd.ExecuteCommand(cfg)
+	buildArgs := dockerfile.NewBuildArgs([]string{})
+	err := exposeCmd.ExecuteCommand(cfg, buildArgs)
 	testutil.CheckErrorAndDeepEqual(t, true, err, nil, nil)
 }

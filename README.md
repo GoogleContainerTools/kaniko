@@ -3,7 +3,7 @@
 kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster.
 
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
-This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster. 
+This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster.
 
 We're currently in the process of building kaniko, so as of now it isn't production ready.
 Please let us know if you have any feature requests or find any bugs!
@@ -12,8 +12,9 @@ Please let us know if you have any feature requests or find any bugs!
 - [Kaniko](#kaniko)
   - [How does kaniko work?](#how-does-kaniko-work)
   - [Known Issues](#known-issues)
+- [Demo](#demo)
 - [Development](#development)
-  - [kaniko Build Contexts](#kaniko-build-contexts) 
+  - [kaniko Build Contexts](#kaniko-build-contexts)
   - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
   - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
   - [Running kaniko locally](#running-kaniko-locally)
@@ -35,17 +36,20 @@ After each command, we append a layer of changed files to the base image (if the
 The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
 
 * HEALTHCHECK
-* ARG
 
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
 
 kaniko also does not support building Windows containers.
 
+## Demo
+
+![Demo](/docs/demo.gif)
+
 ## Development
 ### kaniko Build Contexts
 kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
 To specify a GCS bucket, pass in the `--bucket` flag.
-The GCS bucket should contain a compressed tar of the build context called `context.tar.gz`, which kaniko will unpack and use as the build context. 
+The GCS bucket should contain a compressed tar of the build context called `context.tar.gz`, which kaniko will unpack and use as the build context.
 
 To create `context.tar.gz`, run the following command:
 ```shell
@@ -69,7 +73,7 @@ Requirements:
 * Standard Kubernetes cluster
 * Kubernetes Secret
 
-To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image. 
+To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image.
 
 To create the secret, first you will need to create a service account in the Google Cloud Console project you want to push the final image to, with `Storage Admin` permissions.
 You can download a JSON key for this service account, and rename it `kaniko-secret.json`.
@@ -109,7 +113,7 @@ spec:
 This example pulls the build context from a GCS bucket.
 To use a local directory build context, you could consider using configMaps to mount in small build contexts.
 
-### Running kaniko in Google Container Builder 
+### Running kaniko in Google Container Builder
 To run kaniko in GCB, add it to your build config as a build step:
 
 ```yaml
@@ -142,26 +146,83 @@ To run kaniko in Docker, run the following command:
 
 kaniko uses Docker credential helpers to push images to a registry.
 
-kaniko comes with support for GCR, but configuring another credential helper should allow pushing to a different registry.
+kaniko comes with support for GCR and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
 
+#### Pushing to Amazon ECR
+The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
+To configure credentials, you will need to do the following:
+1. Update the `credHelpers` section of [config.json](https://github.com/GoogleContainerTools/kaniko/blob/master/files/config.json) with the specific URI of your ECR registry:
+```json
+{
+	"credHelpers": {
+		"aws_account_id.dkr.ecr.region.amazonaws.com": "ecr-login"
+	}
+}
+```
+You can mount in the new config as a configMap:
+```shell
+kubectl create configmap docker-config --from-file=<path to config.json>
+```
+2. Create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
+To create the secret, run:
+
+```shell
+kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
+```
+
+The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<path to Dockerfile>",
+            "--context=<path to build context>",
+            "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
+    volumeMounts:
+      - name: aws-secret
+        mountPath: /root/.aws/
+      - name: docker-config
+        mountPath: /root/.docker/
+  restartPolicy: Never
+  volumes:
+    - name: aws-secret
+      secret:
+        secretName: aws-secret
+    - name: docker-config
+      configMap:
+        name: docker-config
+```
 ### Debug Image
 
-We provide `gcr.io/kaniko-project/executor:debug` as a a version of the executor image based off a Debian image. 
-This provides a shell and can be useful for debugging.
+The kaniko executor image is based off of scratch and doesn't contain a shell.
+We provide `gcr.io/kaniko-project/executor:debug`, a debug image which consists of the kaniko executor image along with a busybox shell to enter.
 
+You can launch the debug image with a shell entrypoint:
+```shell
+docker run -it --entrypoint=/busybox/sh gcr.io/kaniko-project/executor:debug
+```
 ## Security
- 
+
 kaniko by itself **does not** make it safe to run untrusted builds inside your cluster, or anywhere else.
- 
+
 kaniko relies on the security features of your container runtime to provide build security.
- 
+
 The minimum permissions kaniko needs inside your container are governed by a few things:
- 
+
 * The permissions required to unpack your base image into it's container
 * The permissions required to execute the RUN commands inside the container
- 
-If you have a minimal base image (SCRATCH or similar) that doesn't require permissions to unpack, and your Dockerfile doesn't execute any commands as the root user,
-you can run Kaniko without root permissions.
+
+If you have a minimal base image (SCRATCH or similar) that doesn't require
+permissions to unpack, and your Dockerfile doesn't execute any commands as the
+root user, you can run Kaniko without root permissions. It should be noted that
+Docker runs as root by default, so you still require (in a sense) privileges to
+use Kaniko.
 
 You may be able to achieve the same default seccomp profile that Docker uses in your Pod by setting [seccomp](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp) profiles with annotations on a [PodSecurityPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/pod-security-policies) to create or update security policies on your cluster.
 
@@ -170,21 +231,37 @@ You may be able to achieve the same default seccomp profile that Docker uses in 
 Similar tools include:
 * [img](https://github.com/genuinetools/img)
 * [orca-build](https://github.com/cyphar/orca-build)
+* [umoci](https://github.com/openSUSE/umoci)
 * [buildah](https://github.com/projectatomic/buildah)
 * [FTL](https://github.com/GoogleCloudPlatform/runtimes-common/tree/master/ftl)
 * [Bazel rules_docker](https://github.com/bazelbuild/rules_docker)
 
 All of these tools build container images with different approaches.
 
-`img` can perform as a non root user from within a container, but requires that the `img` container has `RawProc` access to create nested containers.
-`kaniko` does not actually create nested containers, so it does not require `RawProc` access.
+`img` can perform as a non root user from within a container, but requires that
+the `img` container has `RawProc` access to create nested containers.  `kaniko`
+does not actually create nested containers, so it does not require `RawProc`
+access.
 
-`orca-build` depends on `runC` to build images from Dockerfiles, which can not run inside a container. `kaniko` doesn't use runC so it doesn't require the use of kernel namespacing techniques.
+`orca-build` depends on `runc` to build images from Dockerfiles, which can not
+run inside a container (for similar reasons to `img` above). `kaniko` doesn't
+use `runc` so it doesn't require the use of kernel namespacing techniques.
+However, `orca-build` does not require Docker or any privileged daemon (so
+builds can be done entirely without privilege).
 
-`buildah` requires the same privileges as a Docker daemon does to run, while `kaniko` runs without any special privileges or permissions.  
+`umoci` works without any privileges, and also has no restrictions on the root
+filesystem being extracted (though it requires additional handling if your
+filesystem is sufficiently complicated). However it has no `Dockerfile`-like
+build tooling (it's a slightly lower-level tool that can be used to build such
+builders -- such as `orca-build`).
 
-`FTL` and `Bazel` aim to achieve the fastest possible creation of Docker images for a subset of images.
-These can be thought of as a special-case "fast path" that can be used in conjunction with the support for general Dockerfiles kaniko provides.
+`buildah` requires the same privileges as a Docker daemon does to run, while
+`kaniko` runs without any special privileges or permissions.
+
+`FTL` and `Bazel` aim to achieve the fastest possible creation of Docker images
+for a subset of images.  These can be thought of as a special-case "fast path"
+that can be used in conjunction with the support for general Dockerfiles kaniko
+provides.
 
 ## Community
 

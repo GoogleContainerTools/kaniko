@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -93,7 +94,8 @@ func TestUpdateUser(t *testing.T) {
 				User: test.user,
 			},
 		}
-		err := cmd.ExecuteCommand(cfg)
+		buildArgs := dockerfile.NewBuildArgs([]string{})
+		err := cmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, test.shouldError, err, test.expectedUid, cfg.User)
 	}
 }

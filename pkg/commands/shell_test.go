@@ -49,7 +49,7 @@ func TestShellExecuteCmd(t *testing.T) {
 				Shell: test.cmdLine,
 			},
 		}
-		err := cmd.ExecuteCommand(cfg)
+		err := cmd.ExecuteCommand(cfg, nil)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedShell, cfg.Shell)
 	}
 }
