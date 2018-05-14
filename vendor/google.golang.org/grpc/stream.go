@@ -104,7 +104,7 @@ type ClientStream interface {
 func (cc *ClientConn) NewStream(ctx context.Context, desc *StreamDesc, method string, opts ...CallOption) (ClientStream, error) {
 	// allow interceptor to see all applicable call options, which means those
 	// configured as defaults from dial option as well as per-call options
-	opts = combine(cc.dopts.callOptions, opts)
+	opts = append(cc.dopts.callOptions, opts...)
 
 	if cc.dopts.streamInt != nil {
 		return cc.dopts.streamInt(ctx, desc, cc, method, newClientStream, opts...)
@@ -608,7 +608,6 @@ type ServerStream interface {
 
 // serverStream implements a server side Stream.
 type serverStream struct {
-	ctx   context.Context
 	t     transport.ServerTransport
 	s     *transport.Stream
 	p     *parser
@@ -629,7 +628,7 @@ type serverStream struct {
 }
 
 func (ss *serverStream) Context() context.Context {
-	return ss.ctx
+	return ss.s.Context()
 }
 
 func (ss *serverStream) SetHeader(md metadata.MD) error {
@@ -732,5 +731,9 @@ func (ss *serverStream) RecvMsg(m interface{}) (err error) {
 // MethodFromServerStream returns the method string for the input stream.
 // The returned string is in the format of "/service/method".
 func MethodFromServerStream(stream ServerStream) (string, bool) {
-	return Method(stream.Context())
+	s, ok := transport.StreamFromContext(stream.Context())
+	if !ok {
+		return "", ok
+	}
+	return s.Method(), ok
 }

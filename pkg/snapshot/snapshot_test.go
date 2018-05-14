@@ -149,30 +149,23 @@ func TestSnapshotFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedContents := map[string]string{
-		filepath.Join(testDir, "foo"): "newbaz1",
-	}
+	expectedFiles := []string{"/tmp", filepath.Join(testDir, "foo")}
+
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
 	reader := bytes.NewReader(contents)
 	tr := tar.NewReader(reader)
-	numFiles := 0
+	var actualFiles []string
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
-		numFiles = numFiles + 1
-		if _, isFile := expectedContents[hdr.Name]; !isFile {
-			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
+		if err != nil {
+			t.Fatal(err)
 		}
-		contents, _ := ioutil.ReadAll(tr)
-		if string(contents) != expectedContents[hdr.Name] {
-			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, expectedContents[hdr.Name], string(contents))
-		}
+		actualFiles = append(actualFiles, hdr.Name)
 	}
-	if numFiles != 1 {
-		t.Fatalf("%s was not added.", filepath.Join(testDir, "foo"))
-	}
+	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
 }
 
 func TestEmptySnapshot(t *testing.T) {

@@ -47,7 +47,8 @@ var _ partial.CompressedImageCore = (*remoteImage)(nil)
 
 // Image accesses a given image reference over the provided transport, with the provided authentication.
 func Image(ref name.Reference, auth authn.Authenticator, t http.RoundTripper) (v1.Image, error) {
-	tr, err := transport.New(ref, auth, t, transport.PullScope)
+	scopes := []string{ref.Scope(transport.PullScope)}
+	tr, err := transport.New(ref.Context().Registry, auth, t, scopes)
 	if err != nil {
 		return nil, err
 	}

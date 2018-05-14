@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
@@ -28,10 +29,11 @@ type OnBuildCommand struct {
 }
 
 //ExecuteCommand adds the specified expression in Onbuild to the config
-func (o *OnBuildCommand) ExecuteCommand(config *v1.Config) error {
+func (o *OnBuildCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: ONBUILD")
 	logrus.Infof("args: %s", o.cmd.Expression)
-	resolvedExpression, err := util.ResolveEnvironmentReplacement(o.cmd.Expression, config.Env, false)
+	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	resolvedExpression, err := util.ResolveEnvironmentReplacement(o.cmd.Expression, replacementEnvs, false)
 	if err != nil {
 		return err
 	}

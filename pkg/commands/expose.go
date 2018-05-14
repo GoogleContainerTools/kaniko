@@ -18,6 +18,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -30,17 +31,18 @@ type ExposeCommand struct {
 	cmd *instructions.ExposeCommand
 }
 
-func (r *ExposeCommand) ExecuteCommand(config *v1.Config) error {
+func (r *ExposeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: EXPOSE")
 	// Grab the currently exposed ports
 	existingPorts := config.ExposedPorts
 	if existingPorts == nil {
 		existingPorts = make(map[string]struct{})
 	}
+	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
 	// Add any new ones in
 	for _, p := range r.cmd.Ports {
 		// Resolve any environment variables
-		p, err := util.ResolveEnvironmentReplacement(p, config.Env, false)
+		p, err := util.ResolveEnvironmentReplacement(p, replacementEnvs, false)
 		if err != nil {
 			return err
 		}

@@ -22,11 +22,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -57,29 +55,13 @@ type gzipCompressor struct {
 
 // NewGZIPCompressor creates a Compressor based on GZIP.
 func NewGZIPCompressor() Compressor {
-	c, _ := NewGZIPCompressorWithLevel(gzip.DefaultCompression)
-	return c
-}
-
-// NewGZIPCompressorWithLevel is like NewGZIPCompressor but specifies the gzip compression level instead
-// of assuming DefaultCompression.
-//
-// The error returned will be nil if the level is valid.
-func NewGZIPCompressorWithLevel(level int) (Compressor, error) {
-	if level < gzip.DefaultCompression || level > gzip.BestCompression {
-		return nil, fmt.Errorf("grpc: invalid compression level: %d", level)
-	}
 	return &gzipCompressor{
 		pool: sync.Pool{
 			New: func() interface{} {
-				w, err := gzip.NewWriterLevel(ioutil.Discard, level)
-				if err != nil {
-					panic(err)
-				}
-				return w
+				return gzip.NewWriter(ioutil.Discard)
 			},
 		},
-	}, nil
+	}
 }
 
 func (c *gzipCompressor) Do(w io.Writer, p []byte) error {
@@ -663,40 +645,6 @@ func setCallInfoCodec(c *callInfo) error {
 	return nil
 }
 
-// parseDialTarget returns the network and address to pass to dialer
-func parseDialTarget(target string) (net string, addr string) {
-	net = "tcp"
-
-	m1 := strings.Index(target, ":")
-	m2 := strings.Index(target, ":/")
-
-	// handle unix:addr which will fail with url.Parse
-	if m1 >= 0 && m2 < 0 {
-		if n := target[0:m1]; n == "unix" {
-			net = n
-			addr = target[m1+1:]
-			return net, addr
-		}
-	}
-	if m2 >= 0 {
-		t, err := url.Parse(target)
-		if err != nil {
-			return net, target
-		}
-		scheme := t.Scheme
-		addr = t.Path
-		if scheme == "unix" {
-			net = scheme
-			if addr == "" {
-				addr = t.Host
-			}
-			return net, addr
-		}
-	}
-
-	return net, target
-}
-
 // The SupportPackageIsVersion variables are referenced from generated protocol
 // buffer files to ensure compatibility with the gRPC version used.  The latest
 // support package version is 5.
@@ -712,6 +660,6 @@ const (
 )
 
 // Version is the current grpc version.
-const Version = "1.11.3"
+const Version = "1.11.0-dev"
 
 const grpcUA = "grpc-go/" + Version

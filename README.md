@@ -12,6 +12,7 @@ Please let us know if you have any feature requests or find any bugs!
 - [Kaniko](#kaniko)
   - [How does kaniko work?](#how-does-kaniko-work)
   - [Known Issues](#known-issues)
+- [Demo](#demo)
 - [Development](#development)
   - [kaniko Build Contexts](#kaniko-build-contexts) 
   - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
@@ -35,12 +36,14 @@ After each command, we append a layer of changed files to the base image (if the
 The majority of Dockerfile commands can be executed with kaniko, but we're still working on supporting the following commands:
 
 * HEALTHCHECK
-* STOPSIGNAL
-* ARG
 
 Multi-Stage Dockerfiles are also unsupported currently, but will be ready soon.
 
 kaniko also does not support building Windows containers.
+
+## Demo
+
+![Demo](/docs/demo.gif)
 
 ## Development
 ### kaniko Build Contexts
@@ -143,13 +146,67 @@ To run kaniko in Docker, run the following command:
 
 kaniko uses Docker credential helpers to push images to a registry.
 
-kaniko comes with support for GCR, but configuring another credential helper should allow pushing to a different registry.
+kaniko comes with support for GCR and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
 
+#### Pushing to Amazon ECR
+The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
+To configure credentials, you will need to do the following:
+1. Update the `credHelpers` section of [config.json](https://github.com/GoogleContainerTools/kaniko/blob/master/files/config.json) with the specific URI of your ECR registry:
+```json
+{
+	"credHelpers": {
+		"aws_account_id.dkr.ecr.region.amazonaws.com": "ecr-login"
+	}
+}
+```
+You can mount in the new config as a configMap:
+```shell
+kubectl create configmap docker-config --from-file=<path to config.json>
+```
+2. Create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
+To create the secret, run:
+
+```shell
+kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
+```
+
+The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<path to Dockerfile>",
+            "--context=<path to build context>",
+            "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
+    volumeMounts:
+      - name: aws-secret
+        mountPath: /root/.aws/
+      - name: docker-config
+        mountPath: /root/.docker/
+  restartPolicy: Never
+  volumes:
+    - name: aws-secret
+      secret:
+        secretName: aws-secret
+    - name: docker-config
+      configMap:
+        name: docker-config
+```
 ### Debug Image
 
-We provide `gcr.io/kaniko-project/executor:debug` as a a version of the executor image based off a Debian image. 
-This provides a shell and can be useful for debugging.
+The kaniko executor image is based off of scratch and doesn't contain a shell.
+We provide `gcr.io/kaniko-project/executor:debug`, a debug image which consists of the kaniko executor image along with a busybox shell to enter.
 
+You can launch the debug image with a shell entrypoint:
+```shell
+docker run -it --entrypoint=/busybox/sh gcr.io/kaniko-project/executor:debug
+```
 ## Security
  
 kaniko by itself **does not** make it safe to run untrusted builds inside your cluster, or anywhere else.
