@@ -19,6 +19,7 @@ package commands
 import (
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
@@ -29,7 +30,7 @@ type HealthCheckCommand struct {
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config) error {
+func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: HEALTHCHECK")
 
 	config.Healthcheck = h.cmd.Health
