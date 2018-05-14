@@ -23,37 +23,6 @@ import (
 	"testing"
 )
 
-func TestUpdateEnvConfig(t *testing.T) {
-	cfg := &v1.Config{
-		Env: []string{
-			"PATH=/path/to/dir",
-			"hey=hey",
-		},
-	}
-
-	newEnvs := []instructions.KeyValuePair{
-		{
-			Key:   "foo",
-			Value: "foo2",
-		},
-		{
-			Key:   "PATH",
-			Value: "/new/path/",
-		},
-		{
-			Key:   "foo",
-			Value: "newfoo",
-		},
-	}
-
-	expectedEnvArray := []string{
-		"PATH=/new/path/",
-		"hey=hey",
-		"foo=newfoo",
-	}
-	updateConfigEnv(newEnvs, cfg)
-	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedEnvArray, cfg.Env)
-}
 func Test_EnvExecute(t *testing.T) {
 	cfg := &v1.Config{
 		Env: []string{

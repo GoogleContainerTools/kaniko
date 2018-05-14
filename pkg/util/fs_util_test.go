@@ -103,16 +103,13 @@ var tests = []struct {
 		files: map[string]string{
 			"/workspace/foo/a": "baz1",
 			"/workspace/foo/b": "baz2",
-			"/kaniko/file":     "file",
 		},
 		directory: "",
 		expectedFiles: []string{
 			"workspace/foo/a",
 			"workspace/foo/b",
-			"kaniko/file",
 			"workspace",
 			"workspace/foo",
-			"kaniko",
 			".",
 		},
 	},

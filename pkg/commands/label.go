@@ -41,7 +41,7 @@ func updateLabels(labels []instructions.KeyValuePair, config *v1.Config, buildAr
 		existingLabels = make(map[string]string)
 	}
 	// Let's unescape values before setting the label
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	for index, kvp := range labels {
 		key, err := util.ResolveEnvironmentReplacement(kvp.Key, replacementEnvs, false)
 		if err != nil {

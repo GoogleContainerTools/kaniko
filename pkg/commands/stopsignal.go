@@ -35,7 +35,7 @@ func (s *StopSignalCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerf
 	logrus.Info("cmd: STOPSIGNAL")
 
 	// resolve possible environment variables
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList([]string{s.cmd.Signal}, replacementEnvs, false)
 	if err != nil {
 		return err

@@ -39,3 +39,9 @@ func NewBuildArgs(args []string) *BuildArgs {
 		*d.NewBuildArgs(argsFromOptions),
 	}
 }
+
+// ReplacementEnvs returns a list of filtered environment variables
+func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
+	filtered := b.FilterAllowed(envs)
+	return append(envs, filtered...)
+}

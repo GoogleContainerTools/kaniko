@@ -35,7 +35,7 @@ type VolumeCommand struct {
 func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: VOLUME")
 	volumes := v.cmd.Volumes
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedVolumes, err := util.ResolveEnvironmentReplacementList(volumes, replacementEnvs, true)
 	if err != nil {
 		return err

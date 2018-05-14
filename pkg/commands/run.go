@@ -18,7 +18,6 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
@@ -55,7 +54,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 	cmd.Dir = config.WorkingDir
 	cmd.Stdout = os.Stdout
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	cmd.Env = replacementEnvs
 
 	// If specified, run the command as a specific user

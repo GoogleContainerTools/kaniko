@@ -33,57 +33,8 @@ type EnvCommand struct {
 func (e *EnvCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
-	for index, pair := range newEnvs {
-		expandedKey, err := util.ResolveEnvironmentReplacement(pair.Key, replacementEnvs, false)
-		if err != nil {
-			return err
-		}
-		expandedValue, err := util.ResolveEnvironmentReplacement(pair.Value, replacementEnvs, false)
-		if err != nil {
-			return err
-		}
-		newEnvs[index] = instructions.KeyValuePair{
-			Key:   expandedKey,
-			Value: expandedValue,
-		}
-	}
-	return updateConfigEnv(newEnvs, config)
-}
-
-func updateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config) error {
-	// First, convert config.Env array to []instruction.KeyValuePair
-	var kvps []instructions.KeyValuePair
-	for _, env := range config.Env {
-		entry := strings.Split(env, "=")
-		kvps = append(kvps, instructions.KeyValuePair{
-			Key:   entry[0],
-			Value: entry[1],
-		})
-	}
-	// Iterate through new environment variables, and replace existing keys
-	// We can't use a map because we need to preserve the order of the environment variables
-Loop:
-	for _, newEnv := range newEnvs {
-		for index, kvp := range kvps {
-			// If key exists, replace the KeyValuePair...
-			if kvp.Key == newEnv.Key {
-				logrus.Debugf("Replacing environment variable %v with %v in config", kvp, newEnv)
-				kvps[index] = newEnv
-				continue Loop
-			}
-		}
-		// ... Else, append it as a new env variable
-		kvps = append(kvps, newEnv)
-	}
-	// Convert back to array and set in config
-	envArray := []string{}
-	for _, kvp := range kvps {
-		entry := kvp.Key + "=" + kvp.Value
-		envArray = append(envArray, entry)
-	}
-	config.Env = envArray
-	return nil
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	return util.UpdateConfigEnv(newEnvs, config, replacementEnvs)
 }
 
 // We know that no files have changed, so return an empty array

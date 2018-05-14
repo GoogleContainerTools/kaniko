@@ -166,6 +166,17 @@ var fileTests = []struct {
 			"file3=context/b*",
 		},
 	},
+	{
+		description:    "test multistage",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_multistage",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_multistage.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-multistage",
+		args: []string{
+			"file=/foo2",
+		},
+	},
 }
 
 var structureTests = []struct {

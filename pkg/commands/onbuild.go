@@ -32,7 +32,7 @@ type OnBuildCommand struct {
 func (o *OnBuildCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: ONBUILD")
 	logrus.Infof("args: %s", o.cmd.Expression)
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedExpression, err := util.ResolveEnvironmentReplacement(o.cmd.Expression, replacementEnvs, false)
 	if err != nil {
 		return err

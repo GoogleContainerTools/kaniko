@@ -34,7 +34,7 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	logrus.Info("cmd: USER")
 	u := r.cmd.User
 	userAndGroup := strings.Split(u, ":")
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
 	if err != nil {
 		return err

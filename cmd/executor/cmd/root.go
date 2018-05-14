@@ -21,11 +21,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/executor"
-	"github.com/genuinetools/amicontained/container"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/genuinetools/amicontained/container"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -78,7 +77,12 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		if err := executor.DoBuild(dockerfilePath, srcContext, destination, snapshotMode, dockerInsecureSkipTLSVerify, buildArgs); err != nil {
+		ref, image, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode, buildArgs)
+		if err != nil {
+			logrus.Error(err)
+			os.Exit(1)
+		}
+		if err := executor.DoPush(ref, image, destination); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
