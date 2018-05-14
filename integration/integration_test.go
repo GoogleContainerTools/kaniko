@@ -44,8 +44,8 @@ const (
 	buildContextPath   = "/workspace"
 	emptyContainerDiff = `[
      {
-       "Image1": "%s",
-       "Image2": "%s",
+       "Image1": "%s:latest",
+       "Image2": "%s:latest",
        "DiffType": "File",
        "Diff": {
 	 	"Adds": null,
