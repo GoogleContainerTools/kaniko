@@ -44,8 +44,8 @@ const (
 	buildContextPath   = "/workspace"
 	emptyContainerDiff = `[
      {
-       "Image1": "%s:latest",
-       "Image2": "%s:latest",
+       "Image1": "%s",
+       "Image2": "%s",
        "DiffType": "File",
        "Diff": {
 	 	"Adds": null,
@@ -82,30 +82,53 @@ func TestRun(t *testing.T) {
 		t.FailNow()
 	}
 
+	argsMap := map[string][]string{
+		"Dockerfile_test_run":     []string{"file=/file"},
+		"Dockerfile_test_workdir": []string{"workdir=/arg/workdir"},
+		"Dockerfile_test_add":     []string{"file=context/foo"},
+		"Dockerfile_test_onbuild": []string{"file=/tmp/onbuild"},
+		"Dockerfile_test_scratch": []string{
+			"hello=hello-value",
+			"file=context/foo",
+			"file3=context/b*",
+		},
+	}
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
+			dockerfile = dockerfile[len("dockerfile/")+1:]
 			fmt.Printf("%s\n", dockerfile)
 
+			var buildArgs []string
+			buildArgFlag := "--build-arg"
+			for _, arg := range argsMap[dockerfile] {
+				buildArgs = append(buildArgs, buildArgFlag)
+				buildArgs = append(buildArgs, arg)
+			}
 			// build docker image
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
-			dockerCmd := exec.Command("docker", "build",
-				"-t", dockerImage,
-				"-f", dockerfile,
-				".")
+			dockerCmd := exec.Command("docker",
+				append([]string{"build",
+					"-t", dockerImage,
+					"-f", path.Join(dockerfilesPath, dockerfile),
+					"."},
+					buildArgs...)...,
+			)
 			RunCommand(dockerCmd, t)
 
 			// build kaniko image
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
-			kanikoCmd := exec.Command("docker", "run",
-				"-v", os.Getenv("HOME")+"/.config/gcloud:/root/.config/gcloud",
-				"-v", cwd+":/workspace",
-				executorImage,
-				"-f", path.Join(buildContextPath, dockerfile),
-				"-d", kanikoImage,
-				"-c", buildContextPath,
+			kanikoCmd := exec.Command("docker",
+				append([]string{"run",
+					"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+					"-v", cwd + ":/workspace",
+					executorImage,
+					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+					"-d", kanikoImage,
+					"-c", buildContextPath},
+					buildArgs...)...,
 			)
 
 			RunCommand(kanikoCmd, t)
