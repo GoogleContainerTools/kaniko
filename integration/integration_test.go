@@ -83,11 +83,11 @@ func TestRun(t *testing.T) {
 	}
 
 	argsMap := map[string][]string{
-		"Dockerfile_test_run":     []string{"file=/file"},
-		"Dockerfile_test_workdir": []string{"workdir=/arg/workdir"},
-		"Dockerfile_test_add":     []string{"file=context/foo"},
-		"Dockerfile_test_onbuild": []string{"file=/tmp/onbuild"},
-		"Dockerfile_test_scratch": []string{
+		"Dockerfile_test_run":     {"file=/file"},
+		"Dockerfile_test_workdir": {"workdir=/arg/workdir"},
+		"Dockerfile_test_add":     {"file=context/foo"},
+		"Dockerfile_test_onbuild": {"file=/tmp/onbuild"},
+		"Dockerfile_test_scratch": {
 			"hello=hello-value",
 			"file=context/foo",
 			"file3=context/b*",
