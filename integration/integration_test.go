@@ -82,6 +82,7 @@ func TestRun(t *testing.T) {
 		t.FailNow()
 	}
 
+	// Map for test Dockerfile to expected ARGs
 	argsMap := map[string][]string{
 		"Dockerfile_test_run":     {"file=/file"},
 		"Dockerfile_test_workdir": {"workdir=/arg/workdir"},
@@ -93,6 +94,9 @@ func TestRun(t *testing.T) {
 			"file3=context/b*",
 		},
 	}
+
+	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
+
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -118,6 +122,16 @@ func TestRun(t *testing.T) {
 			)
 			RunCommand(dockerCmd, t)
 
+			contextFlag := "-c"
+			contextPath := buildContextPath
+			for _, d := range bucketContextTests {
+				if d == dockerfile {
+					contextFlag = "-b"
+					contextPath = kanikoTestBucket
+					break
+				}
+			}
+
 			// build kaniko image
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			kanikoCmd := exec.Command("docker",
@@ -127,7 +141,7 @@ func TestRun(t *testing.T) {
 					executorImage,
 					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 					"-d", kanikoImage,
-					"-c", buildContextPath},
+					contextFlag, contextPath},
 					buildArgs...)...,
 			)
 
