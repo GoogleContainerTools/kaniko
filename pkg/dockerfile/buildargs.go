@@ -40,6 +40,13 @@ func NewBuildArgs(args []string) *BuildArgs {
 	}
 }
 
+func (b *BuildArgs) Clone() *BuildArgs {
+	clone := b.BuildArgs.Clone()
+	return &BuildArgs{
+		*clone,
+	}
+}
+
 // ReplacementEnvs returns a list of filtered environment variables
 func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 	filtered := b.FilterAllowed(envs)

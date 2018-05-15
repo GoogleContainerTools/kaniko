@@ -305,9 +305,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if PathInWhitelist(path, root) {
-			return nil
-		}
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
