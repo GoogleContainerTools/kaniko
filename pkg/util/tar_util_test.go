@@ -101,7 +101,7 @@ func createTar(testdir string, writer io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if err := AddToTar(filePath, fi, w); err != nil {
+		if err := AddToTar(filePath, fi, map[uint64]string{}, w); err != nil {
 			return err
 		}
 	}

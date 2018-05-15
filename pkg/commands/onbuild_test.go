@@ -17,11 +17,12 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 )
 
 var onbuildTests = []struct {
@@ -50,7 +51,7 @@ var onbuildTests = []struct {
 
 func TestExecuteOnbuild(t *testing.T) {
 	for _, test := range onbuildTests {
-		cfg := &manifest.Schema2Config{
+		cfg := &v1.Config{
 			Env: []string{
 				"dir=/some/dir",
 			},
@@ -62,8 +63,8 @@ func TestExecuteOnbuild(t *testing.T) {
 				Expression: test.expression,
 			},
 		}
-
-		err := onbuildCmd.ExecuteCommand(cfg)
+		buildArgs := dockerfile.NewBuildArgs([]string{})
+		err := onbuildCmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedArray, cfg.OnBuild)
 	}
 

@@ -20,6 +20,7 @@ import (
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
 	"github.com/docker/docker/builder/dockerfile/shell"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -178,7 +179,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	}
 
 	if len(resolvedSources) == 1 {
-		fi, err := os.Stat(filepath.Join(root, resolvedSources[0]))
+		fi, err := os.Lstat(filepath.Join(root, resolvedSources[0]))
 		if err != nil {
 			return err
 		}
@@ -221,4 +222,54 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 		return false
 	}
 	return true
+}
+
+func UpdateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
+	for index, pair := range newEnvs {
+		expandedKey, err := ResolveEnvironmentReplacement(pair.Key, replacementEnvs, false)
+		if err != nil {
+			return err
+		}
+		expandedValue, err := ResolveEnvironmentReplacement(pair.Value, replacementEnvs, false)
+		if err != nil {
+			return err
+		}
+		newEnvs[index] = instructions.KeyValuePair{
+			Key:   expandedKey,
+			Value: expandedValue,
+		}
+	}
+
+	// First, convert config.Env array to []instruction.KeyValuePair
+	var kvps []instructions.KeyValuePair
+	for _, env := range config.Env {
+		entry := strings.Split(env, "=")
+		kvps = append(kvps, instructions.KeyValuePair{
+			Key:   entry[0],
+			Value: entry[1],
+		})
+	}
+	// Iterate through new environment variables, and replace existing keys
+	// We can't use a map because we need to preserve the order of the environment variables
+Loop:
+	for _, newEnv := range newEnvs {
+		for index, kvp := range kvps {
+			// If key exists, replace the KeyValuePair...
+			if kvp.Key == newEnv.Key {
+				logrus.Debugf("Replacing environment variable %v with %v in config", kvp, newEnv)
+				kvps[index] = newEnv
+				continue Loop
+			}
+		}
+		// ... Else, append it as a new env variable
+		kvps = append(kvps, newEnv)
+	}
+	// Convert back to array and set in config
+	envArray := []string{}
+	for _, kvp := range kvps {
+		entry := kvp.Key + "=" + kvp.Value
+		envArray = append(envArray, entry)
+	}
+	config.Env = envArray
+	return nil
 }

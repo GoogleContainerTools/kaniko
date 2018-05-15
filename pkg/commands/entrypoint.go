@@ -17,10 +17,12 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
+
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type EntrypointCommand struct {
@@ -28,13 +30,18 @@ type EntrypointCommand struct {
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (e *EntrypointCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (e *EntrypointCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: ENTRYPOINT")
 	var newCommand []string
 	if e.cmd.PrependShell {
 		// This is the default shell on Linux
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
+		var shell []string
+		if len(config.Shell) > 0 {
+			shell = config.Shell
+		} else {
+			shell = append(shell, "/bin/sh", "-c")
+		}
+
 		newCommand = append(shell, strings.Join(e.cmd.CmdLine, " "))
 	} else {
 		newCommand = e.cmd.CmdLine

@@ -14,6 +14,10 @@
 
 FROM gcr.io/google-appengine/debian9
 RUN echo "hey" > /etc/foo
-RUN apt-get update && apt-get install -y \
-  bzr \
-  cvs \
+RUN echo "baz" > /etc/baz
+RUN cp /etc/baz /etc/bar
+RUN rm /etc/baz
+
+# Test with ARG
+ARG file
+RUN echo "run" > $file

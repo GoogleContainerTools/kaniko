@@ -17,27 +17,32 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
+	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
-
-	"github.com/containers/image/manifest"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type RunCommand struct {
 	cmd *instructions.RunCommand
 }
 
-func (r *RunCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	var newCommand []string
 	if r.cmd.PrependShell {
 		// This is the default shell on Linux
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
+		var shell []string
+		if len(config.Shell) > 0 {
+			shell = config.Shell
+		} else {
+			shell = append(shell, "/bin/sh", "-c")
+		}
+
 		newCommand = append(shell, strings.Join(r.cmd.CmdLine, " "))
 	} else {
 		newCommand = r.cmd.CmdLine
@@ -49,7 +54,8 @@ func (r *RunCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 	cmd.Dir = config.WorkingDir
 	cmd.Stdout = os.Stdout
-	cmd.Env = config.Env
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	cmd.Env = replacementEnvs
 
 	// If specified, run the command as a specific user
 	if config.User != "" {

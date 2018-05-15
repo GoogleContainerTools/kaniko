@@ -17,12 +17,13 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"os"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,10 +32,11 @@ type VolumeCommand struct {
 	snapshotFiles []string
 }
 
-func (v *VolumeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: VOLUME")
 	volumes := v.cmd.Volumes
-	resolvedVolumes, err := util.ResolveEnvironmentReplacementList(volumes, config.Env, true)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	resolvedVolumes, err := util.ResolveEnvironmentReplacementList(volumes, replacementEnvs, true)
 	if err != nil {
 		return err
 	}

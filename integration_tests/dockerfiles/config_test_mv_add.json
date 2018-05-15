@@ -1,0 +1,12 @@
+[
+  {
+    "Image1": "gcr.io/kaniko-test/docker-test-mv-add:latest",
+    "Image2": "gcr.io/kaniko-test/kaniko-test-mv-add:latest",
+    "DiffType": "File",
+    "Diff": {
+      "Adds": null,
+      "Dels": null,
+      "Mods": null
+    }
+  }
+]

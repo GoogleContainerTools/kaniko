@@ -1,0 +1,10 @@
+FROM gcr.io/distroless/base:latest
+COPY . .
+
+FROM scratch as second
+ENV foopath context/foo
+COPY --from=0 $foopath context/b* /foo/
+
+FROM gcr.io/distroless/base:latest
+ARG file
+COPY --from=second /foo $file

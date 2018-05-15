@@ -18,11 +18,12 @@ package commands
 
 import (
 	"fmt"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,17 +31,18 @@ type ExposeCommand struct {
 	cmd *instructions.ExposeCommand
 }
 
-func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (r *ExposeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: EXPOSE")
 	// Grab the currently exposed ports
 	existingPorts := config.ExposedPorts
 	if existingPorts == nil {
-		existingPorts = make(map[manifest.Schema2Port]struct{})
+		existingPorts = make(map[string]struct{})
 	}
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	// Add any new ones in
 	for _, p := range r.cmd.Ports {
 		// Resolve any environment variables
-		p, err := util.ResolveEnvironmentReplacement(p, config.Env, false)
+		p, err := util.ResolveEnvironmentReplacement(p, replacementEnvs, false)
 		if err != nil {
 			return err
 		}
@@ -53,8 +55,7 @@ func (r *ExposeCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 			return fmt.Errorf("Invalid protocol: %s", protocol)
 		}
 		logrus.Infof("Adding exposed port: %s", p)
-		var x struct{}
-		existingPorts[manifest.Schema2Port(p)] = x
+		existingPorts[p] = struct{}{}
 	}
 	config.ExposedPorts = existingPorts
 	return nil

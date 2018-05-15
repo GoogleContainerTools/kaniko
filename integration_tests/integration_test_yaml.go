@@ -26,6 +26,7 @@ const (
 	executorImage           = "executor-image"
 	dockerImage             = "gcr.io/cloud-builders/docker"
 	ubuntuImage             = "ubuntu"
+	structureTestImage      = "gcr.io/gcp-runtimes/container-structure-test"
 	testRepo                = "gcr.io/kaniko-test/"
 	dockerPrefix            = "docker-"
 	kanikoPrefix            = "kaniko-"
@@ -46,6 +47,7 @@ var fileTests = []struct {
 	kanikoContextBucket bool
 	repo                string
 	snapshotMode        string
+	args                []string
 }{
 	{
 		description:    "test extract filesystem",
@@ -63,6 +65,9 @@ var fileTests = []struct {
 		dockerContext:  dockerfilesPath,
 		kanikoContext:  dockerfilesPath,
 		repo:           "test-run",
+		args: []string{
+			"file=/file",
+		},
 	},
 	{
 		description:    "test run no files changed",
@@ -98,6 +103,9 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-workdir",
+		args: []string{
+			"workdir=/arg/workdir",
+		},
 	},
 	{
 		description:    "test volume",
@@ -114,6 +122,17 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-add",
+		args: []string{
+			"file=context/foo",
+		},
+	},
+	{
+		description:    "test mv add",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_mv_add",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_mv_add.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-mv-add",
 	},
 	{
 		description:    "test registry",
@@ -130,6 +149,9 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-onbuild",
+		args: []string{
+			"file=/tmp/onbuild",
+		},
 	},
 	{
 		description:    "test scratch",
@@ -138,6 +160,22 @@ var fileTests = []struct {
 		dockerContext:  buildcontextPath,
 		kanikoContext:  buildcontextPath,
 		repo:           "test-scratch",
+		args: []string{
+			"hello=hello-value",
+			"file=context/foo",
+			"file3=context/b*",
+		},
+	},
+	{
+		description:    "test multistage",
+		dockerfilePath: "/workspace/integration_tests/dockerfiles/Dockerfile_test_multistage",
+		configPath:     "/workspace/integration_tests/dockerfiles/config_test_multistage.json",
+		dockerContext:  buildcontextPath,
+		kanikoContext:  buildcontextPath,
+		repo:           "test-multistage",
+		args: []string{
+			"file=/foo2",
+		},
 	},
 }
 
@@ -197,15 +235,6 @@ func main() {
 		Name: ubuntuImage,
 		Args: []string{"chmod", "+x", "container-diff-linux-amd64"},
 	}
-	structureTestsStep := step{
-		Name: "gcr.io/cloud-builders/gsutil",
-		Args: []string{"cp", "gs://container-structure-test/latest/container-structure-test", "."},
-	}
-	structureTestPermissions := step{
-		Name: ubuntuImage,
-		Args: []string{"chmod", "+x", "container-structure-test"},
-	}
-
 	GCSBucketTarBuildContext := step{
 		Name: ubuntuImage,
 		Args: []string{"tar", "-C", "/workspace/integration_tests/", "-zcvf", "/workspace/context.tar.gz", "."},
@@ -231,18 +260,23 @@ func main() {
 		Args: []string{"push", onbuildBaseImage},
 	}
 	y := testyaml{
-		Steps: []step{containerDiffStep, containerDiffPermissions, structureTestsStep, structureTestPermissions, GCSBucketTarBuildContext, uploadTarBuildContext, buildExecutorImage,
-			buildOnbuildImage, pushOnbuildBase},
+		Steps: []step{containerDiffStep, containerDiffPermissions, GCSBucketTarBuildContext,
+			uploadTarBuildContext, buildExecutorImage, buildOnbuildImage, pushOnbuildBase},
 		Timeout: "1200s",
 	}
 	for _, test := range fileTests {
 		// First, build the image with docker
 		dockerImageTag := testRepo + dockerPrefix + test.repo
+		var buildArgs []string
+		buildArgFlag := "--build-arg"
+		for _, arg := range test.args {
+			buildArgs = append(buildArgs, buildArgFlag)
+			buildArgs = append(buildArgs, arg)
+		}
 		dockerBuild := step{
 			Name: dockerImage,
-			Args: []string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerContext},
+			Args: append([]string{"build", "-t", dockerImageTag, "-f", test.dockerfilePath, test.dockerContext}, buildArgs...),
 		}
-
 		// Then, buld the image with kaniko
 		kanikoImage := testRepo + kanikoPrefix + test.repo
 		snapshotMode := ""
@@ -255,7 +289,7 @@ func main() {
 		}
 		kaniko := step{
 			Name: executorImage,
-			Args: []string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext, snapshotMode},
+			Args: append([]string{"--destination", kanikoImage, "--dockerfile", test.dockerfilePath, contextFlag, test.kanikoContext, snapshotMode}, buildArgs...),
 		}
 
 		// Pull the kaniko image
@@ -280,7 +314,7 @@ func main() {
 		}
 		compareOutputs := step{
 			Name: ubuntuImage,
-			Args: []string{"cmp", test.configPath, containerDiffOutputFile},
+			Args: []string{"cmp", "-b", test.configPath, containerDiffOutputFile},
 		}
 
 		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, containerDiff, catContainerDiffOutput, compareOutputs)
@@ -307,20 +341,15 @@ func main() {
 			Args: []string{"pull", kanikoImage},
 		}
 		// Run structure tests on the kaniko and docker image
-		args := "container-structure-test -image " + kanikoImage + " " + test.structureTestYamlPath
-		structureTest := step{
-			Name: ubuntuImage,
-			Args: []string{"sh", "-c", args},
-			Env:  []string{"PATH=/workspace:/bin"},
+		kanikoStructureTest := step{
+			Name: structureTestImage,
+			Args: []string{"test", "--image", kanikoImage, "--config", test.structureTestYamlPath},
 		}
-		args = "container-structure-test -image " + dockerImageTag + " " + test.structureTestYamlPath
 		dockerStructureTest := step{
-			Name: ubuntuImage,
-			Args: []string{"sh", "-c", args},
-			Env:  []string{"PATH=/workspace:/bin"},
+			Name: structureTestImage,
+			Args: []string{"test", "--image", dockerImageTag, "--config", test.structureTestYamlPath},
 		}
-
-		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, structureTest, dockerStructureTest)
+		y.Steps = append(y.Steps, dockerBuild, kaniko, pullKanikoImage, kanikoStructureTest, dockerStructureTest)
 	}
 
 	d, _ := yaml.Marshal(&y)

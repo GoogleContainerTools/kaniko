@@ -14,13 +14,26 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
+FROM golang:1.10
+WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
+COPY . .
+RUN make
+# Get GCR credential helper
+ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3-static/docker-credential-gcr_linux_amd64-1.4.3.tar.gz /usr/local/bin/
+RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-1.4.3.tar.gz
+# Get Amazon ECR credential helper
+RUN go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
+RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64
+
 FROM scratch
-ADD out/executor /kaniko/executor
-ADD files/ca-certificates.crt /kaniko/ssl/certs/
-ADD files/docker-credential-gcr /usr/local/bin/
-ADD files/config.json /root/.docker/
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY --from=0 /usr/local/bin/docker-credential-gcr /usr/local/bin/docker-credential-gcr
+COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /usr/local/bin/docker-credential-ecr-login
+COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY files/config.json /root/.docker/
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV HOME /root
+ENV USER /root
 ENV PATH /usr/local/bin
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENTRYPOINT ["/kaniko/executor"]

@@ -43,7 +43,9 @@ type Span struct {
 	spanContext SpanContext
 	// spanStore is the spanStore this span belongs to, if any, otherwise it is nil.
 	*spanStore
-	exportOnce sync.Once
+	endOnce sync.Once
+
+	executionTracerTaskEnd func() // ends the execution tracer span
 }
 
 // IsRecordingEvents returns true if events are being recorded for this span.
@@ -97,7 +99,14 @@ func FromContext(ctx context.Context) *Span {
 }
 
 // WithSpan returns a new context with the given Span attached.
+//
+// Deprecated: Use NewContext.
 func WithSpan(parent context.Context, s *Span) context.Context {
+	return NewContext(parent, s)
+}
+
+// NewContext returns a new context with the given Span attached.
+func NewContext(parent context.Context, s *Span) context.Context {
 	return context.WithValue(parent, contextKey{}, s)
 }
 
@@ -125,32 +134,73 @@ type StartOptions struct {
 	SpanKind int
 }
 
+// StartOption apply changes to StartOptions.
+type StartOption func(*StartOptions)
+
+// WithSpanKind makes new spans to be created with the given kind.
+func WithSpanKind(spanKind int) StartOption {
+	return func(o *StartOptions) {
+		o.SpanKind = spanKind
+	}
+}
+
+// WithSampler makes new spans to be be created with a custom sampler.
+// Otherwise, the global sampler is used.
+func WithSampler(sampler Sampler) StartOption {
+	return func(o *StartOptions) {
+		o.Sampler = sampler
+	}
+}
+
 // StartSpan starts a new child span of the current span in the context. If
 // there is no span in the context, creates a new trace and span.
+func StartSpan(ctx context.Context, name string, o ...StartOption) (context.Context, *Span) {
+	var opts StartOptions
+	var parent SpanContext
+	if p := FromContext(ctx); p != nil {
+		parent = p.spanContext
+	}
+	for _, op := range o {
+		op(&opts)
+	}
+	span := startSpanInternal(name, parent != SpanContext{}, parent, false, opts)
+
+	ctx, end := startExecutionTracerTask(ctx, name)
+	span.executionTracerTaskEnd = end
+	return NewContext(ctx, span), span
+}
+
+// StartSpanWithRemoteParent starts a new child span of the span from the given parent.
 //
-// This is provided as a convenience for WithSpan(ctx, NewSpan(...)). Use it
-// if you require custom spans in addition to the default spans provided by
-// ocgrpc, ochttp or similar framework integration.
-func StartSpan(ctx context.Context, name string) (context.Context, *Span) {
-	parentSpan, _ := ctx.Value(contextKey{}).(*Span)
-	span := NewSpan(name, parentSpan, StartOptions{})
-	return WithSpan(ctx, span), span
+// If the incoming context contains a parent, it ignores. StartSpanWithRemoteParent is
+// preferred for cases where the parent is propagated via an incoming request.
+func StartSpanWithRemoteParent(ctx context.Context, name string, parent SpanContext, o ...StartOption) (context.Context, *Span) {
+	var opts StartOptions
+	for _, op := range o {
+		op(&opts)
+	}
+	span := startSpanInternal(name, parent != SpanContext{}, parent, true, opts)
+	ctx, end := startExecutionTracerTask(ctx, name)
+	span.executionTracerTaskEnd = end
+	return NewContext(ctx, span), span
 }
 
 // NewSpan returns a new span.
 //
 // If parent is not nil, created span will be a child of the parent.
+//
+// Deprecated: Use StartSpan.
 func NewSpan(name string, parent *Span, o StartOptions) *Span {
-	hasParent := false
 	var parentSpanContext SpanContext
 	if parent != nil {
-		hasParent = true
 		parentSpanContext = parent.SpanContext()
 	}
-	return startSpanInternal(name, hasParent, parentSpanContext, false, o)
+	return startSpanInternal(name, parent != nil, parentSpanContext, false, o)
 }
 
 // NewSpanWithRemoteParent returns a new span with the given parent SpanContext.
+//
+// Deprecated: Use StartSpanWithRemoteParent.
 func NewSpanWithRemoteParent(name string, parent SpanContext, o StartOptions) *Span {
 	return startSpanInternal(name, true, parent, true, o)
 }
@@ -215,7 +265,10 @@ func (s *Span) End() {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.exportOnce.Do(func() {
+	s.endOnce.Do(func() {
+		if s.executionTracerTaskEnd != nil {
+			s.executionTracerTaskEnd()
+		}
 		// TODO: optimize to avoid this call if sd won't be used.
 		sd := s.makeSpanData()
 		sd.EndTime = internal.MonotonicEndTime(sd.StartTime)

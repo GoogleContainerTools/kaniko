@@ -17,11 +17,13 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/v1"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/containers/image/manifest"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 )
@@ -40,7 +42,7 @@ type AddCommand struct {
 // 		- If dest doesn't end with a slash, the filepath is inferred to be <dest>/<filename>
 // 	2. If <src> is a local tar archive:
 // 		-If <src> is a local tar archive, it is unpacked at the dest, as 'tar -x' would
-func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
+func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	srcs := a.cmd.SourcesAndDest[:len(a.cmd.SourcesAndDest)-1]
 	dest := a.cmd.SourcesAndDest[len(a.cmd.SourcesAndDest)-1]
 
@@ -48,7 +50,8 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 	logrus.Infof("dest: %s", dest)
 
 	// First, resolve any environment replacement
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(a.cmd.SourcesAndDest, config.Env, true)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(a.cmd.SourcesAndDest, replacementEnvs, true)
 	if err != nil {
 		return err
 	}
@@ -100,7 +103,7 @@ func (a *AddCommand) ExecuteCommand(config *manifest.Schema2Config) error {
 		},
 		buildcontext: a.buildcontext,
 	}
-	if err := copyCmd.ExecuteCommand(config); err != nil {
+	if err := copyCmd.ExecuteCommand(config, buildArgs); err != nil {
 		return err
 	}
 	a.snapshotFiles = append(a.snapshotFiles, copyCmd.snapshotFiles...)

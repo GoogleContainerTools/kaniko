@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"archive/tar"
 	"bufio"
 	"io"
 	"net/http"
@@ -25,38 +26,196 @@ import (
 	"strings"
 	"time"
 
-	pkgutil "github.com/GoogleContainerTools/container-diff/pkg/util"
+	"github.com/google/go-containerregistry/v1"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/containers/image/docker"
 	"github.com/sirupsen/logrus"
 )
 
-var whitelist = []string{"/kaniko"}
+var whitelist = []string{
+	"/kaniko",
+	// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
+	// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
+	// in the image with no way to tell if it came from the base image or not.
+	"/var/run",
+}
 var volumeWhitelist = []string{}
 
-// ExtractFileSystemFromImage pulls an image and unpacks it to a file system at root
-func ExtractFileSystemFromImage(img string) error {
+func GetFSFromImage(img v1.Image) error {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
 		return err
 	}
-	logrus.Infof("Whitelisted directories are %s", whitelist)
-	if img == constants.NoBaseImage {
-		logrus.Info("No base image, nothing to extract")
-		return nil
-	}
-	ref, err := docker.ParseReference("//" + img)
+	logrus.Infof("Mounted directories: %v", whitelist)
+	layers, err := img.Layers()
 	if err != nil {
 		return err
 	}
-	imgSrc, err := ref.NewImageSource(nil)
-	if err != nil {
-		return err
+
+	fs := map[string]struct{}{}
+	whiteouts := map[string]struct{}{}
+
+	for i := len(layers) - 1; i >= 0; i-- {
+		logrus.Infof("Unpacking layer: %d", i)
+		l := layers[i]
+		r, err := l.Uncompressed()
+		if err != nil {
+			return err
+		}
+		tr := tar.NewReader(r)
+		for {
+			hdr, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			path := filepath.Join("/", filepath.Clean(hdr.Name))
+			base := filepath.Base(path)
+			dir := filepath.Dir(path)
+			if strings.HasPrefix(base, ".wh.") {
+				logrus.Infof("Whiting out %s", path)
+				name := strings.TrimPrefix(base, ".wh.")
+				whiteouts[filepath.Join(dir, name)] = struct{}{}
+				continue
+			}
+
+			if checkWhiteouts(path, whiteouts) {
+				logrus.Infof("Not adding %s because it is whited out", path)
+				continue
+			}
+			if _, ok := fs[path]; ok {
+				logrus.Infof("Not adding %s because it was added by a prior layer", path)
+				continue
+			}
+
+			if checkWhitelist(path, whitelist) {
+				logrus.Infof("Not adding %s because it is whitelisted", path)
+				continue
+			}
+			if hdr.Typeflag == tar.TypeSymlink {
+				if checkWhitelist(hdr.Linkname, whitelist) {
+					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
+					continue
+				}
+			}
+			fs[path] = struct{}{}
+
+			if err := extractFile("/", hdr, tr); err != nil {
+				return err
+			}
+		}
 	}
-	return pkgutil.GetFileSystemFromReference(ref, imgSrc, constants.RootDir, whitelist)
+	return nil
 }
 
-// PathInWhitelist returns true if the path is whitelisted
+// DeleteFilesystem deletes the extracted image file system
+func DeleteFilesystem() error {
+	logrus.Info("Deleting filesystem...")
+	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
+		if PathInWhitelist(path, constants.RootDir) || ChildDirInWhitelist(path, constants.RootDir) {
+			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
+			return nil
+		}
+		if path == constants.RootDir {
+			return nil
+		}
+		return os.RemoveAll(path)
+	})
+	return err
+}
+
+// ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
+func ChildDirInWhitelist(path, directory string) bool {
+	for _, d := range whitelist {
+		dirPath := filepath.Join(directory, d)
+		if HasFilepathPrefix(dirPath, path) {
+			return true
+		}
+	}
+	return false
+}
+
+func unTar(r io.Reader, dest string) error {
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if err := extractFile(dest, hdr, tr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
+	path := filepath.Join(dest, filepath.Clean(hdr.Name))
+	base := filepath.Base(path)
+	dir := filepath.Dir(path)
+	mode := hdr.FileInfo().Mode()
+	switch hdr.Typeflag {
+	case tar.TypeReg:
+		logrus.Debugf("creating file %s", path)
+		// It's possible a file is in the tar before it's directory.
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return err
+			}
+		}
+		currFile, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		// manually set permissions on file, since the default umask (022) will interfere
+		if err = os.Chmod(path, mode); err != nil {
+			return err
+		}
+		if _, err = io.Copy(currFile, tr); err != nil {
+			return err
+		}
+		currFile.Close()
+
+	case tar.TypeDir:
+		logrus.Debugf("creating dir %s", path)
+		if err := os.MkdirAll(path, mode); err != nil {
+			return err
+		}
+		// In some cases, MkdirAll doesn't change the permissions, so run Chmod
+		if err := os.Chmod(path, mode); err != nil {
+			return err
+		}
+
+	case tar.TypeLink:
+		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
+		// The base directory for a link may not exist before it is created.
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+		if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+			return err
+		}
+	case tar.TypeSymlink:
+		logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
+		// The base directory for a symlink may not exist before it is created.
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+		if err := os.Symlink(hdr.Linkname, path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func PathInWhitelist(path, directory string) bool {
 	for _, c := range constants.KanikoBuildFiles {
 		if path == c {
@@ -65,7 +224,30 @@ func PathInWhitelist(path, directory string) bool {
 	}
 	for _, d := range whitelist {
 		dirPath := filepath.Join(directory, d)
-		if pkgutil.HasFilepathPrefix(path, dirPath) {
+		if HasFilepathPrefix(path, dirPath) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
+	// Don't add the file if it or it's directory are whited out.
+	if _, ok := whiteouts[path]; ok {
+		return true
+	}
+	for wd := range whiteouts {
+		if HasFilepathPrefix(path, wd) {
+			logrus.Infof("Not adding %s because it's directory is whited out", path)
+			return true
+		}
+	}
+	return false
+}
+
+func checkWhitelist(path string, whitelist []string) bool {
+	for _, wl := range whitelist {
+		if HasFilepathPrefix(path, wl) {
 			return true
 		}
 	}
@@ -117,8 +299,14 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if PathInWhitelist(path, root) {
+			return nil
+		}
 		if err != nil {
 			return err
+		}
+		if PathInWhitelist(path, root) {
+			return nil
 		}
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
@@ -135,10 +323,30 @@ func Files(root string) ([]string, error) {
 	var files []string
 	logrus.Debugf("Getting files and contents at root %s", root)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if PathInWhitelist(path, root) {
+			return nil
+		}
 		files = append(files, path)
 		return err
 	})
 	return files, err
+}
+
+// ParentDirectories returns a list of paths to all parent directories
+// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
+func ParentDirectories(path string) []string {
+	path = filepath.Clean(path)
+	dirs := strings.Split(path, "/")
+	dirPath := constants.RootDir
+	var paths []string
+	for index, dir := range dirs {
+		if dir == "" || index == (len(dirs)-1) {
+			continue
+		}
+		dirPath = filepath.Join(dirPath, dir)
+		paths = append(paths, dirPath)
+	}
+	return paths
 }
 
 // FilepathExists returns true if the path exists
@@ -219,7 +427,7 @@ func CopyDir(src, dest string) error {
 	}
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
-		fi, err := os.Stat(fullPath)
+		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return err
 		}
@@ -267,4 +475,23 @@ func CopyFile(src, dest string) error {
 	}
 	defer srcFile.Close()
 	return CreateFile(dest, srcFile, fi.Mode())
+}
+
+// HasFilepathPrefix checks if the given file path begins with prefix
+func HasFilepathPrefix(path, prefix string) bool {
+	path = filepath.Clean(path)
+	prefix = filepath.Clean(prefix)
+	pathArray := strings.Split(path, "/")
+	prefixArray := strings.Split(prefix, "/")
+
+	if len(pathArray) < len(prefixArray) {
+		return false
+	}
+	for index := range prefixArray {
+		if prefixArray[index] == pathArray[index] {
+			continue
+		}
+		return false
+	}
+	return true
 }

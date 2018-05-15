@@ -1,4 +1,4 @@
-FROM gcr.io/google-appengine/debian9:latest
+FROM gcr.io/google-appengine/debian9@sha256:6b3aa04751aa2ac3b0c7be4ee71148b66d693ad212ce6d3244bd2a2a147f314a
 COPY context/foo foo
 WORKDIR /test
 # Test that this will be appended on to the previous command, to create /test/workdir
@@ -11,3 +11,7 @@ ENV dir /another/new/dir
 WORKDIR $dir/newdir
 WORKDIR $dir/$doesntexist
 WORKDIR /
+
+# Test with ARG
+ARG workdir
+WORKDIR $workdir
