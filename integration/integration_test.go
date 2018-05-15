@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Make sure container-diff is on user's PATH
-	err = exec.Command("container-diff").Run()
+	_, err := exec.LookPath("container-diff")
 	if err != nil {
 		fmt.Print("Make sure you have container-diff installed and on your PATH")
 		os.Exit(1)
@@ -103,7 +103,7 @@ func TestRun(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			dockerfile = dockerfile[len("dockerfile/")+1:]
-			fmt.Printf("%s\n", dockerfile)
+			t.Log("%s\n", dockerfile)
 
 			var buildArgs []string
 			buildArgFlag := "--build-arg"
@@ -149,8 +149,6 @@ func TestRun(t *testing.T) {
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
-			//daemonKanikoImage := daemonPrefix + kanikoImage
-
 			containerdiffCmd := exec.Command("container-diff", "diff",
 				daemonDockerImage, kanikoImage,
 				"-q", "--type=file", "--json")
