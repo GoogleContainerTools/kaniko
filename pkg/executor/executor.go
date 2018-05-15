@@ -19,12 +19,13 @@ package executor
 import (
 	"bytes"
 	"fmt"
-	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 
 	"github.com/google/go-containerregistry/v1/empty"
 
@@ -36,13 +37,14 @@ import (
 	"github.com/google/go-containerregistry/v1/mutate"
 	"github.com/google/go-containerregistry/v1/remote"
 
+	"io/ioutil"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 )
 
 func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (name.Reference, v1.Image, error) {
@@ -168,12 +170,17 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 	return nil, nil, err
 }
 
-func DoPush(ref name.Reference, image v1.Image, destination string) error {
+func DoPush(ref name.Reference, image v1.Image, destination, tarPath string) error {
 	// Push the image
-	destRef, err := name.ParseReference(destination, name.WeakValidation)
+	destRef, err := name.NewTag(destination, name.WeakValidation)
 	if err != nil {
 		return err
 	}
+
+	if tarPath != "" {
+		return tarball.WriteToFile(tarPath, destRef, image, nil)
+	}
+
 	wo := remote.WriteOptions{}
 	if ref != nil {
 		wo.MountPaths = []name.Repository{ref.Context()}

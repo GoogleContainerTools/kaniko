@@ -39,6 +39,7 @@ var (
 	logLevel                    string
 	force                       bool
 	buildArgs                   buildArg
+	tarPath                     string
 )
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&dockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
+	RootCmd.PersistentFlags().StringVarP(&tarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 }
 
 var RootCmd = &cobra.Command{
@@ -82,7 +84,7 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		if err := executor.DoPush(ref, image, destination); err != nil {
+		if err := executor.DoPush(ref, image, destination, tarPath); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
