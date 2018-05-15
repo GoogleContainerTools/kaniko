@@ -1,4 +1,0 @@
-schemaVersion: '2.0.0'
-metadataTest:
-  cmd: ["/bin/sh", "-c", "echo \"hello\""]
-  entrypoint: ["execute", "entrypoint"]
