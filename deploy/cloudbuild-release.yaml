@@ -1,0 +1,12 @@
+# This cloudbuild is run on the creation of new tags, which should signify releases.
+steps:
+  # First, build kaniko
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile",
+           "-t", "gcr.io/kaniko-project/executor:$TAG_NAME", "."]
+  # Then, we want to build kaniko:debug
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile_debug",
+           "-t", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", "."]
+images: ["gcr.io/kaniko-project/executor:$TAG_NAME",
+         "gcr.io/kaniko-project/executor:debug-$TAG_NAME"]
