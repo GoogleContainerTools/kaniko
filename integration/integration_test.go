@@ -44,13 +44,22 @@ const (
 	buildContextPath   = "/workspace"
 	emptyContainerDiff = `[
      {
-       "Image1": "%s:latest",
-       "Image2": "%s:latest",
+       "Image1": "%s",
+       "Image2": "%s",
        "DiffType": "File",
        "Diff": {
 	 	"Adds": null,
 	 	"Dels": null,
 	 	"Mods": null
+       }
+     },
+     {
+       "Image1": "%s",
+       "Image2": "%s",
+       "DiffType": "Metadata",
+       "Diff": {
+	 	"Adds": [],
+	 	"Dels": []
        }
      }
    ]`
@@ -76,7 +85,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRun(t *testing.T) {
-	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile*"))
+	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -103,7 +112,7 @@ func TestRun(t *testing.T) {
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			dockerfile = dockerfile[len("dockerfile/")+1:]
-			t.Logf("%s\n", dockerfile)
+			fmt.Printf("%s\n", dockerfile)
 
 			var buildArgs []string
 			buildArgFlag := "--build-arg"
@@ -151,11 +160,11 @@ func TestRun(t *testing.T) {
 			daemonDockerImage := daemonPrefix + dockerImage
 			containerdiffCmd := exec.Command("container-diff", "diff",
 				daemonDockerImage, kanikoImage,
-				"-q", "--type=file", "--json")
+				"-q", "--type=file", "--type=metadata", "--json")
 			diff := RunCommand(containerdiffCmd, t)
 			t.Logf("diff = %s", string(diff))
 
-			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage)
+			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 
 			// Let's compare the json objects themselves instead of strings to avoid
 			// issues with spaces and indents

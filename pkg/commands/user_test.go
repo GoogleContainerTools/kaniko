@@ -31,7 +31,7 @@ var userTests = []struct {
 }{
 	{
 		user:        "root",
-		expectedUid: "0",
+		expectedUid: "root",
 		shouldError: false,
 	},
 	{
@@ -46,17 +46,17 @@ var userTests = []struct {
 	},
 	{
 		user:        "root:root",
-		expectedUid: "0:0",
+		expectedUid: "root:root",
 		shouldError: false,
 	},
 	{
 		user:        "0:root",
-		expectedUid: "0:0",
+		expectedUid: "0:root",
 		shouldError: false,
 	},
 	{
 		user:        "root:0",
-		expectedUid: "0:0",
+		expectedUid: "root:0",
 		shouldError: false,
 	},
 	{
@@ -71,12 +71,12 @@ var userTests = []struct {
 	},
 	{
 		user:        "$envuser",
-		expectedUid: "0",
+		expectedUid: "root",
 		shouldError: false,
 	},
 	{
 		user:        "root:$envgroup",
-		expectedUid: "0:0",
+		expectedUid: "root:root",
 		shouldError: false,
 	},
 }
