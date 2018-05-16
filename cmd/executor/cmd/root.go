@@ -31,14 +31,14 @@ import (
 
 var (
 	dockerfilePath              string
-	destination                 string
+	destinations                multiArg
 	srcContext                  string
 	snapshotMode                string
 	bucket                      string
 	dockerInsecureSkipTLSVerify bool
 	logLevel                    string
 	force                       bool
-	buildArgs                   buildArg
+	buildArgs                   multiArg
 	tarPath                     string
 )
 
@@ -46,7 +46,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
-	RootCmd.PersistentFlags().StringVarP(&destination, "destination", "d", "", "Registry the final image should be pushed to (ex: gcr.io/test/example:latest)")
+	RootCmd.PersistentFlags().VarP(&destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.MarkPersistentFlagRequired("destination")
 	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&buildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
@@ -84,10 +84,13 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		if err := executor.DoPush(ref, image, destination, tarPath); err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+
+		for _, destination := range destinations {
+			if err := executor.DoPush(ref, image, destination, tarPath); err != nil {
+				logrus.Error(err)
+			}
 		}
+
 	},
 }
 
