@@ -54,6 +54,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 	cmd.Dir = config.WorkingDir
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	cmd.Env = replacementEnvs
 
