@@ -170,26 +170,35 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 	return nil, nil, err
 }
 
-func DoPush(ref name.Reference, image v1.Image, destination, tarPath string) error {
-	// Push the image
-	destRef, err := name.NewTag(destination, name.WeakValidation)
-	if err != nil {
-		return err
-	}
+func DoPush(ref name.Reference, image v1.Image, destinations []string, tarPath string) error {
+	// continue pushing unless an error occurs
+	for _, destination := range destinations {
+		// Push the image
+		destRef, err := name.NewTag(destination, name.WeakValidation)
+		if err != nil {
+			return err
+		}
 
-	if tarPath != "" {
-		return tarball.WriteToFile(tarPath, destRef, image, nil)
-	}
+		if tarPath != "" {
+			return tarball.WriteToFile(tarPath, destRef, image, nil)
+		}
 
-	wo := remote.WriteOptions{}
-	if ref != nil {
-		wo.MountPaths = []name.Repository{ref.Context()}
+		wo := remote.WriteOptions{}
+		if ref != nil {
+			wo.MountPaths = []name.Repository{ref.Context()}
+		}
+		pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
+		if err != nil {
+			return err
+		}
+
+		err = remote.Write(destRef, image, pushAuth, http.DefaultTransport, wo)
+		if err != nil {
+			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
+			return err
+		}
 	}
-	pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
-	if err != nil {
-		return err
-	}
-	return remote.Write(destRef, image, pushAuth, http.DefaultTransport, wo)
+	return nil
 }
 func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *dockerfile.BuildArgs) error {
 	// First, get the files in this stage later stages will need

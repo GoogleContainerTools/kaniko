@@ -85,10 +85,9 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		for _, destination := range destinations {
-			if err := executor.DoPush(ref, image, destination, tarPath); err != nil {
-				logrus.Error(err)
-			}
+		if err := executor.DoPush(ref, image, destinations, tarPath); err != nil {
+			logrus.Error(err)
+			os.Exit(1)
 		}
 
 	},
