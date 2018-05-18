@@ -21,23 +21,23 @@ import (
 	"strings"
 )
 
-// The buildArg type is used to pass in multiple --build-arg flags
-type buildArg []string
+// This type is used to supported passing in multiple flags
+type multiArg []string
 
 // Now, for our new type, implement the two methods of
 // the flag.Value interface...
 // The first method is String() string
-func (b *buildArg) String() string {
+func (b *multiArg) String() string {
 	return strings.Join(*b, ",")
 }
 
 // The second method is Set(value string) error
-func (b *buildArg) Set(value string) error {
-	logrus.Infof("appending to build args %s", value)
+func (b *multiArg) Set(value string) error {
+	logrus.Infof("appending to multi args %s", value)
 	*b = append(*b, value)
 	return nil
 }
 
-func (b *buildArg) Type() string {
-	return "build-arg type"
+func (b *multiArg) Type() string {
+	return "multi-arg type"
 }
