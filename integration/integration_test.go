@@ -102,6 +102,7 @@ func TestRun(t *testing.T) {
 			"file=context/foo",
 			"file3=context/b*",
 		},
+		"Dockerfile_test_multistage": {"file=/foo2"},
 	}
 
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
