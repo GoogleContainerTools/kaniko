@@ -48,5 +48,7 @@ const (
 	NoBaseImage = "scratch"
 )
 
-// KanikoBuildFiles is the list of files required to build kaniko
-var KanikoBuildFiles = []string{"/kaniko/executor", "/kaniko/ssl/certs/ca-certificates.crt"}
+// KanikoFiles is the list of files that shouldn't be deleted from kaniko
+var KanikoFiles = []string{"/kaniko/executor", "/kaniko/ssl/certs/ca-certificates.crt",
+	"/root/.docker/config.json", "/usr/local/bin/docker-credential-gcr",
+	"/usr/local/bin/docker-credential-ecr-login"}
