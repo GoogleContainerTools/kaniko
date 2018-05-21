@@ -6,7 +6,9 @@ COPY $file /foo
 ARG file2=context/bar/bat
 COPY $file2 /bat
 # Check that overriding a default value works
-ARG file3=context/bar/baz
+ENV baz baz
+ENV src file3
+ARG ${src}=context/bar/${baz}
 COPY $file3 /baz
 # Check that setting an ENV will override the ARG
 ENV file context/bar/bam/bat
