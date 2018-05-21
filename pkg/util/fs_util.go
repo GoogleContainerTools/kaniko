@@ -128,7 +128,7 @@ func DeleteFilesystem() error {
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
 func ChildDirInWhitelist(path, directory string) bool {
-	for _, d := range constants.KanikoFiles {
+	for _, d := range constants.KanikoBuildFiles {
 		dirPath := filepath.Join(directory, d)
 		if HasFilepathPrefix(dirPath, path) {
 			return true
@@ -223,7 +223,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 }
 
 func PathInWhitelist(path, directory string) bool {
-	for _, c := range constants.KanikoFiles {
+	for _, c := range constants.KanikoBuildFiles {
 		if path == c {
 			return false
 		}
