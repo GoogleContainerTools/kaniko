@@ -107,13 +107,20 @@ func TestRun(t *testing.T) {
 
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
 
+	testsToIgnore := []string{"Dockerfile_test_user_run"}
+
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			dockerfile = dockerfile[len("dockerfile/")+1:]
-			fmt.Printf("%s\n", dockerfile)
+			for _, d := range testsToIgnore {
+				if dockerfile == d {
+					t.SkipNow()
+				}
+			}
+			t.Logf("%s\n", dockerfile)
 
 			var buildArgs []string
 			buildArgFlag := "--build-arg"
