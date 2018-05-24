@@ -4,3 +4,4 @@ LABEL "baz"="bat"
 ENV label1 "mylabel"
 LABEL label1=$label1
 LABEL multilabel1=multilabel1 multilabel2=multilabel2 multilabel3=multilabel3
+

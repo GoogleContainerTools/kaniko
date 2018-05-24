@@ -100,7 +100,7 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 		}
 		imageConfig, err := sourceImage.ConfigFile()
 		if baseImage == constants.NoBaseImage {
-			imageConfig.Config.Env = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+			imageConfig.Config.Env = constants.ScratchEnvVars
 		}
 		if err != nil {
 			return nil, nil, err
