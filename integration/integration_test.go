@@ -107,6 +107,7 @@ func TestRun(t *testing.T) {
 
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
 
+	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
 	testsToIgnore := []string{"Dockerfile_test_user_run"}
 
 	_, ex, _, _ := runtime.Caller(0)
