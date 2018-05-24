@@ -17,3 +17,5 @@ RUN useradd testuser
 RUN groupadd testgroup
 USER testuser:testgroup
 RUN echo "hey" > /tmp/foo
+USER testuser:1001
+RUN echo "hey2" >> /tmp/foo

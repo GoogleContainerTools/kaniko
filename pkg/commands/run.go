@@ -18,6 +18,7 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
@@ -61,15 +62,26 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	// If specified, run the command as a specific user
 	if config.User != "" {
 		userAndGroup := strings.Split(config.User, ":")
+		userStr := userAndGroup[0]
+		var groupStr string
+		if len(userAndGroup) > 1 {
+			groupStr = userAndGroup[1]
+		}
+
+		uidStr, gidStr, err := util.GetUserFromUsername(userStr, groupStr)
+		if err != nil {
+			return err
+		}
+
 		// uid and gid need to be uint32
-		uid64, err := strconv.ParseUint(userAndGroup[0], 10, 32)
+		uid64, err := strconv.ParseUint(uidStr, 10, 32)
 		if err != nil {
 			return err
 		}
 		uid := uint32(uid64)
 		var gid uint32
-		if len(userAndGroup) > 1 {
-			gid64, err := strconv.ParseUint(userAndGroup[1], 10, 32)
+		if gidStr != "" {
+			gid64, err := strconv.ParseUint(gidStr, 10, 32)
 			if err != nil {
 				return err
 			}

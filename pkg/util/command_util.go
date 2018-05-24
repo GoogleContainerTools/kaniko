@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 )
@@ -272,4 +273,44 @@ Loop:
 	}
 	config.Env = envArray
 	return nil
+}
+
+func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
+	// Lookup by username
+	userObj, err := user.Lookup(userStr)
+	if err != nil {
+		if _, ok := err.(user.UnknownUserError); ok {
+			// Lookup by id
+			userObj, err = user.LookupId(userStr)
+			if err != nil {
+				return "", "", err
+			}
+		} else {
+			return "", "", err
+		}
+	}
+
+	// Same dance with groups
+	var group *user.Group
+	if groupStr != "" {
+		group, err = user.LookupGroup(groupStr)
+		if err != nil {
+			if _, ok := err.(user.UnknownGroupError); ok {
+				group, err = user.LookupGroupId(groupStr)
+				if err != nil {
+					return "", "", err
+				}
+			} else {
+				return "", "", err
+			}
+		}
+	}
+
+	uid := userObj.Uid
+	gid := ""
+	if group != nil {
+		gid = group.Gid
+	}
+
+	return uid, gid, nil
 }

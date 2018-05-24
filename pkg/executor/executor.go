@@ -99,6 +99,9 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 			return nil, nil, err
 		}
 		imageConfig, err := sourceImage.ConfigFile()
+		if baseImage == constants.NoBaseImage {
+			imageConfig.Config.Env = constants.ScratchEnvVars
+		}
 		if err != nil {
 			return nil, nil, err
 		}
@@ -260,5 +263,8 @@ func resolveOnBuild(stage *instructions.Stage, config *v1.Config) error {
 	// Append to the beginning of the commands in the stage
 	stage.Commands = append(cmds, stage.Commands...)
 	logrus.Infof("Executing %v build triggers", len(cmds))
+
+	// Blank out the Onbuild command list for this image
+	config.OnBuild = nil
 	return nil
 }
