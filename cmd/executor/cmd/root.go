@@ -20,6 +20,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
@@ -121,21 +122,38 @@ func checkDockerfilePath() error {
 	return errors.New("please provide a valid path to a Dockerfile within the build context")
 }
 
-// resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
+// resolveSourceContext unpacks the source context if it is a tar in a bucket
 // it resets srcContext to be the path to the unpacked build context within the image
 func resolveSourceContext() error {
 	if srcContext == "" && bucket == "" {
-		return errors.New("please specify a path to the build context with the --context flag or a GCS bucket with the --bucket flag")
+		return errors.New("please specify a path to the build context with the --context flag or a bucket with the --bucket flag")
 	}
-	if bucket == "" {
+
+	buildContextPath := constants.BuildContextDir
+
+	if !strings.Contains(bucket, "://") {
 		return nil
 	}
-	logrus.Infof("Using GCS bucket %s as source context", bucket)
-	buildContextPath := constants.BuildContextDir
-	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
-		return err
+
+	if strings.HasPrefix(bucket, "file://") {
+		logrus.Infof("Using local file %s as source context", bucket)
+		srcContext = strings.TrimPrefix(bucket, "file://")
+		return nil
 	}
-	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
+
+	if strings.HasPrefix(bucket, "gs://") {
+		logrus.Infof("Using GCS bucket %s as source context", bucket)
+		if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
+			return err
+		}
+		logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
+	}
+
+	if strings.HasPrefix(bucket, "s3://") {
+		logrus.Infof("Using AWS bucket %s as source context", bucket)
+		return errors.New("AWS S3 is not yet implemented")
+	}
+
 	srcContext = buildContextPath
 	return nil
 }
