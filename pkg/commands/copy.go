@@ -42,7 +42,11 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	logrus.Infof("cmd: copy %s", srcs)
 	logrus.Infof("dest: %s", dest)
 
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	// Resolve from
+	if c.cmd.From != "" {
+		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
+	}
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	// First, resolve any environment replacement
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, replacementEnvs, true)
 	if err != nil {

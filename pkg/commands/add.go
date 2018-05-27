@@ -50,7 +50,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	logrus.Infof("dest: %s", dest)
 
 	// First, resolve any environment replacement
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(a.cmd.SourcesAndDest, replacementEnvs, true)
 	if err != nil {
 		return err

@@ -300,7 +300,14 @@ func extract(img v1.Image, w io.Writer) error {
 			}
 
 			// check if we have seen value before
-			name := filepath.Join(dirname, basename)
+			// if we're checking a directory, don't filepath.Join names
+			var name string
+			if header.Typeflag == tar.TypeDir {
+				name = header.Name
+			} else {
+				name = filepath.Join(dirname, basename)
+			}
+
 			if _, ok := fileMap[name]; ok {
 				continue
 			}

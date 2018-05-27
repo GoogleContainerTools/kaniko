@@ -103,16 +103,13 @@ var tests = []struct {
 		files: map[string]string{
 			"/workspace/foo/a": "baz1",
 			"/workspace/foo/b": "baz2",
-			"/kaniko/file":     "file",
 		},
 		directory: "",
 		expectedFiles: []string{
 			"workspace/foo/a",
 			"workspace/foo/b",
-			"kaniko/file",
 			"workspace",
 			"workspace/foo",
-			"kaniko",
 			".",
 		},
 	},
@@ -478,7 +475,7 @@ func TestExtractFile(t *testing.T) {
 			},
 		},
 		{
-			name: "symlink parent does not exist",
+			name: "symlink parent does not exist 2",
 			hdrs: []*tar.Header{linkHeader("./foo/bar/baz", "../../bat")},
 			checkers: []checker{
 				linkPointsTo("/foo/bar/baz", "../../bat"),

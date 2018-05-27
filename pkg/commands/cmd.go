@@ -50,6 +50,7 @@ func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	logrus.Infof("Replacing CMD in config with %v", newCommand)
 	config.Cmd = newCommand
+	config.ArgsEscaped = true
 	return nil
 }
 

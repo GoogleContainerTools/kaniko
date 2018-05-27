@@ -22,7 +22,6 @@ import (
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
-	"os/user"
 	"strings"
 )
 
@@ -34,7 +33,7 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	logrus.Info("cmd: USER")
 	u := r.cmd.User
 	userAndGroup := strings.Split(u, ":")
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
 	if err != nil {
 		return err
@@ -47,43 +46,15 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 	}
 
-	// Lookup by username
-	userObj, err := user.Lookup(userStr)
+	_, _, err = util.GetUserFromUsername(userStr, groupStr)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); ok {
-			// Lookup by id
-			userObj, err = user.LookupId(userStr)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
+		return err
 	}
 
-	// Same dance with groups
-	var group *user.Group
 	if groupStr != "" {
-		group, err = user.LookupGroup(groupStr)
-		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); ok {
-				group, err = user.LookupGroupId(groupStr)
-				if err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
+		userStr = userStr + ":" + groupStr
 	}
-
-	uid := userObj.Uid
-	if group != nil {
-		uid = uid + ":" + group.Gid
-	}
-
-	logrus.Infof("Setting user to %s", uid)
-	config.User = uid
+	config.User = userStr
 	return nil
 }
 

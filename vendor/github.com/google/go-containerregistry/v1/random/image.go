@@ -15,6 +15,7 @@
 package random
 
 import (
+	"archive/tar"
 	"bytes"
 	"crypto/rand"
 	"fmt"
@@ -50,8 +51,15 @@ var _ partial.UncompressedLayer = (*uncompressedLayer)(nil)
 func Image(byteSize, layers int64) (v1.Image, error) {
 	layerz := make(map[v1.Hash]partial.UncompressedLayer)
 	for i := int64(0); i < layers; i++ {
-		b := bytes.NewBuffer(nil)
-		if _, err := io.CopyN(b, rand.Reader, byteSize); err != nil {
+		var b bytes.Buffer
+		tw := tar.NewWriter(&b)
+		if err := tw.WriteHeader(&tar.Header{
+			Name: fmt.Sprintf("random_file_%d.txt", i),
+			Size: byteSize,
+		}); err != nil {
+			return nil, err
+		}
+		if _, err := io.CopyN(tw, rand.Reader, byteSize); err != nil {
 			return nil, err
 		}
 		bts := b.Bytes()

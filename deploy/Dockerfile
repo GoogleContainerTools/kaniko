@@ -27,13 +27,15 @@ RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
-COPY --from=0 /usr/local/bin/docker-credential-gcr /usr/local/bin/docker-credential-gcr
-COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /usr/local/bin/docker-credential-ecr-login
+COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
+COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY files/config.json /root/.docker/
-RUN ["docker-credential-gcr", "config", "--token-source=env"]
+COPY files/config.json /kaniko/.docker/
 ENV HOME /root
 ENV USER /root
-ENV PATH /usr/local/bin
+ENV PATH /usr/local/bin:/kaniko
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
+ENV DOCKER_CONFIG /kaniko/.docker/
+ENV DOCKER_CREDENTIAL_GCR_CONFIG /kaniko/.config/gcloud/docker_credential_gcr_config.json
+RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENTRYPOINT ["/kaniko/executor"]

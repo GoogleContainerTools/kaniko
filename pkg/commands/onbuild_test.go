@@ -34,7 +34,7 @@ var onbuildTests = []struct {
 		expression:   "RUN echo \\\"hi\\\" > $dir",
 		onbuildArray: nil,
 		expectedArray: []string{
-			"RUN echo \"hi\" > /some/dir",
+			"RUN echo \\\"hi\\\" > $dir",
 		},
 	},
 	{

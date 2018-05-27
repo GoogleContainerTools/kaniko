@@ -1,0 +1,20 @@
+FROM alpine:3.7
+COPY context/foo foo
+COPY context/foo /foodir/
+COPY context/bar/b* bar/
+COPY context/fo? /foo2
+COPY context/bar/doesnotexist* context/foo hello
+COPY ./context/empty /empty
+COPY ./ dir/
+COPY . newdir
+COPY context/bar /baz/
+COPY ["context/foo", "/tmp/foo" ]
+COPY context/b* /baz/
+COPY context/foo context/bar/ba? /test/
+COPY context/arr[[]0].txt /mydir/
+COPY context/bar/bat .
+
+ENV contextenv ./context
+COPY ${contextenv}/foo /tmp/foo2
+COPY $contextenv/foo /tmp/foo3
+COPY $contextenv/* /tmp/${contextenv}/

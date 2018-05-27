@@ -17,50 +17,36 @@ limitations under the License.
 package commands
 
 import (
+	"strings"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/docker/docker/pkg/signal"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
-type StopSignalCommand struct {
-	cmd *instructions.StopSignalCommand
+type HealthCheckCommand struct {
+	cmd *instructions.HealthCheckCommand
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
-func (s *StopSignalCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: STOPSIGNAL")
+func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Info("cmd: HEALTHCHECK")
 
-	// resolve possible environment variables
-	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList([]string{s.cmd.Signal}, replacementEnvs, false)
-	if err != nil {
-		return err
-	}
-	stopsignal := resolvedEnvs[0]
+	check := v1.HealthConfig(*h.cmd.Health)
+	config.Healthcheck = &check
 
-	// validate stopsignal
-	_, err = signal.ParseSignal(stopsignal)
-	if err != nil {
-		return err
-	}
-
-	logrus.Infof("Replacing StopSignal in config with %v", stopsignal)
-	config.StopSignal = stopsignal
 	return nil
 }
 
 // FilesToSnapshot returns an empty array since this is a metadata command
-func (s *StopSignalCommand) FilesToSnapshot() []string {
+func (h *HealthCheckCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
 // CreatedBy returns some information about the command for the image config history
-func (s *StopSignalCommand) CreatedBy() string {
-	entrypoint := []string{"STOPSIGNAL"}
+func (h *HealthCheckCommand) CreatedBy() string {
+	entrypoint := []string{"HEALTHCHECK"}
 
-	return strings.Join(append(entrypoint, s.cmd.Signal), " ")
+	return strings.Join(append(entrypoint, strings.Join(h.cmd.Health.Test, " ")), " ")
 }

@@ -38,7 +38,7 @@ func (r *ExposeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 	if existingPorts == nil {
 		existingPorts = make(map[string]struct{})
 	}
-	replacementEnvs := util.ReplacementEnvs(config, buildArgs)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	// Add any new ones in
 	for _, p := range r.cmd.Ports {
 		// Resolve any environment variables

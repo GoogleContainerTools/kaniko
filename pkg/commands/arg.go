@@ -18,6 +18,7 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/v1"
 	"github.com/sirupsen/logrus"
@@ -31,7 +32,20 @@ type ArgCommand struct {
 // ExecuteCommand only needs to add this ARG key/value as seen
 func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("ARG")
-	buildArgs.AddArg(r.cmd.Key, r.cmd.Value)
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	resolvedKey, err := util.ResolveEnvironmentReplacement(r.cmd.Key, replacementEnvs, false)
+	if err != nil {
+		return err
+	}
+	var resolvedValue *string
+	if r.cmd.Value != nil {
+		value, err := util.ResolveEnvironmentReplacement(*r.cmd.Value, replacementEnvs, false)
+		if err != nil {
+			return err
+		}
+		resolvedValue = &value
+	}
+	buildArgs.AddArg(resolvedKey, resolvedValue)
 	return nil
 }
 
