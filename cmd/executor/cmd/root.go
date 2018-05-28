@@ -18,6 +18,8 @@ package cmd
 
 import (
 	"errors"
+	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +27,9 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/aws/aws-sdk-go/aws"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -151,7 +156,35 @@ func resolveSourceContext() error {
 
 	if strings.HasPrefix(bucket, "s3://") {
 		logrus.Infof("Using AWS bucket %s as source context", bucket)
-		return errors.New("AWS S3 is not yet implemented")
+		u, err := url.Parse(bucket)
+		if err != nil {
+			return err
+		}
+
+		bucket := strings.TrimSuffix(u.Host, "/")
+		key := strings.TrimSuffix(u.Path, "/")
+		tarPath := filepath.Join(buildContextPath, constants.ContextTar)
+
+		svc := s3.New(awssession.New())
+		input := &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		}
+
+		response, err := svc.GetObject(input)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		ioutil.WriteFile(tarPath, body, 0600)
+
+		if err := util.UnpackCompressedTar(tarPath, buildContextPath); err != nil {
+			return err
+		}
 	}
 
 	srcContext = buildContextPath
