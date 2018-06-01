@@ -5,9 +5,6 @@ kaniko is a tool to build container images from a Dockerfile, inside a container
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster.
 
-We're currently in the process of building kaniko, so as of now it isn't production ready.
-Please let us know if you have any feature requests or find any bugs!
-
 
 - [Kaniko](#kaniko)
   - [How does kaniko work?](#how-does-kaniko-work)
