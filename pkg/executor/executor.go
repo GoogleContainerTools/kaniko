@@ -184,15 +184,12 @@ func DoPush(ref name.Reference, image v1.Image, destinations []string, tarPath s
 			return tarball.WriteToFile(tarPath, destRef, image, nil)
 		}
 
-		wo := remote.WriteOptions{}
-		if ref != nil {
-			wo.MountPaths = []name.Repository{ref.Context()}
-		}
 		pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
 		if err != nil {
 			return err
 		}
 
+		wo := remote.WriteOptions{}
 		err = remote.Write(destRef, image, pushAuth, http.DefaultTransport, wo)
 		if err != nil {
 			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
