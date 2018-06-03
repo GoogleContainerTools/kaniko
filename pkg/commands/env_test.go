@@ -16,11 +16,12 @@ limitations under the License.
 package commands
 
 import (
+	"testing"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/google/go-containerregistry/v1"
-	"testing"
+	"github.com/google/go-containerregistry/pkg/v1"
 )
 
 func Test_EnvExecute(t *testing.T) {
