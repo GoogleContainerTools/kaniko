@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-containerregistry/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"

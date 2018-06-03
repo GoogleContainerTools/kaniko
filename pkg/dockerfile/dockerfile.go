@@ -18,19 +18,20 @@ package dockerfile
 
 import (
 	"bytes"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/docker/docker/builder/dockerfile/parser"
-	"github.com/google/go-containerregistry/authn"
-	"github.com/google/go-containerregistry/name"
-	"github.com/google/go-containerregistry/v1"
-	"github.com/google/go-containerregistry/v1/empty"
-	"github.com/google/go-containerregistry/v1/remote"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/docker/docker/builder/dockerfile/parser"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
