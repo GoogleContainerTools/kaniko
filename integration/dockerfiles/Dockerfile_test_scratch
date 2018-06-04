@@ -1,4 +1,5 @@
-FROM scratch
+ARG image
+FROM ${image}
 # First, make sure simple arg replacement works
 ARG file
 COPY $file /foo
