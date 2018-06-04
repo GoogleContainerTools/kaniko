@@ -63,7 +63,10 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 		return nil, nil, err
 	}
 	for index, stage := range stages {
-		baseImage := stage.BaseName
+		baseImage, err := util.ResolveEnvironmentReplacement(stage.BaseName, args, false)
+		if err != nil {
+			return nil, nil, err
+		}
 		finalStage := index == len(stages)-1
 		// Unpack file system to root
 		logrus.Infof("Unpacking filesystem of %s...", baseImage)
