@@ -98,6 +98,7 @@ func TestRun(t *testing.T) {
 		"Dockerfile_test_add":     {"file=context/foo"},
 		"Dockerfile_test_onbuild": {"file=/tmp/onbuild"},
 		"Dockerfile_test_scratch": {
+			"image=scratch",
 			"hello=hello-value",
 			"file=context/foo",
 			"file3=context/b*",

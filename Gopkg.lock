@@ -380,20 +380,20 @@
   branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
-    "authn",
-    "name",
-    "v1",
-    "v1/empty",
-    "v1/mutate",
-    "v1/partial",
-    "v1/random",
-    "v1/remote",
-    "v1/remote/transport",
-    "v1/tarball",
-    "v1/types",
-    "v1/v1util"
+    "pkg/authn",
+    "pkg/name",
+    "pkg/v1",
+    "pkg/v1/empty",
+    "pkg/v1/mutate",
+    "pkg/v1/partial",
+    "pkg/v1/random",
+    "pkg/v1/remote",
+    "pkg/v1/remote/transport",
+    "pkg/v1/tarball",
+    "pkg/v1/types",
+    "pkg/v1/v1util"
   ]
-  revision = "ee5a6c257df843b47a2666ff0fff3d31d484ebda"
+  revision = "5e2bd1f4bf61add62944828d54e239d352daaabf"
 
 [[projects]]
   name = "github.com/googleapis/gax-go"
@@ -881,15 +881,9 @@
   revision = "8124abf74e7633d82a5b96585b0da487d0e6eed0"
   source = "google.golang.org/grpc"
 
-[[projects]]
-  name = "gopkg.in/yaml.v2"
-  packages = ["."]
-  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
-  version = "v2.2.1"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7dc0b12e9e50b1e09cfb6bf10cbeca2299a3c12ef5dd1074666215f683969b10"
+  inputs-digest = "3bffae5dc15e19a20ce63474c3472eab5ecac39bc4d56d3c1e17822f3cf328e4"
   solver-name = "gps-cdcl"
   solver-version = 1

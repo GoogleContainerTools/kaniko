@@ -16,12 +16,13 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/google/go-containerregistry/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 )
 
 // Each test here changes the same WorkingDir field in the config

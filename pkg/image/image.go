@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-containerregistry/v1"
+	"github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/sirupsen/logrus"
 )
