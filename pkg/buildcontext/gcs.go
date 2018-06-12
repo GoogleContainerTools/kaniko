@@ -18,11 +18,11 @@ package buildcontext
 
 import "github.com/GoogleContainerTools/kaniko/pkg/util"
 
-// BuildContext unifies calls to download and unpack the build context.
-type GC struct {
+// GCS struct for Google Cloud Storage processing
+type GCS struct {
 }
 
-func (g *GC) UnpackTarFromBuildContext(buildContext string, directory string) error {
+func (g *GCS) UnpackTarFromBuildContext(buildContext string, directory string) error {
 	if err := util.UnpackTarFromGCSBucket(buildContext, directory); err != nil {
 		return err
 	}

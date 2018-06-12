@@ -16,8 +16,30 @@ limitations under the License.
 
 package buildcontext
 
+import (
+	"errors"
+	"strings"
+)
+
+var buildContextMap = map[string]BuildContext{
+	"gc://":  &GCS{},
+	"s3://":  &S3{},
+	"dir://": &File{},
+}
+
 // BuildContext unifies calls to download and unpack the build context.
 type BuildContext interface {
 	// Gets context.tar.gz from the build context and unpacks to the directory
 	UnpackTarFromBuildContext(buildContext string, directory string) error
+}
+
+// GetBuildContext parses srcContext for the prefix and returns related buildcontext
+// parser
+func GetBuildContext(srcContext string) (BuildContext, error) {
+	for prefix, bc := range buildContextMap {
+		if strings.HasPrefix(srcContext, prefix) {
+			return bc, nil
+		}
+	}
+	return nil, errors.New("unknown prefix")
 }

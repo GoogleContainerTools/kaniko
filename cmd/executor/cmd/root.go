@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -133,8 +134,9 @@ func resolveSourceContext() error {
 	buildContextPath := constants.BuildContextDir
 	var contextExecutor buildcontext.BuildContext
 
+	// if no prefix use Google Cloud Storage as default for backwards compability
 	if !strings.Contains(bucket, "://") {
-		return nil
+		bucket = fmt.Sprintf("gc://%s", bucket)
 	}
 
 	// if no context is set, add default file context.tar.gz
@@ -142,19 +144,9 @@ func resolveSourceContext() error {
 		bucket += "/" + constants.ContextTar
 	}
 
-	if strings.HasPrefix(bucket, "file://") {
-		logrus.Infof("Using local file %s as source context", bucket)
-		contextExecutor = &buildcontext.File{}
-	}
-
-	if strings.HasPrefix(bucket, "gs://") {
-		logrus.Infof("Using GCS bucket %s as source context", bucket)
-		contextExecutor = &buildcontext.GC{}
-	}
-
-	if strings.HasPrefix(bucket, "s3://") {
-		logrus.Infof("Using AWS bucket %s as source context", bucket)
-		contextExecutor = &buildcontext.S3{}
+	contextExecutor, err := buildcontext.GetBuildContext(bucket)
+	if err != nil {
+		return err
 	}
 
 	if err := contextExecutor.UnpackTarFromBuildContext(bucket, buildContextPath); err != nil {
