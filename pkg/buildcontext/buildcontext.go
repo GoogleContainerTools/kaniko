@@ -22,7 +22,7 @@ import (
 )
 
 var buildContextMap = map[string]BuildContext{
-	"gc://":  &GCS{},
+	"gs://":  &GCS{},
 	"s3://":  &S3{},
 	"dir://": &File{},
 }

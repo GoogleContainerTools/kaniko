@@ -137,7 +137,7 @@ func resolveSourceContext() error {
 	// if no prefix use Google Cloud Storage as default for backwards compability
 	if !strings.Contains(srcContext, "://") {
 		if bucket != "" {
-			srcContext = fmt.Sprintf("gc://%s", bucket)
+			srcContext = fmt.Sprintf("gs://%s", bucket)
 		} else if bucket == "" {
 			srcContext = fmt.Sprintf("dir://%s", srcContext)
 		}
