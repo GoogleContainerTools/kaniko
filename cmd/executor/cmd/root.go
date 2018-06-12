@@ -135,21 +135,25 @@ func resolveSourceContext() error {
 	var contextExecutor buildcontext.BuildContext
 
 	// if no prefix use Google Cloud Storage as default for backwards compability
-	if !strings.Contains(bucket, "://") {
-		bucket = fmt.Sprintf("gc://%s", bucket)
+	if !strings.Contains(srcContext, "://") {
+		if bucket != "" {
+			srcContext = fmt.Sprintf("gc://%s", bucket)
+		} else if bucket == "" {
+			srcContext = fmt.Sprintf("dir://%s", srcContext)
+		}
 	}
 
 	// if no context is set, add default file context.tar.gz
-	if !strings.HasSuffix(bucket, ".tar.gz") {
-		bucket += "/" + constants.ContextTar
+	if !strings.HasSuffix(srcContext, ".tar.gz") {
+		srcContext += "/" + constants.ContextTar
 	}
 
-	contextExecutor, err := buildcontext.GetBuildContext(bucket)
+	contextExecutor, err := buildcontext.GetBuildContext(srcContext)
 	if err != nil {
 		return err
 	}
 
-	if err := contextExecutor.UnpackTarFromBuildContext(bucket, buildContextPath); err != nil {
+	if err := contextExecutor.UnpackTarFromBuildContext(srcContext, buildContextPath); err != nil {
 		return err
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
