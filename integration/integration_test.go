@@ -106,6 +106,12 @@ func TestRun(t *testing.T) {
 		"Dockerfile_test_multistage": {"file=/foo2"},
 	}
 
+	// Map for additional flags
+	additionalFlagsMap := map[string][]string{
+		"Dockerfile_test_add":     {"--single-snapshot"},
+		"Dockerfile_test_scratch": {"--single-snapshot"},
+	}
+
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
 
 	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
@@ -130,6 +136,7 @@ func TestRun(t *testing.T) {
 				buildArgs = append(buildArgs, buildArgFlag)
 				buildArgs = append(buildArgs, arg)
 			}
+
 			// build docker image
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
 			dockerCmd := exec.Command("docker",
@@ -152,6 +159,7 @@ func TestRun(t *testing.T) {
 			}
 
 			// build kaniko image
+			additionalFlags := append(buildArgs, additionalFlagsMap[dockerfile]...)
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			kanikoCmd := exec.Command("docker",
 				append([]string{"run",
@@ -161,7 +169,7 @@ func TestRun(t *testing.T) {
 					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 					"-d", kanikoImage,
 					contextFlag, contextPath},
-					buildArgs...)...,
+					additionalFlags...)...,
 			)
 
 			RunCommand(kanikoCmd, t)
