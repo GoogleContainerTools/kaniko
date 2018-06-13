@@ -23,11 +23,11 @@ import (
 )
 
 // BuildContext unifies calls to download and unpack the build context.
-type File struct {
+type Dir struct {
 }
 
-func (f *File) UnpackTarFromBuildContext(buildContext string, directory string) error {
-	srcContext := strings.TrimPrefix(buildContext, "file://")
+func (f *Dir) UnpackTarFromBuildContext(buildContext string, directory string) error {
+	srcContext := strings.TrimPrefix(buildContext, "dir://")
 	if err := util.UnpackCompressedTar(srcContext, directory); err != nil {
 		return err
 	}

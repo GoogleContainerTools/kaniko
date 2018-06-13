@@ -24,7 +24,7 @@ import (
 var buildContextMap = map[string]BuildContext{
 	"gs://":  &GCS{},
 	"s3://":  &S3{},
-	"dir://": &File{},
+	"dir://": &Dir{},
 }
 
 // BuildContext unifies calls to download and unpack the build context.

@@ -132,13 +132,12 @@ func resolveSourceContext() error {
 	}
 
 	buildContextPath := constants.BuildContextDir
-	var contextExecutor buildcontext.BuildContext
 
 	// if no prefix use Google Cloud Storage as default for backwards compability
 	if !strings.Contains(srcContext, "://") {
 		if bucket != "" {
 			srcContext = fmt.Sprintf("gs://%s", bucket)
-		} else if bucket == "" {
+		} else {
 			srcContext = fmt.Sprintf("dir://%s", srcContext)
 		}
 	}
