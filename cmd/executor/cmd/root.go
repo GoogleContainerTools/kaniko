@@ -142,11 +142,6 @@ func resolveSourceContext() error {
 		}
 	}
 
-	// if no context is set, add default file context.tar.gz
-	if !strings.HasSuffix(srcContext, ".tar.gz") {
-		srcContext += "/" + constants.ContextTar
-	}
-
 	contextExecutor, err := buildcontext.GetBuildContext(srcContext)
 	if err != nil {
 		return err

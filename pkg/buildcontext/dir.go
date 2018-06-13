@@ -16,21 +16,11 @@ limitations under the License.
 
 package buildcontext
 
-import (
-	"strings"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
-)
-
-// BuildContext unifies calls to download and unpack the build context.
+// Dir unifies calls to download and unpack the build context.
 type Dir struct {
 }
 
+// UnpackTarFromBuildContext just provides a directory with already extracted content
 func (f *Dir) UnpackTarFromBuildContext(buildContext string, directory string) error {
-	srcContext := strings.TrimPrefix(buildContext, "dir://")
-	if err := util.UnpackCompressedTar(srcContext, directory); err != nil {
-		return err
-	}
-
 	return nil
 }

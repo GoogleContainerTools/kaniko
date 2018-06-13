@@ -29,12 +29,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-// BuildContext unifies calls to download and unpack the build context.
+// S3 unifies calls to download and unpack the build context.
 type S3 struct {
 }
 
-// download and untar a file from s3
+// UnpackTarFromBuildContext download and untar a file from s3
 func (s *S3) UnpackTarFromBuildContext(buildContext string, directory string) error {
+	// if no context is set, add default file context.tar.gz
+	if !strings.HasSuffix(buildContext, ".tar.gz") {
+		buildContext += "/" + constants.ContextTar
+	}
+
 	u, err := url.Parse(buildContext)
 	if err != nil {
 		return err

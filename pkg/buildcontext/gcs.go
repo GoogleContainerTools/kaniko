@@ -16,13 +16,23 @@ limitations under the License.
 
 package buildcontext
 
-import "github.com/GoogleContainerTools/kaniko/pkg/util"
+import (
+	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+)
 
 // GCS struct for Google Cloud Storage processing
 type GCS struct {
 }
 
 func (g *GCS) UnpackTarFromBuildContext(buildContext string, directory string) error {
+	// if no context is set, add default file context.tar.gz
+	if !strings.HasSuffix(buildContext, ".tar.gz") {
+		buildContext += "/" + constants.ContextTar
+	}
+
 	if err := util.UnpackTarFromGCSBucket(buildContext, directory); err != nil {
 		return err
 	}
