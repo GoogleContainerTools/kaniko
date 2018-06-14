@@ -143,7 +143,9 @@
     "api/types/backend",
     "api/types/blkiodev",
     "api/types/container",
+    "api/types/events",
     "api/types/filters",
+    "api/types/image",
     "api/types/mount",
     "api/types/network",
     "api/types/plugins/logdriver",
@@ -151,7 +153,9 @@
     "api/types/strslice",
     "api/types/swarm",
     "api/types/swarm/runtime",
+    "api/types/time",
     "api/types/versions",
+    "api/types/volume",
     "builder",
     "builder/dockerfile",
     "builder/dockerfile/command",
@@ -162,6 +166,7 @@
     "builder/fscache",
     "builder/remotecontext",
     "builder/remotecontext/git",
+    "client",
     "container",
     "container/stream",
     "daemon/cluster/provider",
@@ -383,6 +388,7 @@
     "pkg/authn",
     "pkg/name",
     "pkg/v1",
+    "pkg/v1/daemon",
     "pkg/v1/empty",
     "pkg/v1/mutate",
     "pkg/v1/partial",
@@ -884,6 +890,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3bffae5dc15e19a20ce63474c3472eab5ecac39bc4d56d3c1e17822f3cf328e4"
+  inputs-digest = "c3f2af4bb8fedb7f2b7ee2e5fa9cd38b7ac221a385230db0927b54b56707b108"
   solver-name = "gps-cdcl"
   solver-version = 1
