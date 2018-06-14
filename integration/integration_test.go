@@ -19,6 +19,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -26,6 +27,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -204,6 +208,61 @@ func TestRun(t *testing.T) {
 			testutil.CheckErrorAndDeepEqual(t, false, nil, expectedInt, diffInt)
 		})
 	}
+}
+
+func TestLayers(t *testing.T) {
+	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	offset := map[string]int{
+		"Dockerfile_test_add":     9,
+		"Dockerfile_test_scratch": 3,
+	}
+	for _, dockerfile := range dockerfiles {
+		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
+			// Pull the kaniko image
+			dockerfile = dockerfile[len("dockerfile/")+1:]
+			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
+			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
+			pullCmd := exec.Command("docker", "pull", kanikoImage)
+			RunCommand(pullCmd, t)
+			if err := checkLayers(dockerImage, kanikoImage, offset[dockerfile]); err != nil {
+				t.Error(err)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func checkLayers(image1, image2 string, offset int) error {
+	lenImage1, err := numLayers(image1)
+	if err != nil {
+		return err
+	}
+	lenImage2, err := numLayers(image2)
+	if err != nil {
+		return err
+	}
+	actualOffset := int(math.Abs(float64(lenImage1 - lenImage2)))
+	if actualOffset != offset {
+		return fmt.Errorf("incorrect offset between layers of %s and %s: expected %d but got %d", image1, image2, offset, actualOffset)
+	}
+	return nil
+}
+
+func numLayers(image string) (int, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return 0, err
+	}
+	img, err := daemon.Image(ref, &daemon.ReadOptions{})
+	if err != nil {
+		return 0, err
+	}
+	layers, err := img.Layers()
+	return len(layers), err
 }
 
 func RunCommand(cmd *exec.Cmd, t *testing.T) []byte {
