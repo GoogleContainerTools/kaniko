@@ -40,6 +40,7 @@ var (
 	force                       bool
 	buildArgs                   multiArg
 	tarPath                     string
+	reproducible                bool
 )
 
 func init() {
@@ -54,6 +55,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 	RootCmd.PersistentFlags().StringVarP(&tarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
+	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", true, "Strip timestamps out of the image to make it reproducible")
 }
 
 var RootCmd = &cobra.Command{
@@ -79,7 +81,7 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		ref, image, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode, buildArgs)
+		ref, image, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode, buildArgs, reproducible)
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)

@@ -159,7 +159,7 @@ func TestRun(t *testing.T) {
 					"-v", cwd + ":/workspace",
 					executorImage,
 					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-					"-d", kanikoImage,
+					"-d", kanikoImage, "--reproducible",
 					contextFlag, contextPath},
 					buildArgs...)...,
 			)

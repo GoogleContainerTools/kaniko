@@ -45,7 +45,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (name.Reference, v1.Image, error) {
+func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, reproducible bool) (name.Reference, v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(dockerfilePath)
 	if err != nil {
@@ -161,6 +161,15 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string) (na
 			if err != nil {
 				return nil, nil, err
 			}
+
+			if reproducible {
+				sourceImage, err = mutate.Canonical(sourceImage)
+			}
+
+			if err != nil {
+				return nil, nil, err
+			}
+
 			return ref, sourceImage, nil
 		}
 		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
