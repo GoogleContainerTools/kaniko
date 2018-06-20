@@ -58,7 +58,7 @@ func getTarFromBucket(bucketName, directory string) (string, error) {
 	}
 	defer reader.Close()
 	tarPath := filepath.Join(directory, constants.ContextTar)
-	if err := CreateFile(tarPath, reader, 0600); err != nil {
+	if err := CreateFile(tarPath, reader, 0600, 0, 0); err != nil {
 		return "", err
 	}
 	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", constants.ContextTar, bucketName, tarPath)
