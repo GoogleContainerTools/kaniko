@@ -108,6 +108,8 @@ func TestRun(t *testing.T) {
 
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
 
+	reproducibleTests := []string{"Docker_test_copy_reproducible"}
+
 	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
 	testsToIgnore := []string{"Dockerfile_test_user_run"}
 
@@ -151,6 +153,14 @@ func TestRun(t *testing.T) {
 				}
 			}
 
+			reproducibleFlag := ""
+			for _, d := range reproducibleTests {
+				if d == dockerfile {
+					reproducibleFlag = "--reproducible"
+					break
+				}
+			}
+
 			// build kaniko image
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			kanikoCmd := exec.Command("docker",
@@ -159,7 +169,7 @@ func TestRun(t *testing.T) {
 					"-v", cwd + ":/workspace",
 					executorImage,
 					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-					"-d", kanikoImage, "--reproducible",
+					"-d", kanikoImage, reproducibleFlag,
 					contextFlag, contextPath},
 					buildArgs...)...,
 			)
