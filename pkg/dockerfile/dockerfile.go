@@ -108,7 +108,7 @@ func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) 
 			if err != nil {
 				return nil, err
 			}
-			sourceImage, err = remote.Image(ref, auth, http.DefaultTransport)
+			sourceImage, err = remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
 			if err != nil {
 				return nil, err
 			}

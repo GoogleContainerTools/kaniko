@@ -85,7 +85,7 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, rep
 			if err != nil {
 				return nil, nil, err
 			}
-			sourceImage, err = remote.Image(ref, auth, http.DefaultTransport)
+			sourceImage, err = remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
 			if err != nil {
 				return nil, nil, err
 			}
