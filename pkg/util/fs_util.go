@@ -336,12 +336,12 @@ func Files(root string) ([]string, error) {
 }
 
 // ParentDirectories returns a list of paths to all parent directories
-// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
+// Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
 func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
 	dirPath := constants.RootDir
-	var paths []string
+	paths := []string{constants.RootDir}
 	for index, dir := range dirs {
 		if dir == "" || index == (len(dirs)-1) {
 			continue
