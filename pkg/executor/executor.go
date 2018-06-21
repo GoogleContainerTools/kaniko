@@ -164,10 +164,9 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, rep
 
 			if reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)
-			}
-
-			if err != nil {
-				return nil, nil, err
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 
 			return ref, sourceImage, nil
