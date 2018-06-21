@@ -55,7 +55,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 	RootCmd.PersistentFlags().StringVarP(&tarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
-	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", true, "Strip timestamps out of the image to make it reproducible")
+	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 }
 
 var RootCmd = &cobra.Command{
