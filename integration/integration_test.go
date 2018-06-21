@@ -69,6 +69,9 @@ const (
    ]`
 )
 
+// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
+var testsToIgnore = []string{"Dockerfile_test_user_run"}
+
 func TestMain(m *testing.M) {
 	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
 	err := buildKaniko.Run()
@@ -118,9 +121,6 @@ func TestRun(t *testing.T) {
 
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
 
-	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
-	testsToIgnore := []string{"Dockerfile_test_user_run"}
-
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -140,7 +140,6 @@ func TestRun(t *testing.T) {
 				buildArgs = append(buildArgs, buildArgFlag)
 				buildArgs = append(buildArgs, arg)
 			}
-
 			// build docker image
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
 			dockerCmd := exec.Command("docker",
@@ -219,11 +218,19 @@ func TestLayers(t *testing.T) {
 	offset := map[string]int{
 		"Dockerfile_test_add":     9,
 		"Dockerfile_test_scratch": 3,
+		// the Docker built image combined some of the dirs defined by separate VOLUME commands into one layer
+		// which is why this offset exists
+		"Dockerfile_test_volume": 1,
 	}
 	for _, dockerfile := range dockerfiles {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
-			// Pull the kaniko image
 			dockerfile = dockerfile[len("dockerfile/")+1:]
+			for _, ignore := range testsToIgnore {
+				if dockerfile == ignore {
+					t.SkipNow()
+				}
+			}
+			// Pull the kaniko image
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			pullCmd := exec.Command("docker", "pull", kanikoImage)
