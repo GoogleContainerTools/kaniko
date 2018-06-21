@@ -411,8 +411,10 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 		return nil, fmt.Errorf("Error appending layers: %v", err)
 	}
 
-	// Copy config over
 	ocf, err := img.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("Error getting original config file: %v", err)
+	}
 
 	cf, err := newImage.ConfigFile()
 	if err != nil {
@@ -421,6 +423,7 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 
 	cfg := cf.DeepCopy()
 
+	// Copy basic config over
 	cfg.Config = ocf.Config
 	cfg.ContainerConfig = ocf.ContainerConfig
 
