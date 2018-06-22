@@ -45,7 +45,7 @@ func Write(ref name.Reference, img v1.Image, auth authn.Authenticator, t http.Ro
 	scopes := []string{ref.Scope(transport.PushScope)}
 	for _, l := range ls {
 		if ml, ok := l.(*MountableLayer); ok {
-			scopes = append(scopes, ml.Repository.Scope(transport.PullScope))
+			scopes = append(scopes, ml.Reference.Context().Scope(transport.PullScope))
 		}
 	}
 
@@ -145,7 +145,7 @@ func (w *writer) initiateUpload(h v1.Hash) (location string, mounted bool, err e
 	// if "mount" is specified, even if no "from" sources are specified.  If this turns out
 	// to not be broadly applicable then we should replace mounts without "from"s with a HEAD.
 	if ml, ok := l.(*MountableLayer); ok {
-		uv["from"] = []string{ml.Repository.RepositoryStr()}
+		uv["from"] = []string{ml.Reference.Context().RepositoryStr()}
 	}
 	u.RawQuery = uv.Encode()
 

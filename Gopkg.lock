@@ -399,7 +399,7 @@
     "pkg/v1/types",
     "pkg/v1/v1util"
   ]
-  revision = "5e2bd1f4bf61add62944828d54e239d352daaabf"
+  revision = "3f6471078a9661a9a439bd5e71a371aff429566a"
 
 [[projects]]
   name = "github.com/googleapis/gax-go"

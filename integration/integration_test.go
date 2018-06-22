@@ -119,7 +119,10 @@ func TestRun(t *testing.T) {
 		"Dockerfile_test_scratch": {"--single-snapshot"},
 	}
 
+	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
+	testsToIgnore := []string{"Dockerfile_test_user_run"}
 	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
+	reproducibleTests := []string{"Dockerfile_test_env"}
 
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
@@ -161,6 +164,14 @@ func TestRun(t *testing.T) {
 				}
 			}
 
+			reproducibleFlag := ""
+			for _, d := range reproducibleTests {
+				if d == dockerfile {
+					reproducibleFlag = "--reproducible"
+					break
+				}
+			}
+
 			// build kaniko image
 			additionalFlags := append(buildArgs, additionalFlagsMap[dockerfile]...)
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
@@ -170,7 +181,7 @@ func TestRun(t *testing.T) {
 					"-v", cwd + ":/workspace",
 					executorImage,
 					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-					"-d", kanikoImage,
+					"-d", kanikoImage, reproducibleFlag,
 					contextFlag, contextPath},
 					additionalFlags...)...,
 			)

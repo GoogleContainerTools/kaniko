@@ -52,6 +52,7 @@ type KanikoBuildArgs struct {
 	SnapshotMode   string
 	Args           []string
 	SingleSnapshot bool
+	Reproducible   bool
 }
 
 func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
@@ -94,7 +95,7 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			sourceImage, err = remote.Image(ref, auth, http.DefaultTransport)
+			sourceImage, err = remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -174,6 +175,14 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 			if err != nil {
 				return nil, nil, err
 			}
+
+			if k.Reproducible {
+				sourceImage, err = mutate.Canonical(sourceImage)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+
 			return ref, sourceImage, nil
 		}
 		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
