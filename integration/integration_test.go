@@ -19,6 +19,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -26,6 +27,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -64,6 +68,9 @@ const (
      }
    ]`
 )
+
+// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
+var testsToIgnore = []string{"Dockerfile_test_user_run"}
 
 func TestMain(m *testing.M) {
 	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
@@ -106,10 +113,13 @@ func TestRun(t *testing.T) {
 		"Dockerfile_test_multistage": {"file=/foo2"},
 	}
 
-	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
+	// Map for additional flags
+	additionalFlagsMap := map[string][]string{
+		"Dockerfile_test_add":     {"--single-snapshot"},
+		"Dockerfile_test_scratch": {"--single-snapshot"},
+	}
 
-	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
-	testsToIgnore := []string{"Dockerfile_test_user_run"}
+	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
 
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
@@ -152,6 +162,7 @@ func TestRun(t *testing.T) {
 			}
 
 			// build kaniko image
+			additionalFlags := append(buildArgs, additionalFlagsMap[dockerfile]...)
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			kanikoCmd := exec.Command("docker",
 				append([]string{"run",
@@ -161,7 +172,7 @@ func TestRun(t *testing.T) {
 					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 					"-d", kanikoImage,
 					contextFlag, contextPath},
-					buildArgs...)...,
+					additionalFlags...)...,
 			)
 
 			RunCommand(kanikoCmd, t)
@@ -196,6 +207,69 @@ func TestRun(t *testing.T) {
 			testutil.CheckErrorAndDeepEqual(t, false, nil, expectedInt, diffInt)
 		})
 	}
+}
+
+func TestLayers(t *testing.T) {
+	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	offset := map[string]int{
+		"Dockerfile_test_add":     9,
+		"Dockerfile_test_scratch": 3,
+		// the Docker built image combined some of the dirs defined by separate VOLUME commands into one layer
+		// which is why this offset exists
+		"Dockerfile_test_volume": 1,
+	}
+	for _, dockerfile := range dockerfiles {
+		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
+			dockerfile = dockerfile[len("dockerfile/")+1:]
+			for _, ignore := range testsToIgnore {
+				if dockerfile == ignore {
+					t.SkipNow()
+				}
+			}
+			// Pull the kaniko image
+			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
+			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
+			pullCmd := exec.Command("docker", "pull", kanikoImage)
+			RunCommand(pullCmd, t)
+			if err := checkLayers(dockerImage, kanikoImage, offset[dockerfile]); err != nil {
+				t.Error(err)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func checkLayers(image1, image2 string, offset int) error {
+	lenImage1, err := numLayers(image1)
+	if err != nil {
+		return err
+	}
+	lenImage2, err := numLayers(image2)
+	if err != nil {
+		return err
+	}
+	actualOffset := int(math.Abs(float64(lenImage1 - lenImage2)))
+	if actualOffset != offset {
+		return fmt.Errorf("incorrect offset between layers of %s and %s: expected %d but got %d", image1, image2, offset, actualOffset)
+	}
+	return nil
+}
+
+func numLayers(image string) (int, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return 0, err
+	}
+	img, err := daemon.Image(ref, &daemon.ReadOptions{})
+	if err != nil {
+		return 0, err
+	}
+	layers, err := img.Layers()
+	return len(layers), err
 }
 
 func RunCommand(cmd *exec.Cmd, t *testing.T) []byte {
