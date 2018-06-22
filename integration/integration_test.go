@@ -275,7 +275,7 @@ func numLayers(image string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	img, err := daemon.Image(ref, &daemon.ReadOptions{})
+	img, err := daemon.Image(ref)
 	if err != nil {
 		return 0, err
 	}
