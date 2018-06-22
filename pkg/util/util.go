@@ -23,6 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"strconv"
+	"syscall"
 )
 
 // SetLogLevel sets the logrus logging level
@@ -45,6 +47,10 @@ func Hasher() func(string) (string, error) {
 		}
 		h.Write([]byte(fi.Mode().String()))
 		h.Write([]byte(fi.ModTime().String()))
+
+		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Uid), 36)))
+		h.Write([]byte(","))
+		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Gid), 36)))
 
 		if fi.Mode().IsRegular() {
 			f, err := os.Open(p)

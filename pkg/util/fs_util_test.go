@@ -382,6 +382,8 @@ func fileHeader(name string, contents string, mode int64) *tar.Header {
 		Size:     int64(len(contents)),
 		Mode:     mode,
 		Typeflag: tar.TypeReg,
+		Uid:      os.Getuid(),
+		Gid:      os.Getgid(),
 	}
 }
 
@@ -409,6 +411,8 @@ func dirHeader(name string, mode int64) *tar.Header {
 		Size:     0,
 		Typeflag: tar.TypeDir,
 		Mode:     mode,
+		Uid:      os.Getuid(),
+		Gid:      os.Getgid(),
 	}
 }
 

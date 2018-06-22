@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1"
@@ -165,6 +166,8 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	base := filepath.Base(path)
 	dir := filepath.Dir(path)
 	mode := hdr.FileInfo().Mode()
+	uid := hdr.Uid
+	gid := hdr.Gid
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
@@ -186,6 +189,9 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if _, err = io.Copy(currFile, tr); err != nil {
 			return err
 		}
+		if err = currFile.Chown(uid, gid); err != nil {
+			return err
+		}
 		currFile.Close()
 
 	case tar.TypeDir:
@@ -195,6 +201,9 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 		// In some cases, MkdirAll doesn't change the permissions, so run Chmod
 		if err := os.Chmod(path, mode); err != nil {
+			return err
+		}
+		if err := os.Chown(path, uid, gid); err != nil {
 			return err
 		}
 
@@ -208,6 +217,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}
+
 	case tar.TypeSymlink:
 		logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
 		// The base directory for a symlink may not exist before it is created.
@@ -218,6 +228,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err := os.Symlink(hdr.Linkname, path); err != nil {
 			return err
 		}
+
 	}
 	return nil
 }
@@ -359,7 +370,7 @@ func FilepathExists(path string) bool {
 }
 
 // CreateFile creates a file at path and copies over contents from the reader
-func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
+func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
 	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
@@ -376,7 +387,10 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode) error {
 	if _, err := io.Copy(dest, reader); err != nil {
 		return err
 	}
-	return dest.Chmod(perm)
+	if err := dest.Chmod(perm); err != nil {
+		return err
+	}
+	return dest.Chown(int(uid), int(gid))
 }
 
 // AddPathToVolumeWhitelist adds the given path to the volume whitelist
@@ -409,7 +423,8 @@ func DownloadFileToDest(rawurl, dest string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if err := CreateFile(dest, resp.Body, 0600); err != nil {
+	// TODO: set uid and gid according to current user
+	if err := CreateFile(dest, resp.Body, 0600, 0, 0); err != nil {
 		return err
 	}
 	mTime := time.Time{}
@@ -437,7 +452,14 @@ func CopyDir(src, dest string) error {
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
 			logrus.Infof("Creating directory %s", destPath)
+
+			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
+			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
+
 			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
+				return err
+			}
+			if err := os.Chown(destPath, uid, gid); err != nil {
 				return err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
@@ -477,7 +499,9 @@ func CopyFile(src, dest string) error {
 		return err
 	}
 	defer srcFile.Close()
-	return CreateFile(dest, srcFile, fi.Mode())
+	uid := fi.Sys().(*syscall.Stat_t).Uid
+	gid := fi.Sys().(*syscall.Stat_t).Gid
+	return CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
 // HasFilepathPrefix checks if the given file path begins with prefix
