@@ -149,7 +149,7 @@ func TestSnapshotFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedFiles := []string{"/tmp", filepath.Join(testDir, "foo")}
+	expectedFiles := []string{"/", "/tmp", filepath.Join(testDir, "foo")}
 
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
 	reader := bytes.NewReader(contents)
