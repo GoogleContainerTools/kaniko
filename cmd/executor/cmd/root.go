@@ -136,7 +136,11 @@ func resolveSourceContext() error {
 	// if no prefix use Google Cloud Storage as default for backwards compability
 	if !strings.Contains(srcContext, "://") {
 		if bucket != "" {
-			srcContext = fmt.Sprintf("gs://%s", bucket)
+			if !strings.Contains(bucket, "://") {
+				srcContext = fmt.Sprintf("gs://%s", bucket)
+			} else {
+				srcContext = bucket
+			}
 		} else {
 			srcContext = fmt.Sprintf("dir://%s", srcContext)
 		}
@@ -147,7 +151,7 @@ func resolveSourceContext() error {
 		return err
 	}
 
-	if err := contextExecutor.UnpackTarFromBuildContext(srcContext, buildContextPath); err != nil {
+	if err := contextExecutor.UnpackTarFromBuildContext(buildContextPath); err != nil {
 		return err
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)

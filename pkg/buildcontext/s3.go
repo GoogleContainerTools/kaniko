@@ -31,10 +31,12 @@ import (
 
 // S3 unifies calls to download and unpack the build context.
 type S3 struct {
+	context string
 }
 
 // UnpackTarFromBuildContext download and untar a file from s3
-func (s *S3) UnpackTarFromBuildContext(buildContext string, directory string) error {
+func (s *S3) UnpackTarFromBuildContext(directory string) error {
+	buildContext := s.context
 	// if no context is set, add default file context.tar.gz
 	if !strings.HasSuffix(buildContext, ".tar.gz") {
 		buildContext += "/" + constants.ContextTar
@@ -71,4 +73,8 @@ func (s *S3) UnpackTarFromBuildContext(buildContext string, directory string) er
 	}
 
 	return nil
+}
+
+func (s *S3) SetContext(srcContext string) {
+	s.context = srcContext
 }

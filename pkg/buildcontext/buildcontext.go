@@ -30,7 +30,8 @@ var buildContextMap = map[string]BuildContext{
 // BuildContext unifies calls to download and unpack the build context.
 type BuildContext interface {
 	// Gets context.tar.gz from the build context and unpacks to the directory
-	UnpackTarFromBuildContext(buildContext string, directory string) error
+	UnpackTarFromBuildContext(directory string) error
+	SetContext(srcContext string)
 }
 
 // GetBuildContext parses srcContext for the prefix and returns related buildcontext
@@ -38,6 +39,7 @@ type BuildContext interface {
 func GetBuildContext(srcContext string) (BuildContext, error) {
 	for prefix, bc := range buildContextMap {
 		if strings.HasPrefix(srcContext, prefix) {
+			bc.SetContext(strings.TrimPrefix(srcContext, prefix))
 			return bc, nil
 		}
 	}

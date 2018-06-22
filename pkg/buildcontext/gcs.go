@@ -25,17 +25,22 @@ import (
 
 // GCS struct for Google Cloud Storage processing
 type GCS struct {
+	context string
 }
 
-func (g *GCS) UnpackTarFromBuildContext(buildContext string, directory string) error {
+func (g *GCS) UnpackTarFromBuildContext(directory string) error {
 	// if no context is set, add default file context.tar.gz
-	if !strings.HasSuffix(buildContext, ".tar.gz") {
-		buildContext += "/" + constants.ContextTar
+	if !strings.HasSuffix(g.context, ".tar.gz") {
+		g.context += "/" + constants.ContextTar
 	}
 
-	if err := util.UnpackTarFromGCSBucket(buildContext, directory); err != nil {
+	if err := util.UnpackTarFromGCSBucket(g.context, directory); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (g *GCS) SetContext(srcContext string) {
+	g.context = srcContext
 }

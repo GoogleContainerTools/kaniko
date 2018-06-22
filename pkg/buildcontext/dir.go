@@ -18,9 +18,14 @@ package buildcontext
 
 // Dir unifies calls to download and unpack the build context.
 type Dir struct {
+	context string
 }
 
 // UnpackTarFromBuildContext just provides a directory with already extracted content
-func (f *Dir) UnpackTarFromBuildContext(buildContext string, directory string) error {
+func (f *Dir) UnpackTarFromBuildContext(directory string) error {
 	return nil
+}
+
+func (f *Dir) SetContext(srcContext string) {
+	f.context = srcContext
 }
