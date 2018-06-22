@@ -30,13 +30,41 @@ import (
 // image accesses an image from a docker daemon
 type image struct {
 	v1.Image
-}
 
-type ReadOptions struct {
-	Buffer bool
+	opener tarball.Opener
+	ref    name.Reference
 }
 
 var _ v1.Image = (*image)(nil)
+
+type imageOpener struct {
+	ref      name.Reference
+	buffered bool
+}
+
+type ImageOption func(*imageOpener) error
+
+func (i *imageOpener) Open() (v1.Image, error) {
+	var opener tarball.Opener
+	var err error
+	if i.buffered {
+		opener, err = bufferedOpener(i.ref)
+	} else {
+		opener, err = unbufferedOpener(i.ref)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	tb, err := tarball.Image(opener, nil)
+	if err != nil {
+		return nil, err
+	}
+	img := &image{
+		Image: tb,
+	}
+	return img, nil
+}
 
 // API interface for testing.
 type ImageSaver interface {
@@ -83,25 +111,18 @@ func unbufferedOpener(ref name.Reference) (tarball.Opener, error) {
 	}, nil
 }
 
-// Image exposes an image reference from within the Docker daemon.
-func Image(ref name.Reference, ro *ReadOptions) (v1.Image, error) {
-	var opener tarball.Opener
-	var err error
-	if ro.Buffer {
-		opener, err = bufferedOpener(ref)
-	} else {
-		opener, err = unbufferedOpener(ref)
+// Image provides access to an image reference from the Docker daemon,
+// applying functional options to the underlying imageOpener before
+// resolving the reference into a v1.Image.
+func Image(ref name.Reference, options ...ImageOption) (v1.Image, error) {
+	i := &imageOpener{
+		ref:      ref,
+		buffered: true, // buffer by default
 	}
-	if err != nil {
-		return nil, err
+	for _, option := range options {
+		if err := option(i); err != nil {
+			return nil, err
+		}
 	}
-
-	tb, err := tarball.Image(opener, nil)
-	if err != nil {
-		return nil, err
-	}
-	img := &image{
-		Image: tb,
-	}
-	return img, nil
+	return i.Open()
 }
