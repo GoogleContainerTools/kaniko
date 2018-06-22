@@ -36,7 +36,7 @@ type S3 struct {
 
 // UnpackTarFromBuildContext download and untar a file from s3
 func (s *S3) UnpackTarFromBuildContext(directory string) error {
-	buildContext := s.context
+	buildContext := "s3://" + s.context
 	// if no context is set, add default file context.tar.gz
 	if !strings.HasSuffix(buildContext, ".tar.gz") {
 		buildContext += "/" + constants.ContextTar
