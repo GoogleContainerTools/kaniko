@@ -130,32 +130,27 @@ func resolveSourceContext() error {
 	if srcContext == "" && bucket == "" {
 		return errors.New("please specify a path to the build context with the --context flag or a bucket with the --bucket flag")
 	}
-
-	buildContextPath := constants.BuildContextDir
-
-	// if no prefix use Google Cloud Storage as default for backwards compability
-	if !strings.Contains(srcContext, "://") {
-		if bucket != "" {
-			if !strings.Contains(bucket, "://") {
-				srcContext = fmt.Sprintf("gs://%s", bucket)
-			} else {
-				srcContext = bucket
-			}
+	if srcContext != "" && !strings.Contains(srcContext, "://") {
+		return nil
+	}
+	if bucket != "" {
+		if !strings.Contains(bucket, "://") {
+			srcContext = fmt.Sprintf("gs://%s", bucket)
 		} else {
-			srcContext = fmt.Sprintf("dir://%s", srcContext)
+			srcContext = bucket
 		}
 	}
-
+	// if no prefix use Google Cloud Storage as default for backwards compability
 	contextExecutor, err := buildcontext.GetBuildContext(srcContext)
 	if err != nil {
 		return err
 	}
 
+	buildContextPath := constants.BuildContextDir
 	if err := contextExecutor.UnpackTarFromBuildContext(buildContextPath); err != nil {
 		return err
 	}
-	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
-
+	logrus.Debugf("Unpacked tar from %s to path %s", srcContext, buildContextPath)
 	srcContext = buildContextPath
 	return nil
 }
