@@ -28,6 +28,11 @@ if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     cp $KOKORO_ROOT/src/keystore/72508_gcr_application_creds $HOME/.config/gcloud/application_default_credentials.json
 fi
 
+echo "Creating build context tarball..."
+tar  -C ./integration -zcvf context.tar.gz .
+gsutil cp context.tar.gz gs://kaniko-test-bucket
+rm context.tar.gz
+
 echo "Running integration tests..."
 make out/executor
 pushd integration

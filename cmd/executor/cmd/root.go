@@ -40,6 +40,7 @@ var (
 	force                       bool
 	buildArgs                   multiArg
 	tarPath                     string
+	singleSnapshot              bool
 	reproducible                bool
 )
 
@@ -55,6 +56,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 	RootCmd.PersistentFlags().StringVarP(&tarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
+	RootCmd.PersistentFlags().BoolVarP(&singleSnapshot, "single-snapshot", "", false, "Set this flag to take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 }
 
@@ -81,7 +83,14 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		ref, image, err := executor.DoBuild(dockerfilePath, srcContext, snapshotMode, buildArgs, reproducible)
+		ref, image, err := executor.DoBuild(executor.KanikoBuildArgs{
+			DockerfilePath: dockerfilePath,
+			SrcContext:     srcContext,
+			SnapshotMode:   snapshotMode,
+			Args:           buildArgs,
+			SingleSnapshot: singleSnapshot,
+			Reproducible:   reproducible,
+		})
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)

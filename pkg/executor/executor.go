@@ -45,9 +45,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, reproducible bool) (name.Reference, v1.Image, error) {
+// KanikoBuildArgs contains all the args required to build the image
+type KanikoBuildArgs struct {
+	DockerfilePath string
+	SrcContext     string
+	SnapshotMode   string
+	Args           []string
+	SingleSnapshot bool
+	Reproducible   bool
+}
+
+func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
-	d, err := ioutil.ReadFile(dockerfilePath)
+	d, err := ioutil.ReadFile(k.DockerfilePath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,12 +68,12 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, rep
 	}
 	dockerfile.ResolveStages(stages)
 
-	hasher, err := getHasher(snapshotMode)
+	hasher, err := getHasher(k.SnapshotMode)
 	if err != nil {
 		return nil, nil, err
 	}
 	for index, stage := range stages {
-		baseImage, err := util.ResolveEnvironmentReplacement(stage.BaseName, args, false)
+		baseImage, err := util.ResolveEnvironmentReplacement(stage.BaseName, k.Args, false)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -109,9 +119,10 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, rep
 		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
 			return nil, nil, err
 		}
-		buildArgs := dockerfile.NewBuildArgs(args)
-		for _, cmd := range stage.Commands {
-			dockerCommand, err := commands.GetCommand(cmd, srcContext)
+		buildArgs := dockerfile.NewBuildArgs(k.Args)
+		for index, cmd := range stage.Commands {
+			finalCmd := index == len(stage.Commands)-1
+			dockerCommand, err := commands.GetCommand(cmd, k.SrcContext)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -121,11 +132,14 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, rep
 			if err := dockerCommand.ExecuteCommand(&imageConfig.Config, buildArgs); err != nil {
 				return nil, nil, err
 			}
-			if !finalStage {
+			if !finalStage || (k.SingleSnapshot && !finalCmd) {
 				continue
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot
 			snapshotFiles := dockerCommand.FilesToSnapshot()
+			if k.SingleSnapshot && finalCmd {
+				snapshotFiles = nil
+			}
 			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
 			if err != nil {
 				return nil, nil, err
@@ -162,7 +176,7 @@ func DoBuild(dockerfilePath, srcContext, snapshotMode string, args []string, rep
 				return nil, nil, err
 			}
 
-			if reproducible {
+			if k.Reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)
 				if err != nil {
 					return nil, nil, err
