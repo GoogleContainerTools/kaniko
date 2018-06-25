@@ -8,5 +8,6 @@
 		"gcr.io": "gcr",
 		"gcr.kubernetes.io": "gcr",
 		"us.gcr.io": "gcr"
-	}
+	},
+	"credsStore": "ecr-login"
 }

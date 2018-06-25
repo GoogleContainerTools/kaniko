@@ -17,16 +17,18 @@ limitations under the License.
 package buildcontext
 
 import (
-	"io/ioutil"
-	"net/url"
-	"path/filepath"
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	// "github.com/sirupsen/logrus"
+	// "io/ioutil"
+	// "net/url"
+	"os"
+	"path/filepath"
+	// "strings"
 )
 
 // S3 unifies calls to download and unpack the build context.
@@ -36,37 +38,29 @@ type S3 struct {
 
 // UnpackTarFromBuildContext download and untar a file from s3
 func (s *S3) UnpackTarFromBuildContext(directory string) error {
-	buildContext := "s3://" + s.context
-	// if no context is set, add default file context.tar.gz
-	if !strings.HasSuffix(buildContext, ".tar.gz") {
-		buildContext += "/" + constants.ContextTar
-	}
+	bucket := "kaniko"
+	item := "context.tar.gz"
+	sess, _ := session.NewSession(&aws.Config{
+		Region: aws.String("us-east")},
+	)
 
-	u, err := url.Parse(buildContext)
-	if err != nil {
-		return err
-	}
-
-	bucket := strings.TrimSuffix(u.Host, "/")
-	key := strings.TrimSuffix(u.Path, "/")
+	downloader := s3manager.NewDownloader(sess)
 	tarPath := filepath.Join(directory, constants.ContextTar)
-
-	svc := s3.New(session.New())
-	input := &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+	if err := os.MkdirAll(directory, 0750); err != nil {
+		return err
 	}
-
-	response, err := svc.GetObject(input)
+	file, err := os.Create(tarPath)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
+	_, err = downloader.Download(file,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(item),
+		})
 	if err != nil {
 		return err
 	}
-	ioutil.WriteFile(tarPath, body, 0600)
 
 	if err := util.UnpackCompressedTar(tarPath, directory); err != nil {
 		return err
