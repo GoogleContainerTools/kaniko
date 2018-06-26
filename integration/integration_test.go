@@ -159,7 +159,7 @@ func TestRun(t *testing.T) {
 			for _, d := range bucketContextTests {
 				if d == dockerfile {
 					contextFlag = "-b"
-					contextPath = kanikoTestBucket
+					contextPath = "gs://" + kanikoTestBucket
 					break
 				}
 			}

@@ -17,10 +17,15 @@ limitations under the License.
 package buildcontext
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
+	"cloud.google.com/go/storage"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 // GCS struct for Google Cloud Storage processing
@@ -28,19 +33,55 @@ type GCS struct {
 	context string
 }
 
-func (g *GCS) UnpackTarFromBuildContext(directory string) error {
+func (g *GCS) UnpackTarFromBuildContext(directory string) (string, error) {
 	// if no context is set, add default file context.tar.gz
 	if !strings.HasSuffix(g.context, ".tar.gz") {
 		g.context += "/" + constants.ContextTar
 	}
 
-	if err := util.UnpackTarFromGCSBucket(g.context, directory); err != nil {
-		return err
-	}
-
-	return nil
+	bucket, item := util.GetBucketAndItem(g.context)
+	return directory, unpackTarFromGCSBucket(bucket, item, directory)
 }
 
 func (g *GCS) SetContext(srcContext string) {
 	g.context = srcContext
+}
+
+// UnpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory
+func unpackTarFromGCSBucket(bucketName, item, directory string) error {
+	// Get the tar from the bucket
+	tarPath, err := getTarFromBucket(bucketName, item, directory)
+	if err != nil {
+		return err
+	}
+	logrus.Debug("Unpacking source context tar...")
+	if err := util.UnpackCompressedTar(tarPath, directory); err != nil {
+		return err
+	}
+	// Remove the tar so it doesn't interfere with subsequent commands
+	logrus.Debugf("Deleting %s", tarPath)
+	return os.Remove(tarPath)
+}
+
+// getTarFromBucket gets context.tar.gz from the GCS bucket and saves it to the filesystem
+// It returns the path to the tar file
+func getTarFromBucket(bucketName, item, directory string) (string, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	bucket := client.Bucket(bucketName)
+	// Get the tarfile context.tar.gz from the GCS bucket, and save it to a tar object
+	reader, err := bucket.Object(item).NewReader(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
+	tarPath := filepath.Join(directory, constants.ContextTar)
+	if err := util.CreateFile(tarPath, reader, 0600, 0, 0); err != nil {
+		return "", err
+	}
+	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", constants.ContextTar, bucketName, tarPath)
+	return tarPath, nil
 }

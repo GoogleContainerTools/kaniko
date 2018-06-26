@@ -147,10 +147,10 @@ func resolveSourceContext() error {
 	}
 
 	buildContextPath := constants.BuildContextDir
-	if err := contextExecutor.UnpackTarFromBuildContext(buildContextPath); err != nil {
+	srcContext, err = contextExecutor.UnpackTarFromBuildContext(buildContextPath)
+	if err != nil {
 		return err
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", srcContext, buildContextPath)
-	srcContext = buildContextPath
 	return nil
 }

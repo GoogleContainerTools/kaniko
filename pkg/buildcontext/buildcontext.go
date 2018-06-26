@@ -30,7 +30,7 @@ var buildContextMap = map[string]BuildContext{
 // BuildContext unifies calls to download and unpack the build context.
 type BuildContext interface {
 	// Gets context.tar.gz from the build context and unpacks to the directory
-	UnpackTarFromBuildContext(directory string) error
+	UnpackTarFromBuildContext(directory string) (string, error)
 	SetContext(srcContext string)
 }
 
@@ -43,5 +43,5 @@ func GetBuildContext(srcContext string) (BuildContext, error) {
 			return bc, nil
 		}
 	}
-	return nil, errors.New("unknown prefix")
+	return nil, errors.New("unknown build context prefix provided, please use on of the following: gs://, dir://, s3://")
 }

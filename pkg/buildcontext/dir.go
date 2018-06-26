@@ -22,8 +22,8 @@ type Dir struct {
 }
 
 // UnpackTarFromBuildContext just provides a directory with already extracted content
-func (f *Dir) UnpackTarFromBuildContext(directory string) error {
-	return nil
+func (f *Dir) UnpackTarFromBuildContext(directory string) (string, error) {
+	return f.context, nil
 }
 
 func (f *Dir) SetContext(srcContext string) {

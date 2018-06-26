@@ -23,12 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	// "github.com/sirupsen/logrus"
-	// "io/ioutil"
-	// "net/url"
 	"os"
 	"path/filepath"
-	// "strings"
 )
 
 // S3 unifies calls to download and unpack the build context.
@@ -37,21 +33,16 @@ type S3 struct {
 }
 
 // UnpackTarFromBuildContext download and untar a file from s3
-func (s *S3) UnpackTarFromBuildContext(directory string) error {
-	bucket := "kaniko"
-	item := "context.tar.gz"
-	sess, _ := session.NewSession(&aws.Config{
-		Region: aws.String("us-east")},
-	)
-
-	downloader := s3manager.NewDownloader(sess)
+func (s *S3) UnpackTarFromBuildContext(directory string) (string, error) {
+	bucket, item := util.GetBucketAndItem(s.context)
+	downloader := s3manager.NewDownloader(session.New())
 	tarPath := filepath.Join(directory, constants.ContextTar)
 	if err := os.MkdirAll(directory, 0750); err != nil {
-		return err
+		return directory, err
 	}
 	file, err := os.Create(tarPath)
 	if err != nil {
-		return err
+		return directory, err
 	}
 	_, err = downloader.Download(file,
 		&s3.GetObjectInput{
@@ -59,14 +50,10 @@ func (s *S3) UnpackTarFromBuildContext(directory string) error {
 			Key:    aws.String(item),
 		})
 	if err != nil {
-		return err
+		return directory, err
 	}
 
-	if err := util.UnpackCompressedTar(tarPath, directory); err != nil {
-		return err
-	}
-
-	return nil
+	return directory, util.UnpackCompressedTar(tarPath, directory)
 }
 
 func (s *S3) SetContext(srcContext string) {
