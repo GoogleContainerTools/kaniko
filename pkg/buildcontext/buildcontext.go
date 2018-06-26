@@ -18,30 +18,29 @@ package buildcontext
 
 import (
 	"errors"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"strings"
 )
 
-var buildContextMap = map[string]BuildContext{
-	"gs://":  &GCS{},
-	"s3://":  &S3{},
-	"dir://": &Dir{},
-}
-
 // BuildContext unifies calls to download and unpack the build context.
 type BuildContext interface {
-	// Gets context.tar.gz from the build context and unpacks to the directory
-	UnpackTarFromBuildContext(directory string) (string, error)
-	SetContext(srcContext string)
+	// Unpacks a build context and returns the directory where it resides
+	UnpackTarFromBuildContext() (string, error)
 }
 
 // GetBuildContext parses srcContext for the prefix and returns related buildcontext
 // parser
 func GetBuildContext(srcContext string) (BuildContext, error) {
-	for prefix, bc := range buildContextMap {
-		if strings.HasPrefix(srcContext, prefix) {
-			bc.SetContext(strings.TrimPrefix(srcContext, prefix))
-			return bc, nil
-		}
+	split := strings.SplitAfter(srcContext, "://")
+	prefix := split[0]
+	context := split[1]
+	switch prefix {
+	case constants.GCSBuildContextPrefix:
+		return &GCS{context: context}, nil
+	case constants.S3BuildContextPrefix:
+		return &S3{context: context}, nil
+	case constants.LocalDirBuildContextPrefix:
+		return &Dir{context: context}, nil
 	}
-	return nil, errors.New("unknown build context prefix provided, please use on of the following: gs://, dir://, s3://")
+	return nil, errors.New("unknown build context prefix provided, please use one of the following: gs://, dir://, s3://")
 }

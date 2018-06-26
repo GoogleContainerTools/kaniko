@@ -33,9 +33,10 @@ type S3 struct {
 }
 
 // UnpackTarFromBuildContext download and untar a file from s3
-func (s *S3) UnpackTarFromBuildContext(directory string) (string, error) {
+func (s *S3) UnpackTarFromBuildContext() (string, error) {
 	bucket, item := util.GetBucketAndItem(s.context)
 	downloader := s3manager.NewDownloader(session.New())
+	directory := constants.BuildContextDir
 	tarPath := filepath.Join(directory, constants.ContextTar)
 	if err := os.MkdirAll(directory, 0750); err != nil {
 		return directory, err
@@ -54,8 +55,4 @@ func (s *S3) UnpackTarFromBuildContext(directory string) (string, error) {
 	}
 
 	return directory, util.UnpackCompressedTar(tarPath, directory)
-}
-
-func (s *S3) SetContext(srcContext string) {
-	s.context = srcContext
 }

@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,7 +134,7 @@ func resolveSourceContext() error {
 	}
 	if bucket != "" {
 		if !strings.Contains(bucket, "://") {
-			srcContext = fmt.Sprintf("gs://%s", bucket)
+			srcContext = constants.GCSBuildContextPrefix + bucket
 		} else {
 			srcContext = bucket
 		}
@@ -145,12 +144,11 @@ func resolveSourceContext() error {
 	if err != nil {
 		return err
 	}
-
-	buildContextPath := constants.BuildContextDir
-	srcContext, err = contextExecutor.UnpackTarFromBuildContext(buildContextPath)
+	logrus.Debugf("Getting source context from %s", srcContext)
+	srcContext, err = contextExecutor.UnpackTarFromBuildContext()
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("Unpacked tar from %s to path %s", srcContext, buildContextPath)
+	logrus.Debugf("Build context located at %s", srcContext)
 	return nil
 }

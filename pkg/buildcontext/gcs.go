@@ -19,7 +19,6 @@ package buildcontext
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"cloud.google.com/go/storage"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -33,21 +32,12 @@ type GCS struct {
 	context string
 }
 
-func (g *GCS) UnpackTarFromBuildContext(directory string) (string, error) {
-	// if no context is set, add default file context.tar.gz
-	if !strings.HasSuffix(g.context, ".tar.gz") {
-		g.context += "/" + constants.ContextTar
-	}
-
+func (g *GCS) UnpackTarFromBuildContext() (string, error) {
 	bucket, item := util.GetBucketAndItem(g.context)
-	return directory, unpackTarFromGCSBucket(bucket, item, directory)
+	return constants.BuildContextDir, unpackTarFromGCSBucket(bucket, item, constants.BuildContextDir)
 }
 
-func (g *GCS) SetContext(srcContext string) {
-	g.context = srcContext
-}
-
-// UnpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory
+// unpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory
 func unpackTarFromGCSBucket(bucketName, item, directory string) error {
 	// Get the tar from the bucket
 	tarPath, err := getTarFromBucket(bucketName, item, directory)

@@ -19,6 +19,9 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"math"
 	"os"
 	"os/exec"
@@ -27,9 +30,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -159,7 +159,7 @@ func TestRun(t *testing.T) {
 			for _, d := range bucketContextTests {
 				if d == dockerfile {
 					contextFlag = "-b"
-					contextPath = "gs://" + kanikoTestBucket
+					contextPath = constants.GCSBuildContextPrefix + kanikoTestBucket
 					break
 				}
 			}
