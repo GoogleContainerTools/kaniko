@@ -21,10 +21,15 @@ VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 GOOS ?= $(shell go env GOOS)
-GOARCH = amd64
+GOARCH ?= $(shell go env GOARCH)
 ORG := github.com/GoogleContainerTools
 PROJECT := kaniko
-REGISTRY?=gcr.io/kaniko-project
+ifeq ($(GOARCH),ppc64le)
+  REGISTRY?=docker.io/pharshal
+else
+  REGISTRY?=gcr.io/kaniko-project
+endif
+
 
 REPOPATH ?= $(ORG)/$(PROJECT)
 
@@ -50,4 +55,4 @@ integration-test:
 
 .PHONY: images
 images:
-	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile.$(GOARCH) .

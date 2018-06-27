@@ -3,6 +3,10 @@ os: linux
 
 go:
   - 1.10.x
+os:
+- linux-ppc64le
+- linux
+
 go_import_path: github.com/GoogleContainerTools/kaniko
 
 script:
