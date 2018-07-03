@@ -5,6 +5,8 @@ kaniko is a tool to build container images from a Dockerfile, inside a container
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster.
 
+kaniko is meant to be run as an image, `gcr.io/kaniko-project/executor`.
+We do **not** recommend running the kaniko executor binary in another image, as it might not work.
 
 - [Kaniko](#kaniko)
   - [How does kaniko work?](#how-does-kaniko-work)
@@ -17,6 +19,7 @@ This enables building container images in environments that can't easily or secu
   - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
   - [Running kaniko locally](#running-kaniko-locally)
   - [Pushing to Different Registries](#pushing-to-different-registries)
+  - [Additional Flags](#additional-flags)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -204,6 +207,24 @@ spec:
       configMap:
         name: docker-config
 ```
+### Additional Flags
+#### --snapshotMode
+You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
+If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting.
+
+#### --build-arg
+This flag allows you to pass in ARG values at build time, similarly to Docker.
+You can set it multiple times for multiple arguments.
+
+#### --single-snapshot
+This flag takes a single snapshot of the filesystem at the end of the build, so only one layer will be appended to the base image.
+
+#### --reproducible
+Set this flag to strip timestamps out of the built image and make it reproducible.
+
+#### --tarPath
+Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.
