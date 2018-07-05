@@ -40,6 +40,7 @@ var (
 	force                       bool
 	buildArgs                   multiArg
 	tarPath                     string
+	contextTar                  string
 	singleSnapshot              bool
 	reproducible                bool
 )
@@ -48,6 +49,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
+	RootCmd.PersistentFlags().StringVarP(&contextTar, "contextTar", "", constants.ContextTar, "Name of the build context tarball")
 	RootCmd.PersistentFlags().VarP(&destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.MarkPersistentFlagRequired("destination")
 	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
@@ -132,7 +134,7 @@ func resolveSourceContext() error {
 	}
 	logrus.Infof("Using GCS bucket %s as source context", bucket)
 	buildContextPath := constants.BuildContextDir
-	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
+	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath, contextTar); err != nil {
 		return err
 	}
 	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)

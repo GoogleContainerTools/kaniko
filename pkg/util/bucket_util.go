@@ -21,15 +21,14 @@ import (
 	"path/filepath"
 
 	"cloud.google.com/go/storage"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
 // UnpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory
-func UnpackTarFromGCSBucket(bucketName, directory string) error {
+func UnpackTarFromGCSBucket(bucketName, directory, contextTarName string) error {
 	// Get the tar from the bucket
-	tarPath, err := getTarFromBucket(bucketName, directory)
+	tarPath, err := getTarFromBucket(bucketName, directory, contextTarName)
 	if err != nil {
 		return err
 	}
@@ -44,7 +43,7 @@ func UnpackTarFromGCSBucket(bucketName, directory string) error {
 
 // getTarFromBucket gets context.tar.gz from the GCS bucket and saves it to the filesystem
 // It returns the path to the tar file
-func getTarFromBucket(bucketName, directory string) (string, error) {
+func getTarFromBucket(bucketName, directory, contextTarName string) (string, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -52,15 +51,15 @@ func getTarFromBucket(bucketName, directory string) (string, error) {
 	}
 	bucket := client.Bucket(bucketName)
 	// Get the tarfile context.tar.gz from the GCS bucket, and save it to a tar object
-	reader, err := bucket.Object(constants.ContextTar).NewReader(ctx)
+	reader, err := bucket.Object(contextTarName).NewReader(ctx)
 	if err != nil {
 		return "", err
 	}
 	defer reader.Close()
-	tarPath := filepath.Join(directory, constants.ContextTar)
+	tarPath := filepath.Join(directory, contextTarName)
 	if err := CreateFile(tarPath, reader, 0600, 0, 0); err != nil {
 		return "", err
 	}
-	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", constants.ContextTar, bucketName, tarPath)
+	logrus.Debugf("Copied tarball %s from GCS bucket %s to %s", contextTarName, bucketName, tarPath)
 	return tarPath, nil
 }
