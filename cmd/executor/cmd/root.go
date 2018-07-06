@@ -113,6 +113,11 @@ func checkContained() bool {
 
 func checkDockerfilePath() error {
 	if util.FilepathExists(dockerfilePath) {
+		abs, err := filepath.Abs(dockerfilePath)
+		if err != nil {
+			return err
+		}
+		dockerfilePath = abs
 		return nil
 	}
 	// Otherwise, check if the path relative to the build context exists
