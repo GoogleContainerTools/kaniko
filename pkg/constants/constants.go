@@ -46,6 +46,10 @@ const (
 
 	// NoBaseImage is the scratch image
 	NoBaseImage = "scratch"
+
+	GCSBuildContextPrefix      = "gs://"
+	S3BuildContextPrefix       = "s3://"
+	LocalDirBuildContextPrefix = "dir://"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko

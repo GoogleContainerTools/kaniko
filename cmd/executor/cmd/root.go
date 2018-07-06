@@ -20,7 +20,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -121,21 +123,32 @@ func checkDockerfilePath() error {
 	return errors.New("please provide a valid path to a Dockerfile within the build context")
 }
 
-// resolveSourceContext unpacks the source context if it is a tar in a GCS bucket
+// resolveSourceContext unpacks the source context if it is a tar in a bucket
 // it resets srcContext to be the path to the unpacked build context within the image
 func resolveSourceContext() error {
 	if srcContext == "" && bucket == "" {
-		return errors.New("please specify a path to the build context with the --context flag or a GCS bucket with the --bucket flag")
+		return errors.New("please specify a path to the build context with the --context flag or a bucket with the --bucket flag")
 	}
-	if bucket == "" {
+	if srcContext != "" && !strings.Contains(srcContext, "://") {
 		return nil
 	}
-	logrus.Infof("Using GCS bucket %s as source context", bucket)
-	buildContextPath := constants.BuildContextDir
-	if err := util.UnpackTarFromGCSBucket(bucket, buildContextPath); err != nil {
+	if bucket != "" {
+		if !strings.Contains(bucket, "://") {
+			srcContext = constants.GCSBuildContextPrefix + bucket
+		} else {
+			srcContext = bucket
+		}
+	}
+	// if no prefix use Google Cloud Storage as default for backwards compability
+	contextExecutor, err := buildcontext.GetBuildContext(srcContext)
+	if err != nil {
 		return err
 	}
-	logrus.Debugf("Unpacked tar from %s to path %s", bucket, buildContextPath)
-	srcContext = buildContextPath
+	logrus.Debugf("Getting source context from %s", srcContext)
+	srcContext, err = contextExecutor.UnpackTarFromBuildContext()
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("Build context located at %s", srcContext)
 	return nil
 }
