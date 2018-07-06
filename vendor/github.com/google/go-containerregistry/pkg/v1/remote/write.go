@@ -145,7 +145,9 @@ func (w *writer) initiateUpload(h v1.Hash) (location string, mounted bool, err e
 	// if "mount" is specified, even if no "from" sources are specified.  If this turns out
 	// to not be broadly applicable then we should replace mounts without "from"s with a HEAD.
 	if ml, ok := l.(*MountableLayer); ok {
-		uv["from"] = []string{ml.Reference.Context().RepositoryStr()}
+		if w.ref.Context().RegistryStr() == ml.Reference.Context().RegistryStr() {
+			uv["from"] = []string{ml.Reference.Context().RepositoryStr()}
+		}
 	}
 	u.RawQuery = uv.Encode()
 
