@@ -216,7 +216,7 @@ func Test_checkWhiteouts(t *testing.T) {
 	}
 }
 
-func Test_checkWhitelist(t *testing.T) {
+func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
 		whitelist []string
@@ -261,8 +261,13 @@ func Test_checkWhitelist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := checkWhitelist(tt.args.path, tt.args.whitelist); got != tt.want {
-				t.Errorf("checkWhitelist() = %v, want %v", got, tt.want)
+			original := whitelist
+			defer func() {
+				whitelist = original
+			}()
+			whitelist = tt.args.whitelist
+			if got := CheckWhitelist(tt.args.path); got != tt.want {
+				t.Errorf("CheckWhitelist() = %v, want %v", got, tt.want)
 			}
 		})
 	}
