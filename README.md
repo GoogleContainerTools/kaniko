@@ -41,25 +41,29 @@ kaniko does not support building Windows containers.
 
 ## Development
 ### kaniko Build Contexts
-kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
-To specify a GCS bucket, pass in the `--bucket` flag.
-The GCS bucket should contain a compressed tar of the build context called `context.tar.gz`, which kaniko will unpack and use as the build context.
+kaniko currently supports local directories, Google Cloud Storage and Amazon S3 as build contexts.
+If using a GCS or S3 bucket, the bucket should contain a compressed tar of the build context, which kaniko will unpack and use. 
 
-To create `context.tar.gz`, run the following command:
+To create a compressed tar, you can run:
 ```shell
 tar -C <path to build context> -zcvf context.tar.gz .
 ```
-
-Or, you can use [skaffold](https://github.com/GoogleContainerTools/skaffold) to create `context.tar.gz` by running
-```
-skaffold docker context
-```
-
-We can copy over the compressed tar to a GCS bucket with gsutil:
-
+Then, copy over the compressed tar into your bucket. 
+For example, we can copy over the compressed tar to a GCS bucket with gsutil:
 ```
 gsutil cp context.tar.gz gs://<bucket name>
 ```
+
+Use the `--context` flag with the appropriate prefix to specify your build context:
+
+|  Source | Prefix  |
+|---------|---------|
+| Local Directory  | dir://[path to directory]  |
+| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     | 
+| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
+
+If you don't specify a prefix, kaniko will assume a local directory.
+For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`. 
 
 ### Running kaniko in a Kubernetes cluster
 
@@ -89,7 +93,7 @@ spec:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
     args: ["--dockerfile=<path to Dockerfile>",
-            "--bucket=<GCS bucket>",
+            "--context=gs://<GCS bucket>/<path to .tar.gz>",
             "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
     volumeMounts:
       - name: kaniko-secret
@@ -129,7 +133,7 @@ To run kaniko in GCB, add it to your build config as a build step:
 steps:
   - name: gcr.io/kaniko-project/executor:latest
     args: ["--dockerfile=<path to Dockerfile>",
-           "--context=<path to build context>",
+           "--context=dir://<path to build context>",
            "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
 ```
 kaniko will build and push the final image in this build step.
@@ -191,7 +195,7 @@ spec:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
     args: ["--dockerfile=<path to Dockerfile>",
-            "--context=<path to build context>",
+            "--context=s3://<bucket name>/<path to .tar.gz>",
             "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
     volumeMounts:
       - name: aws-secret
