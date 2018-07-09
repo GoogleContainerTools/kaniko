@@ -91,12 +91,12 @@ func GetFSFromImage(img v1.Image) error {
 				continue
 			}
 
-			if checkWhitelist(path, whitelist) {
+			if CheckWhitelist(path) {
 				logrus.Infof("Not adding %s because it is whitelisted", path)
 				continue
 			}
 			if hdr.Typeflag == tar.TypeSymlink {
-				if checkWhitelist(hdr.Linkname, whitelist) {
+				if CheckWhitelist(hdr.Linkname) {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
@@ -115,7 +115,7 @@ func GetFSFromImage(img v1.Image) error {
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
-		if PathInWhitelist(path, constants.RootDir) || ChildDirInWhitelist(path, constants.RootDir) {
+		if CheckWhitelist(path) || ChildDirInWhitelist(path, constants.RootDir) {
 			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
 			return nil
 		}
@@ -233,20 +233,20 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	return nil
 }
 
-func PathInWhitelist(path, directory string) bool {
-	for _, c := range constants.KanikoBuildFiles {
-		if path == c {
-			return false
-		}
-	}
-	for _, d := range whitelist {
-		dirPath := filepath.Join(directory, d)
-		if HasFilepathPrefix(path, dirPath) {
-			return true
-		}
-	}
-	return false
-}
+// func PathInWhitelist(path, directory string) bool {
+// 	for _, c := range constants.KanikoBuildFiles {
+// 		if path == c {
+// 			return false
+// 		}
+// 	}
+// 	for _, d := range whitelist {
+// 		dirPath := filepath.Join(directory, d)
+// 		if HasFilepathPrefix(path, dirPath) {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 	// Don't add the file if it or it's directory are whited out.
@@ -262,7 +262,7 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 	return false
 }
 
-func checkWhitelist(path string, whitelist []string) bool {
+func CheckWhitelist(path string) bool {
 	for _, wl := range whitelist {
 		if HasFilepathPrefix(path, wl) {
 			return true
@@ -316,6 +316,9 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if CheckWhitelist(path) && !HasFilepathPrefix(path, root) {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
@@ -334,7 +337,7 @@ func Files(root string) ([]string, error) {
 	var files []string
 	logrus.Debugf("Getting files and contents at root %s", root)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if PathInWhitelist(path, root) {
+		if CheckWhitelist(path) {
 			return nil
 		}
 		files = append(files, path)

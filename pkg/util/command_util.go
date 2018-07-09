@@ -89,20 +89,25 @@ func ContainsWildcards(paths []string) bool {
 // It returns a list of resolved sources
 func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) ([]string, error) {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
+	logrus.Infof("looking at srcs %s", srcs)
 	// If sources contain wildcards, we first need to resolve them to actual paths
 	if ContainsWildcards(srcs) {
 		logrus.Debugf("Resolving srcs %v...", srcs)
 		files, err := RelativeFiles("", root)
 		if err != nil {
+			logrus.Info("error getting relative files")
 			return nil, err
 		}
 		srcs, err = matchSources(srcs, files)
+		logrus.Infof("srcs after matching: %s", srcs)
 		if err != nil {
+			logrus.Info("error matching sources")
 			return nil, err
 		}
 		logrus.Debugf("Resolved sources to %v", srcs)
 	}
 	// Check to make sure the sources are valid
+	logrus.Infof("sources %s are not valid", srcs)
 	return srcs, IsSrcsValid(srcsAndDest, srcs, root)
 }
 

@@ -228,7 +228,11 @@ func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *do
 	dependencies, err := dockerfile.Dependencies(index, stages, buildArgs)
 	logrus.Infof("saving dependencies %s", dependencies)
 	if err != nil {
+		logrus.Info("returning err from getting dependencies")
 		return err
+	}
+	if len(dependencies) == 0 {
+		return nil
 	}
 	// Then, create the directory they will exist in
 	i := strconv.Itoa(index)
