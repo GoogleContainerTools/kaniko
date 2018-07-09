@@ -86,7 +86,7 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		ref, image, err := executor.DoBuild(executor.KanikoBuildArgs{
-			DockerfilePath: dockerfilePath,
+			DockerfilePath: absouteDockerfilePath(),
 			SrcContext:     srcContext,
 			SnapshotMode:   snapshotMode,
 			Args:           buildArgs,
@@ -113,19 +113,26 @@ func checkContained() bool {
 
 func checkDockerfilePath() error {
 	if util.FilepathExists(dockerfilePath) {
-		abs, err := filepath.Abs(dockerfilePath)
-		if err != nil {
+		if _, err := filepath.Abs(dockerfilePath); err != nil {
 			return err
 		}
-		dockerfilePath = abs
 		return nil
 	}
 	// Otherwise, check if the path relative to the build context exists
 	if util.FilepathExists(filepath.Join(srcContext, dockerfilePath)) {
-		dockerfilePath = filepath.Join(srcContext, dockerfilePath)
 		return nil
 	}
 	return errors.New("please provide a valid path to a Dockerfile within the build context")
+}
+
+func absouteDockerfilePath() string {
+	if util.FilepathExists(dockerfilePath) {
+		// Ignore error since we already checked it in checkDockerfilePath()
+		abs, _ := filepath.Abs(dockerfilePath)
+		return abs
+	}
+	// Otherwise, return path relative to build context
+	return filepath.Join(srcContext, dockerfilePath)
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a bucket
