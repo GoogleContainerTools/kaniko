@@ -41,14 +41,27 @@ kaniko does not support building Windows containers.
 
 ## Development
 ### kaniko Build Contexts
-kaniko supports local directories and GCS buckets as build contexts. To specify a local directory, pass in the `--context` flag as an argument to the executor image.
+kaniko supports local directories, Google Cloud Storage and Amazon S3 as build contexts.
+A storage solution like GCS or S3 should contain a compressed tar of the build context, which kaniko will unpack and use as the build context.
+
+To create a compressed tar, you can run:
+```shell
+tar -C <path to build context> -zcvf context.tar.gz .
+```
+We can copy over the compressed tar to a GCS bucket with gsutil:
+```
+gsutil cp context.tar.gz gs://<bucket name>
+```
+
+
+To use a bucket, you will need to provide a compressed tar of the build context which kaniko 
+
+To specify a local directory, pass in the `--context` flag as an argument to the executor image.
 To specify a GCS bucket, pass in the `--bucket` flag.
 The GCS bucket should contain a compressed tar of the build context called `context.tar.gz`, which kaniko will unpack and use as the build context.
 
 To create `context.tar.gz`, run the following command:
-```shell
-tar -C <path to build context> -zcvf context.tar.gz .
-```
+
 
 Or, you can use [skaffold](https://github.com/GoogleContainerTools/skaffold) to create `context.tar.gz` by running
 ```
@@ -56,7 +69,6 @@ skaffold docker context
 ```
 
 We can copy over the compressed tar to a GCS bucket with gsutil:
-
 ```
 gsutil cp context.tar.gz gs://<bucket name>
 ```
