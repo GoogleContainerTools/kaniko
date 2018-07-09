@@ -1,3 +1,12 @@
+# v0.2.0 Release - 7/09/2018
+
+New Features
+* Support for adding different source contexts, including Amazon S3 [#195](https://github.com/GoogleContainerTools/kaniko/issues/195)
+* Added --reproducible [#205](https://github.com/GoogleContainerTools/kaniko/pull/205) and --single-snapshot [#204](https://github.com/GoogleContainerTools/kaniko/pull/204) flags
+* Documented running kaniko in gVisor [#194](https://github.com/GoogleContainerTools/kaniko/pull/194)
+* Update go-containerregistry so kaniko works better with Harbor and Gitlab[#227](https://github.com/GoogleContainerTools/kaniko/pull/227)
+* Push image to multiple destinations [#184](https://github.com/GoogleContainerTools/kaniko/pull/184)
+
 # v0.1.0 Release - 5/17/2018
 
 New Features
