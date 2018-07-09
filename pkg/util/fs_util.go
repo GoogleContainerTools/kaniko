@@ -316,9 +316,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
-		if PathInWhitelist(path, root) {
-			return nil
-		}
 		if err != nil {
 			return err
 		}
