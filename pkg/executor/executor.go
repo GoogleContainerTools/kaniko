@@ -230,6 +230,9 @@ func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *do
 	if err != nil {
 		return err
 	}
+	if len(dependencies) == 0 {
+		return nil
+	}
 	// Then, create the directory they will exist in
 	i := strconv.Itoa(index)
 	dependencyDir := filepath.Join(constants.KanikoDir, i)
