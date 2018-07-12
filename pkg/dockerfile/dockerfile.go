@@ -18,11 +18,6 @@ package dockerfile
 
 import (
 	"bytes"
-	"net/http"
-	"path/filepath"
-	"strconv"
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -32,6 +27,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
@@ -47,9 +46,14 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 	return stages, err
 }
 
+func ResolveDockerfile(stages []instructions.Stage) {
+	resolveStages(stages)
+	resolveBasename(stages)
+}
+
 // ResolveStages resolves any calls to previous stages with names to indices
 // Ex. --from=second_stage should be --from=1 for easier processing later on
-func ResolveStages(stages []instructions.Stage) {
+func resolveStages(stages []instructions.Stage) {
 	nameToIndex := make(map[string]string)
 	for i, stage := range stages {
 		index := strconv.Itoa(i)
@@ -67,6 +71,31 @@ func ResolveStages(stages []instructions.Stage) {
 			}
 		}
 	}
+}
+
+// resolveBasename resolves names in the FROM line if they were references in a previous stage
+func resolveBasename(stages []instructions.Stage) {
+	names := map[string]string{}
+	for index, stage := range stages {
+		if val, ok := names[stage.BaseName]; ok {
+			// First, prepend any commands from that stage which need to be run
+			prependCommands := retrieveCommands(stages, stage.BaseName)
+			stage.Commands = append(prependCommands, stage.Commands...)
+			// Then, replace base name with the actual image being pulled
+			stage.BaseName = val
+			stages[index] = stage
+		}
+		names[stage.Name] = stage.BaseName
+	}
+}
+
+func retrieveCommands(stages []instructions.Stage, baseName string) []instructions.Command {
+	for _, stage := range stages {
+		if baseName == stage.Name {
+			return stage.Commands
+		}
+	}
+	return []instructions.Command{}
 }
 
 // ParseCommands parses an array of commands into an array of instructions.Command; used for onbuild

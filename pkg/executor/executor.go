@@ -66,7 +66,7 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	dockerfile.ResolveStages(stages)
+	dockerfile.ResolveDockerfile(stages)
 
 	hasher, err := getHasher(k.SnapshotMode)
 	if err != nil {
