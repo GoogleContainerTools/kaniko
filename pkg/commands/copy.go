@@ -19,6 +19,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -59,6 +60,33 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return err
 	}
+
+    // Resolve the chown string to a uid:gid format
+    uidStr, gidStr, err := util.GetUidGidFromUserString(c.cmd.Chown, replacementEnvs)
+	if err != nil {
+		return err
+	}
+
+	// Determine uid if uidstr was set
+	uid := -1
+	if uidStr != "" {
+		uid64, err := strconv.ParseUint(uidStr, 10, 32)
+		if err != nil {
+			return err
+		}
+		uid = int(uid64)
+	}
+
+	// Determine gid if gidstr was set
+	gid := -1
+	if gidStr != "" {
+		gid64, err := strconv.ParseUint(gidStr, 10, 32)
+		if err != nil {
+			return err
+		}
+		gid = int(gid64)
+	}
+
 	// For each source, iterate through and copy it over
 	for _, src := range srcs {
 		fullPath := filepath.Join(c.buildcontext, src)
@@ -79,7 +107,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				// we need to add '/' to the end to indicate the destination is a directory
 				dest = filepath.Join(cwd, dest) + "/"
 			}
-			if err := util.CopyDir(fullPath, dest); err != nil {
+			if err := util.CopyDir(fullPath, dest, uid, gid); err != nil {
 				return err
 			}
 			copiedFiles, err := util.Files(dest)
@@ -89,13 +117,13 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := util.CopySymlink(fullPath, destPath); err != nil {
+			if err := util.CopySymlink(fullPath, destPath, uid, gid); err != nil {
 				return err
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			if err := util.CopyFile(fullPath, destPath); err != nil {
+			if err := util.CopyFile(fullPath, destPath, uid, gid); err != nil {
 				return err
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)

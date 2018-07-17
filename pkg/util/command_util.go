@@ -276,6 +276,45 @@ Loop:
 	return nil
 }
 
+// Takes a user string from a command such as "user:group" and replaces
+// any environment variables as needed.  Will return the resolved and split
+// user and group
+func ResolveUserAndGroup(commandUserStr string, replacementEnvs []string) (string, string, error) {
+	userAndGroup := strings.Split(commandUserStr, ":")
+	userStr, err := ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
+	if err != nil {
+		return "", "", err
+	}
+	var groupStr string
+	if len(userAndGroup) > 1 {
+		groupStr, err = ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	return userStr, groupStr, nil
+}
+
+
+// Takes a user string like "user:group" and returns strings for "uid" and "gid"
+// for the corresponding user as a string, replacing any build arguments
+// and environment variables.  Group is not required to be specified, and
+// if left off, gid will be empty
+func GetUidGidFromUserString(commandUserStr string, replacementEnvs []string) (string, string, error) {
+	userStr, groupStr, err := ResolveUserAndGroup(commandUserStr, replacementEnvs)
+	if err != nil {
+		return "", "", err
+	}
+
+	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr)
+	if err != nil {
+		return "", "", err
+	}
+
+	return uidStr, gidStr, err
+}
+
 func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
 	// Lookup by username
 	userObj, err := user.Lookup(userStr)

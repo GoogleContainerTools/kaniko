@@ -434,8 +434,25 @@ func DownloadFileToDest(rawurl, dest string) error {
 	return os.Chtimes(dest, mTime, mTime)
 }
 
+// If the given uid/gid are negative, returns the uid/gid from the
+// file info.
+// Otherwise returns the given uid/gid
+func determineChownUidGid(fileInfo os.FileInfo, chownUid, chownGid int) (uint32, uint32) {
+	uid := uint32(chownUid)
+	if chownUid < 0 {
+		uid = fileInfo.Sys().(*syscall.Stat_t).Uid
+	}
+
+	gid := uint32(chownGid)
+	if chownGid < 0 {
+		gid = fileInfo.Sys().(*syscall.Stat_t).Gid
+	}
+	return uid, gid
+}
+
 // CopyDir copies the file or directory at src to dest
-func CopyDir(src, dest string) error {
+// will chown the file or directory to the uidStr/gidStr if non-negative
+func CopyDir(src string, dest string, chownUid int, chownGid int) error {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return err
@@ -446,27 +463,27 @@ func CopyDir(src, dest string) error {
 		if err != nil {
 			return err
 		}
+
+		uid, gid := determineChownUidGid(fi, chownUid, chownGid)
+
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
 			logrus.Infof("Creating directory %s", destPath)
 
-			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
-			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
-
 			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
 				return err
 			}
-			if err := os.Chown(destPath, uid, gid); err != nil {
+			if err := os.Chown(destPath, int(uid), int(gid)); err != nil {
 				return err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := CopySymlink(fullPath, destPath); err != nil {
+			if err := CopySymlink(fullPath, destPath, chownUid, chownGid); err != nil {
 				return err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if err := CopyFile(fullPath, destPath); err != nil {
+			if err := CopyFile(fullPath, destPath, chownUid, chownGid); err != nil {
 				return err
 			}
 		}
@@ -475,17 +492,29 @@ func CopyDir(src, dest string) error {
 }
 
 // CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest string) error {
+func CopySymlink(src, dest string, uidSigned, gidSigned int) error {
 	link, err := os.Readlink(src)
 	if err != nil {
 		return err
 	}
 	linkDst := filepath.Join(dest, link)
-	return os.Symlink(linkDst, dest)
+	if err = os.Symlink(linkDst, dest); err != nil {
+		return err
+	}
+
+	fi, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	uid, gid := determineChownUidGid(fi, uidSigned, gidSigned)
+
+	return os.Chown(dest, int(uid), int(gid))
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest string) error {
+// If uid/gid are non-negative, files will be created with that owner/group
+// otherwise uid/gid will be preserved
+func CopyFile(src, dest string, uidSigned, gidSigned int) error {
 	fi, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -496,8 +525,8 @@ func CopyFile(src, dest string) error {
 		return err
 	}
 	defer srcFile.Close()
-	uid := fi.Sys().(*syscall.Stat_t).Uid
-	gid := fi.Sys().(*syscall.Stat_t).Gid
+
+	uid, gid := determineChownUidGid(fi, uidSigned, gidSigned)
 	return CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 

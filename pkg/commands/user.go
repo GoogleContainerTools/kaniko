@@ -32,21 +32,14 @@ type UserCommand struct {
 
 func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: USER")
-	u := r.cmd.User
-	userAndGroup := strings.Split(u, ":")
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
+	userStr, groupStr, err := util.ResolveUserAndGroup(r.cmd.User, replacementEnvs)
+
 	if err != nil {
 		return err
 	}
-	var groupStr string
-	if len(userAndGroup) > 1 {
-		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
-		if err != nil {
-			return err
-		}
-	}
 
+	// Validate the user/group
 	_, _, err = util.GetUserFromUsername(userStr, groupStr)
 	if err != nil {
 		return err
@@ -55,6 +48,7 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if groupStr != "" {
 		userStr = userStr + ":" + groupStr
 	}
+
 	config.User = userStr
 	return nil
 }
