@@ -18,11 +18,6 @@ package dockerfile
 
 import (
 	"bytes"
-	"net/http"
-	"path/filepath"
-	"strconv"
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
@@ -32,6 +27,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/sirupsen/logrus"
+	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
@@ -88,17 +89,27 @@ func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 }
 
 // Dependencies returns a list of files in this stage that will be needed in later stages
-func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) ([]string, error) {
+func Dependencies(index int, stages []instructions.Stage, image v1.Image, buildArgs *BuildArgs) ([]string, error) {
 	var dependencies []string
 	for stageIndex, stage := range stages {
 		if stageIndex <= index {
 			continue
 		}
 		var sourceImage v1.Image
+		logrus.Infof("Comparing stage basename %s with stage name %s", stage.BaseName, stages[index].Name)
 		if stage.BaseName == constants.NoBaseImage {
 			sourceImage = empty.Image
+		} else if stage.BaseName == stages[index].Name {
+			sourceImage = image
+		} else if util.FilepathExists(filepath.Join(constants.KanikoIntermediateStagesDir, stage.BaseName)) {
+			var err error
+			sourceImage, err = tarball.ImageFromPath(filepath.Join(filepath.Join(constants.KanikoIntermediateStagesDir, stage.BaseName), constants.StageTar), nil)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			// Initialize source image
+			logrus.Infof("trying to intiialize %s", stage.BaseName)
 			ref, err := name.ParseReference(stage.BaseName, name.WeakValidation)
 			if err != nil {
 				return nil, err

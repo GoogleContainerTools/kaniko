@@ -167,7 +167,7 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 			}
 			return ref, sourceImage, nil
 		}
-		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
+		if err := saveStageDependencies(index, stages, sourceImage, buildArgs.Clone()); err != nil {
 			return nil, nil, err
 		}
 		if err := saveStageAsTarball(stage.BaseName, sourceImage); err != nil {
@@ -208,9 +208,9 @@ func DoPush(ref name.Reference, image v1.Image, destinations []string, tarPath s
 	}
 	return nil
 }
-func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *dockerfile.BuildArgs) error {
+func saveStageDependencies(index int, stages []instructions.Stage, sourceImage v1.Image, buildArgs *dockerfile.BuildArgs) error {
 	// First, get the files in this stage later stages will need
-	dependencies, err := dockerfile.Dependencies(index, stages, buildArgs)
+	dependencies, err := dockerfile.Dependencies(index, stages, sourceImage, buildArgs)
 	logrus.Infof("saving dependencies %s", dependencies)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func retrieveSourceImageAndReference(stageName, baseImage string) (name.Referenc
 	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, stageName)
 	logrus.Infof("checking for source image at path %s", tarPath)
 	if util.FilepathExists(tarPath) {
-		sourceImage, err := tarball.ImageFromPath(tarPath, nil)
+		sourceImage, err := tarball.ImageFromPath(filepath.Join(tarPath, constants.StageTar), nil)
 		return nil, sourceImage, err
 	}
 	// Else, initialize source image as usual
@@ -279,8 +279,11 @@ func saveStageAsTarball(stageName string, image v1.Image) error {
 		return err
 	}
 	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, stageName)
+	if err := os.MkdirAll(tarPath, 0750); err != nil {
+		return err
+	}
 	logrus.Infof("storing source image at path %s", tarPath)
-	return tarball.WriteToFile(tarPath, destRef, image, nil)
+	return tarball.WriteToFile(filepath.Join(tarPath, constants.StageTar), destRef, image, nil)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {
