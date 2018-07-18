@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko)
 
+![kaniko logo](logo/Kaniko-Logo.png)
+
 kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster.
 
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
