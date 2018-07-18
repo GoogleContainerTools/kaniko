@@ -66,7 +66,7 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	dockerfile.ResolveDockerfile(stages)
+	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(k.SnapshotMode)
 	if err != nil {
@@ -80,25 +80,9 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 		finalStage := index == len(stages)-1
 		// Unpack file system to root
 		logrus.Infof("Unpacking filesystem of %s...", baseImage)
-		var sourceImage v1.Image
-		var ref name.Reference
-		if baseImage == constants.NoBaseImage {
-			logrus.Info("No base image, nothing to extract")
-			sourceImage = empty.Image
-		} else {
-			// Initialize source image
-			ref, err = name.ParseReference(baseImage, name.WeakValidation)
-			if err != nil {
-				return nil, nil, err
-			}
-			auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
-			if err != nil {
-				return nil, nil, err
-			}
-			sourceImage, err = remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
-			if err != nil {
-				return nil, nil, err
-			}
+		ref, sourceImage, err := retrieveSourceImageAndReference(stage.Name, baseImage)
+		if err != nil {
+			return nil, nil, err
 		}
 		if err := util.GetFSFromImage(sourceImage); err != nil {
 			return nil, nil, err
@@ -170,22 +154,23 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 				return nil, nil, err
 			}
 		}
+		sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
+		if err != nil {
+			return nil, nil, err
+		}
 		if finalStage {
-			sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
-			if err != nil {
-				return nil, nil, err
-			}
-
 			if k.Reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)
 				if err != nil {
 					return nil, nil, err
 				}
 			}
-
 			return ref, sourceImage, nil
 		}
 		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
+			return nil, nil, err
+		}
+		if err := saveStageAsTarball(stage.BaseName, sourceImage); err != nil {
 			return nil, nil, err
 		}
 		// Delete the filesystem
@@ -261,6 +246,41 @@ func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *do
 		}
 	}
 	return nil
+}
+
+func retrieveSourceImageAndReference(stageName, baseImage string) (name.Reference, v1.Image, error) {
+	if baseImage == constants.NoBaseImage {
+		logrus.Info("No base image, nothing to extract")
+		return nil, empty.Image, nil
+	}
+	// Check if this is a previously built stage
+	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, stageName)
+	logrus.Infof("checking for source image at path %s", tarPath)
+	if util.FilepathExists(tarPath) {
+		sourceImage, err := tarball.ImageFromPath(tarPath, nil)
+		return nil, sourceImage, err
+	}
+	// Else, initialize source image as usual
+	ref, err := name.ParseReference(baseImage, name.WeakValidation)
+	if err != nil {
+		return nil, nil, err
+	}
+	auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
+	if err != nil {
+		return nil, nil, err
+	}
+	sourceImage, err := remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
+	return ref, sourceImage, err
+}
+
+func saveStageAsTarball(stageName string, image v1.Image) error {
+	destRef, err := name.NewTag(stageName, name.WeakValidation)
+	if err != nil {
+		return err
+	}
+	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, stageName)
+	logrus.Infof("storing source image at path %s", tarPath)
+	return tarball.WriteToFile(tarPath, destRef, image, nil)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {

@@ -42,7 +42,7 @@ func Test_ResolveStages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resolveStages(stages)
+	ResolveStages(stages)
 	for index, stage := range stages {
 		if index == 0 {
 			continue
@@ -51,54 +51,6 @@ func Test_ResolveStages(t *testing.T) {
 		expectedStage := strconv.Itoa(index - 1)
 		if copyCmd.From != expectedStage {
 			t.Fatalf("unexpected copy command: %s resolved to stage %s, expected %s", copyCmd.String(), copyCmd.From, expectedStage)
-		}
-	}
-}
-
-func Test_ResolveBasename(t *testing.T) {
-	dockerfile := `
-	FROM base as first
-	RUN echo hi > /hi
-
-	FROM first AS second
-	COPY --from=0 /hi /hi2
-
-	FROM base
-	COPY --from=second /hi2 /hi3
-	`
-	stages, err := Parse([]byte(dockerfile))
-	if err != nil {
-		t.Fatal(err)
-	}
-	expected := []struct {
-		stage       int
-		baseName    string
-		numCommands int
-	}{
-		{
-			stage:       1,
-			baseName:    "base",
-			numCommands: 1,
-		},
-		{
-			stage:       2,
-			baseName:    "base",
-			numCommands: 2,
-		},
-		{
-			stage:       3,
-			baseName:    "base",
-			numCommands: 1,
-		},
-	}
-	resolveBasename(stages)
-	for index, stage := range stages {
-		e := expected[index]
-		if stage.BaseName != e.baseName {
-			t.Fatalf("incorrectly resolved stage %d basename to %s", index, stage.BaseName)
-		}
-		if len(stage.Commands) != e.numCommands {
-			t.Fatalf("incorrect number of commands, got: %d, expected: %d", len(stage.Commands), e.numCommands)
 		}
 	}
 }

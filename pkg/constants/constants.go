@@ -40,6 +40,10 @@ const (
 	// for example, a tarball from a GCS bucket will be unpacked here
 	BuildContextDir = "/kaniko/buildcontext/"
 
+	// KanikoIntermediateStagesDir is where we will store intermediate stages
+	// as tarballs in case they are needed later on
+	KanikoIntermediateStagesDir = "/kaniko/stages"
+
 	// Various snapshot modes:
 	SnapshotModeTime = "time"
 	SnapshotModeFull = "full"
