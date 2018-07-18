@@ -381,7 +381,7 @@ var testRemoteUrls = []struct {
 }{
 	{
 		name:  "Valid URL",
-		url:   testUrl,
+		url:   "https://google.com",
 		valid: true,
 	},
 	{
