@@ -14,18 +14,21 @@ We do **not** recommend running the kaniko executor binary in another image, as 
   - [How does kaniko work?](#how-does-kaniko-work)
   - [Known Issues](#known-issues)
 - [Demo](#demo)
-- [Development](#development)
+- [Using kaniko](#using-kaniko)
   - [kaniko Build Contexts](#kaniko-build-contexts)
-  - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
-  - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-  - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
-  - [Running kaniko locally](#running-kaniko-locally)
+  - [Running kaniko](#running-kaniko)
+    - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+    - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
+    - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
+    - [Running kaniko locally](#running-kaniko-locally)
   - [Pushing to Different Registries](#pushing-to-different-registries)
   - [Additional Flags](#additional-flags)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
 - [Community](#community)
+
+_If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
 ### How does kaniko work?
 
@@ -41,8 +44,15 @@ kaniko does not support building Windows containers.
 
 ![Demo](/docs/demo.gif)
 
-## Development
+## Using kaniko
+
+To use kaniko to build and push an image for you, you will need:
+
+1. A [build context](#kaniko-build-contexts), aka something to build
+2. A [running instance of kaniko](#running-kaniko)
+
 ### kaniko Build Contexts
+
 kaniko currently supports local directories, Google Cloud Storage and Amazon S3 as build contexts.
 If using a GCS or S3 bucket, the bucket should contain a compressed tar of the build context, which kaniko will unpack and use. 
 
@@ -67,11 +77,23 @@ Use the `--context` flag with the appropriate prefix to specify your build conte
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`. 
 
-### Running kaniko in a Kubernetes cluster
+### Running kaniko
+
+There are several different ways to deploy and run kaniko:
+
+- [In a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+- [In gVisor](#running-kaniko-in-gvisor)
+- [In Google Container Builder](#running-kaniko-in-google-container-builder)
+- [Locally](#running-kaniko-locally)
+
+#### Running kaniko in a Kubernetes cluster
 
 Requirements:
-* Standard Kubernetes cluster
-* Kubernetes Secret
+
+- Standard Kubernetes cluster (e.g. using [GKE](https://cloud.google.com/kubernetes-engine/))
+- [Kubernetes Secret](#kubernetes-secrete)
+
+##### Kubernetes secret
 
 To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image.
 
@@ -113,7 +135,7 @@ spec:
 This example pulls the build context from a GCS bucket.
 To use a local directory build context, you could consider using configMaps to mount in small build contexts.
 
-### Running kaniko in gVisor
+#### Running kaniko in gVisor
 
 Running kaniko in [gVisor](https://github.com/google/gvisor) provides an additional security boundary.
 You will need to add the `--force` flag to run kaniko in gVisor, since currently there isn't a way to determine whether or not a container is running in gVisor.
@@ -128,7 +150,8 @@ gcr.io/kaniko-project/executor:latest \
 We pass in `--runtime=runsc` to use gVisor.
 This example mounts the current directory to `/workspace` for the build context and the `~/.config` directory for GCR credentials.
 
-### Running kaniko in Google Container Builder
+#### Running kaniko in Google Container Builder
+
 To run kaniko in GCB, add it to your build config as a build step:
 
 ```yaml
@@ -138,25 +161,30 @@ steps:
            "--context=dir://<path to build context>",
            "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
 ```
+
 kaniko will build and push the final image in this build step.
 
-### Running kaniko locally
+#### Running kaniko locally
 
 Requirements:
-* Docker
-* gcloud
+
+- [Docker](https://docs.docker.com/install/)
+- [gcloud](https://cloud.google.com/sdk/install)
 
 We can run the kaniko executor image locally in a Docker daemon to build and push an image from a Dockerfile.
 
-First, we want to load the executor image into the Docker daemon by running
-```shell
-make images
-```
+1. Load the executor image into the Docker daemon by running:
 
-To run kaniko in Docker, run the following command:
-```shell
-./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
-```
+  ```shell
+  make images
+  ```
+
+2. Run kaniko in Docker using [`run_in_docker.sh`](./run_in_docker.sh):
+
+  ```shell
+  ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
+  ```
+
 ### Pushing to Different Registries
 
 kaniko uses Docker credential helpers to push images to a registry.
@@ -164,71 +192,85 @@ kaniko uses Docker credential helpers to push images to a registry.
 kaniko comes with support for GCR and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
 
 #### Pushing to Amazon ECR
+
 The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
 To configure credentials, you will need to do the following:
+
 1. Update the `credHelpers` section of [config.json](https://github.com/GoogleContainerTools/kaniko/blob/master/files/config.json) with the specific URI of your ECR registry:
-```json
-{
-	"credHelpers": {
-		"aws_account_id.dkr.ecr.region.amazonaws.com": "ecr-login"
-	}
-}
-```
-You can mount in the new config as a configMap:
-```shell
-kubectl create configmap docker-config --from-file=<path to config.json>
-```
+
+  ```json
+  {
+    "credHelpers": {
+      "aws_account_id.dkr.ecr.region.amazonaws.com": "ecr-login"
+    }
+  }
+  ```
+
+  You can mount in the new config as a configMap:
+
+  ```shell
+  kubectl create configmap docker-config --from-file=<path to config.json>
+  ```
+
 2. Create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
-To create the secret, run:
 
-```shell
-kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
-```
+  To create the secret, run:
 
-The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
+  ```shell
+  kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
+  ```
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kaniko
-spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile>",
-            "--context=s3://<bucket name>/<path to .tar.gz>",
-            "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
-    volumeMounts:
+  The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kaniko
+  spec:
+    containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      args: ["--dockerfile=<path to Dockerfile>",
+              "--context=s3://<bucket name>/<path to .tar.gz>",
+              "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
+      volumeMounts:
+        - name: aws-secret
+          mountPath: /root/.aws/
+        - name: docker-config
+          mountPath: /root/.docker/
+    restartPolicy: Never
+    volumes:
       - name: aws-secret
-        mountPath: /root/.aws/
+        secret:
+          secretName: aws-secret
       - name: docker-config
-        mountPath: /root/.docker/
-  restartPolicy: Never
-  volumes:
-    - name: aws-secret
-      secret:
-        secretName: aws-secret
-    - name: docker-config
-      configMap:
-        name: docker-config
-```
+        configMap:
+          name: docker-config
+  ```
+
 ### Additional Flags
+
 #### --snapshotMode
+
 You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
 If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting.
 
 #### --build-arg
+
 This flag allows you to pass in ARG values at build time, similarly to Docker.
 You can set it multiple times for multiple arguments.
 
 #### --single-snapshot
+
 This flag takes a single snapshot of the filesystem at the end of the build, so only one layer will be appended to the base image.
 
 #### --reproducible
+
 Set this flag to strip timestamps out of the built image and make it reproducible.
 
 #### --tarPath
+
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
 
 ### Debug Image
@@ -237,9 +279,11 @@ The kaniko executor image is based off of scratch and doesn't contain a shell.
 We provide `gcr.io/kaniko-project/executor:debug`, a debug image which consists of the kaniko executor image along with a busybox shell to enter.
 
 You can launch the debug image with a shell entrypoint:
+
 ```shell
 docker run -it --entrypoint=/busybox/sh gcr.io/kaniko-project/executor:debug
 ```
+
 ## Security
 
 kaniko by itself **does not** make it safe to run untrusted builds inside your cluster, or anywhere else.
@@ -262,12 +306,13 @@ You may be able to achieve the same default seccomp profile that Docker uses in 
 ## Comparison with Other Tools
 
 Similar tools include:
-* [img](https://github.com/genuinetools/img)
-* [orca-build](https://github.com/cyphar/orca-build)
-* [umoci](https://github.com/openSUSE/umoci)
-* [buildah](https://github.com/projectatomic/buildah)
-* [FTL](https://github.com/GoogleCloudPlatform/runtimes-common/tree/master/ftl)
-* [Bazel rules_docker](https://github.com/bazelbuild/rules_docker)
+
+- [img](https://github.com/genuinetools/img)
+- [orca-build](https://github.com/cyphar/orca-build)
+- [umoci](https://github.com/openSUSE/umoci)
+- [buildah](https://github.com/projectatomic/buildah)
+- [FTL](https://github.com/GoogleCloudPlatform/runtimes-common/tree/master/ftl)
+- [Bazel rules_docker](https://github.com/bazelbuild/rules_docker)
 
 All of these tools build container images with different approaches.
 
@@ -299,3 +344,5 @@ provides.
 ## Community
 
 [kaniko-users](https://groups.google.com/forum/#!forum/kaniko-users) Google group
+
+To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
