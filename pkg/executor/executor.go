@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
@@ -33,15 +34,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-
-	"io/ioutil"
+	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 // KanikoBuildArgs contains all the args required to build the image

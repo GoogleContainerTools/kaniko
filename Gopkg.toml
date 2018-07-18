@@ -1,3 +1,7 @@
+required = [
+  "k8s.io/client-go",
+]
+
 [prune]
   unused-packages = true
   non-go = true
@@ -50,3 +54,11 @@
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
   version = "1.13.56"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "kubernetes-1.10.0"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.10.0"
