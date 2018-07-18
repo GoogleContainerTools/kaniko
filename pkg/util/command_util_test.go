@@ -375,27 +375,33 @@ func Test_ResolveSources(t *testing.T) {
 }
 
 var testRemoteUrls = []struct {
+	name  string
 	url   string
 	valid bool
 }{
 	{
+		name:  "Valid URL",
 		url:   testUrl,
 		valid: true,
 	},
 	{
+		name:  "Invalid URL",
 		url:   "not/real/",
 		valid: false,
 	},
 	{
-		url:   "https://url.com/something/not/real",
+		name:  "URL which fails on GET",
+		url:   "https://thereisnowaythiswilleverbearealurlrightrightrightcatsarethebest.com/something/not/real",
 		valid: false,
 	},
 }
 
 func Test_RemoteUrls(t *testing.T) {
 	for _, test := range testRemoteUrls {
-		valid := IsSrcRemoteFileURL(test.url)
-		testutil.CheckErrorAndDeepEqual(t, false, nil, test.valid, valid)
+		t.Run(test.name, func(t *testing.T) {
+			valid := IsSrcRemoteFileURL(test.url)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, test.valid, valid)
+		})
 	}
 
 }
