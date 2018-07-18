@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -43,7 +43,7 @@ func configDir() (string, error) {
 		return dc, nil
 	}
 	if h := dockerUserHomeDir(); h != "" {
-		return path.Join(dockerUserHomeDir(), ".docker"), nil
+		return filepath.Join(dockerUserHomeDir(), ".docker"), nil
 	}
 	return "", errNoHomeDir
 }
@@ -103,7 +103,7 @@ func (dk *defaultKeychain) Resolve(reg name.Registry) (Authenticator, error) {
 		log.Printf("Unable to determine config dir, falling back on anonymous: %v", err)
 		return Anonymous, nil
 	}
-	file := path.Join(dir, "config.json")
+	file := filepath.Join(dir, "config.json")
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Printf("Unable to read %q, falling back on anonymous: %v", file, err)
