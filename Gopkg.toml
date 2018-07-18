@@ -1,5 +1,5 @@
 required = [
-  "k8s.io/client-go",
+  "k8s.io/client-go/discovery",
 ]
 
 [prune]

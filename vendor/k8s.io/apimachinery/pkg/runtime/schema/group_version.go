@@ -85,10 +85,11 @@ func ParseGroupKind(gk string) GroupKind {
 // ParseGroupResource turns "resource.group" string into a GroupResource struct.  Empty strings are allowed
 // for each field.
 func ParseGroupResource(gr string) GroupResource {
-	if i := strings.Index(gr, "."); i >= 0 {
+	if i := strings.Index(gr, "."); i == -1 {
+		return GroupResource{Resource: gr}
+	} else {
 		return GroupResource{Group: gr[i+1:], Resource: gr[:i]}
 	}
-	return GroupResource{Resource: gr}
 }
 
 // GroupVersionResource unambiguously identifies a resource.  It doesn't anonymously include GroupVersion

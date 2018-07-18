@@ -24,47 +24,38 @@ import (
 )
 
 type notRegisteredErr struct {
-	schemeName string
-	gvk        schema.GroupVersionKind
-	target     GroupVersioner
-	t          reflect.Type
+	gvk    schema.GroupVersionKind
+	target GroupVersioner
+	t      reflect.Type
 }
 
-func NewNotRegisteredErrForKind(schemeName string, gvk schema.GroupVersionKind) error {
-	return &notRegisteredErr{schemeName: schemeName, gvk: gvk}
+func NewNotRegisteredErrForKind(gvk schema.GroupVersionKind) error {
+	return &notRegisteredErr{gvk: gvk}
 }
 
-func NewNotRegisteredErrForType(schemeName string, t reflect.Type) error {
-	return &notRegisteredErr{schemeName: schemeName, t: t}
+func NewNotRegisteredErrForType(t reflect.Type) error {
+	return &notRegisteredErr{t: t}
 }
 
-func NewNotRegisteredErrForTarget(schemeName string, t reflect.Type, target GroupVersioner) error {
-	return &notRegisteredErr{schemeName: schemeName, t: t, target: target}
-}
-
-func NewNotRegisteredGVKErrForTarget(schemeName string, gvk schema.GroupVersionKind, target GroupVersioner) error {
-	return &notRegisteredErr{schemeName: schemeName, gvk: gvk, target: target}
+func NewNotRegisteredErrForTarget(t reflect.Type, target GroupVersioner) error {
+	return &notRegisteredErr{t: t, target: target}
 }
 
 func (k *notRegisteredErr) Error() string {
 	if k.t != nil && k.target != nil {
-		return fmt.Sprintf("%v is not suitable for converting to %q in scheme %q", k.t, k.target, k.schemeName)
-	}
-	nullGVK := schema.GroupVersionKind{}
-	if k.gvk != nullGVK && k.target != nil {
-		return fmt.Sprintf("%q is not suitable for converting to %q in scheme %q", k.gvk.GroupVersion(), k.target, k.schemeName)
+		return fmt.Sprintf("%v is not suitable for converting to %q", k.t, k.target)
 	}
 	if k.t != nil {
-		return fmt.Sprintf("no kind is registered for the type %v in scheme %q", k.t, k.schemeName)
+		return fmt.Sprintf("no kind is registered for the type %v", k.t)
 	}
 	if len(k.gvk.Kind) == 0 {
-		return fmt.Sprintf("no version %q has been registered in scheme %q", k.gvk.GroupVersion(), k.schemeName)
+		return fmt.Sprintf("no version %q has been registered", k.gvk.GroupVersion())
 	}
 	if k.gvk.Version == APIVersionInternal {
-		return fmt.Sprintf("no kind %q is registered for the internal version of group %q in scheme %q", k.gvk.Kind, k.gvk.Group, k.schemeName)
+		return fmt.Sprintf("no kind %q is registered for the internal version of group %q", k.gvk.Kind, k.gvk.Group)
 	}
 
-	return fmt.Sprintf("no kind %q is registered for version %q in scheme %q", k.gvk.Kind, k.gvk.GroupVersion(), k.schemeName)
+	return fmt.Sprintf("no kind %q is registered for version %q", k.gvk.Kind, k.gvk.GroupVersion())
 }
 
 // IsNotRegisteredError returns true if the error indicates the provided

@@ -230,13 +230,13 @@ func pollInternal(wait WaitFunc, condition ConditionFunc) error {
 // PollImmediate tries a condition func until it returns true, an error, or the timeout
 // is reached.
 //
-// PollImmediate always checks 'condition' before waiting for the interval. 'condition'
+// Poll always checks 'condition' before waiting for the interval. 'condition'
 // will always be invoked at least once.
 //
 // Some intervals may be missed if the condition takes too long or the time
 // window is too short.
 //
-// If you want to immediately Poll something forever, see PollImmediateInfinite.
+// If you want to Poll something forever, see PollInfinite.
 func PollImmediate(interval, timeout time.Duration, condition ConditionFunc) error {
 	return pollImmediateInternal(poller(interval, timeout), condition)
 }
@@ -284,30 +284,10 @@ func PollImmediateInfinite(interval time.Duration, condition ConditionFunc) erro
 // PollUntil tries a condition func until it returns true, an error or stopCh is
 // closed.
 //
-// PollUntil always waits interval before the first run of 'condition'.
+// PolUntil always waits interval before the first run of 'condition'.
 // 'condition' will always be invoked at least once.
 func PollUntil(interval time.Duration, condition ConditionFunc, stopCh <-chan struct{}) error {
 	return WaitFor(poller(interval, 0), condition, stopCh)
-}
-
-// PollImmediateUntil tries a condition func until it returns true, an error or stopCh is closed.
-//
-// PollImmediateUntil runs the 'condition' before waiting for the interval.
-// 'condition' will always be invoked at least once.
-func PollImmediateUntil(interval time.Duration, condition ConditionFunc, stopCh <-chan struct{}) error {
-	done, err := condition()
-	if err != nil {
-		return err
-	}
-	if done {
-		return nil
-	}
-	select {
-	case <-stopCh:
-		return ErrWaitTimeout
-	default:
-		return PollUntil(interval, condition, stopCh)
-	}
 }
 
 // WaitFunc creates a channel that receives an item every time a test
