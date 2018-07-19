@@ -26,10 +26,10 @@ import (
 	"strconv"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -72,14 +72,9 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 		return nil, err
 	}
 	for index, stage := range stages {
-		baseImage, err := util.ResolveEnvironmentReplacement(stage.BaseName, k.Args, false)
-		if err != nil {
-			return nil, err
-		}
 		finalStage := index == len(stages)-1
 		// Unpack file system to root
-		logrus.Infof("Unpacking filesystem of %s...", baseImage)
-		sourceImage, err := util.RetrieveSourceImage(index, stages)
+		sourceImage, err := util.RetrieveSourceImage(index, k.Args, stages)
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +88,7 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 			return nil, err
 		}
 		imageConfig, err := sourceImage.ConfigFile()
-		if baseImage == constants.NoBaseImage {
+		if sourceImage == empty.Image {
 			imageConfig.Config.Env = constants.ScratchEnvVars
 		}
 		if err != nil {

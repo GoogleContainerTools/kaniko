@@ -38,10 +38,14 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(index int, stages []instructions.Stage) (v1.Image, error) {
+func RetrieveSourceImage(index int, buildArgs []string, stages []instructions.Stage) (v1.Image, error) {
 	currentStage := stages[index]
+	currentBaseName, err := ResolveEnvironmentReplacement(currentStage.BaseName, buildArgs, false)
+	if err != nil {
+		return nil, err
+	}
 	// First, check if the base image is a scratch image
-	if currentStage.BaseName == constants.NoBaseImage {
+	if currentBaseName == constants.NoBaseImage {
 		logrus.Info("No base image, nothing to extract")
 		return empty.Image, nil
 	}
@@ -51,12 +55,12 @@ func RetrieveSourceImage(index int, stages []instructions.Stage) (v1.Image, erro
 		if i > index {
 			continue
 		}
-		if stage.Name == currentStage.BaseName {
+		if stage.Name == currentBaseName {
 			return retrieveTarImage(i)
 		}
 	}
 	// Otherwise, initialize image as usual
-	return retrieveRemoteImage(currentStage.BaseName)
+	return retrieveRemoteImage(currentBaseName)
 }
 
 func tarballImage(index int) (v1.Image, error) {

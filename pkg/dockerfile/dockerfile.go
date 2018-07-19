@@ -87,7 +87,7 @@ func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) 
 		if stageIndex <= index {
 			continue
 		}
-		sourceImage, err := util.RetrieveSourceImage(stageIndex, stages)
+		sourceImage, err := util.RetrieveSourceImage(stageIndex, buildArgs.ReplacementEnvs(nil), stages)
 		if err != nil {
 			return nil, err
 		}

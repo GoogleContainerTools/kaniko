@@ -53,7 +53,7 @@ func Test_StandardImage(t *testing.T) {
 		return nil, nil
 	}
 	retrieveRemoteImage = mock
-	actual, err := RetrieveSourceImage(0, stages)
+	actual, err := RetrieveSourceImage(0, nil, stages)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 func Test_ScratchImage(t *testing.T) {
@@ -61,7 +61,7 @@ func Test_ScratchImage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual, err := RetrieveSourceImage(1, stages)
+	actual, err := RetrieveSourceImage(1, nil, stages)
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
 }
@@ -79,7 +79,7 @@ func Test_TarImage(t *testing.T) {
 		return nil, nil
 	}
 	retrieveTarImage = mock
-	actual, err := RetrieveSourceImage(2, stages)
+	actual, err := RetrieveSourceImage(2, nil, stages)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 
