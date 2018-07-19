@@ -85,7 +85,7 @@ func Test_Dependencies(t *testing.T) {
 			helloPath,
 			testDir,
 		},
-		nil,
+		{},
 	}
 
 	for index := range stages {
@@ -125,7 +125,7 @@ func Test_DependenciesWithArg(t *testing.T) {
 			helloPath,
 			testDir,
 		},
-		nil,
+		{},
 	}
 	buildArgs := NewBuildArgs([]string{fmt.Sprintf("hienv=%s", helloPath)})
 

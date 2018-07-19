@@ -26,7 +26,6 @@ import (
 	"strconv"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
@@ -55,94 +54,75 @@ type KanikoBuildArgs struct {
 	Reproducible   bool
 }
 
-func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
+func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
 	d, err := ioutil.ReadFile(k.DockerfilePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	stages, err := dockerfile.Parse(d)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(k.SnapshotMode)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for index, stage := range stages {
-		baseImage, err := util.ResolveEnvironmentReplacement(stage.BaseName, k.Args, false)
-		if err != nil {
-			return nil, nil, err
-		}
 		finalStage := index == len(stages)-1
 		// Unpack file system to root
-		logrus.Infof("Unpacking filesystem of %s...", baseImage)
-		var sourceImage v1.Image
-		var ref name.Reference
-		if baseImage == constants.NoBaseImage {
-			logrus.Info("No base image, nothing to extract")
-			sourceImage = empty.Image
-		} else {
-			// Initialize source image
-			ref, err = name.ParseReference(baseImage, name.WeakValidation)
-			if err != nil {
-				return nil, nil, err
-			}
-			auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
-			if err != nil {
-				return nil, nil, err
-			}
-			sourceImage, err = remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
-			if err != nil {
-				return nil, nil, err
-			}
+		sourceImage, err := util.RetrieveSourceImage(index, k.Args, stages)
+		if err != nil {
+			return nil, err
 		}
 		if err := util.GetFSFromImage(sourceImage); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		l := snapshot.NewLayeredMap(hasher)
 		snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
 		// Take initial snapshot
 		if err := snapshotter.Init(); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		imageConfig, err := sourceImage.ConfigFile()
-		if baseImage == constants.NoBaseImage {
+		if sourceImage == empty.Image {
 			imageConfig.Config.Env = constants.ScratchEnvVars
 		}
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		buildArgs := dockerfile.NewBuildArgs(k.Args)
 		for index, cmd := range stage.Commands {
 			finalCmd := index == len(stage.Commands)-1
 			dockerCommand, err := commands.GetCommand(cmd, k.SrcContext)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			if dockerCommand == nil {
 				continue
 			}
 			if err := dockerCommand.ExecuteCommand(&imageConfig.Config, buildArgs); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
-			if !finalStage || (k.SingleSnapshot && !finalCmd) {
+			// Don't snapshot if it's not the final stage and not the final command
+			// Also don't snapshot if it's the final stage, not the final command, and single snapshot is set
+			if (!finalStage && !finalCmd) || (finalStage && !finalCmd && k.SingleSnapshot) {
 				continue
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot
 			snapshotFiles := dockerCommand.FilesToSnapshot()
-			if k.SingleSnapshot && finalCmd {
+			if finalCmd {
 				snapshotFiles = nil
 			}
 			contents, err := snapshotter.TakeSnapshot(snapshotFiles)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			util.MoveVolumeWhitelistToWhitelist()
 			if contents == nil {
@@ -155,7 +135,7 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 			}
 			layer, err := tarball.LayerFromOpener(opener)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			sourceImage, err = mutate.Append(sourceImage,
 				mutate.Addendum{
@@ -167,36 +147,37 @@ func DoBuild(k KanikoBuildArgs) (name.Reference, v1.Image, error) {
 				},
 			)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
+		sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
+		if err != nil {
+			return nil, err
+		}
 		if finalStage {
-			sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
-			if err != nil {
-				return nil, nil, err
-			}
-
 			if k.Reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 			}
-
-			return ref, sourceImage, nil
+			return sourceImage, nil
+		}
+		if err := saveStageAsTarball(index, sourceImage); err != nil {
+			return nil, err
 		}
 		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
-	return nil, nil, err
+	return nil, err
 }
 
-func DoPush(ref name.Reference, image v1.Image, destinations []string, tarPath string) error {
+func DoPush(image v1.Image, destinations []string, tarPath string) error {
 	// continue pushing unless an error occurs
 	for _, destination := range destinations {
 		// Push the image
@@ -261,6 +242,19 @@ func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *do
 		}
 	}
 	return nil
+}
+
+func saveStageAsTarball(stageIndex int, image v1.Image) error {
+	destRef, err := name.NewTag("temp/tag", name.WeakValidation)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(constants.KanikoIntermediateStagesDir, 0750); err != nil {
+		return err
+	}
+	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(stageIndex))
+	logrus.Infof("Storing source image from stage %d at path %s", stageIndex, tarPath)
+	return tarball.WriteToFile(tarPath, destRef, image, nil)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {

@@ -18,20 +18,13 @@ package dockerfile
 
 import (
 	"bytes"
-	"net/http"
-	"path/filepath"
-	"strconv"
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
@@ -89,29 +82,14 @@ func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 
 // Dependencies returns a list of files in this stage that will be needed in later stages
 func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) ([]string, error) {
-	var dependencies []string
+	dependencies := []string{}
 	for stageIndex, stage := range stages {
 		if stageIndex <= index {
 			continue
 		}
-		var sourceImage v1.Image
-		if stage.BaseName == constants.NoBaseImage {
-			sourceImage = empty.Image
-		} else {
-			// Initialize source image
-			ref, err := name.ParseReference(stage.BaseName, name.WeakValidation)
-			if err != nil {
-				return nil, err
-
-			}
-			auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
-			if err != nil {
-				return nil, err
-			}
-			sourceImage, err = remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
-			if err != nil {
-				return nil, err
-			}
+		sourceImage, err := util.RetrieveSourceImage(stageIndex, buildArgs.ReplacementEnvs(nil), stages)
+		if err != nil {
+			return nil, err
 		}
 		imageConfig, err := sourceImage.ConfigFile()
 		if err != nil {

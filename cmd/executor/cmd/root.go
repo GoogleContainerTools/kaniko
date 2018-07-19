@@ -85,7 +85,7 @@ var RootCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		ref, image, err := executor.DoBuild(executor.KanikoBuildArgs{
+		image, err := executor.DoBuild(executor.KanikoBuildArgs{
 			DockerfilePath: absouteDockerfilePath(),
 			SrcContext:     srcContext,
 			SnapshotMode:   snapshotMode,
@@ -98,7 +98,7 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := executor.DoPush(ref, image, destinations, tarPath); err != nil {
+		if err := executor.DoPush(image, destinations, tarPath); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
