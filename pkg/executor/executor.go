@@ -189,14 +189,17 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 			return tarball.WriteToFile(tarPath, destRef, image, nil)
 		}
 
-		pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
+		k8sc, err := k8schain.NewInCluster(k8schain.Options{})
+		if err != nil {
+			return err
+		}
+		kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
+		pushAuth, err := kc.Resolve(destRef.Context().Registry)
 		if err != nil {
 			return err
 		}
 
-		wo := remote.WriteOptions{}
-		err = remote.Write(destRef, image, pushAuth, http.DefaultTransport, wo)
-		if err != nil {
+		if err := remote.Write(destRef, image, pushAuth, http.DefaultTransport, remote.WriteOptions{}); err != nil {
 			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
 			return err
 		}
