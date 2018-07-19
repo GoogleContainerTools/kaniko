@@ -485,7 +485,7 @@
     "pkg/v1/types",
     "pkg/v1/v1util"
   ]
-  revision = "1fcd4c5f05065afeab866058b03c688d0ab89157"
+  revision = "841282694456173deafa67ca26e8f29686ffe2e5"
 
 [[projects]]
   branch = "master"

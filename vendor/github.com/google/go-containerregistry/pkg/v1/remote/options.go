@@ -15,6 +15,7 @@
 package remote
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -24,7 +25,8 @@ import (
 // on a remote image
 func WithTransport(t http.RoundTripper) ImageOption {
 	return func(i *imageOpener) error {
-		return i.setTransport(t)
+		i.transport = t
+		return nil
 	}
 }
 
@@ -32,7 +34,8 @@ func WithTransport(t http.RoundTripper) ImageOption {
 // on a remote image
 func WithAuth(auth authn.Authenticator) ImageOption {
 	return func(i *imageOpener) error {
-		return i.setAuth(auth)
+		i.auth = auth
+		return nil
 	}
 }
 
@@ -44,18 +47,10 @@ func WithAuthFromKeychain(keys authn.Keychain) ImageOption {
 		if err != nil {
 			return err
 		}
-		return i.setAuth(auth)
+		if auth == authn.Anonymous {
+			log.Println("No matching credentials were found, falling back on anonymous")
+		}
+		i.auth = auth
+		return nil
 	}
-}
-
-// Set client on image using provided transport, and the default authenticator
-func (i *imageOpener) setTransport(t http.RoundTripper) error {
-	i.transport = t
-	return nil
-}
-
-// Set client on image using provided authenticator, and the default transport
-func (i *imageOpener) setAuth(auth authn.Authenticator) error {
-	i.auth = auth
-	return nil
 }
