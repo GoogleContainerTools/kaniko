@@ -44,8 +44,6 @@ const (
 	// as tarballs in case they are needed later on
 	KanikoIntermediateStagesDir = "/kaniko/stages"
 
-	StageTar = "stage.tar"
-
 	// Various snapshot modes:
 	SnapshotModeTime = "time"
 	SnapshotModeFull = "full"
