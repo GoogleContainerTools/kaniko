@@ -28,6 +28,7 @@ import (
 
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -189,7 +190,7 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 			return tarball.WriteToFile(tarPath, destRef, image, nil)
 		}
 
-		k8sc, err := k8schain.NewInCluster(k8schain.Options{})
+		k8sc, err := k8schain.NewNoClient()
 		if err != nil {
 			return err
 		}
