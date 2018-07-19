@@ -31,6 +31,12 @@ import (
 	"strconv"
 )
 
+var (
+	// For testing
+	retrieveRemoteImage = remoteImage
+	retrieveTarImage    = tarballImage
+)
+
 // RetrieveSourceImage returns the base image of the stage at index
 func RetrieveSourceImage(index int, stages []instructions.Stage) (v1.Image, error) {
 	currentStage := stages[index]
@@ -46,13 +52,21 @@ func RetrieveSourceImage(index int, stages []instructions.Stage) (v1.Image, erro
 			continue
 		}
 		if stage.Name == currentStage.BaseName {
-			tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(i))
-			logrus.Infof("Base image from previous stage %d found, using saved tar at path %s", i, tarPath)
-			return tarball.ImageFromPath(tarPath, nil)
+			return retrieveTarImage(i)
 		}
 	}
 	// Otherwise, initialize image as usual
-	ref, err := name.ParseReference(currentStage.BaseName, name.WeakValidation)
+	return retrieveRemoteImage(currentStage.BaseName)
+}
+
+func tarballImage(index int) (v1.Image, error) {
+	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(index))
+	logrus.Infof("Base image from previous stage %d found, using saved tar at path %s", index, tarPath)
+	return tarball.ImageFromPath(tarPath, nil)
+}
+
+func remoteImage(image string) (v1.Image, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
 	}
