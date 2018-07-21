@@ -17,18 +17,20 @@ limitations under the License.
 package util
 
 import (
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"path/filepath"
+	"strconv"
+
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"path/filepath"
-	"strconv"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 var (
@@ -74,9 +76,11 @@ func remoteImage(image string) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
+	k8sc, err := k8schain.NewNoClient()
 	if err != nil {
 		return nil, err
 	}
-	return remote.Image(ref, remote.WithAuth(auth), remote.WithTransport(http.DefaultTransport))
+	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
+	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
+
 }

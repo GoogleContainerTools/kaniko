@@ -20,28 +20,28 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-
-	"io/ioutil"
+	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 // KanikoBuildArgs contains all the args required to build the image
@@ -190,14 +190,17 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 			return tarball.WriteToFile(tarPath, destRef, image, nil)
 		}
 
-		pushAuth, err := authn.DefaultKeychain.Resolve(destRef.Context().Registry)
+		k8sc, err := k8schain.NewNoClient()
+		if err != nil {
+			return err
+		}
+		kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
+		pushAuth, err := kc.Resolve(destRef.Context().Registry)
 		if err != nil {
 			return err
 		}
 
-		wo := remote.WriteOptions{}
-		err = remote.Write(destRef, image, pushAuth, http.DefaultTransport, wo)
-		if err != nil {
+		if err := remote.Write(destRef, image, pushAuth, http.DefaultTransport, remote.WriteOptions{}); err != nil {
 			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
 			return err
 		}
