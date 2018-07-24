@@ -18,35 +18,50 @@ package integration
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
+var config = initGCPConfig()
+var imageBuilder *DockerFileBuilder
+
+type gcpConfig struct {
+	gcsBucket        string
+	imageRepo        string
+	onbuildBaseImage string
+}
+
+func initGCPConfig() *gcpConfig {
+	var c gcpConfig
+	flag.StringVar(&c.gcsBucket, "bucket", "", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
+	flag.StringVar(&c.imageRepo, "repo", "", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
+	flag.Parse()
+
+	if c.gcsBucket == "" || c.imageRepo == "" {
+		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)
+	}
+	if !strings.HasSuffix(c.imageRepo, "/") {
+		c.imageRepo = c.imageRepo + "/"
+	}
+	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
+	return &c
+}
+
 const (
-	executorImage      = "executor-image"
-	dockerImage        = "gcr.io/cloud-builders/docker"
 	ubuntuImage        = "ubuntu"
-	testRepo           = "gcr.io/kaniko-test/"
-	dockerPrefix       = "docker-"
-	kanikoPrefix       = "kaniko-"
 	daemonPrefix       = "daemon://"
-	kanikoTestBucket   = "kaniko-test-bucket"
 	dockerfilesPath    = "dockerfiles"
-	onbuildBaseImage   = testRepo + "onbuild-base:latest"
-	buildContextPath   = "/workspace"
 	emptyContainerDiff = `[
      {
        "Image1": "%s",
@@ -70,130 +85,73 @@ const (
    ]`
 )
 
-// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
-var testsToIgnore = []string{"Dockerfile_test_user_run"}
+func meetsRequirements() bool {
+	requiredTools := []string{"container-diff", "gsutil"}
+	hasRequirements := true
+	for _, tool := range requiredTools {
+		_, err := exec.LookPath(tool)
+		if err != nil {
+			fmt.Printf("You must have %s installed and on your PATH\n", tool)
+			hasRequirements = false
+		}
+	}
+	return hasRequirements
+}
 
 func TestMain(m *testing.M) {
-	buildKaniko := exec.Command("docker", "build", "-t", executorImage, "-f", "../deploy/Dockerfile", "..")
-	err := buildKaniko.Run()
+	if !meetsRequirements() {
+		fmt.Println("Missing required tools")
+		os.Exit(1)
+	}
+	contextFile, err := CreateIntegrationTarball()
+	if err != nil {
+		fmt.Println("Failed to create tarball of integration files for build context", err)
+		os.Exit(1)
+	}
+
+	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile)
+	if err != nil {
+		fmt.Println("Failed to upload build context", err)
+		os.Exit(1)
+	}
+
+	err = os.Remove(contextFile)
+	if err != nil {
+		fmt.Printf("Failed to remove tarball at %s: %s\n", contextFile, err)
+		os.Exit(1)
+	}
+
+	RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
+	defer DeleteFromBucket(fileInBucket)
+
+	fmt.Println("Building kaniko image")
+	buildKaniko := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
+	err = buildKaniko.Run()
 	if err != nil {
 		fmt.Print(err)
 		fmt.Print("Building kaniko failed.")
 		os.Exit(1)
 	}
 
-	// Make sure container-diff is on user's PATH
-	_, err = exec.LookPath("container-diff")
+	dockerfiles, err := FindDockerFiles(dockerfilesPath)
 	if err != nil {
-		fmt.Print("Make sure you have container-diff installed and on your PATH")
+		fmt.Printf("Coudn't create map of dockerfiles: %s", err)
 		os.Exit(1)
 	}
-
+	imageBuilder = NewDockerFileBuilder(dockerfiles)
 	os.Exit(m.Run())
 }
-
 func TestRun(t *testing.T) {
-	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-
-	// Map for test Dockerfile to expected ARGs
-	argsMap := map[string][]string{
-		"Dockerfile_test_run":     {"file=/file"},
-		"Dockerfile_test_workdir": {"workdir=/arg/workdir"},
-		"Dockerfile_test_add":     {"file=context/foo"},
-		"Dockerfile_test_onbuild": {"file=/tmp/onbuild"},
-		"Dockerfile_test_scratch": {
-			"image=scratch",
-			"hello=hello-value",
-			"file=context/foo",
-			"file3=context/b*",
-		},
-		"Dockerfile_test_multistage": {"file=/foo2"},
-	}
-
-	// Map for additional docker flags
-	additionalDockerFlagsMap := map[string][]string{
-		"Dockerfile_test_target": {"--target=second"},
-	}
-	// Map for additional kaniko flags
-	additionalKanikoFlagsMap := map[string][]string{
-		"Dockerfile_test_add":     {"--single-snapshot"},
-		"Dockerfile_test_scratch": {"--single-snapshot"},
-		"Dockerfile_test_target":  {"--target=second"},
-	}
-
-	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
-	testsToIgnore := []string{"Dockerfile_test_user_run"}
-	bucketContextTests := []string{"Dockerfile_test_copy_bucket"}
-	reproducibleTests := []string{"Dockerfile_test_env"}
-
-	_, ex, _, _ := runtime.Caller(0)
-	cwd := filepath.Dir(ex)
-
-	for _, dockerfile := range dockerfiles {
+	for dockerfile, built := range imageBuilder.FilesBuilt {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
-			dockerfile = dockerfile[len("dockerfile/")+1:]
-			for _, d := range testsToIgnore {
-				if dockerfile == d {
-					t.SkipNow()
+			if !built {
+				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile)
+				if err != nil {
+					t.Fatalf("Failed to build kaniko and docker images for %s: %s", dockerfile, err)
 				}
 			}
-			t.Logf("%s\n", dockerfile)
-
-			var buildArgs []string
-			buildArgFlag := "--build-arg"
-			for _, arg := range argsMap[dockerfile] {
-				buildArgs = append(buildArgs, buildArgFlag)
-				buildArgs = append(buildArgs, arg)
-			}
-			// build docker image
-			additionalFlags := append(buildArgs, additionalDockerFlagsMap[dockerfile]...)
-			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
-			dockerCmd := exec.Command("docker",
-				append([]string{"build",
-					"-t", dockerImage,
-					"-f", path.Join(dockerfilesPath, dockerfile),
-					"."},
-					additionalFlags...)...,
-			)
-			RunCommand(dockerCmd, t)
-
-			contextFlag := "-c"
-			contextPath := buildContextPath
-			for _, d := range bucketContextTests {
-				if d == dockerfile {
-					contextFlag = "-b"
-					contextPath = constants.GCSBuildContextPrefix + kanikoTestBucket
-					break
-				}
-			}
-
-			reproducibleFlag := ""
-			for _, d := range reproducibleTests {
-				if d == dockerfile {
-					reproducibleFlag = "--reproducible"
-					break
-				}
-			}
-
-			// build kaniko image
-			additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
-			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
-			kanikoCmd := exec.Command("docker",
-				append([]string{"run",
-					"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-					"-v", cwd + ":/workspace",
-					executorImage,
-					"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-					"-d", kanikoImage, reproducibleFlag,
-					contextFlag, contextPath},
-					additionalFlags...)...,
-			)
-
-			RunCommand(kanikoCmd, t)
+			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
+			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
@@ -210,7 +168,7 @@ func TestRun(t *testing.T) {
 			var diffInt interface{}
 			var expectedInt interface{}
 
-			err = json.Unmarshal(diff, &diffInt)
+			err := json.Unmarshal(diff, &diffInt)
 			if err != nil {
 				t.Error(err)
 				t.Fail()
@@ -228,11 +186,6 @@ func TestRun(t *testing.T) {
 }
 
 func TestLayers(t *testing.T) {
-	dockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
 	offset := map[string]int{
 		"Dockerfile_test_add":     9,
 		"Dockerfile_test_scratch": 3,
@@ -240,17 +193,17 @@ func TestLayers(t *testing.T) {
 		// which is why this offset exists
 		"Dockerfile_test_volume": 1,
 	}
-	for _, dockerfile := range dockerfiles {
+	for dockerfile, built := range imageBuilder.FilesBuilt {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
-			dockerfile = dockerfile[len("dockerfile/")+1:]
-			for _, ignore := range testsToIgnore {
-				if dockerfile == ignore {
-					t.SkipNow()
+			if !built {
+				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile)
+				if err != nil {
+					t.Fatalf("Failed to build kaniko and docker images for %s: %s", dockerfile, err)
 				}
 			}
 			// Pull the kaniko image
-			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
-			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
+			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
+			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 			pullCmd := exec.Command("docker", "pull", kanikoImage)
 			RunCommand(pullCmd, t)
 			if err := checkLayers(dockerImage, kanikoImage, offset[dockerfile]); err != nil {
@@ -264,11 +217,11 @@ func TestLayers(t *testing.T) {
 func checkLayers(image1, image2 string, offset int) error {
 	lenImage1, err := numLayers(image1)
 	if err != nil {
-		return err
+		return fmt.Errorf("Couldn't get number of layers for image1 (%s): %s", image1, err)
 	}
 	lenImage2, err := numLayers(image2)
 	if err != nil {
-		return err
+		return fmt.Errorf("Couldn't get number of layers for image2 (%s): %s", image2, err)
 	}
 	actualOffset := int(math.Abs(float64(lenImage1 - lenImage2)))
 	if actualOffset != offset {
@@ -280,24 +233,15 @@ func checkLayers(image1, image2 string, offset int) error {
 func numLayers(image string) (int, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("Couldn't parse referance to image %s: %s", image, err)
 	}
 	img, err := daemon.Image(ref)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("Couldn't get reference to image %s from daemon: %s", image, err)
 	}
 	layers, err := img.Layers()
-	return len(layers), err
-}
-
-func RunCommand(cmd *exec.Cmd, t *testing.T) []byte {
-	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Log(cmd.Args)
-		t.Log(string(output))
-		t.Error(err)
-		t.FailNow()
+		return 0, fmt.Errorf("Error getting layers for image %s: %s", image, err)
 	}
-
-	return output
+	return len(layers), nil
 }

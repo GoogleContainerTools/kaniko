@@ -70,12 +70,32 @@ _These tests will not run correctly unless you have [checked out your fork into 
 The integration tests live in [`integration`](./integration) and can be run with:
 
 ```shell
+export GCS_BUCKET="gs://<your bucket>"
+export IMAGE_REPO="gcr.io/somerepo"
 make integration-test
 ```
 
-_These tests require push access to a project in GCP, and so can only be run
-by maintainers who have access. These tests will be kicked off by [reviewers](#reviews)
-for submitted PRs._
+If you want to run `make integration-test`, you must override the project using environment variables:
+
+* `GCS_BUCKET` - The name of your GCS bucket
+* `IMAGE_REPO` - The path to your docker image repo
+
+You can also run tests with `go test`, for example to run tests individually:
+
+```shell
+go test -v --bucket $GCS_BUCKET --repo $IMAGE_REPO -run TestLayers/test_layer_Dockerfile_test_copy_bucket
+```
+
+Requirements:
+
+* [`gcloud`](https://cloud.google.com/sdk/install)
+* [`gsutil`](https://cloud.google.com/storage/docs/gsutil_install)
+* [`container-diff`](https://github.com/GoogleContainerTools/container-diff#installation)
+* A bucket in [GCS](https://cloud.google.com/storage/) which you have write access to via
+  the user currently logged into `gcloud`
+* An image repo which you have write access to via the user currently logged into `gcloud`
+
+These tests will be kicked off by [reviewers](#reviews) for submitted PRs.
 
 ## Creating a PR
 
