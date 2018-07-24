@@ -93,7 +93,7 @@ There are several different ways to deploy and run kaniko:
 Requirements:
 
 - Standard Kubernetes cluster (e.g. using [GKE](https://cloud.google.com/kubernetes-engine/))
-- [Kubernetes Secret](#kubernetes-secrete)
+- [Kubernetes Secret](#kubernetes-secret)
 
 ##### Kubernetes secret
 
