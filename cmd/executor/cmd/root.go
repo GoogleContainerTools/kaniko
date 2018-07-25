@@ -44,6 +44,7 @@ var (
 	tarPath                     string
 	singleSnapshot              bool
 	reproducible                bool
+	target                      string
 )
 
 func init() {
@@ -60,6 +61,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&tarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&singleSnapshot, "single-snapshot", "", false, "Set this flag to take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
+	RootCmd.PersistentFlags().StringVarP(&target, "target", "", "", " Set the target build stage to build")
 }
 
 var RootCmd = &cobra.Command{
@@ -92,6 +94,7 @@ var RootCmd = &cobra.Command{
 			Args:           buildArgs,
 			SingleSnapshot: singleSnapshot,
 			Reproducible:   reproducible,
+			Target:         target,
 		})
 		if err != nil {
 			logrus.Error(err)

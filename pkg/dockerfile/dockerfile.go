@@ -18,13 +18,15 @@ package dockerfile
 
 import (
 	"bytes"
+	"fmt"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
@@ -38,6 +40,15 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 		return nil, err
 	}
 	return stages, err
+}
+
+func Validate(stages []instructions.Stage, target string) error {
+	for _, stage := range stages {
+		if stage.Name == target {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s is not a valid target build stage", target)
 }
 
 // ResolveStages resolves any calls to previous stages with names to indices
