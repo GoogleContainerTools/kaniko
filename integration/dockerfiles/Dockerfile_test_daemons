@@ -1,0 +1,3 @@
+FROM busybox
+RUN while true; do dd if=/dev/zero of=file`date +%s`.txt count=16000 bs=256  > /dev/null 2>&1; done &
+RUN echo "wait a second..." && sleep 2 && ls -lrat file*.txt || echo "test passed."
