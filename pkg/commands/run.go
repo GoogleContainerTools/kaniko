@@ -27,6 +27,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -88,10 +89,29 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			}
 			gid = uint32(gid64)
 		}
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
-	return cmd.Run()
+
+	if err := cmd.Start(); err != nil {
+		return errors.Wrap(err, "starting command")
+	}
+
+	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+	if err != nil {
+		return errors.Wrap(err, "getting group id for process")
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return errors.Wrap(err, "waiting for process to exit")
+	}
+
+	//it's not an error if there are no grandchildren
+	if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil && err.Error() != "no such process" {
+		return err
+	}
+
+	return nil
 }
 
 // FilesToSnapshot returns nil for this command because we don't know which files
