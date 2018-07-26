@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/google-appengine/debian9
+FROM gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0
 RUN echo "hey" > /etc/foo
 RUN echo "baz" > /etc/baz
 RUN cp /etc/baz /etc/bar
