@@ -56,7 +56,7 @@ func Test_ResolveStages(t *testing.T) {
 	}
 }
 
-func Test_Validate(t *testing.T) {
+func Test_ValidateTarget(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
@@ -89,7 +89,7 @@ func Test_Validate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actualErr := Validate(stages, test.target)
+			actualErr := ValidateTarget(stages, test.target)
 			testutil.CheckError(t, test.shouldErr, actualErr)
 		})
 	}

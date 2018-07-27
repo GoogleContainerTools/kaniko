@@ -66,7 +66,7 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := dockerfile.Validate(stages, k.Target); err != nil {
+	if err := dockerfile.ValidateTarget(stages, k.Target); err != nil {
 		return nil, err
 	}
 	dockerfile.ResolveStages(stages)

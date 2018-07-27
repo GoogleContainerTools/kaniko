@@ -42,7 +42,7 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 	return stages, err
 }
 
-func Validate(stages []instructions.Stage, target string) error {
+func ValidateTarget(stages []instructions.Stage, target string) error {
 	for _, stage := range stages {
 		if stage.Name == target {
 			return nil
