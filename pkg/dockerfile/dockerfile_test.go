@@ -18,13 +18,14 @@ package dockerfile
 
 import (
 	"fmt"
-	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/docker/docker/builder/dockerfile/instructions"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/docker/docker/builder/dockerfile/instructions"
 )
 
 func Test_ResolveStages(t *testing.T) {
@@ -52,6 +53,45 @@ func Test_ResolveStages(t *testing.T) {
 		if copyCmd.From != expectedStage {
 			t.Fatalf("unexpected copy command: %s resolved to stage %s, expected %s", copyCmd.String(), copyCmd.From, expectedStage)
 		}
+	}
+}
+
+func Test_ValidateTarget(t *testing.T) {
+	dockerfile := `
+	FROM scratch
+	RUN echo hi > /hi
+	
+	FROM scratch AS second
+	COPY --from=0 /hi /hi2
+	
+	FROM scratch
+	COPY --from=second /hi2 /hi3
+	`
+	stages, err := Parse([]byte(dockerfile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name      string
+		target    string
+		shouldErr bool
+	}{
+		{
+			name:      "test valid target",
+			target:    "second",
+			shouldErr: false,
+		},
+		{
+			name:      "test invalid target",
+			target:    "invalid",
+			shouldErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actualErr := ValidateTarget(stages, test.target)
+			testutil.CheckError(t, test.shouldErr, actualErr)
+		})
 	}
 }
 

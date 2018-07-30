@@ -52,6 +52,7 @@ type KanikoBuildArgs struct {
 	Args           []string
 	SingleSnapshot bool
 	Reproducible   bool
+	Target         string
 }
 
 func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
@@ -65,6 +66,9 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := dockerfile.ValidateTarget(stages, k.Target); err != nil {
+		return nil, err
+	}
 	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(k.SnapshotMode)
@@ -72,7 +76,7 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 		return nil, err
 	}
 	for index, stage := range stages {
-		finalStage := index == len(stages)-1
+		finalStage := (index == len(stages)-1) || (k.Target == stage.Name)
 		// Unpack file system to root
 		sourceImage, err := util.RetrieveSourceImage(index, k.Args, stages)
 		if err != nil {

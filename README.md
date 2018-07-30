@@ -275,6 +275,10 @@ Set this flag to strip timestamps out of the built image and make it reproducibl
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
 
+#### --target
+
+Set this flag to indicate which build stage is the target build stage.
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.

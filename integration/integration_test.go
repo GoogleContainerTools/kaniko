@@ -19,9 +19,6 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"math"
 	"os"
 	"os/exec"
@@ -30,6 +27,10 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -113,10 +114,15 @@ func TestRun(t *testing.T) {
 		"Dockerfile_test_multistage": {"file=/foo2"},
 	}
 
-	// Map for additional flags
-	additionalFlagsMap := map[string][]string{
+	// Map for additional docker flags
+	additionalDockerFlagsMap := map[string][]string{
+		"Dockerfile_test_target": {"--target=second"},
+	}
+	// Map for additional kaniko flags
+	additionalKanikoFlagsMap := map[string][]string{
 		"Dockerfile_test_add":     {"--single-snapshot"},
 		"Dockerfile_test_scratch": {"--single-snapshot"},
+		"Dockerfile_test_target":  {"--target=second"},
 	}
 
 	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
@@ -144,13 +150,14 @@ func TestRun(t *testing.T) {
 				buildArgs = append(buildArgs, arg)
 			}
 			// build docker image
+			additionalFlags := append(buildArgs, additionalDockerFlagsMap[dockerfile]...)
 			dockerImage := strings.ToLower(testRepo + dockerPrefix + dockerfile)
 			dockerCmd := exec.Command("docker",
 				append([]string{"build",
 					"-t", dockerImage,
 					"-f", path.Join(dockerfilesPath, dockerfile),
 					"."},
-					buildArgs...)...,
+					additionalFlags...)...,
 			)
 			RunCommand(dockerCmd, t)
 
@@ -173,7 +180,7 @@ func TestRun(t *testing.T) {
 			}
 
 			// build kaniko image
-			additionalFlags := append(buildArgs, additionalFlagsMap[dockerfile]...)
+			additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 			kanikoImage := strings.ToLower(testRepo + kanikoPrefix + dockerfile)
 			kanikoCmd := exec.Command("docker",
 				append([]string{"run",

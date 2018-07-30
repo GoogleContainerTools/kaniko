@@ -72,6 +72,7 @@ func tarballImage(index int) (v1.Image, error) {
 }
 
 func remoteImage(image string) (v1.Image, error) {
+	logrus.Infof("Downloading base image %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
