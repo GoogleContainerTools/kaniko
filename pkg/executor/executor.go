@@ -42,6 +42,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/version"
 )
 
 // KanikoBuildArgs contains all the args required to build the image
@@ -181,7 +182,17 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 	return nil, err
 }
 
+type withUserAgent struct {
+	t http.RoundTripper
+}
+
+func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Set("User-Agent", fmt.Sprintf("kaniko/%s", version.Version()))
+	return w.t.RoundTrip(r)
+}
+
 func DoPush(image v1.Image, destinations []string, tarPath string) error {
+
 	// continue pushing unless an error occurs
 	for _, destination := range destinations {
 		// Push the image
@@ -204,7 +215,10 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 			return err
 		}
 
-		if err := remote.Write(destRef, image, pushAuth, http.DefaultTransport, remote.WriteOptions{}); err != nil {
+		// Create a transport to set our user-agent.
+		rt := &withUserAgent{t: http.DefaultTransport}
+
+		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
 			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
 			return err
 		}
