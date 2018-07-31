@@ -63,7 +63,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 }
 
 var bucketContextTests = []string{"Dockerfile_test_copy_bucket"}
-var reproducibleTests = []string{"Dockerfile_test_env"}
+var reproducibleTests = []string{"Dockerfile_test_reproducible"}
 
 // GetDockerImage constructs the name of the docker image that would be built with
 // dockerfile if it was tagged with imageRepo.

@@ -42,6 +42,16 @@ type gcpConfig struct {
 	onbuildBaseImage string
 }
 
+type imageDetails struct {
+	name      string
+	numLayers int
+	digest    string
+}
+
+func (i imageDetails) String() string {
+	return fmt.Sprintf("Image: [%s] Digest: [%s] Number of Layers: [%d]", i.name, i.digest, i.numLayers)
+}
+
 func initGCPConfig() *gcpConfig {
 	var c gcpConfig
 	flag.StringVar(&c.gcsBucket, "bucket", "", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
@@ -206,7 +216,7 @@ func TestLayers(t *testing.T) {
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 			pullCmd := exec.Command("docker", "pull", kanikoImage)
 			RunCommand(pullCmd, t)
-			if err := checkLayers(dockerImage, kanikoImage, offset[dockerfile]); err != nil {
+			if err := checkLayers(t, dockerImage, kanikoImage, offset[dockerfile]); err != nil {
 				t.Error(err)
 				t.Fail()
 			}
@@ -214,34 +224,44 @@ func TestLayers(t *testing.T) {
 	}
 }
 
-func checkLayers(image1, image2 string, offset int) error {
-	lenImage1, err := numLayers(image1)
+func checkLayers(t *testing.T, image1, image2 string, offset int) error {
+	img1, err := getImageDetails(image1)
 	if err != nil {
-		return fmt.Errorf("Couldn't get number of layers for image1 (%s): %s", image1, err)
+		return fmt.Errorf("Couldn't get details from image reference for (%s): %s", image1, err)
 	}
-	lenImage2, err := numLayers(image2)
+
+	img2, err := getImageDetails(image2)
 	if err != nil {
-		return fmt.Errorf("Couldn't get number of layers for image2 (%s): %s", image2, err)
+		return fmt.Errorf("Couldn't get details from image reference for (%s): %s", image2, err)
 	}
-	actualOffset := int(math.Abs(float64(lenImage1 - lenImage2)))
+
+	actualOffset := int(math.Abs(float64(img1.numLayers - img2.numLayers)))
 	if actualOffset != offset {
-		return fmt.Errorf("incorrect offset between layers of %s and %s: expected %d but got %d", image1, image2, offset, actualOffset)
+		return fmt.Errorf("Difference in number of layers in each image is %d but should be %d. Image 1: %s, Image 2: %s", actualOffset, offset, img1, img2)
 	}
 	return nil
 }
 
-func numLayers(image string) (int, error) {
+func getImageDetails(image string) (*imageDetails, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return 0, fmt.Errorf("Couldn't parse referance to image %s: %s", image, err)
+		return nil, fmt.Errorf("Couldn't parse referance to image %s: %s", image, err)
 	}
-	img, err := daemon.Image(ref)
+	imgRef, err := daemon.Image(ref)
 	if err != nil {
-		return 0, fmt.Errorf("Couldn't get reference to image %s from daemon: %s", image, err)
+		return nil, fmt.Errorf("Couldn't get reference to image %s from daemon: %s", image, err)
 	}
-	layers, err := img.Layers()
+	layers, err := imgRef.Layers()
 	if err != nil {
-		return 0, fmt.Errorf("Error getting layers for image %s: %s", image, err)
+		return nil, fmt.Errorf("Error getting layers for image %s: %s", image, err)
 	}
-	return len(layers), nil
+	digest, err := imgRef.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("Error getting digest for image %s: %s", image, err)
+	}
+	return &imageDetails{
+		name:      image,
+		numLayers: len(layers),
+		digest:    digest.Hex,
+	}, nil
 }
