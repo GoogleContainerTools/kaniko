@@ -5,5 +5,8 @@ go:
   - 1.10.x
 go_import_path: github.com/GoogleContainerTools/kaniko
 
+before_script:
+  - export DOCKER_API_VERSION=1.37
+
 script:
   - make test

@@ -50,3 +50,11 @@ required = [
 [[constraint]]
   name = "github.com/google/go-containerregistry"
   revision = "697ee0b3d46eff19ed2b30f86230377061203f79"
+
+[[override]]
+  name = "github.com/tonistiigi/fsutil"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"

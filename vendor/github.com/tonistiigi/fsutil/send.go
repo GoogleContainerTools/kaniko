@@ -1,13 +1,12 @@
 package fsutil
 
 import (
+	"context"
 	"io"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -23,11 +22,10 @@ type Stream interface {
 	Context() context.Context
 }
 
-func Send(ctx context.Context, conn Stream, root string, opt *WalkOpt, progressCb func(int, bool)) error {
+func Send(ctx context.Context, conn Stream, fs FS, progressCb func(int, bool)) error {
 	s := &sender{
 		conn:         &syncStream{Stream: conn},
-		root:         root,
-		opt:          opt,
+		fs:           fs,
 		files:        make(map[uint32]string),
 		progressCb:   progressCb,
 		sendpipeline: make(chan *sendHandle, 128),
@@ -42,8 +40,7 @@ type sendHandle struct {
 
 type sender struct {
 	conn            Stream
-	opt             *WalkOpt
-	root            string
+	fs              FS
 	files           map[uint32]string
 	mu              sync.RWMutex
 	progressCb      func(int, bool)
@@ -57,7 +54,11 @@ func (s *sender) run(ctx context.Context) error {
 	defer s.updateProgress(0, true)
 
 	g.Go(func() error {
-		return s.walk(ctx)
+		err := s.walk(ctx)
+		if err != nil {
+			s.conn.SendMsg(&Packet{Type: PACKET_ERR, Data: []byte(err.Error())})
+		}
+		return err
 	})
 
 	for i := 0; i < 4; i++ {
@@ -126,7 +127,7 @@ func (s *sender) queue(id uint32) error {
 }
 
 func (s *sender) sendFile(h *sendHandle) error {
-	f, err := os.Open(filepath.Join(s.root, h.path))
+	f, err := s.fs.Open(h.path)
 	if err == nil {
 		defer f.Close()
 		buf := bufPool.Get().([]byte)
@@ -140,7 +141,7 @@ func (s *sender) sendFile(h *sendHandle) error {
 
 func (s *sender) walk(ctx context.Context) error {
 	var i uint32 = 0
-	err := Walk(ctx, s.root, s.opt, func(path string, fi os.FileInfo, err error) error {
+	err := s.fs.Walk(ctx, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

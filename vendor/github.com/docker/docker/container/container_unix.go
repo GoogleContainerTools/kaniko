@@ -1,4 +1,4 @@
-// +build linux freebsd
+// +build !windows
 
 package container // import "github.com/docker/docker/container"
 
@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	// DefaultStopTimeout is the timeout (in seconds) for the syscall signal used to stop a container.
+	// DefaultStopTimeout sets the default time, in seconds, to wait
+	// for the graceful container stop before forcefully terminating it.
 	DefaultStopTimeout = 10
 
 	containerSecretMountPath = "/run/secrets"
@@ -380,7 +381,7 @@ func (container *Container) DetachAndUnmount(volumeEventLog func(name, action st
 	}
 
 	for _, mountPath := range mountPaths {
-		if err := detachMounted(mountPath); err != nil {
+		if err := mount.Unmount(mountPath); err != nil {
 			logrus.Warnf("%s unmountVolumes: Failed to do lazy umount fo volume '%s': %v", container.ID, mountPath, err)
 		}
 	}
