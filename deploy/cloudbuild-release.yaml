@@ -4,9 +4,17 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile",
            "-t", "gcr.io/kaniko-project/executor:$TAG_NAME", "."]
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["tag", "gcr.io/kaniko-project/executor:$TAG_NAME", 
+           "gcr.io/kaniko-project/executor:latest"]
   # Then, we want to build kaniko:debug
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
            "-t", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", "."]
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["tag", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", 
+           "gcr.io/kaniko-project/executor:debug"]
 images: ["gcr.io/kaniko-project/executor:$TAG_NAME",
-         "gcr.io/kaniko-project/executor:debug-$TAG_NAME"]
+         "gcr.io/kaniko-project/executor:latest",
+         "gcr.io/kaniko-project/executor:debug-$TAG_NAME",
+         "gcr.io/kaniko-project/executor:debug"]

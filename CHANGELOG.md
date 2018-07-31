@@ -1,3 +1,15 @@
+# v0.3.0 Release - 7/31/2018
+New Features
+* Local integration testing [#256](https://github.com/GoogleContainerTools/kaniko/pull/256)
+* Add --target flag for multistage builds [#255](https://github.com/GoogleContainerTools/kaniko/pull/255)
+* Look for on cluster credentials using k8s chain [#243](https://github.com/GoogleContainerTools/kaniko/pull/243)
+
+Bug Fixes
+* Kill grandchildren spun up by child processes [#247](https://github.com/GoogleContainerTools/kaniko/issues/247)
+* Fix bug in copy command [#221](https://github.com/GoogleContainerTools/kaniko/issues/221)
+* Multi-stage errors when referencing earlier stages [#233](https://github.com/GoogleContainerTools/kaniko/issues/233)
+
+
 # v0.2.0 Release - 7/09/2018
 
 New Features
