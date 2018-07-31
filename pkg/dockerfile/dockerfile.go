@@ -19,6 +19,7 @@ package dockerfile
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -27,7 +28,26 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/docker/docker/builder/dockerfile/parser"
+	"github.com/sirupsen/logrus"
 )
+
+// Stages reads the Dockerfile, validates it's contents, and returns stages
+func Stages(dockerfilePath, target string) ([]instructions.Stage, error) {
+	d, err := ioutil.ReadFile(dockerfilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	stages, err := Parse(d)
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateTarget(stages, target); err != nil {
+		return nil, err
+	}
+	ResolveStages(stages)
+	return stages, nil
+}
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
 func Parse(b []byte) ([]instructions.Stage, error) {
@@ -43,6 +63,9 @@ func Parse(b []byte) ([]instructions.Stage, error) {
 }
 
 func ValidateTarget(stages []instructions.Stage, target string) error {
+	if target == "" {
+		return nil
+	}
 	for _, stage := range stages {
 		if stage.Name == target {
 			return nil
@@ -98,6 +121,7 @@ func Dependencies(index int, stages []instructions.Stage, buildArgs *BuildArgs) 
 		if stageIndex <= index {
 			continue
 		}
+		logrus.Info("retrieving source image!!")
 		sourceImage, err := util.RetrieveSourceImage(stageIndex, buildArgs.ReplacementEnvs(nil), stages)
 		if err != nil {
 			return nil, err

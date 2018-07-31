@@ -58,19 +58,10 @@ type KanikoBuildArgs struct {
 
 func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
-	d, err := ioutil.ReadFile(k.DockerfilePath)
+	stages, err := dockerfile.Stages(k.DockerfilePath, k.Target)
 	if err != nil {
 		return nil, err
 	}
-
-	stages, err := dockerfile.Parse(d)
-	if err != nil {
-		return nil, err
-	}
-	if err := dockerfile.ValidateTarget(stages, k.Target); err != nil {
-		return nil, err
-	}
-	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(k.SnapshotMode)
 	if err != nil {
