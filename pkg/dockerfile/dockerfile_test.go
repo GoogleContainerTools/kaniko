@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/docker/docker/builder/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
 func Test_ResolveStages(t *testing.T) {

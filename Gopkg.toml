@@ -10,42 +10,26 @@ required = [
 [[override]]
   name = "github.com/prometheus/client_golang"
   revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
-  source = "github.com/prometheus/client_golang"
 
 [[override]]
   name = "github.com/containers/storage"
   revision = "1e5ce40cdb84ab66e26186435b1273e04b879fef"
-  source = "github.com/containers/storage"
-
-[[override]]
-  name = "github.com/docker/distribution"
-  revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
-  source = "github.com/docker/distribution"
-
-[[constraint]]
-  name = "github.com/docker/docker"
-  revision = "dfde597fbbb5de4a7559a68980401c8c405aa9af"
-  source = "github.com/docker/docker"
 
 [[override]]
   name = "github.com/opencontainers/runc"
   revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
-  source = "github.com/opencontainers/runc"
 
 [[override]]
   name = "github.com/ishidawataru/sctp"
   revision = "07191f837fedd2f13d1ec7b5f885f0f3ec54b1cb"
-  source = "github.com/ishidawataru/sctp"
 
 [[override]]
   name = "github.com/vishvananda/netlink"
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
-  source = "github.com/vishvananda/netlink"
 
 [[override]]
   name = "google.golang.org/grpc"
   revision = "8124abf74e7633d82a5b96585b0da487d0e6eed0"
-  source = "google.golang.org/grpc"
 
 [[constraint]]
   name = "github.com/genuinetools/amicontained"
@@ -57,8 +41,12 @@ required = [
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
+
+[[constraint]]
+  name = "github.com/google/go-containerregistry"
+  revision = "697ee0b3d46eff19ed2b30f86230377061203f79"
