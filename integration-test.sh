@@ -15,6 +15,10 @@
 #!/bin/bash
 set -ex
 
+GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
+IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
+
+# Sets up a kokoro (Google internal integration testing tool) environment
 if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     echo "Installing dependencies..."
     source "$KOKORO_GFILE_DIR/common.sh"
@@ -28,12 +32,7 @@ if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     cp $KOKORO_ROOT/src/keystore/72508_gcr_application_creds $HOME/.config/gcloud/application_default_credentials.json
 fi
 
-echo "Creating build context tarball..."
-tar  -C ./integration -zcvf context.tar.gz .
-gsutil cp context.tar.gz gs://kaniko-test-bucket
-rm context.tar.gz
-
 echo "Running integration tests..."
 make out/executor
 pushd integration
-go test
+go test -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}"
