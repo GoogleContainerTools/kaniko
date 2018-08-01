@@ -42,7 +42,7 @@ var whitelist = []string{
 }
 var volumeWhitelist = []string{}
 
-func GetFSFromImage(img v1.Image) error {
+func GetFSFromImage(root string, img v1.Image) error {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func GetFSFromImage(img v1.Image) error {
 			if err != nil {
 				return err
 			}
-			path := filepath.Join("/", filepath.Clean(hdr.Name))
+			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
 			if strings.HasPrefix(base, ".wh.") {
@@ -91,7 +91,7 @@ func GetFSFromImage(img v1.Image) error {
 				continue
 			}
 
-			if CheckWhitelist(path) {
+			if CheckWhitelist(path) && !checkWhitelistRoot(root) {
 				logrus.Infof("Not adding %s because it is whitelisted", path)
 				continue
 			}
@@ -103,7 +103,7 @@ func GetFSFromImage(img v1.Image) error {
 			}
 			fs[path] = struct{}{}
 
-			if err := extractFile("/", hdr, tr); err != nil {
+			if err := extractFile(root, hdr, tr); err != nil {
 				return err
 			}
 		}
@@ -250,6 +250,18 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 func CheckWhitelist(path string) bool {
 	for _, wl := range whitelist {
 		if HasFilepathPrefix(path, wl) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkWhitelistRoot(root string) bool {
+	if root == constants.RootDir {
+		return false
+	}
+	for _, wl := range whitelist {
+		if HasFilepathPrefix(root, wl) {
 			return true
 		}
 	}

@@ -17,7 +17,6 @@ limitations under the License.
 package dockerfile
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -95,82 +94,59 @@ func Test_ValidateTarget(t *testing.T) {
 	}
 }
 
-func Test_Dependencies(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
+func Test_SaveStage(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("couldn't create temp dir: %v", err)
 	}
-	helloPath := filepath.Join(testDir, "hello")
-	if err := os.Mkdir(helloPath, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	dockerfile := fmt.Sprintf(`
-	FROM scratch
-	COPY %s %s
+	defer os.RemoveAll(tempDir)
+	files := map[string]string{
+		"Dockerfile": `
+		FROM scratch
+		RUN echo hi > /hi
+		
+		FROM scratch AS second
+		COPY --from=0 /hi /hi2
 	
-	FROM scratch AS second
-	ENV hienv %s
-	COPY a b
-	COPY --from=0 /$hienv %s /hi2/
-	`, helloPath, helloPath, helloPath, testDir)
-
-	stages, err := Parse([]byte(dockerfile))
-	if err != nil {
-		t.Fatal(err)
+		FROM second
+		RUN xxx
+		
+		FROM scratch
+		COPY --from=second /hi2 /hi3
+		`,
 	}
-
-	expectedDependencies := [][]string{
+	if err := testutil.SetupFiles(tempDir, files); err != nil {
+		t.Fatalf("couldn't create dockerfile: %v", err)
+	}
+	stages, err := Stages(filepath.Join(tempDir, "Dockerfile"), "")
+	if err != nil {
+		t.Fatalf("couldn't retrieve stages from Dockerfile: %v", err)
+	}
+	tests := []struct {
+		name     string
+		index    int
+		expected bool
+	}{
 		{
-			helloPath,
-			testDir,
+			name:     "reference stage in later copy command",
+			index:    0,
+			expected: true,
 		},
-		{},
-	}
-
-	for index := range stages {
-		buildArgs := NewBuildArgs([]string{})
-		actualDeps, err := Dependencies(index, stages, buildArgs)
-		testutil.CheckErrorAndDeepEqual(t, false, err, expectedDependencies[index], actualDeps)
-	}
-}
-
-func Test_DependenciesWithArg(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	helloPath := filepath.Join(testDir, "hello")
-	if err := os.Mkdir(helloPath, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	dockerfile := fmt.Sprintf(`
-	FROM scratch
-	COPY %s %s
-	
-	FROM scratch AS second
-	ARG hienv
-	COPY a b
-	COPY --from=0 /$hienv %s /hi2/
-	`, helloPath, helloPath, testDir)
-
-	stages, err := Parse([]byte(dockerfile))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedDependencies := [][]string{
 		{
-			helloPath,
-			testDir,
+			name:     "reference stage in later from command",
+			index:    1,
+			expected: true,
 		},
-		{},
+		{
+			name:     "don't reference stage later",
+			index:    2,
+			expected: false,
+		},
 	}
-	buildArgs := NewBuildArgs([]string{fmt.Sprintf("hienv=%s", helloPath)})
-
-	for index := range stages {
-		actualDeps, err := Dependencies(index, stages, buildArgs)
-		testutil.CheckErrorAndDeepEqual(t, false, err, expectedDependencies[index], actualDeps)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := SaveStage(test.index, stages)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
+		})
 	}
 }
