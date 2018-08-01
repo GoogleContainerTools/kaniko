@@ -20,8 +20,8 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/docker/docker/builder/dockerfile/instructions"
 	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
 func Test_EnvExecute(t *testing.T) {

@@ -73,7 +73,12 @@ type ImageSaver interface {
 
 // This is a variable so we can override in tests.
 var getImageSaver = func() (ImageSaver, error) {
-	return client.NewEnvClient()
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		return nil, err
+	}
+	cli.NegotiateAPIVersion(context.Background())
+	return cli, nil
 }
 
 func saveImage(ref name.Reference) (io.ReadCloser, error) {
