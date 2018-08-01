@@ -89,9 +89,9 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			}
 			gid = uint32(gid64)
 		}
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "starting command")
@@ -101,7 +101,6 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	if err != nil {
 		return errors.Wrap(err, "getting group id for process")
 	}
-
 	if err := cmd.Wait(); err != nil {
 		return errors.Wrap(err, "waiting for process to exit")
 	}
