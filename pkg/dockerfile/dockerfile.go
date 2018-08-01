@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/builder/dockerfile/instructions"
-	"github.com/docker/docker/builder/dockerfile/parser"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 )
 
 // Stages reads the Dockerfile, validates it's contents, and returns stages

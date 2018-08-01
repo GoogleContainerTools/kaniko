@@ -35,4 +35,4 @@ fi
 echo "Running integration tests..."
 make out/executor
 pushd integration
-go test -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}"
+go test -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 30m
