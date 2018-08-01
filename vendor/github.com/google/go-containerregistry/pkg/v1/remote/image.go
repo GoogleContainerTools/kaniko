@@ -93,7 +93,7 @@ func Image(ref name.Reference, options ...ImageOption) (v1.Image, error) {
 
 func (r *remoteImage) url(resource, identifier string) url.URL {
 	return url.URL{
-		Scheme: transport.Scheme(r.ref.Context().Registry),
+		Scheme: r.ref.Context().Registry.Scheme(),
 		Host:   r.ref.Context().RegistryStr(),
 		Path:   fmt.Sprintf("/v2/%s/%s/%s", r.ref.Context().RepositoryStr(), resource, identifier),
 	}
@@ -125,7 +125,7 @@ func (r *remoteImage) RawManifest() ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	if err := checkError(resp, http.StatusOK); err != nil {
+	if err := CheckError(resp, http.StatusOK); err != nil {
 		return nil, err
 	}
 
@@ -206,7 +206,7 @@ func (rl *remoteLayer) Compressed() (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	if err := checkError(resp, http.StatusOK); err != nil {
+	if err := CheckError(resp, http.StatusOK); err != nil {
 		resp.Body.Close()
 		return nil, err
 	}

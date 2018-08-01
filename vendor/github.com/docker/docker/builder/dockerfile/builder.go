@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strings"
 	"time"
 
@@ -208,12 +209,25 @@ func newBuilder(clientCtx context.Context, options builderOptions) *Builder {
 	return b
 }
 
+// Build 'LABEL' command(s) from '--label' options and add to the last stage
+func buildLabelOptions(labels map[string]string, stages []instructions.Stage) {
+	keys := []string{}
+	for key := range labels {
+		keys = append(keys, key)
+	}
+
+	// Sort the label to have a repeatable order
+	sort.Strings(keys)
+	for _, key := range keys {
+		value := labels[key]
+		stages[len(stages)-1].AddCommand(instructions.NewLabelCommand(key, value, true))
+	}
+}
+
 // Build runs the Dockerfile builder by parsing the Dockerfile and executing
 // the instructions from the file.
 func (b *Builder) build(source builder.Source, dockerfile *parser.Result) (*builder.Result, error) {
 	defer b.imageSources.Unmount()
-
-	addNodesForLabelOption(dockerfile.AST, b.options.Labels)
 
 	stages, metaArgs, err := instructions.Parse(dockerfile.AST)
 	if err != nil {
@@ -230,6 +244,9 @@ func (b *Builder) build(source builder.Source, dockerfile *parser.Result) (*buil
 		}
 		stages = stages[:targetIx+1]
 	}
+
+	// Add 'LABEL' command specified by '--label' option to the last stage
+	buildLabelOptions(b.options.Labels, stages)
 
 	dockerfile.PrintWarnings(b.Stderr)
 	dispatchState, err := b.dispatchDockerfileWithCancellation(stages, metaArgs, dockerfile.EscapeToken, source)
@@ -333,15 +350,6 @@ func (b *Builder) dispatchDockerfileWithCancellation(parseResult []instructions.
 	return dispatchRequest.state, nil
 }
 
-func addNodesForLabelOption(dockerfile *parser.Node, labels map[string]string) {
-	if len(labels) == 0 {
-		return
-	}
-
-	node := parser.NodeFromLabels(labels)
-	dockerfile.Children = append(dockerfile.Children, node)
-}
-
 // BuildFromConfig builds directly from `changes`, treating it as if it were the contents of a Dockerfile
 // It will:
 // - Call parse.Parse() to get an AST root for the concatenated Dockerfile entries.
@@ -379,7 +387,7 @@ func BuildFromConfig(config *container.Config, changes []string, os string) (*co
 	b.Stderr = ioutil.Discard
 	b.disableCommit = true
 
-	commands := []instructions.Command{}
+	var commands []instructions.Command
 	for _, n := range dockerfile.AST.Children {
 		cmd, err := instructions.ParseCommand(n)
 		if err != nil {

@@ -29,12 +29,12 @@ type Config struct {
 //
 // Fields not provided in the given config are going to be preserved.
 func ApplyConfig(cfg Config) {
-	c := config.Load().(*Config)
+	c := *config.Load().(*Config)
 	if cfg.DefaultSampler != nil {
 		c.DefaultSampler = cfg.DefaultSampler
 	}
 	if cfg.IDGenerator != nil {
 		c.IDGenerator = cfg.IDGenerator
 	}
-	config.Store(c)
+	config.Store(&c)
 }

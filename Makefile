@@ -51,3 +51,4 @@ integration-test:
 .PHONY: images
 images:
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
