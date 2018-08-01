@@ -79,7 +79,6 @@ var getImageSaver = func() (ImageSaver, error) {
 	}
 	cli.NegotiateAPIVersion(context.Background())
 	return cli, nil
-	// return client.NewEnvClient()
 }
 
 func saveImage(ref name.Reference) (io.ReadCloser, error) {

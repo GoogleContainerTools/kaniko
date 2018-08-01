@@ -49,7 +49,7 @@ required = [
 
 [[constraint]]
   name = "github.com/google/go-containerregistry"
-  revision = "697ee0b3d46eff19ed2b30f86230377061203f79"
+  revision = "5f7b0e4895413d785ff15b84d218d73e8a47866a"
 
 [[override]]
   name = "github.com/tonistiigi/fsutil"
