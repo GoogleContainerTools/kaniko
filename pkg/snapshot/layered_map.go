@@ -22,8 +22,9 @@ import (
 )
 
 type LayeredMap struct {
-	layers []map[string]string
-	hasher func(string) (string, error)
+	layers    []map[string]string
+	whiteouts []map[string]string
+	hasher    func(string) (string, error)
 }
 
 func NewLayeredMap(h func(string) (string, error)) *LayeredMap {
@@ -35,6 +36,7 @@ func NewLayeredMap(h func(string) (string, error)) *LayeredMap {
 }
 
 func (l *LayeredMap) Snapshot() {
+	l.whiteouts = append(l.whiteouts, map[string]string{})
 	l.layers = append(l.layers, map[string]string{})
 }
 
@@ -60,6 +62,24 @@ func (l *LayeredMap) Get(s string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func (l *LayeredMap) GetWhiteout(s string) (string, bool) {
+	for i := len(l.whiteouts) - 1; i >= 0; i-- {
+		if v, ok := l.whiteouts[i][s]; ok {
+			return v, ok
+		}
+	}
+	return "", false
+}
+
+func (l *LayeredMap) MaybeAddWhiteout(s string) (bool, error) {
+	whiteout, ok := l.GetWhiteout(s)
+	if ok && whiteout == s {
+		return false, nil
+	}
+	l.whiteouts[len(l.whiteouts)-1][s] = s
+	return true, nil
 }
 
 func (l *LayeredMap) MaybeAdd(s string) (bool, error) {

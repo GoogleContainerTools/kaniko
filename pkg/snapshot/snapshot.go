@@ -19,12 +19,13 @@ package snapshot
 import (
 	"archive/tar"
 	"bytes"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
@@ -103,11 +104,11 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 			return false, err
 		}
 		// Only add to the tar if we add it to the layeredmap.
-		maybeAdd, err := s.l.MaybeAdd(file)
+		addFile, err := s.l.MaybeAdd(file)
 		if err != nil {
 			return false, err
 		}
-		if maybeAdd {
+		if addFile {
 			filesAdded = true
 			if err := util.AddToTar(file, info, s.hardlinks, w); err != nil {
 				return false, err
@@ -141,10 +142,16 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 		// Only add the whiteout if the directory for the file still exists.
 		dir := filepath.Dir(path)
 		if _, ok := memFs[dir]; ok {
-			logrus.Infof("Adding whiteout for %s", path)
-			filesAdded = true
-			if err := util.Whiteout(path, w); err != nil {
-				return false, err
+			addWhiteout, err := s.l.MaybeAddWhiteout(path)
+			if err != nil {
+				return false, nil
+			}
+			if addWhiteout {
+				logrus.Infof("Adding whiteout for %s", path)
+				filesAdded = true
+				if err := util.Whiteout(path, w); err != nil {
+					return false, err
+				}
 			}
 		}
 	}
