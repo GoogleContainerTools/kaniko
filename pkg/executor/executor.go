@@ -58,32 +58,23 @@ type KanikoBuildArgs struct {
 
 func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
-	d, err := ioutil.ReadFile(k.DockerfilePath)
+	stages, err := dockerfile.Stages(k.DockerfilePath, k.Target)
 	if err != nil {
 		return nil, err
 	}
-
-	stages, err := dockerfile.Parse(d)
-	if err != nil {
-		return nil, err
-	}
-	if err := dockerfile.ValidateTarget(stages, k.Target); err != nil {
-		return nil, err
-	}
-	dockerfile.ResolveStages(stages)
 
 	hasher, err := getHasher(k.SnapshotMode)
 	if err != nil {
 		return nil, err
 	}
 	for index, stage := range stages {
-		finalStage := (index == len(stages)-1) || (k.Target == stage.Name)
+		finalStage := finalStage(index, k.Target, stages)
 		// Unpack file system to root
 		sourceImage, err := util.RetrieveSourceImage(index, k.Args, stages)
 		if err != nil {
 			return nil, err
 		}
-		if err := util.GetFSFromImage(sourceImage); err != nil {
+		if err := util.GetFSFromImage(constants.RootDir, sourceImage); err != nil {
 			return nil, err
 		}
 		l := snapshot.NewLayeredMap(hasher)
@@ -168,11 +159,13 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 			}
 			return sourceImage, nil
 		}
-		if err := saveStageAsTarball(index, sourceImage); err != nil {
-			return nil, err
-		}
-		if err := saveStageDependencies(index, stages, buildArgs.Clone()); err != nil {
-			return nil, err
+		if dockerfile.SaveStage(index, stages) {
+			if err := saveStageAsTarball(index, sourceImage); err != nil {
+				return nil, err
+			}
+			if err := extractImageToDependecyDir(index, sourceImage); err != nil {
+				return nil, err
+			}
 		}
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
@@ -225,44 +218,24 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 	}
 	return nil
 }
-func saveStageDependencies(index int, stages []instructions.Stage, buildArgs *dockerfile.BuildArgs) error {
-	// First, get the files in this stage later stages will need
-	dependencies, err := dockerfile.Dependencies(index, stages, buildArgs)
-	logrus.Infof("saving dependencies %s", dependencies)
-	if err != nil {
-		return err
+
+func finalStage(index int, target string, stages []instructions.Stage) bool {
+	if index == len(stages)-1 {
+		return true
 	}
-	if len(dependencies) == 0 {
-		return nil
+	if target == "" {
+		return false
 	}
-	// Then, create the directory they will exist in
-	i := strconv.Itoa(index)
-	dependencyDir := filepath.Join(constants.KanikoDir, i)
+	return target == stages[index].Name
+}
+
+func extractImageToDependecyDir(index int, image v1.Image) error {
+	dependencyDir := filepath.Join(constants.KanikoDir, strconv.Itoa(index))
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}
-	// Now, copy over dependencies to this dir
-	for _, d := range dependencies {
-		fi, err := os.Lstat(d)
-		if err != nil {
-			return err
-		}
-		dest := filepath.Join(dependencyDir, d)
-		if fi.IsDir() {
-			if err := util.CopyDir(d, dest); err != nil {
-				return err
-			}
-		} else if fi.Mode()&os.ModeSymlink != 0 {
-			if err := util.CopySymlink(d, dest); err != nil {
-				return err
-			}
-		} else {
-			if err := util.CopyFile(d, dest); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	logrus.Infof("trying to extract to %s", dependencyDir)
+	return util.GetFSFromImage(dependencyDir, image)
 }
 
 func saveStageAsTarball(stageIndex int, image v1.Image) error {

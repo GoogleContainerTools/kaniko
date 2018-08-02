@@ -83,5 +83,4 @@ func remoteImage(image string) (v1.Image, error) {
 	}
 	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
 	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
-
 }
