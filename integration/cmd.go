@@ -30,7 +30,7 @@ func RunCommandWithoutTest(cmd *exec.Cmd) ([]byte, error) {
 		fmt.Println(cmd.Args)
 		fmt.Println(string(output))
 	}
-	return output, nil
+	return output, err
 }
 
 // RunCommand will run cmd and if it fails will output relevant info for debugging
