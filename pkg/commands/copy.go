@@ -61,8 +61,8 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		return err
 	}
 
-    // Resolve the chown string to a uid:gid format
-    uidStr, gidStr, err := util.GetUidGidFromUserString(c.cmd.Chown, replacementEnvs)
+	// Resolve the chown string to a uid:gid format
+	uidStr, gidStr, err := util.GetUidGidFromUserString(c.cmd.Chown, replacementEnvs)
 	if err != nil {
 		return err
 	}

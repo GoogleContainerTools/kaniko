@@ -296,7 +296,6 @@ func ResolveUserAndGroup(commandUserStr string, replacementEnvs []string) (strin
 	return userStr, groupStr, nil
 }
 
-
 // Takes a user string like "user:group" and returns strings for "uid" and "gid"
 // for the corresponding user as a string, replacing any build arguments
 // and environment variables.  Group is not required to be specified, and
