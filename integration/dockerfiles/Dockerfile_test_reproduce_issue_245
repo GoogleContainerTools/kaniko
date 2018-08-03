@@ -1,3 +1,7 @@
 FROM busybox
 
 RUN sleep 600
+
+FROM debian:stable-slim
+
+RUN echo "second stage is working"
