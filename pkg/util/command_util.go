@@ -180,7 +180,11 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		}
 	}
 
+	// If there is only one source and it's a directory, docker assumes the dest is a directory
 	if len(resolvedSources) == 1 {
+		if IsSrcRemoteFileURL(resolvedSources[0]) {
+			return nil
+		}
 		fi, err := os.Lstat(filepath.Join(root, resolvedSources[0]))
 		if err != nil {
 			return err
