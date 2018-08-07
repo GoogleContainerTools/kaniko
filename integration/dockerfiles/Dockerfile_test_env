@@ -1,6 +1,7 @@
 FROM gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0
 ENV hey hey
 ENV PATH /usr/local
+ENV testmultipleeq="this=is a=test string=with a=lot of=equals"
 ENV hey hello
 ENV first=foo second=foo2
 ENV third $second:/third
