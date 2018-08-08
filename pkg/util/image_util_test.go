@@ -84,52 +84,6 @@ func Test_TarImage(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 
-func Test_defaultConfigEnv(t *testing.T) {
-	tests := []struct {
-		name     string
-		initial  []string
-		expected []string
-	}{
-		{
-			name: "HOME already set",
-			initial: []string{
-				"HOME=/something",
-				"PATH=/something/else",
-			},
-			expected: []string{
-				"HOME=/something",
-				"PATH=/something/else",
-			},
-		},
-		{
-			name: "HOME isn't set",
-			initial: []string{
-				"PATH=/something/else",
-			},
-			expected: []string{
-				"PATH=/something/else",
-				"HOME=/root",
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			initial := &v1.ConfigFile{
-				Config: v1.Config{
-					Env: test.initial,
-				},
-			}
-			expected := &v1.ConfigFile{
-				Config: v1.Config{
-					Env: test.expected,
-				},
-			}
-			actual := defaultConfigEnv(initial)
-			testutil.CheckErrorAndDeepEqual(t, false, nil, expected, actual)
-		})
-	}
-}
-
 // parse parses the contents of a Dockerfile and returns a list of commands
 func parse(s string) ([]instructions.Stage, error) {
 	p, err := parser.Parse(bytes.NewReader([]byte(s)))

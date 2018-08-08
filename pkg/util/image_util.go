@@ -17,10 +17,8 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
@@ -75,21 +73,8 @@ func RetrieveConfigFile(sourceImage v1.Image) (*v1.ConfigFile, error) {
 	}
 	if sourceImage == empty.Image {
 		imageConfig.Config.Env = constants.ScratchEnvVars
-		return imageConfig, nil
 	}
-	return defaultConfigEnv(imageConfig), nil
-}
-
-func defaultConfigEnv(config *v1.ConfigFile) *v1.ConfigFile {
-	for _, env := range config.Config.Env {
-		split := strings.SplitN(env, "=", 2)
-		if split[0] == constants.HOME {
-			return config
-		}
-	}
-	config.Config.Env = append(config.Config.Env,
-		fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
-	return config
+	return imageConfig, nil
 }
 
 func tarballImage(index int) (v1.Image, error) {
