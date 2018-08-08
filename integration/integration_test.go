@@ -197,7 +197,7 @@ func TestRun(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":     9,
+		"Dockerfile_test_add":     10,
 		"Dockerfile_test_scratch": 3,
 		// the Docker built image combined some of the dirs defined by separate VOLUME commands into one layer
 		// which is why this offset exists

@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 )
@@ -94,8 +95,8 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 		if val, ok := snapshottedFiles[file]; ok && val {
 			continue
 		}
-		if util.CheckWhitelist(file) {
-			logrus.Debugf("Not adding %s to layer, as it's whitelisted", file)
+		if util.CheckWhitelist(file) && !isBuildFile(file) {
+			logrus.Infof("Not adding %s to layer, as it's whitelisted", file)
 			continue
 		}
 		snapshottedFiles[file] = true
@@ -116,6 +117,15 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 		}
 	}
 	return filesAdded, nil
+}
+
+func isBuildFile(file string) bool {
+	for _, buildFile := range constants.KanikoBuildFiles {
+		if file == buildFile {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
