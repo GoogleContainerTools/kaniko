@@ -54,6 +54,10 @@ const (
 	GCSBuildContextPrefix      = "gs://"
 	S3BuildContextPrefix       = "s3://"
 	LocalDirBuildContextPrefix = "dir://"
+
+	// DefaultHOMEValue is the default value Docker sets for $HOME
+	HOME             = "HOME"
+	DefaultHOMEValue = "/root"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko

@@ -30,7 +30,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -83,10 +82,7 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 		if err := snapshotter.Init(); err != nil {
 			return nil, err
 		}
-		imageConfig, err := sourceImage.ConfigFile()
-		if sourceImage == empty.Image {
-			imageConfig.Config.Env = constants.ScratchEnvVars
-		}
+		imageConfig, err := util.RetrieveConfigFile(sourceImage)
 		if err != nil {
 			return nil, err
 		}

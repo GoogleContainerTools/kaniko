@@ -18,12 +18,13 @@ package util
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
-	"testing"
 )
 
 var (
@@ -81,6 +82,52 @@ func Test_TarImage(t *testing.T) {
 	retrieveTarImage = mock
 	actual, err := RetrieveSourceImage(2, nil, stages)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
+}
+
+func Test_defaultConfigEnv(t *testing.T) {
+	tests := []struct {
+		name     string
+		initial  []string
+		expected []string
+	}{
+		{
+			name: "HOME already set",
+			initial: []string{
+				"HOME=/something",
+				"PATH=/something/else",
+			},
+			expected: []string{
+				"HOME=/something",
+				"PATH=/something/else",
+			},
+		},
+		{
+			name: "HOME isn't set",
+			initial: []string{
+				"PATH=/something/else",
+			},
+			expected: []string{
+				"PATH=/something/else",
+				"HOME=/root",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			initial := &v1.ConfigFile{
+				Config: v1.Config{
+					Env: test.initial,
+				},
+			}
+			expected := &v1.ConfigFile{
+				Config: v1.Config{
+					Env: test.expected,
+				},
+			}
+			actual := defaultConfigEnv(initial)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, expected, actual)
+		})
+	}
 }
 
 // parse parses the contents of a Dockerfile and returns a list of commands
