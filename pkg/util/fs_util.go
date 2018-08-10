@@ -60,7 +60,6 @@ func GetFSFromImage(root string, img v1.Image) error {
 
 	fs := map[string]struct{}{}
 	whiteouts := map[string]struct{}{}
-	symlinks := map[string]struct{}{}
 	hardlinks := map[string]*hardlink{}
 
 	for i := len(layers) - 1; i >= 0; i-- {
@@ -106,7 +105,6 @@ func GetFSFromImage(root string, img v1.Image) error {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
-				symlinks[filepath.Clean(filepath.Join("/", hdr.Name))] = struct{}{}
 			}
 			if hdr.Typeflag == tar.TypeLink {
 				// If linkname no longer exists, extract hardlink as regular file
@@ -116,7 +114,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 					continue
 				}
 				_, previouslyAdded := fs[linkname]
-				if previouslyAdded || checkSymlinks(linkname, symlinks) || checkWhiteouts(linkname, whiteouts) {
+				if previouslyAdded || checkWhiteouts(linkname, whiteouts) {
 					if h, ok := hardlinks[linkname]; ok {
 						h.links = append(h.links, hdr)
 						continue
@@ -281,15 +279,6 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 	for wd := range whiteouts {
 		if HasFilepathPrefix(path, wd) {
 			logrus.Infof("Not adding %s because it's directory is whited out", path)
-			return true
-		}
-	}
-	return false
-}
-
-func checkSymlinks(path string, symlinks map[string]struct{}) bool {
-	for sym := range symlinks {
-		if path == sym {
 			return true
 		}
 	}

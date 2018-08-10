@@ -89,22 +89,30 @@ func Whiteout(p string, w *tar.Writer) error {
 func checkHardlink(p string, hardlinks map[uint64]string, i os.FileInfo) (bool, string) {
 	hardlink := false
 	linkDst := ""
-	if sys := i.Sys(); sys != nil {
-		if stat, ok := sys.(*syscall.Stat_t); ok {
-			nlinks := stat.Nlink
-			if nlinks > 1 {
-				inode := stat.Ino
-				if original, exists := hardlinks[inode]; exists && original != p {
-					hardlink = true
-					logrus.Debugf("%s inode exists in hardlinks map, linking to %s", p, original)
-					linkDst = original
-				} else {
-					hardlinks[inode] = p
-				}
+	stat := getSyscallStat_t(i)
+	if stat != nil {
+		nlinks := stat.Nlink
+		if nlinks > 1 {
+			inode := stat.Ino
+			if original, exists := hardlinks[inode]; exists && original != p {
+				hardlink = true
+				logrus.Debugf("%s inode exists in hardlinks map, linking to %s", p, original)
+				linkDst = original
+			} else {
+				hardlinks[inode] = p
 			}
 		}
 	}
 	return hardlink, linkDst
+}
+
+func getSyscallStat_t(i os.FileInfo) *syscall.Stat_t {
+	if sys := i.Sys(); sys != nil {
+		if stat, ok := sys.(*syscall.Stat_t); ok {
+			return stat
+		}
+	}
+	return nil
 }
 
 // UnpackLocalTarArchive unpacks the tar archive at path to the directory dest
