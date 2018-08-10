@@ -21,7 +21,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-func Test_addDefaultEnvs(t *testing.T) {
+func Test_addDefaultHOME(t *testing.T) {
 	tests := []struct {
 		name     string
 		user     string
@@ -65,7 +65,7 @@ func Test_addDefaultEnvs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := addDefaultEnvs(test.user, test.initial)
+			actual := addDefaultHOME(test.user, test.initial)
 			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
 		})
 	}

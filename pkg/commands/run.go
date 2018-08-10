@@ -61,7 +61,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	cmd.Env = addDefaultEnvs(config.User, replacementEnvs)
+	cmd.Env = addDefaultHOME(config.User, replacementEnvs)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// If specified, run the command as a specific user
@@ -115,8 +115,8 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	return nil
 }
 
-// addDefaultEnvs adds default values of variables (like $HOME) if they aren't already set
-func addDefaultEnvs(user string, envs []string) []string {
+// addDefaultHOME adds the default value for HOME if it isn't already set
+func addDefaultHOME(user string, envs []string) []string {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
