@@ -37,9 +37,10 @@ var config = initGCPConfig()
 var imageBuilder *DockerFileBuilder
 
 type gcpConfig struct {
-	gcsBucket        string
-	imageRepo        string
-	onbuildBaseImage string
+	gcsBucket         string
+	imageRepo         string
+	onbuildBaseImage  string
+	hardlinkBaseImage string
 }
 
 type imageDetails struct {
@@ -65,6 +66,7 @@ func initGCPConfig() *gcpConfig {
 		c.imageRepo = c.imageRepo + "/"
 	}
 	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
+	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
 	return &c
 }
 
@@ -140,6 +142,30 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		fmt.Print(err)
 		fmt.Print("Building kaniko failed.")
+		os.Exit(1)
+	}
+
+	fmt.Println("Building onbuild base image")
+	buildOnbuildBase := exec.Command("docker", "build", "-t", config.onbuildBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", ".")
+	if err := buildOnbuildBase.Run(); err != nil {
+		fmt.Printf("error building onbuild base: %v", err)
+		os.Exit(1)
+	}
+	pushOnbuildBase := exec.Command("docker", "push", config.onbuildBaseImage)
+	if err := pushOnbuildBase.Run(); err != nil {
+		fmt.Printf("error pushing onbuild base %s: %v", config.onbuildBaseImage, err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Building hardlink base image")
+	buildHardlinkBase := exec.Command("docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", ".")
+	if err := buildHardlinkBase.Run(); err != nil {
+		fmt.Printf("error building hardlink base: %v", err)
+		os.Exit(1)
+	}
+	pushHardlinkBase := exec.Command("docker", "push", config.hardlinkBaseImage)
+	if err := pushHardlinkBase.Run(); err != nil {
+		fmt.Printf("error pushing hardlink base %s: %v", config.hardlinkBaseImage, err)
 		os.Exit(1)
 	}
 

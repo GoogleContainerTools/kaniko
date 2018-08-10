@@ -42,6 +42,11 @@ var whitelist = []string{
 }
 var volumeWhitelist = []string{}
 
+type hardlink struct {
+	links  []*tar.Header
+	reader io.Reader
+}
+
 func GetFSFromImage(root string, img v1.Image) error {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
@@ -55,6 +60,8 @@ func GetFSFromImage(root string, img v1.Image) error {
 
 	fs := map[string]struct{}{}
 	whiteouts := map[string]struct{}{}
+	symlinks := map[string]struct{}{}
+	hardlinks := map[string]*hardlink{}
 
 	for i := len(layers) - 1; i >= 0; i-- {
 		logrus.Infof("Unpacking layer: %d", i)
@@ -90,7 +97,6 @@ func GetFSFromImage(root string, img v1.Image) error {
 				logrus.Infof("Not adding %s because it was added by a prior layer", path)
 				continue
 			}
-
 			if CheckWhitelist(path) && !checkWhitelistRoot(root) {
 				logrus.Infof("Not adding %s because it is whitelisted", path)
 				continue
@@ -100,10 +106,45 @@ func GetFSFromImage(root string, img v1.Image) error {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
+				symlinks[filepath.Clean(filepath.Join("/", hdr.Name))] = struct{}{}
+			}
+			if hdr.Typeflag == tar.TypeLink {
+				// If linkname no longer exists, extract hardlink as regular file
+				linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
+				if CheckWhitelist(linkname) {
+					logrus.Debugf("skipping hardlink from %s to %s because %s is whitelisted", linkname, path, linkname)
+					continue
+				}
+				_, previouslyAdded := fs[linkname]
+				if previouslyAdded || checkSymlinks(linkname, symlinks) || checkWhiteouts(linkname, whiteouts) {
+					if h, ok := hardlinks[linkname]; ok {
+						h.links = append(h.links, hdr)
+						continue
+					}
+					hardlinks[linkname] = &hardlink{
+						links:  []*tar.Header{hdr},
+						reader: tr,
+					}
+					continue
+				}
 			}
 			fs[path] = struct{}{}
 
 			if err := extractFile(root, hdr, tr); err != nil {
+				return err
+			}
+		}
+	}
+	// Process hardlinks
+	for _, h := range hardlinks {
+		original := h.links[0]
+		original.Typeflag = tar.TypeReg
+		if err := extractFile(root, original, h.reader); err != nil {
+			return err
+		}
+		for _, link := range h.links[1:] {
+			link.Linkname = original.Name
+			if err := extractFile(root, link, nil); err != nil {
 				return err
 			}
 		}
@@ -208,13 +249,12 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 
 	case tar.TypeLink:
-		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
 		// The base directory for a link may not exist before it is created.
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
-		if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}
 
@@ -241,6 +281,15 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 	for wd := range whiteouts {
 		if HasFilepathPrefix(path, wd) {
 			logrus.Infof("Not adding %s because it's directory is whited out", path)
+			return true
+		}
+	}
+	return false
+}
+
+func checkSymlinks(path string, symlinks map[string]struct{}) bool {
+	for sym := range symlinks {
+		if path == sym {
 			return true
 		}
 	}
