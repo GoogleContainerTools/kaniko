@@ -1,4 +1,3 @@
 FROM gcr.io/kaniko-test/hardlink-base:latest
-RUN ln -s /usr/libexec/git-core/git /usr/bin/git-clone
-RUN ls -al /usr/libexec/git-core/git /usr/bin/git /usr/bin/git-clone /usr/libexec/git-core/git-diff
+RUN ls -al /usr/libexec/git-core/git /usr/bin/git /usr/libexec/git-core/git-diff
 RUN git --version
