@@ -158,7 +158,7 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Println("Building hardlink base image")
-	buildHardlinkBase := exec.Command("docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", ".")
+	buildHardlinkBase := exec.Command("docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_hardlink_base", ".")
 	if err := buildHardlinkBase.Run(); err != nil {
 		fmt.Printf("error building hardlink base: %v", err)
 		os.Exit(1)

@@ -19,7 +19,9 @@ package util
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,8 +45,8 @@ var whitelist = []string{
 var volumeWhitelist = []string{}
 
 type hardlink struct {
-	links  []*tar.Header
-	reader io.Reader
+	links    []*tar.Header
+	contents []byte
 }
 
 func GetFSFromImage(root string, img v1.Image) error {
@@ -60,7 +62,10 @@ func GetFSFromImage(root string, img v1.Image) error {
 
 	fs := map[string]struct{}{}
 	whiteouts := map[string]struct{}{}
-	hardlinks := map[string]*hardlink{}
+	hardlinks, err := retrieveHardlinks(layers)
+	if err != nil {
+		return err
+	}
 
 	for i := len(layers) - 1; i >= 0; i-- {
 		logrus.Infof("Unpacking layer: %d", i)
@@ -78,6 +83,10 @@ func GetFSFromImage(root string, img v1.Image) error {
 			if err != nil {
 				return err
 			}
+			contents, err := ioutil.ReadAll(tr)
+			if err != nil {
+				return err
+			}
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
@@ -86,6 +95,9 @@ func GetFSFromImage(root string, img v1.Image) error {
 				name := strings.TrimPrefix(base, ".wh.")
 				whiteouts[filepath.Join(dir, name)] = struct{}{}
 				continue
+			}
+			if err := resolveHardlink(hdr, contents, hardlinks); err != nil {
+				return err
 			}
 
 			if checkWhiteouts(path, whiteouts) {
@@ -107,46 +119,99 @@ func GetFSFromImage(root string, img v1.Image) error {
 				}
 			}
 			if hdr.Typeflag == tar.TypeLink {
-				// If linkname no longer exists, extract hardlink as regular file
-				linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
-				if CheckWhitelist(linkname) {
-					logrus.Debugf("skipping hardlink from %s to %s because %s is whitelisted", linkname, path, linkname)
-					continue
-				}
-				_, previouslyAdded := fs[linkname]
-				if previouslyAdded || checkWhiteouts(linkname, whiteouts) {
-					if h, ok := hardlinks[linkname]; ok {
-						h.links = append(h.links, hdr)
-						continue
-					}
-					hardlinks[linkname] = &hardlink{
-						links:  []*tar.Header{hdr},
-						reader: tr,
-					}
-					continue
-				}
-				logrus.Infof("normally adding hardlink for %s", hdr)
+				continue
 			}
+
 			fs[path] = struct{}{}
 
-			if err := extractFile(root, hdr, tr); err != nil {
+			if err := extractFile(root, hdr, bytes.NewReader(contents)); err != nil {
 				return err
 			}
 		}
 	}
 	// Process hardlinks
-	for _, h := range hardlinks {
+	for k, h := range hardlinks {
+		if regularFile(k) {
+			for _, link := range h.links {
+				if err := extractFile(root, link, bytes.NewReader(h.contents)); err != nil {
+					return err
+				}
+			}
+			continue
+		}
 		original := h.links[0]
 		original.Typeflag = tar.TypeReg
-		if err := extractFile(root, original, h.reader); err != nil {
+		if err := extractFile(root, original, bytes.NewReader(h.contents)); err != nil {
 			return err
 		}
-		logrus.Infof("num links for %s is %s", original.Name, len(h.links))
 		for _, link := range h.links[1:] {
 			link.Linkname = original.Name
+			if FilepathExists(filepath.Clean(filepath.Join("/", link.Name))) {
+				continue
+			}
 			if err := extractFile(root, link, nil); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func regularFile(fp string) bool {
+	fi, err := os.Stat(fp)
+	if err != nil {
+		return false
+	}
+	return fi.Mode().IsRegular()
+}
+
+func retrieveHardlinks(layers []v1.Layer) (map[string]*hardlink, error) {
+	hardlinks := map[string]*hardlink{}
+	for i := len(layers) - 1; i >= 0; i-- {
+		l := layers[i]
+		r, err := l.Uncompressed()
+		if err != nil {
+			return nil, err
+		}
+		tr := tar.NewReader(r)
+		for {
+			hdr, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			if hdr.Typeflag == tar.TypeLink {
+				// If linkname no longer exists, extract hardlink as regular file
+				linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
+				if CheckWhitelist(linkname) {
+					continue
+				}
+				if h, ok := hardlinks[linkname]; ok {
+					h.links = append(h.links, hdr)
+					continue
+				}
+				hardlinks[linkname] = &hardlink{
+					links: []*tar.Header{hdr},
+				}
+				continue
+			}
+		}
+	}
+	return hardlinks, nil
+}
+
+func resolveHardlink(hdr *tar.Header, contents []byte, hardlinks map[string]*hardlink) error {
+	for k, h := range hardlinks {
+		if h.contents != nil {
+			return nil
+		}
+		if hdr.Typeflag != tar.TypeReg {
+			continue
+		}
+		if k == filepath.Clean(filepath.Join("/", hdr.Name)) {
+			h.contents = contents
 		}
 	}
 	return nil
@@ -254,8 +319,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
-		logrus.Infof("linking %s to %s", filepath.Clean(filepath.Join("/", hdr.Linkname)), path)
-
 		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}

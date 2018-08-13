@@ -25,7 +25,6 @@ import (
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
-	"github.com/sirupsen/logrus"
 )
 
 // Stages reads the Dockerfile, validates it's contents, and returns stages
@@ -113,7 +112,6 @@ func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 
 // SaveStage returns true if the current stage will be needed later in the Dockerfile
 func SaveStage(index int, stages []instructions.Stage) bool {
-	logrus.Infof("looking into saving stage %d", index)
 	for stageIndex, stage := range stages {
 		if stageIndex <= index {
 			continue
