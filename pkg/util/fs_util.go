@@ -125,6 +125,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 					}
 					continue
 				}
+				logrus.Infof("normally adding hardlink for %s", hdr)
 			}
 			fs[path] = struct{}{}
 
@@ -140,6 +141,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 		if err := extractFile(root, original, h.reader); err != nil {
 			return err
 		}
+		logrus.Infof("num links for %s is %s", original.Name, len(h.links))
 		for _, link := range h.links[1:] {
 			link.Linkname = original.Name
 			if err := extractFile(root, link, nil); err != nil {
@@ -252,6 +254,8 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
+		logrus.Infof("linking %s to %s", filepath.Clean(filepath.Join("/", hdr.Linkname)), path)
+
 		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}
