@@ -41,6 +41,10 @@ func AddToTar(p string, i os.FileInfo, hardlinks map[uint64]string, w *tar.Write
 			return err
 		}
 	}
+	if i.Mode()&os.ModeSocket != 0 {
+		logrus.Infof("ignoring socket %s, not adding to tar", i.Name())
+		return nil
+	}
 	hdr, err := tar.FileInfoHeader(i, linkDst)
 	if err != nil {
 		return err
