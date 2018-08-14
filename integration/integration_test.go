@@ -135,11 +135,10 @@ func TestMain(m *testing.M) {
 	defer DeleteFromBucket(fileInBucket)
 
 	fmt.Println("Building kaniko image")
-	buildKaniko := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
-	err = buildKaniko.Run()
+	cmd := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
+	_, err = RunCommandWithoutTest(cmd)
 	if err != nil {
-		fmt.Print(err)
-		fmt.Print("Building kaniko failed.")
+		fmt.Printf("Building kaniko failed: %s", err)
 		os.Exit(1)
 	}
 

@@ -29,6 +29,7 @@ We do **not** recommend running the kaniko executor binary in another image, as 
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
 - [Community](#community)
+- [Limitations](#limitations)
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
@@ -256,7 +257,8 @@ To configure credentials, you will need to do the following:
 #### --snapshotMode
 
 You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
-If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting.
+If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
+[limitations related to mtime](#mtime-and-snapshotting)).
 
 #### --build-arg
 
@@ -356,3 +358,19 @@ provides.
 [kaniko-users](https://groups.google.com/forum/#!forum/kaniko-users) Google group
 
 To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Limitations
+
+### mtime and snapshotting
+
+When taking a snapshot, kaniko's hashing algorithms include (or in the case of
+[`--snapshotMode=time`](#--snapshotmode), only use) a file's
+[`mtime`](https://en.wikipedia.org/wiki/Inode#POSIX_inode_description) to determine
+if the file has changed. Unfortunately there is a delay between when changes to a
+file are made and when the `mtime` is updated. This means:
+
+* With the default snapshot mode (`--snapshotMode=full`), whether or not kaniko will
+  add a layer in the case where a `RUN` command modifies a file but the contents do
+  not change is non-deterministic.
+* With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss changes
+  introduced by `RUN` commands entirely.

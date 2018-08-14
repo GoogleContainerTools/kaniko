@@ -47,8 +47,14 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 		config.WorkingDir = filepath.Join(config.WorkingDir, resolvedWorkingDir)
 	}
 	logrus.Infof("Changed working directory to %s", config.WorkingDir)
-	w.snapshotFiles = []string{config.WorkingDir}
-	return os.MkdirAll(config.WorkingDir, 0755)
+
+	// Only create and snapshot the dir if it didn't exist already
+	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
+		logrus.Infof("Creating directory %s", config.WorkingDir)
+		w.snapshotFiles = []string{config.WorkingDir}
+		return os.MkdirAll(config.WorkingDir, 0755)
+	}
+	return nil
 }
 
 // FilesToSnapshot returns the workingdir, which should have been created if it didn't already exist
