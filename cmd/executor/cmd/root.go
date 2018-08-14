@@ -101,7 +101,7 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := executor.DoPush(image, destinations, tarPath); err != nil {
+		if err := executor.DoPush(image, destinations, tarPath, dockerInsecureSkipTLSVerify); err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
