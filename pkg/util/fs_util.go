@@ -146,9 +146,6 @@ func GetFSFromImage(root string, img v1.Image) error {
 		}
 		for _, link := range h.links[1:] {
 			link.Linkname = original.Name
-			if FilepathExists(filepath.Clean(filepath.Join("/", link.Name))) {
-				continue
-			}
 			if err := extractFile(root, link, nil); err != nil {
 				return err
 			}
