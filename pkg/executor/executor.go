@@ -18,6 +18,7 @@ package executor
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -180,7 +181,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	return w.t.RoundTrip(r)
 }
 
-func DoPush(image v1.Image, destinations []string, tarPath string) error {
+func DoPush(image v1.Image, destinations []string, tarPath string, dockerInsecureSkipTLSVerify bool) error {
 
 	// continue pushing unless an error occurs
 	for _, destination := range destinations {
@@ -188,6 +189,14 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
 			return err
+		}
+
+		if dockerInsecureSkipTLSVerify {
+			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
+			if err != nil {
+				return err
+			}
+			destRef.Repository.Registry = newReg
 		}
 
 		if tarPath != "" {
@@ -205,7 +214,13 @@ func DoPush(image v1.Image, destinations []string, tarPath string) error {
 		}
 
 		// Create a transport to set our user-agent.
-		rt := &withUserAgent{t: http.DefaultTransport}
+		tr := http.DefaultTransport
+		if dockerInsecureSkipTLSVerify {
+			tr.(*http.Transport).TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		}
+		rt := &withUserAgent{t: tr}
 
 		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
 			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
