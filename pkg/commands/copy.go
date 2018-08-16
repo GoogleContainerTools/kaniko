@@ -61,30 +61,32 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		return err
 	}
 
-	// Resolve the chown string to a uid:gid format
-	uidStr, gidStr, err := util.GetUidGidFromUserString(c.cmd.Chown, replacementEnvs)
-	if err != nil {
-		return err
-	}
-
-	// Determine uid if uidstr was set
-	uid := -1
-	if uidStr != "" {
-		uid64, err := strconv.ParseUint(uidStr, 10, 32)
+	// Default to not setting uid or gid
+	uid, gid := -1, -1
+	if c.cmd.Chown != "" {
+		// Resolve the chown string to a uid:gid format
+		uidStr, gidStr, err := util.GetUidGidFromUserString(c.cmd.Chown, replacementEnvs)
 		if err != nil {
 			return err
 		}
-		uid = int(uid64)
-	}
 
-	// Determine gid if gidstr was set
-	gid := -1
-	if gidStr != "" {
-		gid64, err := strconv.ParseUint(gidStr, 10, 32)
-		if err != nil {
-			return err
+		// Determine uid if uidstr was set
+		if uidStr != "" {
+			uid64, err := strconv.ParseUint(uidStr, 10, 32)
+			if err != nil {
+				return err
+			}
+			uid = int(uid64)
 		}
-		gid = int(gid64)
+
+		// Determine gid if gidstr was set
+		if gidStr != "" {
+			gid64, err := strconv.ParseUint(gidStr, 10, 32)
+			if err != nil {
+				return err
+			}
+			gid = int(gid64)
+		}
 	}
 
 	// For each source, iterate through and copy it over
