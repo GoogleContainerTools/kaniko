@@ -369,8 +369,12 @@ When taking a snapshot, kaniko's hashing algorithms include (or in the case of
 if the file has changed. Unfortunately there is a delay between when changes to a
 file are made and when the `mtime` is updated. This means:
 
-* With the default snapshot mode (`--snapshotMode=full`), whether or not kaniko will
-  add a layer in the case where a `RUN` command modifies a file but the contents do
-  not change is non-deterministic.
 * With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss changes
   introduced by `RUN` commands entirely.
+* With the default snapshot mode (`--snapshotMode=full`), whether or not kaniko will
+  add a layer in the case where a `RUN` command modifies a file **but the contents do
+  not** change is theoretically non-deterministic. This _does not affect the contents_
+  which will still be correct, but it does affect the number of layers.
+
+_Note that these issues are currently theoretical only. If you see this issue occur, please
+[open an issue](https://github.com/GoogleContainerTools/kaniko/issues)._
