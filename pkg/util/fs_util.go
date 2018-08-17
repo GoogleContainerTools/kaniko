@@ -62,10 +62,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 
 	fs := map[string]struct{}{}
 	whiteouts := map[string]struct{}{}
-	hardlinks, err := retrieveHardlinks(layers)
-	if err != nil {
-		return err
-	}
+	hardlinks := map[string]*hardlink{}
 
 	for i := len(layers) - 1; i >= 0; i-- {
 		logrus.Infof("Unpacking layer: %d", i)
@@ -74,7 +71,14 @@ func GetFSFromImage(root string, img v1.Image) error {
 		if err != nil {
 			return err
 		}
-		tr := tar.NewReader(r)
+		layerContents, err := ioutil.ReadAll(r)
+		if err != nil {
+			return err
+		}
+		if err := retrieveHardlinks(layerContents, hardlinks); err != nil {
+			return err
+		}
+		tr := tar.NewReader(bytes.NewReader(layerContents))
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {
@@ -133,7 +137,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 	for k, h := range hardlinks {
 		if regularFile(k) {
 			for _, link := range h.links {
-				if err := extractFile(root, link, bytes.NewReader(h.contents)); err != nil {
+				if err := extractFile(root, link, nil); err != nil {
 					return err
 				}
 			}
@@ -162,41 +166,33 @@ func regularFile(fp string) bool {
 	return fi.Mode().IsRegular()
 }
 
-func retrieveHardlinks(layers []v1.Layer) (map[string]*hardlink, error) {
-	hardlinks := map[string]*hardlink{}
-	for i := len(layers) - 1; i >= 0; i-- {
-		l := layers[i]
-		r, err := l.Uncompressed()
-		if err != nil {
-			return nil, err
+func retrieveHardlinks(layerContents []byte, hardlinks map[string]*hardlink) error {
+	tr := tar.NewReader(bytes.NewReader(layerContents))
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
 		}
-		tr := tar.NewReader(r)
-		for {
-			hdr, err := tr.Next()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return nil, err
-			}
-			if hdr.Typeflag == tar.TypeLink {
-				// If linkname no longer exists, extract hardlink as regular file
-				linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
-				if CheckWhitelist(linkname) {
-					continue
-				}
-				if h, ok := hardlinks[linkname]; ok {
-					h.links = append(h.links, hdr)
-					continue
-				}
-				hardlinks[linkname] = &hardlink{
-					links: []*tar.Header{hdr},
-				}
+		if err != nil {
+			return err
+		}
+		if hdr.Typeflag == tar.TypeLink {
+			// If linkname no longer exists, extract hardlink as regular file
+			linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
+			if CheckWhitelist(linkname) {
 				continue
 			}
+			if h, ok := hardlinks[linkname]; ok {
+				h.links = append(h.links, hdr)
+				continue
+			}
+			hardlinks[linkname] = &hardlink{
+				links: []*tar.Header{hdr},
+			}
+			continue
 		}
 	}
-	return hardlinks, nil
+	return nil
 }
 
 func resolveHardlink(hdr *tar.Header, contents []byte, hardlinks map[string]*hardlink) error {
