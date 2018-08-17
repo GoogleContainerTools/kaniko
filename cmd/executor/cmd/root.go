@@ -45,6 +45,7 @@ var (
 	singleSnapshot              bool
 	reproducible                bool
 	target                      string
+	noPush                      bool
 )
 
 func init() {
@@ -52,7 +53,6 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().VarP(&destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
-	RootCmd.MarkPersistentFlagRequired("destination")
 	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&buildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&dockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
@@ -62,6 +62,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&singleSnapshot, "single-snapshot", "", false, "Set this flag to take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&target, "target", "", "", " Set the target build stage to build")
+	RootCmd.PersistentFlags().BoolVarP(&noPush, "no-push", "", false, "Do not push the image to the registry")
 }
 
 var RootCmd = &cobra.Command{
@@ -73,6 +74,10 @@ var RootCmd = &cobra.Command{
 		if err := resolveSourceContext(); err != nil {
 			return err
 		}
+		if !noPush && len(destinations) == 0 {
+			return errors.New("You must provide --destination, or use --no-push")
+		}
+
 		return checkDockerfilePath()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -99,6 +104,11 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)
+		}
+
+		if noPush {
+			logrus.Info("Skipping push to container registry due to --no-push flag")
+			os.Exit(0)
 		}
 
 		if err := executor.DoPush(image, destinations, tarPath, dockerInsecureSkipTLSVerify); err != nil {

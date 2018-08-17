@@ -279,6 +279,10 @@ Set this flag as `--tarPath=<path>` to save the image as a tarball at path inste
 
 Set this flag to indicate which build stage is the target build stage.
 
+#### --no-push
+
+Set this flag if you only want to build the image, without pushing to a registry.
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.
