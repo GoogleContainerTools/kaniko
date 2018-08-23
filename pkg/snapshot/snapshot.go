@@ -95,7 +95,11 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 		if val, ok := snapshottedFiles[file]; ok && val {
 			continue
 		}
-		if util.CheckWhitelist(file) && !isBuildFile(file) {
+		whitelisted, err := util.CheckWhitelist(file)
+		if err != nil {
+			return false, err
+		}
+		if whitelisted && !isBuildFile(file) {
 			logrus.Infof("Not adding %s to layer, as it's whitelisted", file)
 			continue
 		}
@@ -168,7 +172,11 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 
 	// Now create the tar.
 	for path, info := range memFs {
-		if util.CheckWhitelist(path) {
+		whitelisted, err := util.CheckWhitelist(path)
+		if err != nil {
+			return false, err
+		}
+		if whitelisted {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}

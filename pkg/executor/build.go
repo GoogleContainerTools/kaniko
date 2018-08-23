@@ -21,18 +21,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
@@ -40,37 +35,26 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/options"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/GoogleContainerTools/kaniko/pkg/version"
 )
 
-// KanikoBuildArgs contains all the args required to build the image
-type KanikoBuildArgs struct {
-	DockerfilePath string
-	SrcContext     string
-	SnapshotMode   string
-	Args           []string
-	SingleSnapshot bool
-	Reproducible   bool
-	Target         string
-}
-
-func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
+func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
-	stages, err := dockerfile.Stages(k.DockerfilePath, k.Target)
+	stages, err := dockerfile.Stages(opts.DockerfilePath, opts.Target)
 	if err != nil {
 		return nil, err
 	}
 
-	hasher, err := getHasher(k.SnapshotMode)
+	hasher, err := getHasher(opts.SnapshotMode)
 	if err != nil {
 		return nil, err
 	}
 	for index, stage := range stages {
-		finalStage := finalStage(index, k.Target, stages)
+		finalStage := finalStage(index, opts.Target, stages)
 		// Unpack file system to root
-		sourceImage, err := util.RetrieveSourceImage(index, k.Args, stages)
+		sourceImage, err := util.RetrieveSourceImage(index, opts.BuildArgs, stages)
 		if err != nil {
 			return nil, err
 		}
@@ -83,20 +67,17 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 		if err := snapshotter.Init(); err != nil {
 			return nil, err
 		}
-		imageConfig, err := sourceImage.ConfigFile()
-		if sourceImage == empty.Image {
-			imageConfig.Config.Env = constants.ScratchEnvVars
-		}
+		imageConfig, err := util.RetrieveConfigFile(sourceImage)
 		if err != nil {
 			return nil, err
 		}
 		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
 			return nil, err
 		}
-		buildArgs := dockerfile.NewBuildArgs(k.Args)
+		buildArgs := dockerfile.NewBuildArgs(opts.BuildArgs)
 		for index, cmd := range stage.Commands {
 			finalCmd := index == len(stage.Commands)-1
-			dockerCommand, err := commands.GetCommand(cmd, k.SrcContext)
+			dockerCommand, err := commands.GetCommand(cmd, opts.SrcContext)
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +89,7 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 			}
 			// Don't snapshot if it's not the final stage and not the final command
 			// Also don't snapshot if it's the final stage, not the final command, and single snapshot is set
-			if (!finalStage && !finalCmd) || (finalStage && !finalCmd && k.SingleSnapshot) {
+			if (!finalStage && !finalCmd) || (finalStage && !finalCmd && opts.SingleSnapshot) {
 				continue
 			}
 			// Now, we get the files to snapshot from this command and take the snapshot
@@ -151,7 +132,7 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 			return nil, err
 		}
 		if finalStage {
-			if k.Reproducible {
+			if opts.Reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)
 				if err != nil {
 					return nil, err
@@ -173,50 +154,6 @@ func DoBuild(k KanikoBuildArgs) (v1.Image, error) {
 		}
 	}
 	return nil, err
-}
-
-type withUserAgent struct {
-	t http.RoundTripper
-}
-
-func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Set("User-Agent", fmt.Sprintf("kaniko/%s", version.Version()))
-	return w.t.RoundTrip(r)
-}
-
-func DoPush(image v1.Image, destinations []string, tarPath string) error {
-
-	// continue pushing unless an error occurs
-	for _, destination := range destinations {
-		// Push the image
-		destRef, err := name.NewTag(destination, name.WeakValidation)
-		if err != nil {
-			return err
-		}
-
-		if tarPath != "" {
-			return tarball.WriteToFile(tarPath, destRef, image, nil)
-		}
-
-		k8sc, err := k8schain.NewNoClient()
-		if err != nil {
-			return err
-		}
-		kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-		pushAuth, err := kc.Resolve(destRef.Context().Registry)
-		if err != nil {
-			return err
-		}
-
-		// Create a transport to set our user-agent.
-		rt := &withUserAgent{t: http.DefaultTransport}
-
-		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
-			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
-			return err
-		}
-	}
-	return nil
 }
 
 func finalStage(index int, target string, stages []instructions.Stage) bool {

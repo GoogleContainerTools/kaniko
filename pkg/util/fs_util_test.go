@@ -266,7 +266,11 @@ func Test_CheckWhitelist(t *testing.T) {
 				whitelist = original
 			}()
 			whitelist = tt.args.whitelist
-			if got := CheckWhitelist(tt.args.path); got != tt.want {
+			got, err := CheckWhitelist(tt.args.path)
+			if err != nil {
+				t.Fatalf("error checking whitelist: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("CheckWhitelist() = %v, want %v", got, tt.want)
 			}
 		})

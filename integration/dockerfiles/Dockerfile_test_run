@@ -21,3 +21,6 @@ RUN rm /etc/baz
 # Test with ARG
 ARG file
 RUN echo "run" > $file
+
+RUN echo "test home" > $HOME/file
+COPY context/foo $HOME/foo

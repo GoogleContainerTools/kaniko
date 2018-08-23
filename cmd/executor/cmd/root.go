@@ -17,7 +17,6 @@ limitations under the License.
 package cmd
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,43 +24,25 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/options"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	dockerfilePath              string
-	destinations                multiArg
-	srcContext                  string
-	snapshotMode                string
-	bucket                      string
-	dockerInsecureSkipTLSVerify bool
-	logLevel                    string
-	force                       bool
-	buildArgs                   multiArg
-	tarPath                     string
-	singleSnapshot              bool
-	reproducible                bool
-	target                      string
+	opts     = &options.KanikoOptions{}
+	logLevel string
+	force    bool
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&dockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
-	RootCmd.PersistentFlags().StringVarP(&srcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
-	RootCmd.PersistentFlags().StringVarP(&bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
-	RootCmd.PersistentFlags().VarP(&destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
-	RootCmd.MarkPersistentFlagRequired("destination")
-	RootCmd.PersistentFlags().StringVarP(&snapshotMode, "snapshotMode", "", "full", "Set this flag to change the file attributes inspected during snapshotting")
-	RootCmd.PersistentFlags().VarP(&buildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
-	RootCmd.PersistentFlags().BoolVarP(&dockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
-	RootCmd.PersistentFlags().StringVarP(&tarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
-	RootCmd.PersistentFlags().BoolVarP(&singleSnapshot, "single-snapshot", "", false, "Set this flag to take a single snapshot at the end of the build.")
-	RootCmd.PersistentFlags().BoolVarP(&reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
-	RootCmd.PersistentFlags().StringVarP(&target, "target", "", "", " Set the target build stage to build")
+	addKanikoOptionsFlags(RootCmd)
+	addHiddenFlags(RootCmd)
 }
 
 var RootCmd = &cobra.Command{
@@ -70,43 +51,54 @@ var RootCmd = &cobra.Command{
 		if err := util.SetLogLevel(logLevel); err != nil {
 			return err
 		}
-		if err := resolveSourceContext(); err != nil {
-			return err
+		if !opts.NoPush && len(opts.Destinations) == 0 {
+			return errors.New("You must provide --destination, or use --no-push")
 		}
-		return checkDockerfilePath()
+		if err := resolveSourceContext(); err != nil {
+			return errors.Wrap(err, "error resolving source context")
+		}
+		return resolveDockerfilePath()
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if !checkContained() {
 			if !force {
-				logrus.Error("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue.")
-				os.Exit(1)
+				return errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue")
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
 		if err := os.Chdir("/"); err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+			return errors.Wrap(err, "error changing to root dir")
 		}
-		image, err := executor.DoBuild(executor.KanikoBuildArgs{
-			DockerfilePath: absouteDockerfilePath(),
-			SrcContext:     srcContext,
-			SnapshotMode:   snapshotMode,
-			Args:           buildArgs,
-			SingleSnapshot: singleSnapshot,
-			Reproducible:   reproducible,
-			Target:         target,
-		})
+		image, err := executor.DoBuild(opts)
 		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+			return errors.Wrap(err, "error building image")
 		}
-
-		if err := executor.DoPush(image, destinations, tarPath); err != nil {
-			logrus.Error(err)
-			os.Exit(1)
-		}
-
+		return executor.DoPush(image, opts)
 	},
+}
+
+// addKanikoOptionsFlags configures opts
+func addKanikoOptionsFlags(cmd *cobra.Command) {
+	RootCmd.PersistentFlags().StringVarP(&opts.DockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
+	RootCmd.PersistentFlags().StringVarP(&opts.SrcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
+	RootCmd.PersistentFlags().StringVarP(&opts.Bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
+	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
+	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
+	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.DockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
+	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
+	RootCmd.PersistentFlags().BoolVarP(&opts.NoPush, "no-push", "", false, "Do not push the image to the registry")
+}
+
+// addHiddenFlags marks certain flags as hidden from the executor help text
+func addHiddenFlags(cmd *cobra.Command) {
+	// This flag is added in a vendored directory, hide so that it doesn't come up via --help
+	RootCmd.PersistentFlags().MarkHidden("azure-container-registry-config")
+	// Hide this flag as we want to encourage people to use the --context flag instead
+	RootCmd.PersistentFlags().MarkHidden("bucket")
 }
 
 func checkContained() bool {
@@ -114,56 +106,54 @@ func checkContained() bool {
 	return err == nil
 }
 
-func checkDockerfilePath() error {
-	if util.FilepathExists(dockerfilePath) {
-		if _, err := filepath.Abs(dockerfilePath); err != nil {
-			return err
+// resolveDockerfilePath resolves the Dockerfile path to an absolute path
+func resolveDockerfilePath() error {
+	if util.FilepathExists(opts.DockerfilePath) {
+		abs, err := filepath.Abs(opts.DockerfilePath)
+		if err != nil {
+			return errors.Wrap(err, "getting absolute path for dockerfile")
 		}
+		opts.DockerfilePath = abs
 		return nil
 	}
 	// Otherwise, check if the path relative to the build context exists
-	if util.FilepathExists(filepath.Join(srcContext, dockerfilePath)) {
+	if util.FilepathExists(filepath.Join(opts.SrcContext, opts.DockerfilePath)) {
+		abs, err := filepath.Abs(filepath.Join(opts.SrcContext, opts.DockerfilePath))
+		if err != nil {
+			return errors.Wrap(err, "getting absolute path for src context/dockerfile path")
+		}
+		opts.DockerfilePath = abs
 		return nil
 	}
-	return errors.New("please provide a valid path to a Dockerfile within the build context")
-}
-
-func absouteDockerfilePath() string {
-	if util.FilepathExists(dockerfilePath) {
-		// Ignore error since we already checked it in checkDockerfilePath()
-		abs, _ := filepath.Abs(dockerfilePath)
-		return abs
-	}
-	// Otherwise, return path relative to build context
-	return filepath.Join(srcContext, dockerfilePath)
+	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a bucket
 // it resets srcContext to be the path to the unpacked build context within the image
 func resolveSourceContext() error {
-	if srcContext == "" && bucket == "" {
+	if opts.SrcContext == "" && opts.Bucket == "" {
 		return errors.New("please specify a path to the build context with the --context flag or a bucket with the --bucket flag")
 	}
-	if srcContext != "" && !strings.Contains(srcContext, "://") {
+	if opts.SrcContext != "" && !strings.Contains(opts.SrcContext, "://") {
 		return nil
 	}
-	if bucket != "" {
-		if !strings.Contains(bucket, "://") {
-			srcContext = constants.GCSBuildContextPrefix + bucket
+	if opts.Bucket != "" {
+		if !strings.Contains(opts.Bucket, "://") {
+			opts.SrcContext = constants.GCSBuildContextPrefix + opts.Bucket
 		} else {
-			srcContext = bucket
+			opts.SrcContext = opts.Bucket
 		}
 	}
 	// if no prefix use Google Cloud Storage as default for backwards compability
-	contextExecutor, err := buildcontext.GetBuildContext(srcContext)
+	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("Getting source context from %s", srcContext)
-	srcContext, err = contextExecutor.UnpackTarFromBuildContext()
+	logrus.Debugf("Getting source context from %s", opts.SrcContext)
+	opts.SrcContext, err = contextExecutor.UnpackTarFromBuildContext()
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("Build context located at %s", srcContext)
+	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
 }

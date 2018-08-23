@@ -112,12 +112,20 @@ func GetFSFromImage(root string, img v1.Image) error {
 				logrus.Infof("Not adding %s because it was added by a prior layer", path)
 				continue
 			}
-			if CheckWhitelist(path) && !checkWhitelistRoot(root) {
+			whitelisted, err := CheckWhitelist(path)
+			if err != nil {
+				return err
+			}
+			if whitelisted && !checkWhitelistRoot(root) {
 				logrus.Infof("Not adding %s because it is whitelisted", path)
 				continue
 			}
 			if hdr.Typeflag == tar.TypeSymlink {
-				if CheckWhitelist(hdr.Linkname) {
+				whitelisted, err := CheckWhitelist(hdr.Linkname)
+				if err != nil {
+					return err
+				}
+				if whitelisted {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
@@ -179,7 +187,11 @@ func retrieveHardlinks(layerContents []byte, hardlinks map[string]*hardlink) err
 		if hdr.Typeflag == tar.TypeLink {
 			// If linkname no longer exists, extract hardlink as regular file
 			linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
-			if CheckWhitelist(linkname) {
+			whitelisted, err := CheckWhitelist(linkname)
+			if err != nil {
+				return err
+			}
+			if whitelisted {
 				continue
 			}
 			if h, ok := hardlinks[linkname]; ok {
@@ -214,7 +226,11 @@ func resolveHardlink(hdr *tar.Header, contents []byte, hardlinks map[string]*har
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
-		if CheckWhitelist(path) || ChildDirInWhitelist(path, constants.RootDir) {
+		whitelisted, err := CheckWhitelist(path)
+		if err != nil {
+			return err
+		}
+		if whitelisted || ChildDirInWhitelist(path, constants.RootDir) {
 			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
 			return nil
 		}
@@ -345,13 +361,18 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 	return false
 }
 
-func CheckWhitelist(path string) bool {
+func CheckWhitelist(path string) (bool, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		logrus.Infof("unable to get absolute path for %s", path)
+		return false, err
+	}
 	for _, wl := range whitelist {
-		if HasFilepathPrefix(path, wl) {
-			return true
+		if HasFilepathPrefix(abs, wl) {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func checkWhitelistRoot(root string) bool {
@@ -411,7 +432,11 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
-		if CheckWhitelist(path) && !HasFilepathPrefix(path, root) {
+		whitelisted, err := CheckWhitelist(path)
+		if err != nil {
+			return err
+		}
+		if whitelisted && !HasFilepathPrefix(path, root) {
 			return nil
 		}
 		if err != nil {
@@ -432,7 +457,11 @@ func Files(root string) ([]string, error) {
 	var files []string
 	logrus.Debugf("Getting files and contents at root %s", root)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if CheckWhitelist(path) {
+		whitelisted, err := CheckWhitelist(path)
+		if err != nil {
+			return err
+		}
+		if whitelisted {
 			return nil
 		}
 		files = append(files, path)

@@ -240,7 +240,7 @@ To configure credentials, you will need to do the following:
         - name: aws-secret
           mountPath: /root/.aws/
         - name: docker-config
-          mountPath: /root/.docker/
+          mountPath: /kaniko/.docker/
     restartPolicy: Never
     volumes:
       - name: aws-secret
@@ -278,6 +278,10 @@ Set this flag as `--tarPath=<path>` to save the image as a tarball at path inste
 #### --target
 
 Set this flag to indicate which build stage is the target build stage.
+
+#### --no-push
+
+Set this flag if you only want to build the image, without pushing to a registry.
 
 ### Debug Image
 

@@ -113,6 +113,19 @@ func Test_SaveStage(t *testing.T) {
 		
 		FROM scratch
 		COPY --from=second /hi2 /hi3
+
+		FROM ubuntu:16.04 AS base
+		ENV DEBIAN_FRONTEND noninteractive
+		ENV LC_ALL C.UTF-8
+
+		FROM base AS development
+		ENV PS1 " 🐳 \[\033[1;36m\]\W\[\033[0;35m\] # \[\033[0m\]"
+
+		FROM development AS test
+		ENV ORG_ENV UnitTest
+
+		FROM base AS production
+		COPY . /code
 		`,
 	}
 	if err := testutil.SetupFiles(tempDir, files); err != nil {
@@ -140,6 +153,21 @@ func Test_SaveStage(t *testing.T) {
 		{
 			name:     "don't reference stage later",
 			index:    2,
+			expected: false,
+		},
+		{
+			name:     "reference current stage in next stage",
+			index:    4,
+			expected: true,
+		},
+		{
+			name:     "from prebuilt stage, and reference current stage in next stage",
+			index:    5,
+			expected: true,
+		},
+		{
+			name:     "final stage",
+			index:    6,
 			expected: false,
 		},
 	}
