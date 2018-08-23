@@ -14,20 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package options
+package config
 
-// KanikoOptions are options that are set by command line arguments
-type KanikoOptions struct {
-	DockerfilePath              string
-	Destinations                multiArg
-	SrcContext                  string
-	SnapshotMode                string
-	Bucket                      string
-	DockerInsecureSkipTLSVerify bool
-	BuildArgs                   multiArg
-	TarPath                     string
-	SingleSnapshot              bool
-	Reproducible                bool
-	Target                      string
-	NoPush                      bool
+import "github.com/moby/buildkit/frontend/dockerfile/instructions"
+
+// KanikoStage wraps a stage of the Dockerfile and provides extra information
+type KanikoStage struct {
+	instructions.Stage
+	FinalStage             bool
+	BaseImageStoredLocally bool
+	BaseImageIndex         int
+	SaveStage              bool
 }

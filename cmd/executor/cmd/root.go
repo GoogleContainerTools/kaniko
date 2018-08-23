@@ -22,9 +22,9 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
-	"github.com/GoogleContainerTools/kaniko/pkg/options"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	opts     = &options.KanikoOptions{}
+	opts     = &config.KanikoOptions{}
 	logLevel string
 	force    bool
 )
