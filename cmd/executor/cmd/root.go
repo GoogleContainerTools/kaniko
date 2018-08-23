@@ -39,7 +39,8 @@ var (
 )
 
 func init() {
-	addSetupFlags(RootCmd)
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 	addKanikoOptionsFlags(RootCmd)
 	addHiddenFlags(RootCmd)
 }
@@ -74,11 +75,6 @@ var RootCmd = &cobra.Command{
 		}
 		return executor.DoPush(image, opts)
 	},
-}
-
-func addSetupFlags(cmd *cobra.Command) {
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
-	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 }
 
 // addKanikoOptionsFlags configures opts

@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,13 +53,13 @@ func DoPush(image v1.Image, opts *options.KanikoOptions) error {
 		// Push the image
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "getting tag for destination")
 		}
 
 		if opts.DockerInsecureSkipTLSVerify {
 			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "getting new insecure registry")
 			}
 			destRef.Repository.Registry = newReg
 		}
@@ -69,12 +70,12 @@ func DoPush(image v1.Image, opts *options.KanikoOptions) error {
 
 		k8sc, err := k8schain.NewNoClient()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "getting k8schain client")
 		}
 		kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
 		pushAuth, err := kc.Resolve(destRef.Context().Registry)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "resolving pushAuth")
 		}
 
 		// Create a transport to set our user-agent.
@@ -87,8 +88,7 @@ func DoPush(image v1.Image, opts *options.KanikoOptions) error {
 		rt := &withUserAgent{t: tr}
 
 		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
-			logrus.Error(fmt.Errorf("Failed to push to destination %s", destination))
-			return err
+			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destination))
 		}
 	}
 	return nil
