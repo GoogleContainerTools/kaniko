@@ -2,7 +2,6 @@
 
 
 [[projects]]
-  digest = "1:c2e5159d359682eb494a86940851547f50a2395d4003428fafb0b5ca6f979c90"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
@@ -11,36 +10,30 @@
     "internal/optional",
     "internal/trace",
     "internal/version",
-    "storage",
+    "storage"
   ]
-  pruneopts = "NUT"
   revision = "aad3f485ee528456e0768f20397b4d9dd941e755"
   version = "v0.25.0"
 
 [[projects]]
-  digest = "1:f56288257633effcb1743f6fa77d12dd3eaeeb5c78b3de6e199eb1b4780f57f5"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/containerregistry/mgmt/2017-10-01/containerregistry",
-    "version",
+    "version"
   ]
-  pruneopts = "NUT"
   revision = "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a"
   version = "v19.1.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:81f8c061c3d18ed1710957910542bc17d2b789c6cd19e0f654c30b35fd255ca5"
   name = "github.com/Azure/go-ansiterm"
   packages = [
     ".",
-    "winterm",
+    "winterm"
   ]
-  pruneopts = "NUT"
   revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
 
 [[projects]]
-  digest = "1:187e4d8953228d79bceea7c23c5afe1de4ae040876bfffecee0b65aa73acb756"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -50,30 +43,24 @@
     "autorest/to",
     "autorest/validation",
     "logger",
-    "version",
+    "version"
   ]
-  pruneopts = "NUT"
   revision = "dd94e014aaf16d1df746762e392aa201c1b4c461"
   version = "v10.15.0"
 
 [[projects]]
-  digest = "1:99632bb2b4e2c066233ee9d19c1370a695ebd2be18625e31390476d356db5d8a"
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "a6d595ae73cf27a1b8fc32930668708f45ce1c85"
   version = "v0.4.9"
 
 [[projects]]
   branch = "master"
-  digest = "1:7da1a26e347165227c79dfb10b90b3b5dedb6cbae50e88cdb81f5b6259b5b951"
   name = "github.com/Nvveen/Gotty"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "cd527374f1e5bff4938207604a14f2e38a9cf512"
 
 [[projects]]
-  digest = "1:43e579d4cd246b1034ddd8520e1f0fed618be2f6127873e4d06b8e2f5c467086"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -111,43 +98,35 @@
     "service/s3",
     "service/s3/s3iface",
     "service/s3/s3manager",
-    "service/sts",
+    "service/sts"
   ]
-  pruneopts = "NUT"
   revision = "e3f7540480e3b9a733845f9fa5d35d7484bac3cd"
   version = "v1.15.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
-  pruneopts = "NUT"
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  digest = "1:a12d94258c5298ead75e142e8001224bf029f302fed9e96cd39c0eaf90f3954d"
   name = "github.com/boltdb/bolt"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
   version = "v1.3.1"
 
 [[projects]]
-  digest = "1:e33e5ee8f3ae693a3c6894d3a45bef0261c6bd153c2bca2fcee11a657b189ffd"
   name = "github.com/containerd/containerd"
   packages = [
     "cio",
     "defaults",
-    "log",
+    "log"
   ]
-  pruneopts = "NUT"
   revision = "468a545b9edcd5932818eb9de8e72413e616e86e"
   version = "v1.1.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:792024d8e8fabed9bbfd7d86b9dc71855854272a5f5eb52d0836be492fb13118"
   name = "github.com/containerd/continuity"
   packages = [
     "devices",
@@ -155,49 +134,39 @@
     "fs",
     "pathdriver",
     "syscallx",
-    "sysx",
+    "sysx"
   ]
-  pruneopts = "NUT"
   revision = "0377f7d767206f3a9e8881d0f02267b0d89c7a62"
 
 [[projects]]
   branch = "master"
-  digest = "1:a16d601cf7295c29ccc3e7711be788bca1376e1f22e0826929f8883ed36c7c99"
   name = "github.com/containerd/fifo"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "3d5202aec260678c48179c56f40e6f38a095738c"
 
 [[projects]]
-  digest = "1:9e2dbc126e8e5314cba3ab654b2183376dc81cb657ca8c588f86990f5da88cbc"
   name = "github.com/coreos/etcd"
   packages = ["raft/raftpb"]
-  pruneopts = "NUT"
   revision = "fca8add78a9d926166eb739b8e4a124434025ba3"
   version = "v3.3.9"
 
 [[projects]]
-  digest = "1:7a6852b35eb5bbc184561443762d225116ae630c26a7c4d90546619f1e7d2ad2"
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:1ca1988ad760b15a9b6e2eef41dfcf1086aef53283623fca0d151d2f5833579e"
   name = "github.com/docker/distribution"
   packages = [
     ".",
     "digestset",
-    "reference",
+    "reference"
   ]
-  pruneopts = "NUT"
   revision = "0dae0957e5fe3156c265d22bef4cba9efbf388e2"
 
 [[projects]]
-  digest = "1:d2471b0cb6ee1ff6689d6e00f778fe70684ebe26e7afbbd2b1cd373d2c4d82ec"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -281,50 +250,40 @@
     "restartmanager",
     "runconfig/opts",
     "volume",
-    "volume/mounts",
+    "volume/mounts"
   ]
-  pruneopts = "NUT"
   revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"
 
 [[projects]]
-  digest = "1:2a47f7eb1a2c30428d1ee6808cb66d4deb17e68a3e55d696f03c8068552ba5e8"
   name = "github.com/docker/go-connections"
   packages = [
     "nat",
     "sockets",
-    "tlsconfig",
+    "tlsconfig"
   ]
-  pruneopts = "NUT"
   revision = "7395e3f8aa162843a74ed6d48e79627d9792ac55"
   version = "v0.4.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:3c7e22fc463067fcb27473d9010b9ac8c49b791357e0c7e7da6002a291129162"
   name = "github.com/docker/go-events"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "9461782956ad83b30282bf90e31fa6a70c255ba9"
 
 [[projects]]
   branch = "master"
-  digest = "1:8e5e04894d9d663ac464d6e73803d602f85fe679ec5a54de35378b5d073efd64"
   name = "github.com/docker/go-metrics"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "399ea8c73916000c64c2c76e8da00ca82f8387ab"
 
 [[projects]]
-  digest = "1:4340101f42556a9cb2f7a360a0e95a019bfef6247d92e6c4c46f2433cf86a482"
   name = "github.com/docker/go-units"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
   version = "v0.3.3"
 
 [[projects]]
   branch = "master"
-  digest = "1:f793c63abccf2c08f72ab01a78e2e2e10618eb6b3636f33c4b80c891e40234dd"
   name = "github.com/docker/swarmkit"
   packages = [
     "agent/exec",
@@ -334,67 +293,53 @@
     "log",
     "manager/raftselector",
     "protobuf/plugin",
-    "protobuf/ptypes",
+    "protobuf/ptypes"
   ]
-  pruneopts = "NUT"
   revision = "7567d47988d82a78b052c4b9ba1e61399e0e7897"
 
 [[projects]]
-  digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
 
 [[projects]]
-  digest = "1:7b9d29bf52744b65d27fd7203c9fed8493d12053e8fb7ae555c9a99237c55e23"
   name = "github.com/genuinetools/amicontained"
   packages = ["container"]
-  pruneopts = "NUT"
   revision = "f0ea8cedefb967ac75fc7450212b0bbf2a85f623"
   version = "v0.4.3"
 
 [[projects]]
-  digest = "1:81466b4218bf6adddac2572a30ac733a9255919bc2f470b4827a317bd4ee1756"
   name = "github.com/ghodss/yaml"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:f59266de09e138237bf9df9deb57b9ebbdb1e33b8399bb739c3745e7d3d2787b"
   name = "github.com/go-ini/ini"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
   version = "v1.38.1"
 
 [[projects]]
-  digest = "1:983cb7d70588854e2706e32c61698bbf0eab4956fca89e86c1c10d7213679a0e"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
     "proto",
     "protoc-gen-gogo/descriptor",
     "sortkeys",
-    "types",
+    "types"
   ]
-  pruneopts = "NUT"
   revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
   version = "v1.1.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:e2b86e41f3d669fc36b50d31d32d22c8ac656c75aa5ea89717ce7177e134ff2a"
   name = "github.com/golang/glog"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
 
 [[projects]]
-  digest = "1:698b57d2e177534bca3e8ee5eee05968dd14dc4fe1d015e3fb6237ff10e8826a"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -402,22 +347,19 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp",
+    "ptypes/timestamp"
   ]
-  pruneopts = "NUT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:245bd4eb633039cd66106a5d340ae826d87f4e36a8602fcc940e14176fd26ea7"
   name = "github.com/google/btree"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "e89373fe6b4a7413d7acd6da1725b83ef713e6e4"
 
 [[projects]]
-  digest = "1:b347f4d441e737532862875ab98e47a2b631cd9d1348103e92bee722d69bf287"
+  branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
@@ -433,124 +375,96 @@
     "pkg/v1/remote/transport",
     "pkg/v1/tarball",
     "pkg/v1/types",
-    "pkg/v1/v1util",
+    "pkg/v1/v1util"
   ]
-  pruneopts = "NUT"
-  revision = "5f7b0e4895413d785ff15b84d218d73e8a47866a"
+  revision = "e3df2a4fd30e0756e8fc2031f5a02c5c0b25f10d"
 
 [[projects]]
   branch = "master"
-  digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
-  digest = "1:fe852c57b4fc4d11e6ef79bce1e930ee2f2f7d148b370afef8f8d012a80960ea"
   name = "github.com/googleapis/gax-go"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
   version = "v2.0.0"
 
 [[projects]]
-  digest = "1:06a7dadb7b760767341ffb6c8d377238d68a1226f2b21b5d497d2e3f6ecf6b4e"
   name = "github.com/googleapis/gnostic"
   packages = [
     "OpenAPIv2",
     "compiler",
-    "extensions",
+    "extensions"
   ]
-  pruneopts = "NUT"
   revision = "7c663266750e7d82587642f65e60bc4083f1f84e"
   version = "v0.2.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:7fdf3223c7372d1ced0b98bf53457c5e89d89aecbad9a77ba9fcc6e01f9e5621"
   name = "github.com/gregjones/httpcache"
   packages = [
     ".",
-    "diskcache",
+    "diskcache"
   ]
-  pruneopts = "NUT"
   revision = "9cad4c3443a7200dd6400aef47183728de563a38"
 
 [[projects]]
   branch = "master"
-  digest = "1:7b760aa6dbe426378f54934270dde1b176fda379111da2154748f030fffe4d3f"
   name = "github.com/grpc-ecosystem/grpc-opentracing"
   packages = ["go/otgrpc"]
-  pruneopts = "NUT"
   revision = "8e809c8a86450a29b90dcc9efbf062d0fe6d9746"
 
 [[projects]]
   branch = "master"
-  digest = "1:1cf16b098a70d6c02899608abbb567296d11c7b830635014dfe6124a02dc1369"
   name = "github.com/hashicorp/go-immutable-radix"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "7f3cd4390caab3250a57f30efdb2a65dd7649ecf"
 
 [[projects]]
   branch = "master"
-  digest = "1:776e1eed2fbdfdfc09a12d660aa11805213d86f163a45303520500d827e66059"
   name = "github.com/hashicorp/go-memdb"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "1289e7fffe71d8fd4d4d491ba9a412c50f244c44"
 
 [[projects]]
   branch = "master"
-  digest = "1:e0e3eb7886110c57a7c103fbc5fc419b1651d3014655b47b71f26809c2daeb1c"
   name = "github.com/hashicorp/golang-lru"
   packages = ["simplelru"]
-  pruneopts = "NUT"
   revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
 
 [[projects]]
-  digest = "1:406338ad39ab2e37b7f4452906442a3dbf0eb3379dd1f06aafb5c07e769a5fbb"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
 
 [[projects]]
-  digest = "1:ac6d01547ec4f7f673311b4663909269bfb8249952de3279799289467837c3cc"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "0b12d6b5"
 
 [[projects]]
-  digest = "1:0243cffa4a3410f161ee613dfdd903a636d07e838a42d341da95d81f42cd1d41"
   name = "github.com/json-iterator/go"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "ab8a2e0c74be9d3be70b3184d9acc634935ded82"
   version = "1.1.4"
 
 [[projects]]
-  digest = "1:d0164259ed17929689df11205194d80288e8ae25351778f7a3421a24774c36f8"
   name = "github.com/mattn/go-shellwords"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "02e3cf038dcea8290e44424da473dd12be796a8a"
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:5985ef4caf91ece5d54817c11ea25f182697534f8ae6521eadcd628c142ac4b6"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
-  pruneopts = "NUT"
   revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
   version = "v1.0.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:e92b50943cf297f740ce62ee527a1044215689f0daea2b51bb9be4265e2b2b36"
   name = "github.com/moby/buildkit"
   packages = [
     "frontend/dockerfile/command",
@@ -559,210 +473,166 @@
     "frontend/dockerfile/shell",
     "identity",
     "session",
-    "session/filesync",
+    "session/filesync"
   ]
-  pruneopts = "NUT"
   revision = "e57eed420c7573ae44875be98fa877175b4677a1"
 
 [[projects]]
-  digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
   version = "1.0.3"
 
 [[projects]]
-  digest = "1:c6aca19413b13dc59c220ad7430329e2ec454cc310bc6d8de2c7e2b93c18a0f6"
   name = "github.com/modern-go/reflect2"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
 
 [[projects]]
-  digest = "1:e0cc8395ea893c898ff5eb0850f4d9851c1f57c78c232304a026379a47a552d0"
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
   version = "v1.0.0-rc1"
 
 [[projects]]
-  digest = "1:11db38d694c130c800d0aefb502fb02519e514dc53d9804ce51d1ad25ec27db6"
   name = "github.com/opencontainers/image-spec"
   packages = [
     "specs-go",
-    "specs-go/v1",
+    "specs-go/v1"
   ]
-  pruneopts = "NUT"
   revision = "d60099175f88c47cd379c4738d158884749ed235"
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:665148313bcef8bee229ade70b3d345344121db27777e3b1edb78ca5088bb9c4"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
     "libcontainer/devices",
     "libcontainer/system",
-    "libcontainer/user",
+    "libcontainer/user"
   ]
-  pruneopts = "NUT"
   revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
 
 [[projects]]
-  digest = "1:57234a321bf1f8f98a8a9a5122a2404cc60d0800516f4ab7a7b2375e4b2d19ea"
   name = "github.com/opencontainers/runtime-spec"
   packages = ["specs-go"]
-  pruneopts = "NUT"
   revision = "4e3b9264a330d094b0386c3703c5f379119711e8"
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:5c65c485fa22fdfd6937db07aaf879904a4745770ee416d8d1f2a1434dc2d8ce"
   name = "github.com/opencontainers/selinux"
   packages = [
     "go-selinux",
-    "go-selinux/label",
+    "go-selinux/label"
   ]
-  pruneopts = "NUT"
   revision = "ba1aefe8057f1d0cfb8e88d0ec1dc85925ef987d"
   version = "v1.0.0-rc1"
 
 [[projects]]
-  digest = "1:7da29c22bcc5c2ffb308324377dc00b5084650348c2799e573ed226d8cc9faf0"
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
     "ext",
-    "log",
+    "log"
   ]
-  pruneopts = "NUT"
   revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
   version = "v1.0.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
   name = "github.com/petar/GoLLRB"
   packages = ["llrb"]
-  pruneopts = "NUT"
   revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
 
 [[projects]]
-  digest = "1:6c6d91dc326ed6778783cff869c49fb2f61303cdd2ebbcf90abe53505793f3b6"
   name = "github.com/peterbourgon/diskv"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:5cf3f025cbee5951a4ee961de067c8a89fc95a5adabead774f82822efabab121"
   name = "github.com/pkg/errors"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:775b74e1796722b72b5c4de3b26496bddfcc0588eff23be4b7b0994dcce6afcf"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
-    "prometheus/promhttp",
+    "prometheus/promhttp"
   ]
-  pruneopts = "NUT"
   revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
 
 [[projects]]
   branch = "master"
-  digest = "1:2d5cd61daa5565187e1d96bae64dbbc6080dacf741448e9629c64fd93203b0d4"
   name = "github.com/prometheus/client_model"
   packages = ["go"]
-  pruneopts = "NUT"
   revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f"
 
 [[projects]]
   branch = "master"
-  digest = "1:768b555b86742de2f28beb37f1dedce9a75f91f871d75b5717c96399c1a78c08"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
-    "model",
+    "model"
   ]
-  pruneopts = "NUT"
   revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
 
 [[projects]]
   branch = "master"
-  digest = "1:6621142cd60b7150ab66f38ff36303ca55843dc5a635c1f9a28f95ecddab72b4"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
     "internal/util",
     "nfs",
-    "xfs",
+    "xfs"
   ]
-  pruneopts = "NUT"
   revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
-  digest = "1:b2339e83ce9b5c4f79405f949429a7f68a9a904fed903c672aac1e7ceb7f5f02"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
   version = "v1.0.6"
 
 [[projects]]
-  digest = "1:343d44e06621142ab09ae0c76c1799104cdfddd3ffb445d78b1adf8dc3ffaf3d"
   name = "github.com/spf13/cobra"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:15e5c398fbd9d2c439b635a08ac161b13d04f0c2aa587fe256b65dc0c3efe8b7"
   name = "github.com/spf13/pflag"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:e865a1cd94806d1bb0eaa0bffba2ccb5e25ac42e1f55328c83d5e3399c9961a4"
   name = "github.com/syndtr/gocapability"
   packages = ["capability"]
-  pruneopts = "NUT"
   revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
   branch = "master"
-  digest = "1:b6921aae65fd2eb1f81299987f039368d1d7a867178b6763c7ce5b37c44c6839"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "b19464cd1b6a00773b4f2eb7acf9c30426f9df42"
 
 [[projects]]
-  digest = "1:c50d03312be5e5914ccb213c500c92d0231c6364bd5f968bc6b756ba7d99f1b0"
   name = "github.com/vbatts/tar-split"
   packages = [
     "archive/tar",
     "tar/asm",
-    "tar/storage",
+    "tar/storage"
   ]
-  pruneopts = "NUT"
   revision = "38ec4ddb06dedbea0a895c4848b248eb38af221b"
   version = "v0.10.2"
 
 [[projects]]
-  digest = "1:51db8b83c5320ce0522433046efec5fda0d34a2308ff969627e1ca206de77f35"
   name = "go.opencensus.io"
   packages = [
     ".",
@@ -777,27 +647,23 @@
     "tag",
     "trace",
     "trace/internal",
-    "trace/propagation",
+    "trace/propagation"
   ]
-  pruneopts = "NUT"
   revision = "e262766cd0d230a1bb7c37281e345e465f19b41b"
   version = "v0.14.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:670ac353e434afad9b6d96ba9735f243c5808c58ed67fdce9768e160d84389ba"
   name = "golang.org/x/crypto"
   packages = [
     "pkcs12",
     "pkcs12/internal/rc2",
-    "ssh/terminal",
+    "ssh/terminal"
   ]
-  pruneopts = "NUT"
   revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
 
 [[projects]]
   branch = "master"
-  digest = "1:f3e57ce909415ab28ce6c6db1fa7bf7a9134c8d9cb53663775d766b515a665d8"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -809,51 +675,43 @@
     "internal/socks",
     "internal/timeseries",
     "proxy",
-    "trace",
+    "trace"
   ]
-  pruneopts = "NUT"
   revision = "49c15d80dfbc983ea25246ee959d970efe09ec09"
 
 [[projects]]
   branch = "master"
-  digest = "1:20be1c62ac412f0f743bb5afdf2b3e343cb2f5b6dbcfb5ea09dac0d3d476dc2f"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
     "google",
     "internal",
     "jws",
-    "jwt",
+    "jwt"
   ]
-  pruneopts = "NUT"
   revision = "3d292e4d0cdc3a0113e6d207bb137145ef1de42f"
 
 [[projects]]
   branch = "master"
-  digest = "1:7038a1e75dbca94d9c236189750dc9c7f1a17dd88f4331173e28d8ac7497aa88"
   name = "golang.org/x/sync"
   packages = [
     "errgroup",
     "singleflight",
-    "syncmap",
+    "syncmap"
   ]
-  pruneopts = "NUT"
   revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
 [[projects]]
   branch = "master"
-  digest = "1:eeb413d109f4b2813de0b5b23645d7a503db926cae8f10dfdcf248d15499314f"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
-    "windows/registry",
+    "windows/registry"
   ]
-  pruneopts = "NUT"
   revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
 
 [[projects]]
-  digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -869,23 +727,19 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable",
+    "unicode/rangetable"
   ]
-  pruneopts = "NUT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:c9e7a4b4d47c0ed205d257648b0e5b0440880cb728506e318f8ac7cd36270bc4"
   name = "golang.org/x/time"
   packages = ["rate"]
-  pruneopts = "NUT"
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   branch = "master"
-  digest = "1:90be4d5bd77ea891a49987956d4ebb734b84f24d08261f749261baf2e6b388e9"
   name = "google.golang.org/api"
   packages = [
     "gensupport",
@@ -896,13 +750,11 @@
     "iterator",
     "option",
     "storage/v1",
-    "transport/http",
+    "transport/http"
   ]
-  pruneopts = "NUT"
   revision = "31ca0e01cd791f07750cb23fc99327721f753290"
 
 [[projects]]
-  digest = "1:b5aeceb800276be69165a745328380c8a4b6f2edc7a6bac112e22c8596ed8a49"
   name = "google.golang.org/appengine"
   packages = [
     ".",
@@ -914,27 +766,23 @@
     "internal/modules",
     "internal/remote_api",
     "internal/urlfetch",
-    "urlfetch",
+    "urlfetch"
   ]
-  pruneopts = "NUT"
   revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:ff94ea38fec4e39a0a1da6ef4a19e4d86711e027de5d7dd084cdd0a1bcc596fc"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
     "googleapis/iam/v1",
     "googleapis/rpc/code",
-    "googleapis/rpc/status",
+    "googleapis/rpc/status"
   ]
-  pruneopts = "NUT"
   revision = "daca94659cb50e9f37c1b834680f2e46358f10b0"
 
 [[projects]]
-  digest = "1:ca6ae91b86f5ae40a409093b4cbc6bd81f34347c619d9b66125320e409e1e79b"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -961,30 +809,24 @@
     "stats",
     "status",
     "tap",
-    "transport",
+    "transport"
   ]
-  pruneopts = "NUT"
   revision = "8124abf74e7633d82a5b96585b0da487d0e6eed0"
 
 [[projects]]
-  digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
   name = "gopkg.in/inf.v0"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
   version = "v0.9.1"
 
 [[projects]]
-  digest = "1:7c95b35057a0ff2e19f707173cc1a947fa43a6eb5c4d300d196ece0334046082"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
   version = "v2.2.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:ab24c78181938293003a84bf956be09f195c57fa2f418ed6c1595f3198312f25"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1alpha1",
@@ -1015,13 +857,11 @@
     "settings/v1alpha1",
     "storage/v1",
     "storage/v1alpha1",
-    "storage/v1beta1",
+    "storage/v1beta1"
   ]
-  pruneopts = "NUT"
   revision = "183f3326a9353bd6d41430fc80f96259331d029c"
 
 [[projects]]
-  digest = "1:13a711fa4a9db8c05c1217196f149dc3cbf01ccc2050bf1608ba5ab9e5d7afd3"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1058,14 +898,12 @@
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
-    "third_party/forked/golang/reflect",
+    "third_party/forked/golang/reflect"
   ]
-  pruneopts = "NUT"
   revision = "103fd098999dc9c0c88536f5c9ad2e5da39373ae"
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:b960fc62d636ccdc3265dd1e190b7f5e7bf5f8d29bf4f02af7f1352768c58f3f"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1114,14 +952,12 @@
     "util/cert",
     "util/connrotation",
     "util/flowcontrol",
-    "util/integer",
+    "util/integer"
   ]
-  pruneopts = "NUT"
   revision = "7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65"
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:e345c95cf277bb7f650306556904df69e0904395c56959a56002d0140747eda0"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/cloudprovider/providers/azure/auth",
@@ -1129,42 +965,14 @@
     "pkg/credentialprovider/aws",
     "pkg/credentialprovider/azure",
     "pkg/credentialprovider/gcp",
-    "pkg/credentialprovider/secrets",
+    "pkg/credentialprovider/secrets"
   ]
-  pruneopts = "NUT"
   revision = "b1b29978270dc22fecc592ac55d903350454310a"
   version = "v1.11.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "cloud.google.com/go/storage",
-    "github.com/aws/aws-sdk-go/aws",
-    "github.com/aws/aws-sdk-go/aws/session",
-    "github.com/aws/aws-sdk-go/service/s3",
-    "github.com/aws/aws-sdk-go/service/s3/s3manager",
-    "github.com/docker/docker/builder/dockerfile",
-    "github.com/docker/docker/pkg/archive",
-    "github.com/docker/docker/pkg/signal",
-    "github.com/genuinetools/amicontained/container",
-    "github.com/google/go-containerregistry/pkg/authn",
-    "github.com/google/go-containerregistry/pkg/authn/k8schain",
-    "github.com/google/go-containerregistry/pkg/name",
-    "github.com/google/go-containerregistry/pkg/v1",
-    "github.com/google/go-containerregistry/pkg/v1/daemon",
-    "github.com/google/go-containerregistry/pkg/v1/empty",
-    "github.com/google/go-containerregistry/pkg/v1/mutate",
-    "github.com/google/go-containerregistry/pkg/v1/remote",
-    "github.com/google/go-containerregistry/pkg/v1/tarball",
-    "github.com/moby/buildkit/frontend/dockerfile/instructions",
-    "github.com/moby/buildkit/frontend/dockerfile/parser",
-    "github.com/moby/buildkit/frontend/dockerfile/shell",
-    "github.com/pkg/errors",
-    "github.com/sirupsen/logrus",
-    "github.com/spf13/cobra",
-    "golang.org/x/net/context",
-    "k8s.io/client-go/discovery",
-  ]
+  inputs-digest = "e2edf813355250ce0afb670aa8ed7096b44d93edaa813598a2717417bfd30d5a"
   solver-name = "gps-cdcl"
   solver-version = 1
