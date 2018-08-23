@@ -240,7 +240,7 @@ To configure credentials, you will need to do the following:
         - name: aws-secret
           mountPath: /root/.aws/
         - name: docker-config
-          mountPath: /root/.docker/
+          mountPath: /kaniko/.docker/
     restartPolicy: Never
     volumes:
       - name: aws-secret
