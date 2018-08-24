@@ -136,8 +136,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("Building kaniko image")
 	cmd := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
-	_, err = RunCommandWithoutTest(cmd)
-	if err != nil {
+	if _, err = RunCommandWithoutTest(cmd); err != nil {
 		fmt.Printf("Building kaniko failed: %s", err)
 		os.Exit(1)
 	}
