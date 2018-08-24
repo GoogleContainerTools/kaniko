@@ -50,11 +50,11 @@ func Test_StandardImage(t *testing.T) {
 	defer func() {
 		retrieveRemoteImage = original
 	}()
-	mock := func(image string) (v1.Image, error) {
+	mock := func(image string, dockerInsecureSkipTLSVerifyAtPull bool) (v1.Image, error) {
 		return nil, nil
 	}
 	retrieveRemoteImage = mock
-	actual, err := RetrieveSourceImage(0, nil, stages)
+	actual, err := RetrieveSourceImage(0, nil, false, stages)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 func Test_ScratchImage(t *testing.T) {
@@ -62,7 +62,7 @@ func Test_ScratchImage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual, err := RetrieveSourceImage(1, nil, stages)
+	actual, err := RetrieveSourceImage(1, nil, false, stages)
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
 }
@@ -80,7 +80,7 @@ func Test_TarImage(t *testing.T) {
 		return nil, nil
 	}
 	retrieveTarImage = mock
-	actual, err := RetrieveSourceImage(2, nil, stages)
+	actual, err := RetrieveSourceImage(2, nil, false, stages)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 

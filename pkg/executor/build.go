@@ -54,7 +54,7 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 	for index, stage := range stages {
 		finalStage := finalStage(index, opts.Target, stages)
 		// Unpack file system to root
-		sourceImage, err := util.RetrieveSourceImage(index, opts.BuildArgs, stages)
+		sourceImage, err := util.RetrieveSourceImage(index, opts.BuildArgs, opts.DockerInsecureSkipTLSVerify, stages)
 		if err != nil {
 			return nil, err
 		}

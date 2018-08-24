@@ -17,6 +17,8 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
+	"net/http"
 	"path/filepath"
 	"strconv"
 
@@ -40,7 +42,7 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(index int, buildArgs []string, stages []instructions.Stage) (v1.Image, error) {
+func RetrieveSourceImage(index int, buildArgs []string, dockerInsecureSkipTLSVerify bool, stages []instructions.Stage) (v1.Image, error) {
 	currentStage := stages[index]
 	currentBaseName, err := ResolveEnvironmentReplacement(currentStage.BaseName, buildArgs, false)
 	if err != nil {
@@ -62,7 +64,7 @@ func RetrieveSourceImage(index int, buildArgs []string, stages []instructions.St
 		}
 	}
 	// Otherwise, initialize image as usual
-	return retrieveRemoteImage(currentBaseName)
+	return retrieveRemoteImage(currentBaseName, dockerInsecureSkipTLSVerify)
 }
 
 // RetrieveConfigFile returns the config file for an image
@@ -83,16 +85,46 @@ func tarballImage(index int) (v1.Image, error) {
 	return tarball.ImageFromPath(tarPath, nil)
 }
 
-func remoteImage(image string) (v1.Image, error) {
+func remoteImage(image string, dockerInsecureSkipTLSVerify bool) (v1.Image, error) {
 	logrus.Infof("Downloading base image %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
 	}
+
+	// check we can connect to connect regitry with normal transport
+	tr := http.DefaultTransport.(*http.Transport)
+	client := http.Client{Transport: tr}
+	_, err = client.Get(fmt.Sprintf("%s://%s/v2/", ref.Context().Scheme(), ref.Context().Registry.Name()))
+
+	// when failure and dockerInsecureSkipTLSVerify is true,
+	// make registry and transport be insecure.
+	if err != nil && dockerInsecureSkipTLSVerify {
+		// make registry scheme be insecure.
+		insecureReg, err := name.NewInsecureRegistry(ref.Context().RegistryStr(), name.WeakValidation)
+		if err != nil {
+			return nil, err
+		}
+		if tag, ok := ref.(name.Tag); ok {
+			tag.Repository.Registry = insecureReg
+			ref = tag
+		}
+		if digest, ok := ref.(name.Digest); ok {
+			digest.Repository.Registry = insecureReg
+			ref = digest
+		}
+		// try to connect insecure registry with insecure transport
+		tr.TLSClientConfig.InsecureSkipVerify = true
+		_, err = client.Get(fmt.Sprintf("%s://%s/v2/", ref.Context().Scheme(), ref.Context().Registry.Name()))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	k8sc, err := k8schain.NewNoClient()
 	if err != nil {
 		return nil, err
 	}
 	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
+	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(kc))
 }
