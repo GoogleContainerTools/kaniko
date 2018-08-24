@@ -141,7 +141,6 @@ func TestSnapshotFiles(t *testing.T) {
 	}
 	filesToSnapshot := []string{
 		filepath.Join(testDir, "foo"),
-		filepath.Join(testDir, "kaniko/file"),
 	}
 	contents, err := snapshotter.TakeSnapshot(filesToSnapshot)
 	if err != nil {
