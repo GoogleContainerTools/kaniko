@@ -459,16 +459,18 @@ func DownloadFileToDest(rawurl, dest string) error {
 }
 
 // CopyDir copies the file or directory at src to dest
-func CopyDir(src, dest string) error {
+// It returns a list of files it copied over
+func CopyDir(src, dest string) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var copiedFiles []string
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
@@ -478,24 +480,25 @@ func CopyDir(src, dest string) error {
 			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
 
 			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
-				return err
+				return nil, err
 			}
 			if err := os.Chown(destPath, uid, gid); err != nil {
-				return err
+				return nil, err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
 			if err := CopySymlink(fullPath, destPath); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
 			if err := CopyFile(fullPath, destPath); err != nil {
-				return err
+				return nil, err
 			}
 		}
+		copiedFiles = append(copiedFiles, destPath)
 	}
-	return nil
+	return copiedFiles, nil
 }
 
 // CopySymlink copies the symlink at src to dest
