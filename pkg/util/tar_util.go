@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -31,8 +32,32 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// AddToTar adds the file i to tar w at path p
-func AddToTar(p string, i os.FileInfo, hardlinks map[uint64]string, w *tar.Writer) error {
+// Tar knows how to write files to a tar file.
+type Tar struct {
+	hardlinks map[uint64]string
+	w         *tar.Writer
+}
+
+// NewTar will create an instance of Tar that can write files to the writer at f.
+func NewTar(f io.Writer) Tar {
+	w := tar.NewWriter(f)
+	return Tar{
+		w:         w,
+		hardlinks: map[uint64]string{},
+	}
+}
+
+// Close will close any open streams used by Tar.
+func (t *Tar) Close() {
+	t.w.Close()
+}
+
+// AddFileToTar adds the file at path p to the tar
+func (t *Tar) AddFileToTar(p string) error {
+	i, err := os.Lstat(p)
+	if err != nil {
+		return fmt.Errorf("Failed to get file info for %s: %s", p, err)
+	}
 	linkDst := ""
 	if i.Mode()&os.ModeSymlink != 0 {
 		var err error
@@ -51,13 +76,13 @@ func AddToTar(p string, i os.FileInfo, hardlinks map[uint64]string, w *tar.Write
 	}
 	hdr.Name = p
 
-	hardlink, linkDst := checkHardlink(p, hardlinks, i)
+	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {
 		hdr.Linkname = linkDst
 		hdr.Typeflag = tar.TypeLink
 		hdr.Size = 0
 	}
-	if err := w.WriteHeader(hdr); err != nil {
+	if err := t.w.WriteHeader(hdr); err != nil {
 		return err
 	}
 	if !(i.Mode().IsRegular()) || hardlink {
@@ -68,13 +93,13 @@ func AddToTar(p string, i os.FileInfo, hardlinks map[uint64]string, w *tar.Write
 		return err
 	}
 	defer r.Close()
-	if _, err := io.Copy(w, r); err != nil {
+	if _, err := io.Copy(t.w, r); err != nil {
 		return err
 	}
 	return nil
 }
 
-func Whiteout(p string, w *tar.Writer) error {
+func (t *Tar) Whiteout(p string) error {
 	dir := filepath.Dir(p)
 	name := ".wh." + filepath.Base(p)
 
@@ -82,7 +107,7 @@ func Whiteout(p string, w *tar.Writer) error {
 		Name: filepath.Join(dir, name),
 		Size: 0,
 	}
-	if err := w.WriteHeader(th); err != nil {
+	if err := t.w.WriteHeader(th); err != nil {
 		return err
 	}
 
@@ -90,7 +115,7 @@ func Whiteout(p string, w *tar.Writer) error {
 }
 
 // Returns true if path is hardlink, and the link destination
-func checkHardlink(p string, hardlinks map[uint64]string, i os.FileInfo) (bool, string) {
+func (t *Tar) checkHardlink(p string, i os.FileInfo) (bool, string) {
 	hardlink := false
 	linkDst := ""
 	stat := getSyscallStat_t(i)
@@ -98,12 +123,12 @@ func checkHardlink(p string, hardlinks map[uint64]string, i os.FileInfo) (bool, 
 		nlinks := stat.Nlink
 		if nlinks > 1 {
 			inode := stat.Ino
-			if original, exists := hardlinks[inode]; exists && original != p {
+			if original, exists := t.hardlinks[inode]; exists && original != p {
 				hardlink = true
 				logrus.Debugf("%s inode exists in hardlinks map, linking to %s", p, original)
 				linkDst = original
 			} else {
-				hardlinks[inode] = p
+				t.hardlinks[inode] = p
 			}
 		}
 	}

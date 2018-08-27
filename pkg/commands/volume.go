@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -53,13 +54,14 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 			return err
 		}
 
-		logrus.Infof("Creating directory %s", volume)
-		if err := os.MkdirAll(volume, 0755); err != nil {
-			return err
+		// Only create and snapshot the dir if it didn't exist already
+		if _, err := os.Stat(volume); os.IsNotExist(err) {
+			logrus.Infof("Creating directory %s", volume)
+			v.snapshotFiles = []string{volume}
+			if err := os.MkdirAll(volume, 0755); err != nil {
+				return fmt.Errorf("Could not create directory for volume %s: %s", volume, err)
+			}
 		}
-
-		//Check if directory already exists?
-		v.snapshotFiles = append(v.snapshotFiles, volume)
 	}
 	config.Volumes = existingVolumes
 

@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"archive/tar"
 	"compress/gzip"
 	"io"
 	"io/ioutil"
@@ -92,16 +91,11 @@ func setUpFilesAndTars(testDir string) error {
 }
 
 func createTar(testdir string, writer io.Writer) error {
-
-	w := tar.NewWriter(writer)
-	defer w.Close()
+	t := NewTar(writer)
+	defer t.Close()
 	for _, regFile := range regularFiles {
 		filePath := filepath.Join(testdir, regFile)
-		fi, err := os.Stat(filePath)
-		if err != nil {
-			return err
-		}
-		if err := AddToTar(filePath, fi, map[uint64]string{}, w); err != nil {
+		if err := t.AddFileToTar(filePath); err != nil {
 			return err
 		}
 	}
