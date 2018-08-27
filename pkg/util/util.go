@@ -19,12 +19,13 @@ package util
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"strconv"
 	"syscall"
+
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // SetLogLevel sets the logrus logging level
@@ -68,7 +69,8 @@ func Hasher() func(string) (string, error) {
 	return hasher
 }
 
-// MtimeHasher returns a hash function, which only looks at mtime to determine if a file has changed
+// MtimeHasher returns a hash function, which only looks at mtime to determine if a file has changed.
+// Note that the mtime can lag, so it's possible that a file will have changed but the mtime may look the same.
 func MtimeHasher() func(string) (string, error) {
 	hasher := func(p string) (string, error) {
 		h := md5.New()

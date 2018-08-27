@@ -40,6 +40,7 @@ func SetupFiles(path string, files map[string]string) error {
 }
 
 func CheckErrorAndDeepEqual(t *testing.T, shouldErr bool, err error, expected, actual interface{}) {
+	t.Helper()
 	if err := checkErr(shouldErr, err); err != nil {
 		t.Error(err)
 		return

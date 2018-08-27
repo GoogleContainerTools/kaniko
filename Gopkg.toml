@@ -12,10 +12,6 @@ required = [
   revision = "a40133b69fbd73ee655606a9bf5f8b9b9bf758dd"
 
 [[override]]
-  name = "github.com/containers/storage"
-  revision = "1e5ce40cdb84ab66e26186435b1273e04b879fef"
-
-[[override]]
   name = "github.com/opencontainers/runc"
   revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
 
@@ -32,10 +28,6 @@ required = [
   revision = "8124abf74e7633d82a5b96585b0da487d0e6eed0"
 
 [[constraint]]
-  name = "github.com/genuinetools/amicontained"
-  version = "0.4.0"
-
-[[constraint]]
   name = "github.com/aws/aws-sdk-go"
   version = "1.13.56"
 
@@ -46,11 +38,3 @@ required = [
 [[override]]
   name = "k8s.io/apimachinery"
   version = "kubernetes-1.11.0"
-
-[[override]]
-  name = "github.com/tonistiigi/fsutil"
-  branch = "master"
-
-[[constraint]]
-  name = "github.com/docker/docker"
-  revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"

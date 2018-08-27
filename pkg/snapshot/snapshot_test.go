@@ -29,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestSnapshotFileChange(t *testing.T) {
+func TestSnapshotFSFileChange(t *testing.T) {
 
 	testDir, snapshotter, err := setUpTestDir()
 	defer os.RemoveAll(testDir)
@@ -45,7 +45,7 @@ func TestSnapshotFileChange(t *testing.T) {
 		t.Fatalf("Error setting up fs: %s", err)
 	}
 	// Take another snapshot
-	contents, err := snapshotter.TakeSnapshot(nil)
+	contents, err := snapshotter.TakeSnapshotFS()
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
@@ -81,7 +81,7 @@ func TestSnapshotFileChange(t *testing.T) {
 	}
 }
 
-func TestSnapshotChangePermissions(t *testing.T) {
+func TestSnapshotFSChangePermissions(t *testing.T) {
 	testDir, snapshotter, err := setUpTestDir()
 	defer os.RemoveAll(testDir)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestSnapshotChangePermissions(t *testing.T) {
 		t.Fatalf("Error changing permissions on %s: %v", batPath, err)
 	}
 	// Take another snapshot
-	contents, err := snapshotter.TakeSnapshot(nil)
+	contents, err := snapshotter.TakeSnapshotFS()
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
@@ -141,7 +141,6 @@ func TestSnapshotFiles(t *testing.T) {
 	}
 	filesToSnapshot := []string{
 		filepath.Join(testDir, "foo"),
-		filepath.Join(testDir, "kaniko/file"),
 	}
 	contents, err := snapshotter.TakeSnapshot(filesToSnapshot)
 	if err != nil {
@@ -166,14 +165,14 @@ func TestSnapshotFiles(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
 }
 
-func TestEmptySnapshot(t *testing.T) {
+func TestEmptySnapshotFS(t *testing.T) {
 	testDir, snapshotter, err := setUpTestDir()
 	defer os.RemoveAll(testDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Take snapshot with no changes
-	contents, err := snapshotter.TakeSnapshot(nil)
+	contents, err := snapshotter.TakeSnapshotFS()
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
