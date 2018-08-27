@@ -155,7 +155,9 @@ func ChildDirInWhitelist(path, directory string) bool {
 	return false
 }
 
-func unTar(r io.Reader, dest string) error {
+// unTar returns a list of files that have been extracted from the tar archive at r to the path at dest
+func unTar(r io.Reader, dest string) ([]string, error) {
+	var extractedFiles []string
 	tr := tar.NewReader(r)
 	for {
 		hdr, err := tr.Next()
@@ -163,13 +165,14 @@ func unTar(r io.Reader, dest string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err := extractFile(dest, hdr, tr); err != nil {
-			return err
+			return nil, err
 		}
+		extractedFiles = append(extractedFiles, dest)
 	}
-	return nil
+	return extractedFiles, nil
 }
 
 func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
@@ -349,24 +352,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	return files, err
 }
 
-// Files returns a list of all files rooted at root
-func Files(root string) ([]string, error) {
-	var files []string
-	logrus.Debugf("Getting files and contents at root %s", root)
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		whitelisted, err := CheckWhitelist(path)
-		if err != nil {
-			return err
-		}
-		if whitelisted {
-			return nil
-		}
-		files = append(files, path)
-		return err
-	})
-	return files, err
-}
-
 // ParentDirectories returns a list of paths to all parent directories
 // Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
 func ParentDirectories(path string) []string {
@@ -459,16 +444,18 @@ func DownloadFileToDest(rawurl, dest string) error {
 }
 
 // CopyDir copies the file or directory at src to dest
-func CopyDir(src, dest string) error {
+// It returns a list of files it copied over
+func CopyDir(src, dest string) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var copiedFiles []string
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
@@ -478,24 +465,25 @@ func CopyDir(src, dest string) error {
 			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
 
 			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
-				return err
+				return nil, err
 			}
 			if err := os.Chown(destPath, uid, gid); err != nil {
-				return err
+				return nil, err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
 			if err := CopySymlink(fullPath, destPath); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
 			if err := CopyFile(fullPath, destPath); err != nil {
-				return err
+				return nil, err
 			}
 		}
+		copiedFiles = append(copiedFiles, destPath)
 	}
-	return nil
+	return copiedFiles, nil
 }
 
 // CopySymlink copies the symlink at src to dest

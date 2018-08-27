@@ -137,17 +137,17 @@ func (t *Tar) checkHardlink(p string, i os.FileInfo) (bool, string) {
 }
 
 // UnpackLocalTarArchive unpacks the tar archive at path to the directory dest
-// Returns true if the path was actually unpacked
-func UnpackLocalTarArchive(path, dest string) error {
+// Returns the files extracted from the tar archive
+func UnpackLocalTarArchive(path, dest string) ([]string, error) {
 	// First, we need to check if the path is a local tar archive
 	if compressed, compressionLevel := fileIsCompressedTar(path); compressed {
 		file, err := os.Open(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer file.Close()
 		if compressionLevel == archive.Gzip {
-			return UnpackCompressedTar(path, dest)
+			return nil, UnpackCompressedTar(path, dest)
 		} else if compressionLevel == archive.Bzip2 {
 			bzr := bzip2.NewReader(file)
 			return unTar(bzr, dest)
@@ -156,12 +156,12 @@ func UnpackLocalTarArchive(path, dest string) error {
 	if fileIsUncompressedTar(path) {
 		file, err := os.Open(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer file.Close()
 		return unTar(file, dest)
 	}
-	return errors.New("path does not lead to local tar archive")
+	return nil, errors.New("path does not lead to local tar archive")
 }
 
 //IsFileLocalTarArchive returns true if the file is a local tar archive
@@ -223,5 +223,6 @@ func UnpackCompressedTar(path, dir string) error {
 		return err
 	}
 	defer gzr.Close()
-	return unTar(gzr, dir)
+	_, err = unTar(gzr, dir)
+	return err
 }

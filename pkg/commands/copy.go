@@ -79,10 +79,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				// we need to add '/' to the end to indicate the destination is a directory
 				dest = filepath.Join(cwd, dest) + "/"
 			}
-			if err := util.CopyDir(fullPath, dest); err != nil {
-				return err
-			}
-			copiedFiles, err := util.Files(dest)
+			copiedFiles, err := util.CopyDir(fullPath, dest)
 			if err != nil {
 				return err
 			}
