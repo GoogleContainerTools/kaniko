@@ -155,7 +155,9 @@ func ChildDirInWhitelist(path, directory string) bool {
 	return false
 }
 
-func unTar(r io.Reader, dest string) error {
+// unTar returns a list of files that have been extracted from the tar archive at r to the path at dest
+func unTar(r io.Reader, dest string) ([]string, error) {
+	var extractedFiles []string
 	tr := tar.NewReader(r)
 	for {
 		hdr, err := tr.Next()
@@ -163,13 +165,14 @@ func unTar(r io.Reader, dest string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err := extractFile(dest, hdr, tr); err != nil {
-			return err
+			return nil, err
 		}
+		extractedFiles = append(extractedFiles, dest)
 	}
-	return nil
+	return extractedFiles, nil
 }
 
 func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
@@ -345,24 +348,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		}
 		files = append(files, relPath)
 		return nil
-	})
-	return files, err
-}
-
-// Files returns a list of all files rooted at root
-func Files(root string) ([]string, error) {
-	var files []string
-	logrus.Debugf("Getting files and contents at root %s", root)
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		whitelisted, err := CheckWhitelist(path)
-		if err != nil {
-			return err
-		}
-		if whitelisted {
-			return nil
-		}
-		files = append(files, path)
-		return err
 	})
 	return files, err
 }
