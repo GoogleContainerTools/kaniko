@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/pkg/errors"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
@@ -53,17 +54,14 @@ func GetFSFromImage(root string, img v1.Image) error {
 		return err
 	}
 
-	fs := map[string]struct{}{}
-	whiteouts := map[string]struct{}{}
-
-	for i := len(layers) - 1; i >= 0; i-- {
-		logrus.Infof("Unpacking layer: %d", i)
-		l := layers[i]
+	for i, l := range layers {
+		logrus.Infof("Extracting layer %d", i)
 		r, err := l.Uncompressed()
 		if err != nil {
 			return err
 		}
 		tr := tar.NewReader(r)
+		symlinks := []*tar.Header{}
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {
@@ -78,16 +76,9 @@ func GetFSFromImage(root string, img v1.Image) error {
 			if strings.HasPrefix(base, ".wh.") {
 				logrus.Infof("Whiting out %s", path)
 				name := strings.TrimPrefix(base, ".wh.")
-				whiteouts[filepath.Join(dir, name)] = struct{}{}
-				continue
-			}
-
-			if checkWhiteouts(path, whiteouts) {
-				logrus.Infof("Not adding %s because it is whited out", path)
-				continue
-			}
-			if _, ok := fs[path]; ok {
-				logrus.Infof("Not adding %s because it was added by a prior layer", path)
+				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
+					return errors.Wrapf(err, "removing whiteout %s", hdr.Name)
+				}
 				continue
 			}
 			whitelisted, err := CheckWhitelist(path)
@@ -107,11 +98,16 @@ func GetFSFromImage(root string, img v1.Image) error {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
+				symlinks = append(symlinks, hdr)
+				continue
 			}
-			fs[path] = struct{}{}
-
 			if err := extractFile(root, hdr, tr); err != nil {
 				return err
+			}
+		}
+		for _, s := range symlinks {
+			if err := extractFile(root, s, nil); err != nil {
+				return errors.Wrapf(err, "extracting symlink %s", s.Name)
 			}
 		}
 	}
@@ -224,25 +220,29 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	case tar.TypeLink:
 		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
 		// The base directory for a link may not exist before it is created.
-		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
-		if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}
 
 	case tar.TypeSymlink:
 		logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
 		// The base directory for a symlink may not exist before it is created.
-		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
+		}
+		// Check if something already exists at path
+		// If so, delete it
+		if FilepathExists(path) {
+			if err := os.Remove(path); err != nil {
+				return errors.Wrapf(err, "error removing %s to make way for new symlink", hdr.Name)
+			}
 		}
 		if err := os.Symlink(hdr.Linkname, path); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
