@@ -247,20 +247,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	return nil
 }
 
-func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
-	// Don't add the file if it or it's directory are whited out.
-	if _, ok := whiteouts[path]; ok {
-		return true
-	}
-	for wd := range whiteouts {
-		if HasFilepathPrefix(path, wd) {
-			logrus.Infof("Not adding %s because it's directory is whited out", path)
-			return true
-		}
-	}
-	return false
-}
-
 func CheckWhitelist(path string) (bool, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {

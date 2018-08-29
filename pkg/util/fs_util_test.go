@@ -164,58 +164,6 @@ func Test_ParentDirectories(t *testing.T) {
 	}
 }
 
-func Test_checkWhiteouts(t *testing.T) {
-	type args struct {
-		path      string
-		whiteouts map[string]struct{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "file whited out",
-			args: args{
-				path:      "/foo",
-				whiteouts: map[string]struct{}{"/foo": {}},
-			},
-			want: true,
-		},
-		{
-			name: "directory whited out",
-			args: args{
-				path:      "/foo/bar",
-				whiteouts: map[string]struct{}{"/foo": {}},
-			},
-			want: true,
-		},
-		{
-			name: "grandparent whited out",
-			args: args{
-				path:      "/foo/bar/baz",
-				whiteouts: map[string]struct{}{"/foo": {}},
-			},
-			want: true,
-		},
-		{
-			name: "sibling whited out",
-			args: args{
-				path:      "/foo/bar/baz",
-				whiteouts: map[string]struct{}{"/foo/bat": {}},
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := checkWhiteouts(tt.args.path, tt.args.whiteouts); got != tt.want {
-				t.Errorf("checkWhiteouts() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
