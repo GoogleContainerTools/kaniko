@@ -23,7 +23,7 @@ type KanikoOptions struct {
 	SrcContext     string
 	SnapshotMode   string
 	Bucket         string
-	DockerInsecure bool
+	InsecurePush   bool
 	SkipTlsVerify  bool
 	BuildArgs      multiArg
 	TarPath        string

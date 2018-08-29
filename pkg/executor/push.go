@@ -67,7 +67,7 @@ func DoPush(image v1.Image, opts *options.KanikoOptions) error {
 
 	// continue pushing unless an error occurs
 	for _, destRef := range destRefs {
-		if opts.DockerInsecure {
+		if opts.InsecurePush {
 			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
