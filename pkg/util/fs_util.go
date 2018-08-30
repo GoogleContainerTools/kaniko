@@ -19,7 +19,9 @@ package util
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -42,6 +44,11 @@ var whitelist = []string{
 }
 var volumeWhitelist = []string{}
 
+type hardlink struct {
+	links    []*tar.Header
+	contents []byte
+}
+
 func GetFSFromImage(root string, img v1.Image) error {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
@@ -55,6 +62,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 
 	fs := map[string]struct{}{}
 	whiteouts := map[string]struct{}{}
+	hardlinks := map[string]*hardlink{}
 
 	for i := len(layers) - 1; i >= 0; i-- {
 		logrus.Infof("Unpacking layer: %d", i)
@@ -63,12 +71,23 @@ func GetFSFromImage(root string, img v1.Image) error {
 		if err != nil {
 			return err
 		}
-		tr := tar.NewReader(r)
+		layerContents, err := ioutil.ReadAll(r)
+		if err != nil {
+			return err
+		}
+		if err := retrieveHardlinks(layerContents, hardlinks); err != nil {
+			return err
+		}
+		tr := tar.NewReader(bytes.NewReader(layerContents))
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {
 				break
 			}
+			if err != nil {
+				return err
+			}
+			contents, err := ioutil.ReadAll(tr)
 			if err != nil {
 				return err
 			}
@@ -80,6 +99,9 @@ func GetFSFromImage(root string, img v1.Image) error {
 				name := strings.TrimPrefix(base, ".wh.")
 				whiteouts[filepath.Join(dir, name)] = struct{}{}
 				continue
+			}
+			if err := resolveHardlink(hdr, contents, hardlinks); err != nil {
+				return err
 			}
 
 			if checkWhiteouts(path, whiteouts) {
@@ -108,11 +130,93 @@ func GetFSFromImage(root string, img v1.Image) error {
 					continue
 				}
 			}
+			if hdr.Typeflag == tar.TypeLink {
+				continue
+			}
+
 			fs[path] = struct{}{}
 
-			if err := extractFile(root, hdr, tr); err != nil {
+			if err := extractFile(root, hdr, bytes.NewReader(contents)); err != nil {
 				return err
 			}
+		}
+	}
+	// Process hardlinks
+	for k, h := range hardlinks {
+		if regularFile(k) {
+			for _, link := range h.links {
+				if err := extractFile(root, link, nil); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+		original := h.links[0]
+		original.Typeflag = tar.TypeReg
+		if err := extractFile(root, original, bytes.NewReader(h.contents)); err != nil {
+			return err
+		}
+		for _, link := range h.links[1:] {
+			link.Linkname = original.Name
+			if err := extractFile(root, link, nil); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func regularFile(fp string) bool {
+	fi, err := os.Stat(fp)
+	if err != nil {
+		return false
+	}
+	return fi.Mode().IsRegular()
+}
+
+func retrieveHardlinks(layerContents []byte, hardlinks map[string]*hardlink) error {
+	tr := tar.NewReader(bytes.NewReader(layerContents))
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if hdr.Typeflag == tar.TypeLink {
+			// If linkname no longer exists, extract hardlink as regular file
+			linkname := filepath.Clean(filepath.Join("/", hdr.Linkname))
+			whitelisted, err := CheckWhitelist(linkname)
+			if err != nil {
+				return err
+			}
+			if whitelisted {
+				continue
+			}
+			if h, ok := hardlinks[linkname]; ok {
+				h.links = append(h.links, hdr)
+				continue
+			}
+			hardlinks[linkname] = &hardlink{
+				links: []*tar.Header{hdr},
+			}
+			continue
+		}
+	}
+	return nil
+}
+
+func resolveHardlink(hdr *tar.Header, contents []byte, hardlinks map[string]*hardlink) error {
+	for k, h := range hardlinks {
+		if h.contents != nil {
+			return nil
+		}
+		if hdr.Typeflag != tar.TypeReg {
+			continue
+		}
+		if k == filepath.Clean(filepath.Join("/", hdr.Name)) {
+			h.contents = contents
 		}
 	}
 	return nil
@@ -222,13 +326,12 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 
 	case tar.TypeLink:
-		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
 		// The base directory for a link may not exist before it is created.
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
-		if err := os.Symlink(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}
 

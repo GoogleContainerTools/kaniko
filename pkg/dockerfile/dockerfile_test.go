@@ -32,10 +32,10 @@ func Test_ResolveStages(t *testing.T) {
 	FROM scratch
 	RUN echo hi > /hi
 	
-	FROM scratch AS second
+	FROM gcr.io/distroless/base AS second
 	COPY --from=0 /hi /hi2
 	
-	FROM scratch
+	FROM another/image
 	COPY --from=second /hi2 /hi3
 	`
 	stages, err := Parse([]byte(dockerfile))
