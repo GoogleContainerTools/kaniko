@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
@@ -150,6 +151,10 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		if finalStage {
+			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
+			if err != nil {
+				return nil, err
+			}
 			if opts.Reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)
 				if err != nil {
