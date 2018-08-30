@@ -61,7 +61,6 @@ func GetFSFromImage(root string, img v1.Image) error {
 			return err
 		}
 		tr := tar.NewReader(r)
-		symlinks := []*tar.Header{}
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {
@@ -98,16 +97,9 @@ func GetFSFromImage(root string, img v1.Image) error {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
-				symlinks = append(symlinks, hdr)
-				continue
 			}
 			if err := extractFile(root, hdr, tr); err != nil {
 				return err
-			}
-		}
-		for _, s := range symlinks {
-			if err := extractFile(root, s, nil); err != nil {
-				return errors.Wrapf(err, "extracting symlink %s", s.Name)
 			}
 		}
 	}
