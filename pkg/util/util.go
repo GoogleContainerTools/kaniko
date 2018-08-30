@@ -28,13 +28,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// SetLogLevel sets the logrus logging level
-func SetLogLevel(logLevel string) error {
+// ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
+func ConfigureLogging(logLevel string) error {
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
 		return errors.Wrap(err, "parsing log level")
 	}
 	logrus.SetLevel(lvl)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		ForceColors: true,
+	})
 	return nil
 }
 

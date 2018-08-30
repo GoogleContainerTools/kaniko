@@ -48,24 +48,31 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		logrus.Info("Skipping push to container registry due to --no-push flag")
 		return nil
 	}
-	// continue pushing unless an error occurs
+	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
-		// Push the image
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
+		destRefs = append(destRefs, destRef)
+	}
 
+	if opts.TarPath != "" {
+		tagToImage := map[name.Tag]v1.Image{}
+		for _, destRef := range destRefs {
+			tagToImage[destRef] = image
+		}
+		return tarball.MultiWriteToFile(opts.TarPath, tagToImage, nil)
+	}
+
+	// continue pushing unless an error occurs
+	for _, destRef := range destRefs {
 		if opts.DockerInsecureSkipTLSVerify {
 			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
 			destRef.Repository.Registry = newReg
-		}
-
-		if opts.TarPath != "" {
-			return tarball.WriteToFile(opts.TarPath, destRef, image, nil)
 		}
 
 		k8sc, err := k8schain.NewNoClient()
@@ -88,7 +95,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		rt := &withUserAgent{t: tr}
 
 		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destination))
+			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
 	return nil

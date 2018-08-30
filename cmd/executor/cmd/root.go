@@ -48,7 +48,7 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := util.SetLogLevel(logLevel); err != nil {
+		if err := util.ConfigureLogging(logLevel); err != nil {
 			return err
 		}
 		if !opts.NoPush && len(opts.Destinations) == 0 {
