@@ -285,6 +285,14 @@ Set this flag to indicate which build stage is the target build stage.
 
 Set this flag if you only want to build the image, without pushing to a registry.
 
+#### --insecure
+
+Set this flag if you want to connect to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify
+
+Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.
