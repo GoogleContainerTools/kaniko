@@ -79,6 +79,12 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 		for index, cmd := range stage.Commands {
 			finalCmd := index == len(stage.Commands)-1
 			dockerCommand, err := commands.GetCommand(cmd, opts.SrcContext)
+			// Check the cache here. Create the key based on the command.
+
+			// Create key. Pass in command object.
+
+			// Check Registry using image_util.remoteImage
+
 			if err != nil {
 				return nil, err
 			}
