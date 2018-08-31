@@ -73,7 +73,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
 			if strings.HasPrefix(base, ".wh.") {
-				logrus.Infof("Whiting out %s", path)
+				logrus.Debugf("Whiting out %s", path)
 				name := strings.TrimPrefix(base, ".wh.")
 				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
 					return errors.Wrapf(err, "removing whiteout %s", hdr.Name)
@@ -85,7 +85,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 				return err
 			}
 			if whitelisted && !checkWhitelistRoot(root) {
-				logrus.Infof("Not adding %s because it is whitelisted", path)
+				logrus.Debugf("Not adding %s because it is whitelisted", path)
 				continue
 			}
 			if hdr.Typeflag == tar.TypeSymlink {

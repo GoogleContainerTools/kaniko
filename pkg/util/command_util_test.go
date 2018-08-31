@@ -219,6 +219,7 @@ var matchSourcesTests = []struct {
 	{
 		srcs: []string{
 			"pkg/*",
+			"/root/dir?",
 			testUrl,
 		},
 		files: []string{
@@ -227,8 +228,10 @@ var matchSourcesTests = []struct {
 			"/pkg/d",
 			"pkg/b/d/",
 			"dir/",
+			"root/dir1",
 		},
 		expectedFiles: []string{
+			"/root/dir1",
 			"pkg/a",
 			"pkg/b",
 			testUrl,
