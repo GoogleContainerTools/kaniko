@@ -180,7 +180,11 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		}
 	}
 
+	// If there is only one source and it's a directory, docker assumes the dest is a directory
 	if len(resolvedSources) == 1 {
+		if IsSrcRemoteFileURL(resolvedSources[0]) {
+			return nil
+		}
 		fi, err := os.Lstat(filepath.Join(root, resolvedSources[0]))
 		if err != nil {
 			return err
@@ -245,7 +249,7 @@ func UpdateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config, rep
 	// First, convert config.Env array to []instruction.KeyValuePair
 	var kvps []instructions.KeyValuePair
 	for _, env := range config.Env {
-		entry := strings.Split(env, "=")
+		entry := strings.SplitN(env, "=", 2)
 		kvps = append(kvps, instructions.KeyValuePair{
 			Key:   entry[0],
 			Value: entry[1],

@@ -339,6 +339,16 @@ var isSrcValidTests = []struct {
 		},
 		shouldErr: false,
 	},
+	{
+		srcsAndDest: []string{
+			testUrl,
+			"dest",
+		},
+		resolvedSources: []string{
+			testUrl,
+		},
+		shouldErr: false,
+	},
 }
 
 func Test_IsSrcsValid(t *testing.T) {

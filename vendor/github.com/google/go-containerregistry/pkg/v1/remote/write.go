@@ -120,6 +120,26 @@ func (w *writer) nextLocation(resp *http.Response) (string, error) {
 	return resp.Request.URL.ResolveReference(u).String(), nil
 }
 
+// checkExisting checks if a blob exists already in the repository by making a
+// HEAD request to the blob store API.  GCR performs an existence check on the
+// initiation if "mount" is specified, even if no "from" sources are specified.
+// However, this is not broadly applicable to all registries, e.g. ECR.
+func (w *writer) checkExisting(h v1.Hash) (bool, error) {
+	u := w.url(fmt.Sprintf("/v2/%s/blobs/%s", w.ref.Context().RepositoryStr(), h.String()))
+
+	resp, err := w.client.Head(u.String())
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if err := CheckError(resp, http.StatusOK, http.StatusNotFound); err != nil {
+		return false, err
+	}
+
+	return resp.StatusCode == http.StatusOK, nil
+}
+
 // initiateUpload initiates the blob upload, which starts with a POST that can
 // optionally include the hash of the layer and a list of repositories from
 // which that layer might be read. On failure, an error is returned.
@@ -135,10 +155,7 @@ func (w *writer) initiateUpload(h v1.Hash) (location string, mounted bool, err e
 	if err != nil {
 		return "", false, err
 	}
-	// We currently avoid HEAD because it's semi-redundant with the mount that is part
-	// of initiating the blob upload.  GCR will perform an existence check on the initiation
-	// if "mount" is specified, even if no "from" sources are specified.  If this turns out
-	// to not be broadly applicable then we should replace mounts without "from"s with a HEAD.
+
 	if ml, ok := l.(*MountableLayer); ok {
 		if w.ref.Context().RegistryStr() == ml.Reference.Context().RegistryStr() {
 			uv["from"] = []string{ml.Reference.Context().RepositoryStr()}
@@ -231,6 +248,15 @@ func (w *writer) commitBlob(h v1.Hash, location string) (err error) {
 
 // uploadOne performs a complete upload of a single layer.
 func (w *writer) uploadOne(h v1.Hash) error {
+	existing, err := w.checkExisting(h)
+	if err != nil {
+		return err
+	}
+	if existing {
+		log.Printf("existing blob: %v", h)
+		return nil
+	}
+
 	location, mounted, err := w.initiateUpload(h)
 	if err != nil {
 		return err

@@ -65,6 +65,18 @@ func RetrieveSourceImage(index int, buildArgs []string, stages []instructions.St
 	return retrieveRemoteImage(currentBaseName)
 }
 
+// RetrieveConfigFile returns the config file for an image
+func RetrieveConfigFile(sourceImage v1.Image) (*v1.ConfigFile, error) {
+	imageConfig, err := sourceImage.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	if sourceImage == empty.Image {
+		imageConfig.Config.Env = constants.ScratchEnvVars
+	}
+	return imageConfig, nil
+}
+
 func tarballImage(index int) (v1.Image, error) {
 	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(index))
 	logrus.Infof("Base image from previous stage %d found, using saved tar at path %s", index, tarPath)

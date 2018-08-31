@@ -29,6 +29,7 @@ We do **not** recommend running the kaniko executor binary in another image, as 
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
 - [Community](#community)
+- [Limitations](#limitations)
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
@@ -240,7 +241,7 @@ To configure credentials, you will need to do the following:
         - name: aws-secret
           mountPath: /root/.aws/
         - name: docker-config
-          mountPath: /root/.docker/
+          mountPath: /kaniko/.docker/
     restartPolicy: Never
     volumes:
       - name: aws-secret
@@ -256,7 +257,8 @@ To configure credentials, you will need to do the following:
 #### --snapshotMode
 
 You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
-If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting.
+If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
+[limitations related to mtime](#mtime-and-snapshotting)).
 
 #### --build-arg
 
@@ -278,6 +280,10 @@ Set this flag as `--tarPath=<path>` to save the image as a tarball at path inste
 #### --target
 
 Set this flag to indicate which build stage is the target build stage.
+
+#### --no-push
+
+Set this flag if you only want to build the image, without pushing to a registry.
 
 ### Debug Image
 
@@ -352,3 +358,23 @@ provides.
 [kaniko-users](https://groups.google.com/forum/#!forum/kaniko-users) Google group
 
 To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Limitations
+
+### mtime and snapshotting
+
+When taking a snapshot, kaniko's hashing algorithms include (or in the case of
+[`--snapshotMode=time`](#--snapshotmode), only use) a file's
+[`mtime`](https://en.wikipedia.org/wiki/Inode#POSIX_inode_description) to determine
+if the file has changed. Unfortunately there is a delay between when changes to a
+file are made and when the `mtime` is updated. This means:
+
+* With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss changes
+  introduced by `RUN` commands entirely.
+* With the default snapshot mode (`--snapshotMode=full`), whether or not kaniko will
+  add a layer in the case where a `RUN` command modifies a file **but the contents do
+  not** change is theoretically non-deterministic. This _does not affect the contents_
+  which will still be correct, but it does affect the number of layers.
+
+_Note that these issues are currently theoretical only. If you see this issue occur, please
+[open an issue](https://github.com/GoogleContainerTools/kaniko/issues)._

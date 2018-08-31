@@ -116,8 +116,10 @@ func SaveStage(index int, stages []instructions.Stage) bool {
 		if stageIndex <= index {
 			continue
 		}
-		if stage.Name == stages[index].BaseName {
-			return true
+		if stage.BaseName == stages[index].Name {
+			if stage.BaseName != "" {
+				return true
+			}
 		}
 		for _, cmd := range stage.Commands {
 			switch c := cmd.(type) {

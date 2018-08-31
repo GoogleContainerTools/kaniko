@@ -135,11 +135,9 @@ func TestMain(m *testing.M) {
 	defer DeleteFromBucket(fileInBucket)
 
 	fmt.Println("Building kaniko image")
-	buildKaniko := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
-	err = buildKaniko.Run()
-	if err != nil {
-		fmt.Print(err)
-		fmt.Print("Building kaniko failed.")
+	cmd := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
+	if _, err = RunCommandWithoutTest(cmd); err != nil {
+		fmt.Printf("Building kaniko failed: %s", err)
 		os.Exit(1)
 	}
 
@@ -197,7 +195,7 @@ func TestRun(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":     9,
+		"Dockerfile_test_add":     10,
 		"Dockerfile_test_scratch": 3,
 		// the Docker built image combined some of the dirs defined by separate VOLUME commands into one layer
 		// which is why this offset exists

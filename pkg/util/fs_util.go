@@ -90,13 +90,20 @@ func GetFSFromImage(root string, img v1.Image) error {
 				logrus.Infof("Not adding %s because it was added by a prior layer", path)
 				continue
 			}
-
-			if CheckWhitelist(path) && !checkWhitelistRoot(root) {
+			whitelisted, err := CheckWhitelist(path)
+			if err != nil {
+				return err
+			}
+			if whitelisted && !checkWhitelistRoot(root) {
 				logrus.Infof("Not adding %s because it is whitelisted", path)
 				continue
 			}
 			if hdr.Typeflag == tar.TypeSymlink {
-				if CheckWhitelist(hdr.Linkname) {
+				whitelisted, err := CheckWhitelist(hdr.Linkname)
+				if err != nil {
+					return err
+				}
+				if whitelisted {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 					continue
 				}
@@ -115,7 +122,11 @@ func GetFSFromImage(root string, img v1.Image) error {
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
-		if CheckWhitelist(path) || ChildDirInWhitelist(path, constants.RootDir) {
+		whitelisted, err := CheckWhitelist(path)
+		if err != nil {
+			return err
+		}
+		if whitelisted || ChildDirInWhitelist(path, constants.RootDir) {
 			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
 			return nil
 		}
@@ -144,7 +155,9 @@ func ChildDirInWhitelist(path, directory string) bool {
 	return false
 }
 
-func unTar(r io.Reader, dest string) error {
+// unTar returns a list of files that have been extracted from the tar archive at r to the path at dest
+func unTar(r io.Reader, dest string) ([]string, error) {
+	var extractedFiles []string
 	tr := tar.NewReader(r)
 	for {
 		hdr, err := tr.Next()
@@ -152,13 +165,14 @@ func unTar(r io.Reader, dest string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err := extractFile(dest, hdr, tr); err != nil {
-			return err
+			return nil, err
 		}
+		extractedFiles = append(extractedFiles, dest)
 	}
-	return nil
+	return extractedFiles, nil
 }
 
 func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
@@ -247,13 +261,18 @@ func checkWhiteouts(path string, whiteouts map[string]struct{}) bool {
 	return false
 }
 
-func CheckWhitelist(path string) bool {
+func CheckWhitelist(path string) (bool, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		logrus.Infof("unable to get absolute path for %s", path)
+		return false, err
+	}
 	for _, wl := range whitelist {
-		if HasFilepathPrefix(path, wl) {
-			return true
+		if HasFilepathPrefix(abs, wl) {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func checkWhitelistRoot(root string) bool {
@@ -313,7 +332,11 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
-		if CheckWhitelist(path) && !HasFilepathPrefix(path, root) {
+		whitelisted, err := CheckWhitelist(path)
+		if err != nil {
+			return err
+		}
+		if whitelisted && !HasFilepathPrefix(path, root) {
 			return nil
 		}
 		if err != nil {
@@ -325,20 +348,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		}
 		files = append(files, relPath)
 		return nil
-	})
-	return files, err
-}
-
-// Files returns a list of all files rooted at root
-func Files(root string) ([]string, error) {
-	var files []string
-	logrus.Debugf("Getting files and contents at root %s", root)
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if CheckWhitelist(path) {
-			return nil
-		}
-		files = append(files, path)
-		return err
 	})
 	return files, err
 }
@@ -451,17 +460,19 @@ func determineChownUidGid(fileInfo os.FileInfo, chownUid, chownGid int) (uint32,
 }
 
 // CopyDir copies the file or directory at src to dest
-// will chown the file or directory to the uidStr/gidStr if non-negative
-func CopyDir(src string, dest string, chownUid int, chownGid int) error {
+// will chown the file or directory to the uid/gid if non-negative
+// It returns a list of files it copied over
+func CopyDir(src string, dest string, chownUid int, chownGid int) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var copiedFiles []string
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		uid, gid := determineChownUidGid(fi, chownUid, chownGid)
@@ -471,24 +482,25 @@ func CopyDir(src string, dest string, chownUid int, chownGid int) error {
 			logrus.Infof("Creating directory %s", destPath)
 
 			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
-				return err
+				return nil, err
 			}
 			if err := os.Chown(destPath, int(uid), int(gid)); err != nil {
-				return err
+				return nil, err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
 			if err := CopySymlink(fullPath, destPath, chownUid, chownGid); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
 			if err := CopyFile(fullPath, destPath, chownUid, chownGid); err != nil {
-				return err
+				return nil, err
 			}
 		}
+		copiedFiles = append(copiedFiles, destPath)
 	}
-	return nil
+	return copiedFiles, nil
 }
 
 // CopySymlink copies the symlink at src to dest
