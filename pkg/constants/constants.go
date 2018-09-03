@@ -54,6 +54,7 @@ const (
 	GCSBuildContextPrefix      = "gs://"
 	S3BuildContextPrefix       = "s3://"
 	LocalDirBuildContextPrefix = "dir://"
+	GitBuildContextPrefix      = "git://"
 
 	// DefaultHOMEValue is the default value Docker sets for $HOME
 	HOME             = "HOME"

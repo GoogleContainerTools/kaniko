@@ -18,8 +18,9 @@ package buildcontext
 
 import (
 	"errors"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 // BuildContext unifies calls to download and unpack the build context.
@@ -41,6 +42,8 @@ func GetBuildContext(srcContext string) (BuildContext, error) {
 		return &S3{context: context}, nil
 	case constants.LocalDirBuildContextPrefix:
 		return &Dir{context: context}, nil
+	case constants.GitBuildContextPrefix:
+		return &Git{context: context}, nil
 	}
-	return nil, errors.New("unknown build context prefix provided, please use one of the following: gs://, dir://, s3://")
+	return nil, errors.New("unknown build context prefix provided, please use one of the following: gs://, dir://, s3://, git://")
 }
