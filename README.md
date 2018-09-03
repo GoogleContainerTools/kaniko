@@ -56,7 +56,7 @@ To use kaniko to build and push an image for you, you will need:
 
 ### kaniko Build Contexts
 
-kaniko currently supports local directories, Google Cloud Storage and Amazon S3 as build contexts.
+kaniko currently supports local directories, Google Cloud Storage, Amazon S3 and Git Repositories as build contexts.
 If using a GCS or S3 bucket, the bucket should contain a compressed tar of the build context, which kaniko will unpack and use. 
 
 To create a compressed tar, you can run:
@@ -76,9 +76,13 @@ Use the `--context` flag with the appropriate prefix to specify your build conte
 | Local Directory  | dir://[path to directory]  |
 | GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     | 
 | S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
+| Git Repository   | git://[repository url]     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`. 
+
+### Using Private Git Repository
+You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
 ### Running kaniko
 
