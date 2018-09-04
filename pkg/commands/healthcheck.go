@@ -17,12 +17,9 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type HealthCheckCommand struct {
@@ -31,8 +28,6 @@ type HealthCheckCommand struct {
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
 func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: HEALTHCHECK")
-
 	check := v1.HealthConfig(*h.cmd.Health)
 	config.Healthcheck = &check
 
@@ -44,9 +39,12 @@ func (h *HealthCheckCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (h *HealthCheckCommand) CreatedBy() string {
-	entrypoint := []string{"HEALTHCHECK"}
+// String returns some information about the command for the image config history
+func (h *HealthCheckCommand) String() string {
+	return h.cmd.String()
+}
 
-	return strings.Join(append(entrypoint, strings.Join(h.cmd.Health.Test, " ")), " ")
+// CacheCommand returns false since this command shouldn't be cached
+func (h *HealthCheckCommand) CacheCommand() bool {
+	return false
 }

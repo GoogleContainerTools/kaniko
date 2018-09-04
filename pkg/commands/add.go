@@ -18,7 +18,6 @@ package commands
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
@@ -46,9 +45,6 @@ type AddCommand struct {
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	srcs := a.cmd.SourcesAndDest[:len(a.cmd.SourcesAndDest)-1]
 	dest := a.cmd.SourcesAndDest[len(a.cmd.SourcesAndDest)-1]
-
-	logrus.Infof("cmd: Add %s", srcs)
-	logrus.Infof("dest: %s", dest)
 
 	// First, resolve any environment replacement
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
@@ -112,7 +108,12 @@ func (a *AddCommand) FilesToSnapshot() []string {
 	return a.snapshotFiles
 }
 
-// CreatedBy returns some information about the command for the image config
-func (a *AddCommand) CreatedBy() string {
-	return strings.Join(a.cmd.SourcesAndDest, " ")
+// String returns some information about the command for the image config
+func (a *AddCommand) String() string {
+	return a.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (a *AddCommand) CacheCommand() bool {
+	return false
 }
