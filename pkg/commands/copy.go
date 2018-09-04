@@ -35,9 +35,6 @@ type CopyCommand struct {
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	srcs := c.cmd.SourcesAndDest[:len(c.cmd.SourcesAndDest)-1]
-	dest := c.cmd.SourcesAndDest[len(c.cmd.SourcesAndDest)-1]
-
 	// Resolve from
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
@@ -48,9 +45,9 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return err
 	}
-	dest = resolvedEnvs[len(resolvedEnvs)-1]
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
 	// Resolve wildcards and get a list of resolved sources
-	srcs, err = util.ResolveSources(resolvedEnvs, c.buildcontext)
+	srcs, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
 		return err
 	}
