@@ -20,8 +20,12 @@ RUN echo "hey" > /tmp/foo
 USER testuser:1001
 RUN echo "hey2" >> /tmp/foo
 
+USER root
+
 RUN useradd -ms /bin/bash newuser
 USER newuser
 RUN echo "hi" > $HOME/file
 COPY context/foo $HOME/foo
 
+USER 1001
+RUN touch ~/invalid
