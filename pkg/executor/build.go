@@ -30,20 +30,19 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/GoogleContainerTools/kaniko/pkg/options"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
-func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
+func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
-	stages, err := dockerfile.Stages(opts.DockerfilePath, opts.Target)
+	stages, err := dockerfile.Stages(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +52,8 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 	for index, stage := range stages {
-		finalStage := finalStage(index, opts.Target, stages)
 		// Unpack file system to root
-		sourceImage, err := util.RetrieveSourceImage(index, opts.BuildArgs, stages)
+		sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +93,7 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 			// If this is an intermediate stage, we only snapshot for the last command and we
 			// want to snapshot the entire filesystem since we aren't tracking what was changed
 			// by previous commands.
-			if !finalStage {
+			if !stage.FinalStage {
 				if finalCmd {
 					contents, err = snapshotter.TakeSnapshotFS()
 				}
@@ -151,7 +149,7 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, err
 		}
-		if finalStage {
+		if stage.FinalStage {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
 			if err != nil {
 				return nil, err
@@ -164,7 +162,7 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 			}
 			return sourceImage, nil
 		}
-		if dockerfile.SaveStage(index, stages) {
+		if stage.SaveStage {
 			if err := saveStageAsTarball(index, sourceImage); err != nil {
 				return nil, err
 			}
@@ -178,16 +176,6 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 		}
 	}
 	return nil, err
-}
-
-func finalStage(index int, target string, stages []instructions.Stage) bool {
-	if index == len(stages)-1 {
-		return true
-	}
-	if target == "" {
-		return false
-	}
-	return target == stages[index].Name
 }
 
 func extractImageToDependecyDir(index int, image v1.Image) error {
@@ -223,7 +211,7 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
-func resolveOnBuild(stage *instructions.Stage, config *v1.Config) error {
+func resolveOnBuild(stage *config.KanikoStage, config *v1.Config) error {
 	if config.OnBuild == nil {
 		return nil
 	}
