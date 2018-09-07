@@ -27,10 +27,11 @@ import (
 )
 
 type LayeredMap struct {
-	layers      []map[string]string
-	whiteouts   []map[string]string
-	added       []map[string]string
-	hasher      func(string) (string, error)
+	layers    []map[string]string
+	whiteouts []map[string]string
+	added     []map[string]string
+	hasher    func(string) (string, error)
+	// cacheHasher doesn't include mtime in it's hash so that filesystem cache keys are stable
 	cacheHasher func(string) (string, error)
 }
 

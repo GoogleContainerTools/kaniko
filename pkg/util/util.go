@@ -122,5 +122,8 @@ func MtimeHasher() func(string) (string, error) {
 func SHA256(r io.Reader) (string, error) {
 	hasher := sha256.New()
 	_, err := io.Copy(hasher, r)
-	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), err
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
 }

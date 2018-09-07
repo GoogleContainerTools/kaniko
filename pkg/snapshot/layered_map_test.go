@@ -32,11 +32,15 @@ func Test_CacheKey(t *testing.T) {
 				"a": "apple",
 				"b": "bat",
 				"c": "cat",
+				"d": "dog",
+				"e": "egg",
 			},
 			map2: map[string]string{
 				"c": "cat",
+				"d": "dog",
 				"b": "bat",
 				"a": "apple",
+				"e": "egg",
 			},
 			equal: true,
 		},
@@ -67,11 +71,8 @@ func Test_CacheKey(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error getting key for map 2: %v", err)
 			}
-			if test.equal && k1 != k2 {
-				t.Fatalf("keys differ.\nExpected\n%+v\nActual\n%+v", k1, k2)
-			}
-			if !test.equal && k1 == k2 {
-				t.Fatal("keys are the same, expected different keys")
+			if test.equal != (k1 == k2) {
+				t.Fatalf("unexpected result: \nExpected\n%s\nActual\n%s\n", k1, k2)
 			}
 		})
 	}
