@@ -85,6 +85,7 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 			if dockerCommand == nil {
 				continue
 			}
+			logrus.Info(dockerCommand.String())
 			if err := dockerCommand.ExecuteCommand(&imageConfig.Config, buildArgs); err != nil {
 				return nil, err
 			}
@@ -138,7 +139,7 @@ func DoBuild(opts *options.KanikoOptions) (v1.Image, error) {
 					Layer: layer,
 					History: v1.History{
 						Author:    constants.Author,
-						CreatedBy: dockerCommand.CreatedBy(),
+						CreatedBy: dockerCommand.String(),
 					},
 				},
 			)
