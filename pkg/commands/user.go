@@ -17,8 +17,6 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/v1"

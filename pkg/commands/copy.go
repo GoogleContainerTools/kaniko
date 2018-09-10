@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
