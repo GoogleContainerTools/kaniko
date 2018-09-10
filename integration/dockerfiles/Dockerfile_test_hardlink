@@ -1,0 +1,5 @@
+FROM gcr.io/kaniko-test/hardlink-base:latest
+RUN ls -al /usr/libexec/git-core/git /usr/bin/git /usr/libexec/git-core/git-diff
+RUN stat /usr/bin/git
+RUN stat /usr/libexec/git-core/git
+RUN git --version > /git-version

@@ -17,13 +17,10 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type ArgCommand struct {
@@ -32,7 +29,6 @@ type ArgCommand struct {
 
 // ExecuteCommand only needs to add this ARG key/value as seen
 func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("ARG")
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedKey, err := util.ResolveEnvironmentReplacement(r.cmd.Key, replacementEnvs, false)
 	if err != nil {
@@ -55,7 +51,12 @@ func (r *ArgCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (r *ArgCommand) CreatedBy() string {
-	return strings.Join([]string{r.cmd.Name(), r.cmd.Key}, " ")
+// String returns some information about the command for the image config history
+func (r *ArgCommand) String() string {
+	return r.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (r *ArgCommand) CacheCommand() bool {
+	return false
 }

@@ -18,7 +18,6 @@ package commands
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
@@ -44,21 +43,15 @@ type AddCommand struct {
 // 	2. If <src> is a local tar archive:
 // 		-If <src> is a local tar archive, it is unpacked at the dest, as 'tar -x' would
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	srcs := a.cmd.SourcesAndDest[:len(a.cmd.SourcesAndDest)-1]
-	dest := a.cmd.SourcesAndDest[len(a.cmd.SourcesAndDest)-1]
-
-	logrus.Infof("cmd: Add %s", srcs)
-	logrus.Infof("dest: %s", dest)
-
 	// First, resolve any environment replacement
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(a.cmd.SourcesAndDest, replacementEnvs, true)
 	if err != nil {
 		return err
 	}
-	dest = resolvedEnvs[len(resolvedEnvs)-1]
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
 	// Resolve wildcards and get a list of resolved sources
-	srcs, err = util.ResolveSources(resolvedEnvs, a.buildcontext)
+	srcs, err := util.ResolveSources(resolvedEnvs, a.buildcontext)
 	if err != nil {
 		return err
 	}
@@ -112,7 +105,12 @@ func (a *AddCommand) FilesToSnapshot() []string {
 	return a.snapshotFiles
 }
 
-// CreatedBy returns some information about the command for the image config
-func (a *AddCommand) CreatedBy() string {
-	return strings.Join(a.cmd.SourcesAndDest, " ")
+// String returns some information about the command for the image config
+func (a *AddCommand) String() string {
+	return a.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (a *AddCommand) CacheCommand() bool {
+	return false
 }

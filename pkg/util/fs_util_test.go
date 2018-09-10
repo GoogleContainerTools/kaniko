@@ -164,58 +164,6 @@ func Test_ParentDirectories(t *testing.T) {
 	}
 }
 
-func Test_checkWhiteouts(t *testing.T) {
-	type args struct {
-		path      string
-		whiteouts map[string]struct{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "file whited out",
-			args: args{
-				path:      "/foo",
-				whiteouts: map[string]struct{}{"/foo": {}},
-			},
-			want: true,
-		},
-		{
-			name: "directory whited out",
-			args: args{
-				path:      "/foo/bar",
-				whiteouts: map[string]struct{}{"/foo": {}},
-			},
-			want: true,
-		},
-		{
-			name: "grandparent whited out",
-			args: args{
-				path:      "/foo/bar/baz",
-				whiteouts: map[string]struct{}{"/foo": {}},
-			},
-			want: true,
-		},
-		{
-			name: "sibling whited out",
-			args: args{
-				path:      "/foo/bar/baz",
-				whiteouts: map[string]struct{}{"/foo/bat": {}},
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := checkWhiteouts(tt.args.path, tt.args.whiteouts); got != tt.want {
-				t.Errorf("checkWhiteouts() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
@@ -343,7 +291,7 @@ func fileExists(p string) checker {
 	return func(root string, t *testing.T) {
 		_, err := os.Stat(filepath.Join(root, p))
 		if err != nil {
-			t.Fatalf("File does not exist")
+			t.Fatalf("File %s does not exist", filepath.Join(root, p))
 		}
 	}
 }
@@ -381,6 +329,24 @@ func linkPointsTo(src, dst string) checker {
 		}
 		if got != dst {
 			t.Errorf("link destination does not match: %s != %s", got, dst)
+		}
+	}
+}
+
+func filesAreHardlinks(first, second string) checker {
+	return func(root string, t *testing.T) {
+		fi1, err := os.Stat(filepath.Join(root, first))
+		if err != nil {
+			t.Fatalf("error getting file %s", first)
+		}
+		fi2, err := os.Stat(filepath.Join(second))
+		if err != nil {
+			t.Fatalf("error getting file %s", second)
+		}
+		stat1 := getSyscallStat_t(fi1)
+		stat2 := getSyscallStat_t(fi2)
+		if stat1.Ino != stat2.Ino {
+			t.Errorf("%s and %s aren't hardlinks as they dont' have the same inode", first, second)
 		}
 	}
 }
@@ -429,6 +395,7 @@ func TestExtractFile(t *testing.T) {
 	type tc struct {
 		name     string
 		hdrs     []*tar.Header
+		tmpdir   string
 		contents []byte
 		checkers []checker
 	}
@@ -500,13 +467,15 @@ func TestExtractFile(t *testing.T) {
 			},
 		},
 		{
-			name: "hardlink",
+			name:   "hardlink",
+			tmpdir: "/tmp/hardlink",
 			hdrs: []*tar.Header{
 				fileHeader("/bin/gzip", "gzip-binary", 0751),
-				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
+				hardlinkHeader("/bin/uncompress", "/tmp/hardlink/bin/gzip"),
 			},
 			checkers: []checker{
-				linkPointsTo("/bin/uncompress", "/bin/gzip"),
+				fileExists("/bin/gzip"),
+				filesAreHardlinks("/bin/uncompress", "/tmp/hardlink/bin/gzip"),
 			},
 		},
 	}
@@ -515,11 +484,19 @@ func TestExtractFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc
 			t.Parallel()
-			r, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatal(err)
+			r := ""
+			var err error
+
+			if tc.tmpdir != "" {
+				r = tc.tmpdir
+			} else {
+				r, err = ioutil.TempDir("", "")
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			defer os.RemoveAll(r)
+
 			for _, hdr := range tc.hdrs {
 				if err := extractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
 					t.Fatal(err)

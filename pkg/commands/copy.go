@@ -28,7 +28,6 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type CopyCommand struct {
@@ -38,12 +37,6 @@ type CopyCommand struct {
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	srcs := c.cmd.SourcesAndDest[:len(c.cmd.SourcesAndDest)-1]
-	dest := c.cmd.SourcesAndDest[len(c.cmd.SourcesAndDest)-1]
-
-	logrus.Infof("cmd: copy %s", srcs)
-	logrus.Infof("dest: %s", dest)
-
 	// Resolve from
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
@@ -54,9 +47,9 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return err
 	}
-	dest = resolvedEnvs[len(resolvedEnvs)-1]
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
 	// Resolve wildcards and get a list of resolved sources
-	srcs, err = util.ResolveSources(resolvedEnvs, c.buildcontext)
+	srcs, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
 	if err != nil {
 		return err
 	}
@@ -136,7 +129,12 @@ func (c *CopyCommand) FilesToSnapshot() []string {
 	return c.snapshotFiles
 }
 
-// CreatedBy returns some information about the command for the image config
-func (c *CopyCommand) CreatedBy() string {
-	return strings.Join(c.cmd.SourcesAndDest, " ")
+// String returns some information about the command for the image config
+func (c *CopyCommand) String() string {
+	return c.cmd.String()
+}
+
+// CacheCommand returns true since this command should be cached
+func (c *CopyCommand) CacheCommand() bool {
+	return false
 }

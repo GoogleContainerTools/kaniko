@@ -19,7 +19,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
@@ -72,6 +71,11 @@ func (v *VolumeCommand) FilesToSnapshot() []string {
 	return v.snapshotFiles
 }
 
-func (v *VolumeCommand) CreatedBy() string {
-	return strings.Join(append([]string{v.cmd.Name()}, v.cmd.Volumes...), " ")
+func (v *VolumeCommand) String() string {
+	return v.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (v *VolumeCommand) CacheCommand() bool {
+	return false
 }

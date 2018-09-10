@@ -76,7 +76,11 @@ func (r *ExposeCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-func (r *ExposeCommand) CreatedBy() string {
-	s := []string{r.cmd.Name()}
-	return strings.Join(append(s, r.cmd.Ports...), " ")
+func (r *ExposeCommand) String() string {
+	return r.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (r *ExposeCommand) CacheCommand() bool {
+	return false
 }

@@ -32,7 +32,6 @@ type EntrypointCommand struct {
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
 func (e *EntrypointCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: ENTRYPOINT")
 	var newCommand []string
 	if e.cmd.PrependShell {
 		// This is the default shell on Linux
@@ -58,15 +57,12 @@ func (e *EntrypointCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (e *EntrypointCommand) CreatedBy() string {
-	entrypoint := []string{"ENTRYPOINT"}
-	cmdLine := strings.Join(e.cmd.CmdLine, " ")
-	if e.cmd.PrependShell {
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
-		appendedShell := append(entrypoint, shell...)
-		return strings.Join(append(appendedShell, cmdLine), " ")
-	}
-	return strings.Join(append(entrypoint, cmdLine), " ")
+// String returns some information about the command for the image config history
+func (e *EntrypointCommand) String() string {
+	return e.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (e *EntrypointCommand) CacheCommand() bool {
+	return false
 }

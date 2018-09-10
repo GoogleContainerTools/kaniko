@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
@@ -116,6 +117,9 @@ func matchSources(srcs, files []string) ([]string, error) {
 		}
 		src = filepath.Clean(src)
 		for _, file := range files {
+			if filepath.IsAbs(src) {
+				file = filepath.Join(constants.RootDir, file)
+			}
 			matched, err := filepath.Match(src, file)
 			if err != nil {
 				return nil, err

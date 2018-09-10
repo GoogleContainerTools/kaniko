@@ -137,13 +137,12 @@ func (r *RunCommand) FilesToSnapshot() []string {
 	return nil
 }
 
-// CreatedBy returns some information about the command for the image config
-func (r *RunCommand) CreatedBy() string {
-	cmdLine := strings.Join(r.cmd.CmdLine, " ")
-	if r.cmd.PrependShell {
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
-		return strings.Join(append(shell, cmdLine), " ")
-	}
-	return cmdLine
+// String returns some information about the command for the image config
+func (r *RunCommand) String() string {
+	return r.cmd.String()
+}
+
+// CacheCommand returns true since this command should be cached
+func (r *RunCommand) CacheCommand() bool {
+	return true
 }

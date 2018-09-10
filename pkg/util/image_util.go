@@ -27,9 +27,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
@@ -40,9 +40,8 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(index int, buildArgs []string, stages []instructions.Stage) (v1.Image, error) {
-	currentStage := stages[index]
-	currentBaseName, err := ResolveEnvironmentReplacement(currentStage.BaseName, buildArgs, false)
+func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image, error) {
+	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +52,10 @@ func RetrieveSourceImage(index int, buildArgs []string, stages []instructions.St
 	}
 	// Next, check if the base image of the current stage is built from a previous stage
 	// If so, retrieve the image from the stored tarball
-	for i, stage := range stages {
-		if i > index {
-			continue
-		}
-		if stage.Name == currentBaseName {
-			return retrieveTarImage(i)
-		}
+	if stage.BaseImageStoredLocally {
+		return retrieveTarImage(stage.BaseImageIndex)
 	}
+
 	// Otherwise, initialize image as usual
 	return retrieveRemoteImage(currentBaseName)
 }
