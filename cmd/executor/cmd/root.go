@@ -22,9 +22,9 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
-	"github.com/GoogleContainerTools/kaniko/pkg/options"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	opts     = &options.KanikoOptions{}
+	opts     = &config.KanikoOptions{}
 	logLevel string
 	force    bool
 )
@@ -85,7 +85,8 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
-	RootCmd.PersistentFlags().BoolVarP(&opts.DockerInsecureSkipTLSVerify, "insecure-skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePush, "insecure", "", false, "Push to insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTlsVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")

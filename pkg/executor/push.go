@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/options"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
@@ -43,7 +43,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 // DoPush is responsible for pushing image to the destinations specified in opts
-func DoPush(image v1.Image, opts *options.KanikoOptions) error {
+func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	if opts.NoPush {
 		logrus.Info("Skipping push to container registry due to --no-push flag")
 		return nil
@@ -67,7 +67,7 @@ func DoPush(image v1.Image, opts *options.KanikoOptions) error {
 
 	// continue pushing unless an error occurs
 	for _, destRef := range destRefs {
-		if opts.DockerInsecureSkipTLSVerify {
+		if opts.InsecurePush {
 			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
@@ -87,7 +87,7 @@ func DoPush(image v1.Image, opts *options.KanikoOptions) error {
 
 		// Create a transport to set our user-agent.
 		tr := http.DefaultTransport
-		if opts.DockerInsecureSkipTLSVerify {
+		if opts.SkipTlsVerify {
 			tr.(*http.Transport).TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}

@@ -17,8 +17,6 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -46,10 +44,12 @@ func (s *ShellCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (s *ShellCommand) CreatedBy() string {
-	entrypoint := []string{"SHELL"}
-	cmdLine := strings.Join(s.cmd.Shell, " ")
+// String returns some information about the command for the image config history
+func (s *ShellCommand) String() string {
+	return s.cmd.String()
+}
 
-	return strings.Join(append(entrypoint, cmdLine), " ")
+// CacheCommand returns false since this command shouldn't be cached
+func (s *ShellCommand) CacheCommand() bool {
+	return false
 }
