@@ -40,6 +40,9 @@ var whitelist = []string{
 	// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 	// in the image with no way to tell if it came from the base image or not.
 	"/var/run",
+	// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
+	// from the base image
+	"/etc/mtab",
 }
 var volumeWhitelist = []string{}
 
@@ -195,7 +198,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 		currFile.Close()
-
 	case tar.TypeDir:
 		logrus.Debugf("creating dir %s", path)
 		if err := os.MkdirAll(path, mode); err != nil {
