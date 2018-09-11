@@ -195,10 +195,10 @@ func fileIsCompressedTar(src string) (bool, archive.Compression) {
 
 func fileIsUncompressedTar(src string) bool {
 	r, err := os.Open(src)
-	defer r.Close()
 	if err != nil {
 		return false
 	}
+	defer r.Close()
 	fi, err := os.Lstat(src)
 	if err != nil {
 		return false
@@ -210,13 +210,8 @@ func fileIsUncompressedTar(src string) bool {
 	if tr == nil {
 		return false
 	}
-	for {
-		_, err := tr.Next()
-		if err != nil {
-			return false
-		}
-		return true
-	}
+	_, err = tr.Next()
+	return err == nil
 }
 
 // UnpackCompressedTar unpacks the compressed tar at path to dir

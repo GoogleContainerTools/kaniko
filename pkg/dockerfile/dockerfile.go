@@ -54,8 +54,8 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 		stage.Name = resolvedBaseName
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
-			BaseImageIndex:         baseImageIndex(opts, index, stages),
-			BaseImageStoredLocally: (baseImageIndex(opts, index, stages) != -1),
+			BaseImageIndex:         baseImageIndex(index, stages),
+			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
 			SaveStage:              saveStage(index, stages),
 			FinalStage:             index == targetStage,
 		})
@@ -68,7 +68,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 
 // baseImageIndex returns the index of the stage the current stage is built off
 // returns -1 if the current stage isn't built off a previous stage
-func baseImageIndex(opts *config.KanikoOptions, currentStage int, stages []instructions.Stage) int {
+func baseImageIndex(currentStage int, stages []instructions.Stage) int {
 	for i, stage := range stages {
 		if i > currentStage {
 			break

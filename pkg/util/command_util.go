@@ -228,10 +228,7 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 		return false
 	}
 	_, err = http.Get(rawurl)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func UpdateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
