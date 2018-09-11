@@ -343,8 +343,8 @@ func filesAreHardlinks(first, second string) checker {
 		if err != nil {
 			t.Fatalf("error getting file %s", second)
 		}
-		stat1 := getSyscallStat_t(fi1)
-		stat2 := getSyscallStat_t(fi2)
+		stat1 := getSyscallStatT(fi1)
+		stat2 := getSyscallStatT(fi2)
 		if stat1.Ino != stat2.Ino {
 			t.Errorf("%s and %s aren't hardlinks as they dont' have the same inode", first, second)
 		}

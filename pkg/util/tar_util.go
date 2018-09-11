@@ -118,7 +118,7 @@ func (t *Tar) Whiteout(p string) error {
 func (t *Tar) checkHardlink(p string, i os.FileInfo) (bool, string) {
 	hardlink := false
 	linkDst := ""
-	stat := getSyscallStat_t(i)
+	stat := getSyscallStatT(i)
 	if stat != nil {
 		nlinks := stat.Nlink
 		if nlinks > 1 {
@@ -135,7 +135,7 @@ func (t *Tar) checkHardlink(p string, i os.FileInfo) (bool, string) {
 	return hardlink, linkDst
 }
 
-func getSyscallStat_t(i os.FileInfo) *syscall.Stat_t {
+func getSyscallStatT(i os.FileInfo) *syscall.Stat_t {
 	if sys := i.Sys(); sys != nil {
 		if stat, ok := sys.(*syscall.Stat_t); ok {
 			return stat

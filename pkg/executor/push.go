@@ -87,7 +87,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 		// Create a transport to set our user-agent.
 		tr := http.DefaultTransport
-		if opts.SkipTlsVerify {
+		if opts.SkipTLSVerify {
 			tr.(*http.Transport).TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}
