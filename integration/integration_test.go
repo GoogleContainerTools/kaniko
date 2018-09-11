@@ -245,6 +245,7 @@ func TestLayers(t *testing.T) {
 }
 
 func checkLayers(t *testing.T, image1, image2 string, offset int) {
+	t.Helper()
 	img1, err := getImageDetails(image1)
 	if err != nil {
 		t.Fatalf("Couldn't get details from image reference for (%s): %s", image1, err)
