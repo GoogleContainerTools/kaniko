@@ -50,7 +50,7 @@ func Test_reviewConfig(t *testing.T) {
 			ENTRYPOINT ["myentrypoint"]`,
 			originalEntrypoint: []string{"myentrypoint"},
 			originalCmd:        []string{"mycmd"},
-			expectedCmd:        []string{},
+			expectedCmd:        nil,
 		},
 	}
 	for _, test := range tests {

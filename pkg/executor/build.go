@@ -248,7 +248,7 @@ func reviewConfig(stage config.KanikoStage, config *v1.Config) error {
 		}
 	}
 	if entrypoint && !cmd {
-		config.Cmd = []string{}
+		config.Cmd = nil
 	}
 	return nil
 }
