@@ -50,7 +50,7 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	}
 
 	actualWhitelist, err := fileSystemWhitelist(path)
-	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys", "/var/run"}
+	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys", "/var/run", "/etc/mtab"}
 	sort.Strings(actualWhitelist)
 	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
