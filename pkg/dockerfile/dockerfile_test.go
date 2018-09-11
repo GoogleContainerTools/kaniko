@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
@@ -184,7 +183,7 @@ func Test_baseImageIndex(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := baseImageIndex(&config.KanikoOptions{}, test.currentStage, stages)
+			actual := baseImageIndex(test.currentStage, stages)
 			if actual != test.expected {
 				t.Fatalf("unexpected result, expected %d got %d", test.expected, actual)
 			}

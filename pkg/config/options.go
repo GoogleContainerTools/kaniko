@@ -19,16 +19,16 @@ package config
 // KanikoOptions are options that are set by command line arguments
 type KanikoOptions struct {
 	DockerfilePath string
-	Destinations   multiArg
 	SrcContext     string
 	SnapshotMode   string
 	Bucket         string
-	InsecurePush   bool
-	SkipTlsVerify  bool
-	BuildArgs      multiArg
 	TarPath        string
+	Target         string
+	Destinations   multiArg
+	BuildArgs      multiArg
+	InsecurePush   bool
+	SkipTLSVerify  bool
 	SingleSnapshot bool
 	Reproducible   bool
-	Target         string
 	NoPush         bool
 }

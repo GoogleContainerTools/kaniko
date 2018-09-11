@@ -109,7 +109,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 // DeleteFilesystem deletes the extracted image file system
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
-	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
 		whitelisted, err := CheckWhitelist(path)
 		if err != nil {
 			return err
@@ -123,7 +123,6 @@ func DeleteFilesystem() error {
 		}
 		return os.RemoveAll(path)
 	})
-	return err
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
@@ -310,6 +309,9 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		whitelisted, err := CheckWhitelist(path)
 		if err != nil {
 			return err
