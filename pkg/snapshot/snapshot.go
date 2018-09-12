@@ -49,6 +49,11 @@ func (s *Snapshotter) Init() error {
 	return nil
 }
 
+// Key returns a string based on the current state of the file system
+func (s *Snapshotter) Key() (string, error) {
+	return s.l.Key()
+}
+
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the whitelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string) ([]byte, error) {
@@ -102,7 +107,8 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 		logrus.Info("No files changed in this command, skipping snapshotting.")
 		return false, nil
 	}
-	logrus.Infof("Taking snapshot of files %v...", files)
+	logrus.Info("Taking snapshot of files...")
+	logrus.Debugf("Taking snapshot of files %v", files)
 	snapshottedFiles := make(map[string]bool)
 	filesAdded := false
 

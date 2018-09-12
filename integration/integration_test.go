@@ -71,7 +71,6 @@ func initGCPConfig() *gcpConfig {
 }
 
 const (
-	ubuntuImage        = "ubuntu"
 	daemonPrefix       = "daemon://"
 	dockerfilesPath    = "dockerfiles"
 	emptyContainerDiff = `[
@@ -240,30 +239,27 @@ func TestLayers(t *testing.T) {
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 			pullCmd := exec.Command("docker", "pull", kanikoImage)
 			RunCommand(pullCmd, t)
-			if err := checkLayers(t, dockerImage, kanikoImage, offset[dockerfile]); err != nil {
-				t.Error(err)
-				t.Fail()
-			}
+			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
 		})
 	}
 }
 
-func checkLayers(t *testing.T, image1, image2 string, offset int) error {
+func checkLayers(t *testing.T, image1, image2 string, offset int) {
+	t.Helper()
 	img1, err := getImageDetails(image1)
 	if err != nil {
-		return fmt.Errorf("Couldn't get details from image reference for (%s): %s", image1, err)
+		t.Fatalf("Couldn't get details from image reference for (%s): %s", image1, err)
 	}
 
 	img2, err := getImageDetails(image2)
 	if err != nil {
-		return fmt.Errorf("Couldn't get details from image reference for (%s): %s", image2, err)
+		t.Fatalf("Couldn't get details from image reference for (%s): %s", image2, err)
 	}
 
 	actualOffset := int(math.Abs(float64(img1.numLayers - img2.numLayers)))
 	if actualOffset != offset {
-		return fmt.Errorf("Difference in number of layers in each image is %d but should be %d. Image 1: %s, Image 2: %s", actualOffset, offset, img1, img2)
+		t.Fatalf("Difference in number of layers in each image is %d but should be %d. Image 1: %s, Image 2: %s", actualOffset, offset, img1, img2)
 	}
-	return nil
 }
 
 func getImageDetails(image string) (*imageDetails, error) {

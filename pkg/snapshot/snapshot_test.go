@@ -198,7 +198,7 @@ func setUpTestDir() (string, *Snapshotter, error) {
 	}
 
 	// Take the initial snapshot
-	l := NewLayeredMap(util.Hasher())
+	l := NewLayeredMap(util.Hasher(), util.CacheHasher())
 	snapshotter := NewSnapshotter(l, testDir)
 	if err := snapshotter.Init(); err != nil {
 		return testDir, nil, errors.Wrap(err, "initializing snapshotter")

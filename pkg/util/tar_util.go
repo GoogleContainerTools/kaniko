@@ -118,7 +118,7 @@ func (t *Tar) Whiteout(p string) error {
 func (t *Tar) checkHardlink(p string, i os.FileInfo) (bool, string) {
 	hardlink := false
 	linkDst := ""
-	stat := getSyscallStat_t(i)
+	stat := getSyscallStatT(i)
 	if stat != nil {
 		nlinks := stat.Nlink
 		if nlinks > 1 {
@@ -135,7 +135,7 @@ func (t *Tar) checkHardlink(p string, i os.FileInfo) (bool, string) {
 	return hardlink, linkDst
 }
 
-func getSyscallStat_t(i os.FileInfo) *syscall.Stat_t {
+func getSyscallStatT(i os.FileInfo) *syscall.Stat_t {
 	if sys := i.Sys(); sys != nil {
 		if stat, ok := sys.(*syscall.Stat_t); ok {
 			return stat
@@ -195,10 +195,10 @@ func fileIsCompressedTar(src string) (bool, archive.Compression) {
 
 func fileIsUncompressedTar(src string) bool {
 	r, err := os.Open(src)
-	defer r.Close()
 	if err != nil {
 		return false
 	}
+	defer r.Close()
 	fi, err := os.Lstat(src)
 	if err != nil {
 		return false
@@ -210,13 +210,8 @@ func fileIsUncompressedTar(src string) bool {
 	if tr == nil {
 		return false
 	}
-	for {
-		_, err := tr.Next()
-		if err != nil {
-			return false
-		}
-		return true
-	}
+	_, err = tr.Next()
+	return err == nil
 }
 
 // UnpackCompressedTar unpacks the compressed tar at path to dir

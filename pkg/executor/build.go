@@ -43,10 +43,10 @@ import (
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
-	stage config.KanikoStage
-	image v1.Image
-	cf    *v1.ConfigFile
-	*snapshot.Snapshotter
+	stage           config.KanikoStage
+	image           v1.Image
+	cf              *v1.ConfigFile
+	snapshotter     *snapshot.Snapshotter
 	baseImageDigest string
 }
 
@@ -67,7 +67,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	if err != nil {
 		return nil, err
 	}
-	l := snapshot.NewLayeredMap(hasher)
+	l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
 	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
 
 	digest, err := sourceImage.Digest()
@@ -78,7 +78,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 		stage:           stage,
 		image:           sourceImage,
 		cf:              imageConfig,
-		Snapshotter:     snapshotter,
+		snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
 	}, nil
 }
@@ -101,7 +101,7 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		return err
 	}
 	// Take initial snapshot
-	if err := s.Snapshotter.Init(); err != nil {
+	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
 	args := dockerfile.NewBuildArgs(opts.BuildArgs)
@@ -113,6 +113,9 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		}
 		if command == nil {
 			continue
+		}
+		if err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
+			return err
 		}
 		logrus.Info(command.String())
 		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
@@ -126,23 +129,23 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		// by previous commands.
 		if !s.stage.Final {
 			if finalCmd {
-				contents, err = s.Snapshotter.TakeSnapshotFS()
+				contents, err = s.snapshotter.TakeSnapshotFS()
 			}
 		} else {
 			// If we are in single snapshot mode, we only take a snapshot once, after all
 			// commands have completed.
 			if opts.SingleSnapshot {
 				if finalCmd {
-					contents, err = s.Snapshotter.TakeSnapshotFS()
+					contents, err = s.snapshotter.TakeSnapshotFS()
 				}
 			} else {
 				// Otherwise, in the final stage we take a snapshot at each command. If we know
 				// the files that were changed, we'll snapshot those explicitly, otherwise we'll
 				// check if anything in the filesystem changed.
 				if files != nil {
-					contents, err = s.Snapshotter.TakeSnapshot(files)
+					contents, err = s.snapshotter.TakeSnapshot(files)
 				} else {
-					contents, err = s.Snapshotter.TakeSnapshotFS()
+					contents, err = s.snapshotter.TakeSnapshotFS()
 				}
 			}
 		}

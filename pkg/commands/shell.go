@@ -20,7 +20,6 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type ShellCommand struct {
@@ -29,13 +28,7 @@ type ShellCommand struct {
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
 func (s *ShellCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: SHELL")
-	var newShell []string
-
-	newShell = s.cmd.Shell
-
-	logrus.Infof("Replacing Shell in config with %v", newShell)
-	config.Shell = newShell
+	config.Shell = s.cmd.Shell
 	return nil
 }
 

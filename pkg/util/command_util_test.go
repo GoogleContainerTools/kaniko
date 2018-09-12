@@ -23,7 +23,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-var testUrl = "https://github.com/GoogleContainerTools/runtimes-common/blob/master/LICENSE"
+var testURL = "https://github.com/GoogleContainerTools/runtimes-common/blob/master/LICENSE"
 
 var testEnvReplacement = []struct {
 	path         string
@@ -220,7 +220,7 @@ var matchSourcesTests = []struct {
 		srcs: []string{
 			"pkg/*",
 			"/root/dir?",
-			testUrl,
+			testURL,
 		},
 		files: []string{
 			"pkg/a",
@@ -234,7 +234,7 @@ var matchSourcesTests = []struct {
 			"/root/dir1",
 			"pkg/a",
 			"pkg/b",
-			testUrl,
+			testURL,
 		},
 	},
 }
@@ -344,11 +344,11 @@ var isSrcValidTests = []struct {
 	},
 	{
 		srcsAndDest: []string{
-			testUrl,
+			testURL,
 			"dest",
 		},
 		resolvedSources: []string{
-			testUrl,
+			testURL,
 		},
 		shouldErr: false,
 	},
@@ -369,13 +369,13 @@ var testResolveSources = []struct {
 		srcsAndDest: []string{
 			"context/foo",
 			"context/b*",
-			testUrl,
+			testURL,
 			"dest/",
 		},
 		expectedList: []string{
 			"context/foo",
 			"context/bar",
-			testUrl,
+			testURL,
 		},
 	},
 }
