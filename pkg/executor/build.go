@@ -60,7 +60,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := util.GetFSFromImage(constants.RootDir, sourceImage); err != nil {
 			return nil, err
 		}
-		l := snapshot.NewLayeredMap(hasher)
+		l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
 		snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
 		// Take initial snapshot
 		if err := snapshotter.Init(); err != nil {

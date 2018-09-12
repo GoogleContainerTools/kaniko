@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/sirupsen/logrus"
@@ -61,7 +62,7 @@ func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image
 }
 
 // RetrieveConfigFile returns the config file for an image
-func RetrieveConfigFile(sourceImage v1.Image) (*v1.ConfigFile, error) {
+func RetrieveConfigFile(sourceImage partial.WithConfigFile) (*v1.ConfigFile, error) {
 	imageConfig, err := sourceImage.ConfigFile()
 	if err != nil {
 		return nil, err

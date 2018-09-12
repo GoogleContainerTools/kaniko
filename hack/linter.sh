@@ -14,22 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-#!/bin/bash
 set -e -o pipefail
 
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-install_gometalinter() {
-	echo "Installing gometalinter.v2"
-	go get -u gopkg.in/alecthomas/gometalinter.v2
-	gometalinter.v2 --install
-}
-
-if ! [ -x "$(command -v gometalinter.v2)" ]; then
-  install_gometalinter
+if ! [ -x "$(command -v golangci-lint)" ]; then
+	echo "Installing GolangCI-Lint"
+	${DIR}/install_golint.sh -b $GOPATH/bin v1.9.3
 fi
 
-gometalinter.v2 \
-	${GOMETALINTER_OPTS:--deadine 5m} \
-	--config $SCRIPTDIR/gometalinter.json ./...
+golangci-lint run \
+	--no-config \
+	-E goconst \
+	-E goimports \
+	-E golint \
+	-E interfacer \
+	-E maligned \
+	-E misspell \
+	-E unconvert \
+	-E unparam \
+	-D errcheck \
+	-D gas
