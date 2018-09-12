@@ -17,20 +17,28 @@ limitations under the License.
 package snapshot
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
 type LayeredMap struct {
 	layers    []map[string]string
 	whiteouts []map[string]string
+	added     []map[string]string
 	hasher    func(string) (string, error)
+	// cacheHasher doesn't include mtime in it's hash so that filesystem cache keys are stable
+	cacheHasher func(string) (string, error)
 }
 
-func NewLayeredMap(h func(string) (string, error)) *LayeredMap {
+func NewLayeredMap(h func(string) (string, error), c func(string) (string, error)) *LayeredMap {
 	l := LayeredMap{
-		hasher: h,
+		hasher:      h,
+		cacheHasher: c,
 	}
 	l.layers = []map[string]string{}
 	return &l
@@ -39,8 +47,18 @@ func NewLayeredMap(h func(string) (string, error)) *LayeredMap {
 func (l *LayeredMap) Snapshot() {
 	l.whiteouts = append(l.whiteouts, map[string]string{})
 	l.layers = append(l.layers, map[string]string{})
+	l.added = append(l.added, map[string]string{})
 }
 
+// Key returns a hash for added files
+func (l *LayeredMap) Key() (string, error) {
+	c := bytes.NewBuffer([]byte{})
+	enc := json.NewEncoder(c)
+	enc.Encode(l.added)
+	return util.SHA256(c)
+}
+
+// GetFlattenedPathsForWhiteOut returns all paths in the current FS
 func (l *LayeredMap) GetFlattenedPathsForWhiteOut() map[string]struct{} {
 	paths := map[string]struct{}{}
 	for _, l := range l.layers {
@@ -85,11 +103,18 @@ func (l *LayeredMap) MaybeAddWhiteout(s string) (bool, error) {
 
 // Add will add the specified file s to the layered map.
 func (l *LayeredMap) Add(s string) error {
+	// Use hash function and add to layers
 	newV, err := l.hasher(s)
 	if err != nil {
-		return fmt.Errorf("Error creating hash for %s: %s", s, err)
+		return fmt.Errorf("Error creating hash for %s: %v", s, err)
 	}
 	l.layers[len(l.layers)-1][s] = newV
+	// Use cache hash function and add to added
+	cacheV, err := l.cacheHasher(s)
+	if err != nil {
+		return fmt.Errorf("Error creating cache hash for %s: %v", s, err)
+	}
+	l.added[len(l.added)-1][s] = cacheV
 	return nil
 }
 

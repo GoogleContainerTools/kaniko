@@ -40,6 +40,9 @@ var whitelist = []string{
 	// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 	// in the image with no way to tell if it came from the base image or not.
 	"/var/run",
+	// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
+	// from the base image
+	"/etc/mtab",
 }
 var volumeWhitelist = []string{}
 
@@ -109,7 +112,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 // DeleteFilesystem deletes the extracted image file system
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
-	err := filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
 		whitelisted, err := CheckWhitelist(path)
 		if err != nil {
 			return err
@@ -123,7 +126,6 @@ func DeleteFilesystem() error {
 		}
 		return os.RemoveAll(path)
 	})
-	return err
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
@@ -195,7 +197,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 		currFile.Close()
-
 	case tar.TypeDir:
 		logrus.Debugf("creating dir %s", path)
 		if err := os.MkdirAll(path, mode); err != nil {
@@ -310,6 +311,9 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 	fullPath := filepath.Join(root, fp)
 	logrus.Debugf("Getting files and contents at root %s", fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		whitelisted, err := CheckWhitelist(path)
 		if err != nil {
 			return err

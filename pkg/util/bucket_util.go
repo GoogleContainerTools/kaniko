@@ -17,8 +17,9 @@ limitations under the License.
 package util
 
 import (
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 func GetBucketAndItem(context string) (string, string) {

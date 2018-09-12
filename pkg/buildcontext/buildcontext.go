@@ -18,8 +18,9 @@ package buildcontext
 
 import (
 	"errors"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 // BuildContext unifies calls to download and unpack the build context.
