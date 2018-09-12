@@ -57,7 +57,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			BaseImageIndex:         baseImageIndex(opts, index, stages),
 			BaseImageStoredLocally: (baseImageIndex(opts, index, stages) != -1),
 			SaveStage:              saveStage(index, stages),
-			FinalStage:             index == targetStage,
+			Final:                  index == targetStage,
 		})
 		if index == targetStage {
 			break

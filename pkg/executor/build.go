@@ -44,8 +44,8 @@ import (
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
 	stage config.KanikoStage
-	v1.Image
-	*v1.ConfigFile
+	image v1.Image
+	cf    *v1.ConfigFile
 	*snapshot.Snapshotter
 	baseImageDigest string
 }
@@ -76,8 +76,8 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	}
 	return &stageBuilder{
 		stage:           stage,
-		Image:           sourceImage,
-		ConfigFile:      imageConfig,
+		image:           sourceImage,
+		cf:              imageConfig,
 		Snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
 	}, nil
@@ -95,36 +95,36 @@ func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) erro
 	return nil
 }
 
-func (s *stageBuilder) buildStage(opts *config.KanikoOptions) error {
+func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 	// Unpack file system to root
-	if err := util.GetFSFromImage(constants.RootDir, s.Image); err != nil {
+	if err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 		return err
 	}
 	// Take initial snapshot
 	if err := s.Snapshotter.Init(); err != nil {
 		return err
 	}
-	buildArgs := dockerfile.NewBuildArgs(opts.BuildArgs)
+	args := dockerfile.NewBuildArgs(opts.BuildArgs)
 	for index, cmd := range s.stage.Commands {
 		finalCmd := index == len(s.stage.Commands)-1
-		dockerCommand, err := commands.GetCommand(cmd, opts.SrcContext)
+		command, err := commands.GetCommand(cmd, opts.SrcContext)
 		if err != nil {
 			return err
 		}
-		if dockerCommand == nil {
+		if command == nil {
 			continue
 		}
-		logrus.Info(dockerCommand.String())
-		if err := dockerCommand.ExecuteCommand(&s.ConfigFile.Config, buildArgs); err != nil {
+		logrus.Info(command.String())
+		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
 			return err
 		}
-		snapshotFiles := dockerCommand.FilesToSnapshot()
+		files := command.FilesToSnapshot()
 		var contents []byte
 
 		// If this is an intermediate stage, we only snapshot for the last command and we
 		// want to snapshot the entire filesystem since we aren't tracking what was changed
 		// by previous commands.
-		if !s.stage.FinalStage {
+		if !s.stage.Final {
 			if finalCmd {
 				contents, err = s.Snapshotter.TakeSnapshotFS()
 			}
@@ -139,15 +139,15 @@ func (s *stageBuilder) buildStage(opts *config.KanikoOptions) error {
 				// Otherwise, in the final stage we take a snapshot at each command. If we know
 				// the files that were changed, we'll snapshot those explicitly, otherwise we'll
 				// check if anything in the filesystem changed.
-				if snapshotFiles != nil {
-					contents, err = s.Snapshotter.TakeSnapshot(snapshotFiles)
+				if files != nil {
+					contents, err = s.Snapshotter.TakeSnapshot(files)
 				} else {
 					contents, err = s.Snapshotter.TakeSnapshotFS()
 				}
 			}
 		}
 		if err != nil {
-			return fmt.Errorf("Error taking snapshot of files for command %s: %s", dockerCommand, err)
+			return fmt.Errorf("Error taking snapshot of files for command %s: %s", command, err)
 		}
 
 		util.MoveVolumeWhitelistToWhitelist()
@@ -163,12 +163,12 @@ func (s *stageBuilder) buildStage(opts *config.KanikoOptions) error {
 		if err != nil {
 			return err
 		}
-		s.Image, err = mutate.Append(s.Image,
+		s.image, err = mutate.Append(s.image,
 			mutate.Addendum{
 				Layer: layer,
 				History: v1.History{
 					Author:    constants.Author,
-					CreatedBy: dockerCommand.String(),
+					CreatedBy: command.String(),
 				},
 			},
 		)
@@ -187,18 +187,18 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 	for index, stage := range stages {
-		stageBuilder, err := newStageBuilder(opts, stage)
+		sb, err := newStageBuilder(opts, stage)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("getting stage builder for stage %d", index))
 		}
-		if err := stageBuilder.buildStage(opts); err != nil {
+		if err := sb.build(opts); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
-		sourceImage, err := mutate.Config(stageBuilder.Image, stageBuilder.ConfigFile.Config)
+		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
 		if err != nil {
 			return nil, err
 		}
-		if stage.FinalStage {
+		if stage.Final {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
 			if err != nil {
 				return nil, err
