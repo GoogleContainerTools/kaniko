@@ -22,7 +22,7 @@ import "github.com/moby/buildkit/frontend/dockerfile/instructions"
 type KanikoStage struct {
 	instructions.Stage
 	BaseImageIndex         int
-	FinalStage             bool
+	Final                  bool
 	BaseImageStoredLocally bool
 	SaveStage              bool
 }
