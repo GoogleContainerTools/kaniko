@@ -85,15 +85,15 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 
 // key will return a string representation of the build at the cmd
 // TODO: priyawadhwa@ to fill this out when implementing caching
-func (s *stageBuilder) key(cmd string) (string, error) {
-	return "", nil
-}
+// func (s *stageBuilder) key(cmd string) (string, error) {
+// 	return "", nil
+// }
 
 // extractCachedLayer will extract the cached layer and append it to the config file
 // TODO: priyawadhwa@ to fill this out when implementing caching
-func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
-	return nil
-}
+// func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
+// 	return nil
+// }
 
 func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 	// Unpack file system to root
@@ -113,9 +113,6 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		}
 		if command == nil {
 			continue
-		}
-		if err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
-			return err
 		}
 		logrus.Info(command.String())
 		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
