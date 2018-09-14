@@ -204,7 +204,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 }
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
-func (d *DockerFileBuilder) buildCachedImages(imageRepo, cache, dockerfilesPath, dockerfile string, version int) error {
+func (d *DockerFileBuilder) buildCachedImages(imageRepo, cache, dockerfilesPath string, version int) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 

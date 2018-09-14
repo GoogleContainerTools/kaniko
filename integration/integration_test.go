@@ -244,11 +244,11 @@ func TestCache(t *testing.T) {
 		t.Run("test_cache_"+dockerfile, func(t *testing.T) {
 			cache := filepath.Join(config.imageRepo, "cache", fmt.Sprintf("%v", time.Now().UnixNano()))
 			// Build the initial image which will cache layers
-			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, dockerfile, 0); err != nil {
+			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 0); err != nil {
 				t.Fatalf("error building cached image for the first time: %v", err)
 			}
 			// Build the second image which should pull from the cache
-			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, dockerfile, 1); err != nil {
+			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 1); err != nil {
 				t.Fatalf("error building cached image for the first time: %v", err)
 			}
 			// Make sure both images are the same
