@@ -18,6 +18,7 @@ package executor
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,6 +34,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -84,20 +86,52 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 }
 
 // key will return a string representation of the build at the cmd
-// TODO: priyawadhwa@ to fill this out when implementing caching
-// func (s *stageBuilder) key(cmd string) (string, error) {
-// 	return "", nil
-// }
+func (s *stageBuilder) key(cmd string) (string, error) {
+	fsKey, err := s.snapshotter.Key()
+	if err != nil {
+		return "", err
+	}
+	c := bytes.NewBuffer([]byte{})
+	enc := json.NewEncoder(c)
+	enc.Encode(s.cf)
+	cf, err := util.SHA256(c)
+	if err != nil {
+		return "", err
+	}
+	logrus.Debugf("%s\n%s\n%s\n%s\n", s.baseImageDigest, fsKey, cf, cmd)
+	return util.SHA256(bytes.NewReader([]byte(s.baseImageDigest + fsKey + cf + cmd)))
+}
 
 // extractCachedLayer will extract the cached layer and append it to the config file
-// TODO: priyawadhwa@ to fill this out when implementing caching
-// func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
-// 	return nil
-// }
+func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
+	logrus.Infof("Found cached layer, extracting to filesystem")
+	extractedFiles, err := util.GetFSFromImage(constants.RootDir, layer)
+	if err != nil {
+		return errors.Wrap(err, "extracting fs from image")
+	}
+	if _, err := s.snapshotter.TakeSnapshot(extractedFiles); err != nil {
+		return err
+	}
+	logrus.Infof("Appending cached layer to base image")
+	l, err := layer.Layers()
+	if err != nil {
+		return errors.Wrap(err, "getting cached layer from image")
+	}
+	s.image, err = mutate.Append(s.image,
+		mutate.Addendum{
+			Layer: l[0],
+			History: v1.History{
+				Author:    constants.Author,
+				CreatedBy: createdBy,
+			},
+		},
+	)
+	return err
+}
 
 func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 	// Unpack file system to root
-	if err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
+	if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 		return err
 	}
 	// Take initial snapshot
@@ -115,6 +149,20 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 			continue
 		}
 		logrus.Info(command.String())
+		cacheKey, err := s.key(command.String())
+		if err != nil {
+			return errors.Wrap(err, "getting key")
+		}
+		if command.CacheCommand() && opts.UseCache {
+			image, err := cache.RetrieveLayer(opts, cacheKey)
+			if err == nil {
+				if err := s.extractCachedLayer(image, command.String()); err != nil {
+					return errors.Wrap(err, "extracting cached layer")
+				}
+				continue
+			}
+			logrus.Info("No cached layer found, executing command...")
+		}
 		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
 			return err
 		}
@@ -162,6 +210,12 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		layer, err := tarball.LayerFromOpener(opener)
 		if err != nil {
 			return err
+		}
+		// Push layer to cache now along with new config file
+		if command.CacheCommand() && opts.UseCache {
+			if err := pushLayerToCache(opts, cacheKey, layer, command.String()); err != nil {
+				return err
+			}
 		}
 		s.image, err = mutate.Append(s.image,
 			mutate.Addendum{
@@ -233,7 +287,8 @@ func extractImageToDependecyDir(index int, image v1.Image) error {
 		return err
 	}
 	logrus.Infof("trying to extract to %s", dependencyDir)
-	return util.GetFSFromImage(dependencyDir, image)
+	_, err := util.GetFSFromImage(dependencyDir, image)
+	return err
 }
 
 func saveStageAsTarball(stageIndex int, image v1.Image) error {

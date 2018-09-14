@@ -24,6 +24,7 @@ type KanikoOptions struct {
 	Bucket         string
 	TarPath        string
 	Target         string
+	Cache          string
 	Destinations   multiArg
 	BuildArgs      multiArg
 	InsecurePush   bool
@@ -31,4 +32,5 @@ type KanikoOptions struct {
 	SingleSnapshot bool
 	Reproducible   bool
 	NoPush         bool
+	UseCache       bool
 }
