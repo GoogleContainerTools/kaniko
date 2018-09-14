@@ -64,7 +64,7 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 		if err != nil {
 			return "", errors.Wrap(err, "getting tag for destination")
 		}
-		return fmt.Sprintf("%s/cache", destRef.Context()), nil
+		return fmt.Sprintf("%s/cache:%s", destRef.Context(), cacheKey), nil
 	}
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
