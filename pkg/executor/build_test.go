@@ -59,8 +59,8 @@ func Test_reviewConfig(t *testing.T) {
 				Cmd:        test.originalCmd,
 				Entrypoint: test.originalEntrypoint,
 			}
-			err := reviewConfig(stage(t, test.dockerfile), config)
-			testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedCmd, config.Cmd)
+			reviewConfig(stage(t, test.dockerfile), config)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expectedCmd, config.Cmd)
 		})
 	}
 }
