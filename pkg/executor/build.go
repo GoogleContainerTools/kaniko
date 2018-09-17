@@ -30,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
@@ -40,117 +41,165 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
+// stageBuilder contains all fields necessary to build one stage of a Dockerfile
+type stageBuilder struct {
+	stage           config.KanikoStage
+	image           v1.Image
+	cf              *v1.ConfigFile
+	snapshotter     *snapshot.Snapshotter
+	baseImageDigest string
+}
+
+// newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
+	sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs)
+	if err != nil {
+		return nil, err
+	}
+	imageConfig, err := util.RetrieveConfigFile(sourceImage)
+	if err != nil {
+		return nil, err
+	}
+	if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
+		return nil, err
+	}
+	hasher, err := getHasher(opts.SnapshotMode)
+	if err != nil {
+		return nil, err
+	}
+	l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
+	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
+
+	digest, err := sourceImage.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return &stageBuilder{
+		stage:           stage,
+		image:           sourceImage,
+		cf:              imageConfig,
+		snapshotter:     snapshotter,
+		baseImageDigest: digest.String(),
+	}, nil
+}
+
+// key will return a string representation of the build at the cmd
+// TODO: priyawadhwa@ to fill this out when implementing caching
+// func (s *stageBuilder) key(cmd string) (string, error) {
+// 	return "", nil
+// }
+
+// extractCachedLayer will extract the cached layer and append it to the config file
+// TODO: priyawadhwa@ to fill this out when implementing caching
+// func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
+// 	return nil
+// }
+
+func (s *stageBuilder) build(opts *config.KanikoOptions) error {
+	// Unpack file system to root
+	if err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
+		return err
+	}
+	// Take initial snapshot
+	if err := s.snapshotter.Init(); err != nil {
+		return err
+	}
+	args := dockerfile.NewBuildArgs(opts.BuildArgs)
+	for index, cmd := range s.stage.Commands {
+		finalCmd := index == len(s.stage.Commands)-1
+		command, err := commands.GetCommand(cmd, opts.SrcContext)
+		if err != nil {
+			return err
+		}
+		if command == nil {
+			continue
+		}
+		logrus.Info(command.String())
+		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
+			return err
+		}
+		files := command.FilesToSnapshot()
+		var contents []byte
+
+		// If this is an intermediate stage, we only snapshot for the last command and we
+		// want to snapshot the entire filesystem since we aren't tracking what was changed
+		// by previous commands.
+		if !s.stage.Final {
+			if finalCmd {
+				contents, err = s.snapshotter.TakeSnapshotFS()
+			}
+		} else {
+			// If we are in single snapshot mode, we only take a snapshot once, after all
+			// commands have completed.
+			if opts.SingleSnapshot {
+				if finalCmd {
+					contents, err = s.snapshotter.TakeSnapshotFS()
+				}
+			} else {
+				// Otherwise, in the final stage we take a snapshot at each command. If we know
+				// the files that were changed, we'll snapshot those explicitly, otherwise we'll
+				// check if anything in the filesystem changed.
+				if files != nil {
+					contents, err = s.snapshotter.TakeSnapshot(files)
+				} else {
+					contents, err = s.snapshotter.TakeSnapshotFS()
+				}
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("Error taking snapshot of files for command %s: %s", command, err)
+		}
+
+		util.MoveVolumeWhitelistToWhitelist()
+		if contents == nil {
+			logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
+			continue
+		}
+		// Append the layer to the image
+		opener := func() (io.ReadCloser, error) {
+			return ioutil.NopCloser(bytes.NewReader(contents)), nil
+		}
+		layer, err := tarball.LayerFromOpener(opener)
+		if err != nil {
+			return err
+		}
+		s.image, err = mutate.Append(s.image,
+			mutate.Addendum{
+				Layer: layer,
+				History: v1.History{
+					Author:    constants.Author,
+					CreatedBy: command.String(),
+				},
+			},
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
 		return nil, err
 	}
-
-	hasher, err := getHasher(opts.SnapshotMode)
-	if err != nil {
-		return nil, err
-	}
 	for index, stage := range stages {
-		// Unpack file system to root
-		sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs)
+		sb, err := newStageBuilder(opts, stage)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("getting stage builder for stage %d", index))
+		}
+		if err := sb.build(opts); err != nil {
+			return nil, errors.Wrap(err, "error building stage")
+		}
+		reviewConfig(stage, &sb.cf.Config)
+		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
 		if err != nil {
 			return nil, err
 		}
-		if err := util.GetFSFromImage(constants.RootDir, sourceImage); err != nil {
-			return nil, err
-		}
-		l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
-		snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
-		// Take initial snapshot
-		if err := snapshotter.Init(); err != nil {
-			return nil, err
-		}
-		imageConfig, err := util.RetrieveConfigFile(sourceImage)
-		if err != nil {
-			return nil, err
-		}
-		if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
-			return nil, err
-		}
-		buildArgs := dockerfile.NewBuildArgs(opts.BuildArgs)
-		for index, cmd := range stage.Commands {
-			finalCmd := index == len(stage.Commands)-1
-			dockerCommand, err := commands.GetCommand(cmd, opts.SrcContext)
-			if err != nil {
-				return nil, err
-			}
-			if dockerCommand == nil {
-				continue
-			}
-			logrus.Info(dockerCommand.String())
-			if err := dockerCommand.ExecuteCommand(&imageConfig.Config, buildArgs); err != nil {
-				return nil, err
-			}
-			snapshotFiles := dockerCommand.FilesToSnapshot()
-			var contents []byte
-
-			// If this is an intermediate stage, we only snapshot for the last command and we
-			// want to snapshot the entire filesystem since we aren't tracking what was changed
-			// by previous commands.
-			if !stage.FinalStage {
-				if finalCmd {
-					contents, err = snapshotter.TakeSnapshotFS()
-				}
-			} else {
-				// If we are in single snapshot mode, we only take a snapshot once, after all
-				// commands have completed.
-				if opts.SingleSnapshot {
-					if finalCmd {
-						contents, err = snapshotter.TakeSnapshotFS()
-					}
-				} else {
-					// Otherwise, in the final stage we take a snapshot at each command. If we know
-					// the files that were changed, we'll snapshot those explicitly, otherwise we'll
-					// check if anything in the filesystem changed.
-					if snapshotFiles != nil {
-						contents, err = snapshotter.TakeSnapshot(snapshotFiles)
-					} else {
-						contents, err = snapshotter.TakeSnapshotFS()
-					}
-				}
-			}
-			if err != nil {
-				return nil, fmt.Errorf("Error taking snapshot of files for command %s: %s", dockerCommand, err)
-			}
-
-			util.MoveVolumeWhitelistToWhitelist()
-			if contents == nil {
-				logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
-				continue
-			}
-			// Append the layer to the image
-			opener := func() (io.ReadCloser, error) {
-				return ioutil.NopCloser(bytes.NewReader(contents)), nil
-			}
-			layer, err := tarball.LayerFromOpener(opener)
-			if err != nil {
-				return nil, err
-			}
-			sourceImage, err = mutate.Append(sourceImage,
-				mutate.Addendum{
-					Layer: layer,
-					History: v1.History{
-						Author:    constants.Author,
-						CreatedBy: dockerCommand.String(),
-					},
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-		}
-		reviewConfig(stage, &imageConfig.Config)
-		sourceImage, err = mutate.Config(sourceImage, imageConfig.Config)
-		if err != nil {
-			return nil, err
-		}
-		if stage.FinalStage {
+		if stage.Final {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
 			if err != nil {
 				return nil, err
