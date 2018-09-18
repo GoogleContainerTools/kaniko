@@ -220,6 +220,14 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
+		// Check if something already exists at path
+		// If so, delete it
+		if FilepathExists(path) {
+			if err := os.Remove(path); err != nil {
+				return errors.Wrapf(err, "error removing %s to make way for new link", hdr.Name)
+			}
+		}
+
 		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}
