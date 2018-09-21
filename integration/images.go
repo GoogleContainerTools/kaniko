@@ -82,7 +82,7 @@ func GetKanikoImage(imageRepo, dockerfile string) string {
 // skipping, it will not be included in the returned list.
 func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
-	testsToIgnore := map[string]bool{"Dockerfile_test_user_run": false}
+	testsToIgnore := map[string]bool{"Dockerfile_test_user_run": true}
 	allDockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
 	if err != nil {
 		return []string{}, fmt.Errorf("Failed to find docker files at %s: %s", dockerfilesPath, err)
