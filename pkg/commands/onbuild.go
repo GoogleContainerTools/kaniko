@@ -44,7 +44,12 @@ func (o *OnBuildCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (o *OnBuildCommand) CreatedBy() string {
-	return o.cmd.Expression
+// String returns some information about the command for the image config history
+func (o *OnBuildCommand) String() string {
+	return o.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (o *OnBuildCommand) CacheCommand() bool {
+	return false
 }

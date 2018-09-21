@@ -17,8 +17,6 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/pkg/signal"
@@ -59,9 +57,12 @@ func (s *StopSignalCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (s *StopSignalCommand) CreatedBy() string {
-	entrypoint := []string{"STOPSIGNAL"}
+// String returns some information about the command for the image config history
+func (s *StopSignalCommand) String() string {
+	return s.cmd.String()
+}
 
-	return strings.Join(append(entrypoint, s.cmd.Signal), " ")
+// CacheCommand returns false since this command shouldn't be cached
+func (s *StopSignalCommand) CacheCommand() bool {
+	return false
 }

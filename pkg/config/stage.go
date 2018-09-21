@@ -14,18 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package config
 
-import (
-	"strings"
+import "github.com/moby/buildkit/frontend/dockerfile/instructions"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-)
-
-func GetBucketAndItem(context string) (string, string) {
-	split := strings.SplitN(context, "/", 2)
-	if len(split) == 2 {
-		return split[0], split[1]
-	}
-	return split[0], constants.ContextTar
+// KanikoStage wraps a stage of the Dockerfile and provides extra information
+type KanikoStage struct {
+	instructions.Stage
+	BaseImageIndex         int
+	Final                  bool
+	BaseImageStoredLocally bool
+	SaveStage              bool
 }

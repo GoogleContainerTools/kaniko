@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -54,7 +55,9 @@ func Test_StandardImage(t *testing.T) {
 		return nil, nil
 	}
 	retrieveRemoteImage = mock
-	actual, err := RetrieveSourceImage(0, nil, stages)
+	actual, err := RetrieveSourceImage(config.KanikoStage{
+		Stage: stages[0],
+	}, nil)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 func Test_ScratchImage(t *testing.T) {
@@ -62,7 +65,9 @@ func Test_ScratchImage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual, err := RetrieveSourceImage(1, nil, stages)
+	actual, err := RetrieveSourceImage(config.KanikoStage{
+		Stage: stages[1],
+	}, nil)
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
 }
@@ -80,7 +85,11 @@ func Test_TarImage(t *testing.T) {
 		return nil, nil
 	}
 	retrieveTarImage = mock
-	actual, err := RetrieveSourceImage(2, nil, stages)
+	actual, err := RetrieveSourceImage(config.KanikoStage{
+		BaseImageStoredLocally: true,
+		BaseImageIndex:         0,
+		Stage:                  stages[2],
+	}, nil)
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 

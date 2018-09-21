@@ -14,18 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package testutil
 
-import (
-	"strings"
+const (
+	// Dockerfile is used for unit testing
+	Dockerfile = `
+	FROM scratch
+	RUN echo hi > /hi
+	
+	FROM scratch AS second
+	COPY --from=0 /hi /hi2
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	FROM second
+	RUN xxx
+	
+	FROM scratch
+	COPY --from=second /hi2 /hi3
+
+	FROM ubuntu:16.04 AS base
+	ENV DEBIAN_FRONTEND noninteractive
+	ENV LC_ALL C.UTF-8
+
+	FROM base AS development
+	ENV PS1 " 🐳 \[\033[1;36m\]\W\[\033[0;35m\] # \[\033[0m\]"
+
+	FROM development AS test
+	ENV ORG_ENV UnitTest
+
+	FROM base AS production
+	COPY . /code
+	`
 )
-
-func GetBucketAndItem(context string) (string, string) {
-	split := strings.SplitN(context, "/", 2)
-	if len(split) == 2 {
-		return split[0], split[1]
-	}
-	return split[0], constants.ContextTar
-}
