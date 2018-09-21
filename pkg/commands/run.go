@@ -130,15 +130,16 @@ func addDefaultHOME(u string, envs []string) []string {
 		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
 	}
 
-	// If user is set, set value of HOME to /home/${user}
-	// If uid is saved instead of username, lookup the user and supply the username
-	userObj, err := user.LookupId(u)
-	// The user is guaranteed to exist, so if err is not nil, then the username is set in the config
+	// If user is set to username, set value of HOME to /home/${user}
+	// Otherwise the user is set to uid and HOME is /
+	home := fmt.Sprintf("%s=/", constants.HOME)
+	userObj, err := user.Lookup(u)
 	if err == nil {
 		u = userObj.Username
+		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
 	}
 
-	return append(envs, fmt.Sprintf("%s=/home/%s", constants.HOME, u))
+	return append(envs, home)
 }
 
 // FilesToSnapshot returns nil for this command because we don't know which files
