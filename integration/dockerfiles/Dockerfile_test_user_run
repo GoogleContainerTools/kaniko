@@ -28,4 +28,4 @@ RUN echo "hi" > $HOME/file
 COPY context/foo $HOME/foo
 
 USER 1001
-RUN touch ~/invalid
+RUN echo $HOME
