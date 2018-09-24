@@ -153,7 +153,7 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		if err != nil {
 			return errors.Wrap(err, "getting key")
 		}
-		if command.CacheCommand() && opts.UseCache {
+		if command.CacheCommand() && opts.Cache {
 			image, err := cache.RetrieveLayer(opts, cacheKey)
 			if err == nil {
 				if err := s.extractCachedLayer(image, command.String()); err != nil {
@@ -212,7 +212,7 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 			return err
 		}
 		// Push layer to cache now along with new config file
-		if command.CacheCommand() && opts.UseCache {
+		if command.CacheCommand() && opts.Cache {
 			if err := pushLayerToCache(opts, cacheKey, layer, command.String()); err != nil {
 				return err
 			}

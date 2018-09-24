@@ -57,7 +57,7 @@ func RetrieveLayer(opts *config.KanikoOptions, cacheKey string) (v1.Image, error
 // Destination returns the repo where the layer should be stored
 // If no cache is specified, one is inferred from the destination provided
 func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
-	cache := opts.Cache
+	cache := opts.CacheRepo
 	if cache == "" {
 		destination := opts.Destinations[0]
 		destRef, err := name.NewTag(destination, name.WeakValidation)

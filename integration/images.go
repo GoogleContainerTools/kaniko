@@ -178,7 +178,6 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		}
 	}
 
-	cacheFlag := "--use-cache=false"
 	// build kaniko image
 	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
@@ -189,7 +188,6 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			ExecutorImage,
 			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 			"-d", kanikoImage, reproducibleFlag,
-			cacheFlag,
 			contextFlag, contextPath},
 			additionalFlags...)...,
 	)
@@ -204,9 +202,11 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 }
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
-func (d *DockerFileBuilder) buildCachedImages(imageRepo, cache, dockerfilesPath string, version int) error {
+func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesPath string, version int) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
+
+	cacheFlag := "--cache=true"
 
 	for dockerfile := range d.TestCacheDockerfiles {
 		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
@@ -218,7 +218,8 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cache, dockerfilesPath 
 				"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 				"-d", kanikoImage,
 				"-c", buildContextPath,
-				"--cache", cache})...,
+				cacheFlag,
+				"--cache-repo", cacheRepo})...,
 		)
 
 		if _, err := RunCommandWithoutTest(kanikoCmd); err != nil {

@@ -92,8 +92,8 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
 	RootCmd.PersistentFlags().BoolVarP(&opts.NoPush, "no-push", "", false, "Do not push the image to the registry")
-	RootCmd.PersistentFlags().StringVarP(&opts.Cache, "cache", "", "", "Specify a registry to use as a cache, otherwise one will be inferred from the destination provided")
-	RootCmd.PersistentFlags().BoolVarP(&opts.UseCache, "use-cache", "", true, "Use cache when building image")
+	RootCmd.PersistentFlags().StringVarP(&opts.CacheRepo, "cache-repo", "", "", "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
