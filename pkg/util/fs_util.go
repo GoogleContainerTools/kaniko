@@ -46,22 +46,25 @@ var whitelist = []string{
 }
 var volumeWhitelist = []string{}
 
-func GetFSFromImage(root string, img v1.Image) error {
+// GetFSFromImage extracts the layers of img to root
+// It returns a list of all files extracted
+func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	logrus.Infof("Mounted directories: %v", whitelist)
+	logrus.Debugf("Mounted directories: %v", whitelist)
 	layers, err := img.Layers()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	extractedFiles := []string{}
 
 	for i, l := range layers {
 		logrus.Infof("Extracting layer %d", i)
 		r, err := l.Uncompressed()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tr := tar.NewReader(r)
 		for {
@@ -70,7 +73,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 				break
 			}
 			if err != nil {
-				return err
+				return nil, err
 			}
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
@@ -79,13 +82,13 @@ func GetFSFromImage(root string, img v1.Image) error {
 				logrus.Debugf("Whiting out %s", path)
 				name := strings.TrimPrefix(base, ".wh.")
 				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
-					return errors.Wrapf(err, "removing whiteout %s", hdr.Name)
+					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
 				}
 				continue
 			}
 			whitelisted, err := CheckWhitelist(path)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if whitelisted && !checkWhitelistRoot(root) {
 				logrus.Debugf("Not adding %s because it is whitelisted", path)
@@ -94,7 +97,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 			if hdr.Typeflag == tar.TypeSymlink {
 				whitelisted, err := CheckWhitelist(hdr.Linkname)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if whitelisted {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
@@ -102,11 +105,12 @@ func GetFSFromImage(root string, img v1.Image) error {
 				}
 			}
 			if err := extractFile(root, hdr, tr); err != nil {
-				return err
+				return nil, err
 			}
+			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
 	}
-	return nil
+	return extractedFiles, nil
 }
 
 // DeleteFilesystem deletes the extracted image file system
