@@ -1,0 +1,2 @@
+FROM tenstartups/alpine@sha256:31dc8b12e0f73a1de899146c3663644b7668f8fd198cfe9b266886c9abfa944b
+RUN pwd

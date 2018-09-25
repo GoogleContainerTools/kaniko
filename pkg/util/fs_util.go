@@ -186,6 +186,13 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return err
 			}
 		}
+		// Check if something already exists at path (symlinks etc.)
+		// If so, delete it
+		if FilepathExists(path) {
+			if err := os.Remove(path); err != nil {
+				return errors.Wrapf(err, "error removing %s to make way for new file.", path)
+			}
+		}
 		currFile, err := os.Create(path)
 		if err != nil {
 			return err
