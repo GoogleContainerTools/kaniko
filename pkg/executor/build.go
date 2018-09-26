@@ -248,6 +248,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := sb.build(opts); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
+		reviewConfig(stage, &sb.cf.Config)
 		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
 		if err != nil {
 			return nil, err
@@ -331,4 +332,24 @@ func resolveOnBuild(stage *config.KanikoStage, config *v1.Config) error {
 	// Blank out the Onbuild command list for this image
 	config.OnBuild = nil
 	return nil
+}
+
+// reviewConfig makes sure the value of CMD is correct after building the stage
+// If ENTRYPOINT was set in this stage but CMD wasn't, then CMD should be cleared out
+// See Issue #346 for more info
+func reviewConfig(stage config.KanikoStage, config *v1.Config) {
+	entrypoint := false
+	cmd := false
+
+	for _, c := range stage.Commands {
+		if c.Name() == constants.Cmd {
+			cmd = true
+		}
+		if c.Name() == constants.Entrypoint {
+			entrypoint = true
+		}
+	}
+	if entrypoint && !cmd {
+		config.Cmd = nil
+	}
 }

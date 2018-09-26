@@ -23,7 +23,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type EntrypointCommand struct {
@@ -47,7 +46,6 @@ func (e *EntrypointCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerf
 		newCommand = e.cmd.CmdLine
 	}
 
-	logrus.Infof("Replacing Entrypoint in config with %v", newCommand)
 	config.Entrypoint = newCommand
 	return nil
 }
