@@ -23,7 +23,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type CmdCommand struct {
@@ -48,7 +47,6 @@ func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		newCommand = c.cmd.CmdLine
 	}
 
-	logrus.Infof("Replacing CMD in config with %v", newCommand)
 	config.Cmd = newCommand
 	config.ArgsEscaped = true
 	return nil

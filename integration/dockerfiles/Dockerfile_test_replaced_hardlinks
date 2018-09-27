@@ -1,0 +1,1 @@
+FROM jboss/base-jdk@sha256:70d956f632c26d1f1df57cbb99870a6141cfe470de0eb2d51bccd44929df9367

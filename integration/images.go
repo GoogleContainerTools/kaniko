@@ -23,6 +23,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -77,12 +78,16 @@ func GetKanikoImage(imageRepo, dockerfile string) string {
 	return strings.ToLower(imageRepo + kanikoPrefix + dockerfile)
 }
 
+// GetVersionedKanikoImage versions constructs the name of the kaniko image that would be built
+// with the dockerfile and versions it for cache testing
+func GetVersionedKanikoImage(imageRepo, dockerfile string, version int) string {
+	return strings.ToLower(imageRepo + kanikoPrefix + dockerfile + strconv.Itoa(version))
+}
+
 // FindDockerFiles will look for test docker files in the directory dockerfilesPath.
 // These files must start with `Dockerfile_test`. If the file is one we are intentionally
 // skipping, it will not be included in the returned list.
 func FindDockerFiles(dockerfilesPath string) ([]string, error) {
-	// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
-	testsToIgnore := map[string]bool{"Dockerfile_test_user_run": true}
 	allDockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
 	if err != nil {
 		return []string{}, fmt.Errorf("Failed to find docker files at %s: %s", dockerfilesPath, err)
@@ -92,9 +97,8 @@ func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 	for _, dockerfile := range allDockerfiles {
 		// Remove the leading directory from the path
 		dockerfile = dockerfile[len("dockerfiles/"):]
-		if !testsToIgnore[dockerfile] {
-			dockerfiles = append(dockerfiles, dockerfile)
-		}
+		dockerfiles = append(dockerfiles, dockerfile)
+
 	}
 	return dockerfiles, err
 }
@@ -103,7 +107,9 @@ func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 // keeps track of which files have been built.
 type DockerFileBuilder struct {
 	// Holds all available docker files and whether or not they've been built
-	FilesBuilt map[string]bool
+	FilesBuilt           map[string]bool
+	DockerfilesToIgnore  map[string]struct{}
+	TestCacheDockerfiles map[string]struct{}
 }
 
 // NewDockerFileBuilder will create a DockerFileBuilder initialized with dockerfiles, which
@@ -112,6 +118,14 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 	d := DockerFileBuilder{FilesBuilt: map[string]bool{}}
 	for _, f := range dockerfiles {
 		d.FilesBuilt[f] = false
+	}
+	d.DockerfilesToIgnore = map[string]struct{}{
+		// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
+		"Dockerfile_test_user_run": {},
+	}
+	d.TestCacheDockerfiles = map[string]struct{}{
+		"Dockerfile_test_cache":         {},
+		"Dockerfile_test_cache_install": {},
 	}
 	return &d
 }
@@ -184,5 +198,33 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	}
 
 	d.FilesBuilt[dockerfile] = true
+	return nil
+}
+
+// buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
+func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesPath string, version int) error {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	cacheFlag := "--cache=true"
+
+	for dockerfile := range d.TestCacheDockerfiles {
+		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
+		kanikoCmd := exec.Command("docker",
+			append([]string{"run",
+				"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+				"-v", cwd + ":/workspace",
+				ExecutorImage,
+				"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+				"-d", kanikoImage,
+				"-c", buildContextPath,
+				cacheFlag,
+				"--cache-repo", cacheRepo})...,
+		)
+
+		if _, err := RunCommandWithoutTest(kanikoCmd); err != nil {
+			return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
+		}
+	}
 	return nil
 }
