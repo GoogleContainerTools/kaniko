@@ -40,25 +40,31 @@ var whitelist = []string{
 	// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 	// in the image with no way to tell if it came from the base image or not.
 	"/var/run",
+	// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
+	// from the base image
+	"/etc/mtab",
 }
 var volumeWhitelist = []string{}
 
-func GetFSFromImage(root string, img v1.Image) error {
+// GetFSFromImage extracts the layers of img to root
+// It returns a list of all files extracted
+func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	logrus.Infof("Mounted directories: %v", whitelist)
+	logrus.Debugf("Mounted directories: %v", whitelist)
 	layers, err := img.Layers()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	extractedFiles := []string{}
 
 	for i, l := range layers {
 		logrus.Infof("Extracting layer %d", i)
 		r, err := l.Uncompressed()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tr := tar.NewReader(r)
 		for {
@@ -67,7 +73,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 				break
 			}
 			if err != nil {
-				return err
+				return nil, err
 			}
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
@@ -76,13 +82,13 @@ func GetFSFromImage(root string, img v1.Image) error {
 				logrus.Debugf("Whiting out %s", path)
 				name := strings.TrimPrefix(base, ".wh.")
 				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
-					return errors.Wrapf(err, "removing whiteout %s", hdr.Name)
+					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
 				}
 				continue
 			}
 			whitelisted, err := CheckWhitelist(path)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if whitelisted && !checkWhitelistRoot(root) {
 				logrus.Debugf("Not adding %s because it is whitelisted", path)
@@ -91,7 +97,7 @@ func GetFSFromImage(root string, img v1.Image) error {
 			if hdr.Typeflag == tar.TypeSymlink {
 				whitelisted, err := CheckWhitelist(hdr.Linkname)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if whitelisted {
 					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
@@ -99,11 +105,12 @@ func GetFSFromImage(root string, img v1.Image) error {
 				}
 			}
 			if err := extractFile(root, hdr, tr); err != nil {
-				return err
+				return nil, err
 			}
+			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
 	}
-	return nil
+	return extractedFiles, nil
 }
 
 // DeleteFilesystem deletes the extracted image file system
@@ -179,6 +186,13 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return err
 			}
 		}
+		// Check if something already exists at path (symlinks etc.)
+		// If so, delete it
+		if FilepathExists(path) {
+			if err := os.Remove(path); err != nil {
+				return errors.Wrapf(err, "error removing %s to make way for new file.", path)
+			}
+		}
 		currFile, err := os.Create(path)
 		if err != nil {
 			return err
@@ -194,7 +208,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 		currFile.Close()
-
 	case tar.TypeDir:
 		logrus.Debugf("creating dir %s", path)
 		if err := os.MkdirAll(path, mode); err != nil {
@@ -214,6 +227,14 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
+		// Check if something already exists at path
+		// If so, delete it
+		if FilepathExists(path) {
+			if err := os.Remove(path); err != nil {
+				return errors.Wrapf(err, "error removing %s to make way for new link", hdr.Name)
+			}
+		}
+
 		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
 			return err
 		}

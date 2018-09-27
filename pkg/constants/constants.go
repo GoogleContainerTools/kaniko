@@ -55,9 +55,13 @@ const (
 	S3BuildContextPrefix       = "s3://"
 	LocalDirBuildContextPrefix = "dir://"
 
+	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME
-	HOME             = "HOME"
 	DefaultHOMEValue = "/root"
+
+	// Docker command names
+	Cmd        = "cmd"
+	Entrypoint = "entrypoint"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko

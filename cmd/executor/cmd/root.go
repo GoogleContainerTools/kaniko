@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,21 +60,23 @@ var RootCmd = &cobra.Command{
 		}
 		return resolveDockerfilePath()
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		if !checkContained() {
 			if !force {
-				return errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue")
+				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
 		if err := os.Chdir("/"); err != nil {
-			return errors.Wrap(err, "error changing to root dir")
+			exit(errors.Wrap(err, "error changing to root dir"))
 		}
 		image, err := executor.DoBuild(opts)
 		if err != nil {
-			return errors.Wrap(err, "error building image")
+			exit(errors.Wrap(err, "error building image"))
 		}
-		return executor.DoPush(image, opts)
+		if err := executor.DoPush(image, opts); err != nil {
+			exit(errors.Wrap(err, "error pushing image"))
+		}
 	},
 }
 
@@ -92,6 +95,8 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
 	RootCmd.PersistentFlags().BoolVarP(&opts.NoPush, "no-push", "", false, "Do not push the image to the registry")
+	RootCmd.PersistentFlags().StringVarP(&opts.CacheRepo, "cache-repo", "", "", "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -157,4 +162,9 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
+}
+
+func exit(err error) {
+	fmt.Println(err)
+	os.Exit(1)
 }
