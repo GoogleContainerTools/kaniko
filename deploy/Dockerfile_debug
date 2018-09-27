@@ -38,6 +38,8 @@ COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kanik
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=1 /distroless/bazel-genfiles/experimental/busybox/busybox/ /busybox/
+# Declare /busybox as a volume to get it automatically whitelisted
+VOLUME /busybox
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
 COPY files/config.json /kaniko/.docker/
 ENV HOME /root
