@@ -264,6 +264,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 					return nil, err
 				}
 			}
+			if opts.Cleanup {
+				if err = util.DeleteFilesystem(); err != nil {
+					return nil, err
+				}
+			}
 			return sourceImage, nil
 		}
 		if stage.SaveStage {
