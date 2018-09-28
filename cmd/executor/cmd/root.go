@@ -55,6 +55,9 @@ var RootCmd = &cobra.Command{
 		if !opts.NoPush && len(opts.Destinations) == 0 {
 			return errors.New("You must provide --destination, or use --no-push")
 		}
+		if err := cacheFlagsValid(); err != nil {
+			return errors.Wrap(err, "cache flags invalid")
+		}
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
 		}
@@ -111,6 +114,19 @@ func addHiddenFlags(cmd *cobra.Command) {
 func checkContained() bool {
 	_, err := container.DetectRuntime()
 	return err == nil
+}
+
+// cacheFlagsValid makes sure the flags passed in related to caching are valid
+func cacheFlagsValid() error {
+	if !opts.Cache {
+		return nil
+	}
+	// If --cache=true and --no-push=true, then cache repo must be provided
+	// since cache can't be inferred from destination
+	if opts.CacheRepo == "" && opts.NoPush {
+		return errors.New("if using cache with --no-push, specify cache repo with --cache-repo")
+	}
+	return nil
 }
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
