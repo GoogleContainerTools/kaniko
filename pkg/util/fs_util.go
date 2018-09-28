@@ -86,24 +86,6 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				}
 				continue
 			}
-			whitelisted, err := CheckWhitelist(path)
-			if err != nil {
-				return nil, err
-			}
-			if whitelisted && !checkWhitelistRoot(root) {
-				logrus.Debugf("Not adding %s because it is whitelisted", path)
-				continue
-			}
-			if hdr.Typeflag == tar.TypeSymlink {
-				whitelisted, err := CheckWhitelist(hdr.Linkname)
-				if err != nil {
-					return nil, err
-				}
-				if whitelisted {
-					logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
-					continue
-				}
-			}
 			if err := extractFile(root, hdr, tr); err != nil {
 				return nil, err
 			}
@@ -176,6 +158,15 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	mode := hdr.FileInfo().Mode()
 	uid := hdr.Uid
 	gid := hdr.Gid
+
+	whitelisted, err := CheckWhitelist(path)
+	if err != nil {
+		return err
+	}
+	if whitelisted && !checkWhitelistRoot(dest) {
+		logrus.Debugf("Not adding %s because it is whitelisted", path)
+		return nil
+	}
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
@@ -223,6 +214,14 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 
 	case tar.TypeLink:
 		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
+		whitelisted, err := CheckWhitelist(hdr.Linkname)
+		if err != nil {
+			return err
+		}
+		if whitelisted {
+			logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
+			return nil
+		}
 		// The base directory for a link may not exist before it is created.
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
