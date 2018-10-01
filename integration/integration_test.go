@@ -314,7 +314,7 @@ func filterDiff(f []fileDiff) []fileDiff {
 	for _, diff := range f {
 		isWhitelisted := false
 		for _, p := range allowedDiffPaths {
-			if util.HasFilepathPrefix(diff.Name, p) {
+			if util.HasFilepathPrefix(diff.Name, p, false) {
 				isWhitelisted = true
 				break
 			}
