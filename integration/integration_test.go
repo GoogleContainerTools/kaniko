@@ -214,6 +214,9 @@ func TestLayers(t *testing.T) {
 	offset := map[string]int{
 		"Dockerfile_test_add":     11,
 		"Dockerfile_test_scratch": 3,
+		// the Docker built image combined some of the dirs defined by separate VOLUME commands into one layer
+		// which is why this offset exists
+		"Dockerfile_test_volume": 1,
 	}
 	for dockerfile, built := range imageBuilder.FilesBuilt {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {

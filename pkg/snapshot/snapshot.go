@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 )
@@ -83,6 +84,21 @@ func (s *Snapshotter) TakeSnapshotFS() ([]byte, error) {
 	return contents, err
 }
 
+func shouldSnapshot(file string, snapshottedFiles map[string]bool) (bool, error) {
+	if val, ok := snapshottedFiles[file]; ok && val {
+		return false, nil
+	}
+	whitelisted, err := util.CheckWhitelist(file)
+	if err != nil {
+		return false, fmt.Errorf("Error checking for %s in whitelist: %s", file, err)
+	}
+	if whitelisted && !isBuildFile(file) {
+		logrus.Infof("Not adding %s to layer, as it's whitelisted", file)
+		return false, nil
+	}
+	return true, nil
+}
+
 // snapshotFiles creates a snapshot (tar) and adds the specified files.
 // It will not add files which are whitelisted.
 func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
@@ -107,7 +123,11 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 	}
 	for _, file := range parentDirs {
 		file = filepath.Clean(file)
-		if val, ok := snapshottedFiles[file]; ok && val {
+		shouldSnapshot, err := shouldSnapshot(file, snapshottedFiles)
+		if err != nil {
+			return false, fmt.Errorf("Error checking if parent dir %s can be snapshotted: %s", file, err)
+		}
+		if !shouldSnapshot {
 			continue
 		}
 		snapshottedFiles[file] = true
@@ -128,20 +148,33 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 	// Next add the files themselves to the tar
 	for _, file := range files {
 		file = filepath.Clean(file)
-		if val, ok := snapshottedFiles[file]; ok && val {
+		shouldSnapshot, err := shouldSnapshot(file, snapshottedFiles)
+		if err != nil {
+			return false, fmt.Errorf("Error checking if file %s can be snapshotted: %s", file, err)
+		}
+		if !shouldSnapshot {
 			continue
 		}
 		snapshottedFiles[file] = true
 
-		if err := s.l.Add(file); err != nil {
+		if err = s.l.Add(file); err != nil {
 			return false, fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
 		}
-		if err := t.AddFileToTar(file); err != nil {
+		if err = t.AddFileToTar(file); err != nil {
 			return false, fmt.Errorf("Error adding file %s to tar: %s", file, err)
 		}
 		filesAdded = true
 	}
 	return filesAdded, nil
+}
+
+func isBuildFile(file string) bool {
+	for _, buildFile := range constants.KanikoBuildFiles {
+		if file == buildFile {
+			return true
+		}
+	}
+	return false
 }
 
 // shapShotFS creates a snapshot (tar) of all files in the system which are not

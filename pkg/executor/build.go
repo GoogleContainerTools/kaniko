@@ -138,7 +138,6 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
-	var volumes []string
 	args := dockerfile.NewBuildArgs(opts.BuildArgs)
 	for index, cmd := range s.stage.Commands {
 		finalCmd := index == len(s.stage.Commands)-1
@@ -168,10 +167,6 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 			return err
 		}
 		files := command.FilesToSnapshot()
-		if cmd.Name() == constants.VolumeCmdName {
-			volumes = append(volumes, files...)
-			continue
-		}
 		var contents []byte
 
 		// If this is an intermediate stage, we only snapshot for the last command and we
@@ -193,14 +188,9 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 				// the files that were changed, we'll snapshot those explicitly, otherwise we'll
 				// check if anything in the filesystem changed.
 				if files != nil {
-					if len(files) > 0 {
-						files = append(files, volumes...)
-						volumes = []string{}
-					}
 					contents, err = s.snapshotter.TakeSnapshot(files)
 				} else {
 					contents, err = s.snapshotter.TakeSnapshotFS()
-					volumes = []string{}
 				}
 			}
 		}
@@ -208,6 +198,7 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 			return fmt.Errorf("Error taking snapshot of files for command %s: %s", command, err)
 		}
 
+		util.MoveVolumeWhitelistToWhitelist()
 		if contents == nil {
 			logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 			continue

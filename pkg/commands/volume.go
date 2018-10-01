@@ -48,7 +48,7 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 	for _, volume := range resolvedVolumes {
 		var x struct{}
 		existingVolumes[volume] = x
-		err := util.AddVolumePathToWhitelist(volume)
+		err := util.AddPathToVolumeWhitelist(volume)
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 		// Only create and snapshot the dir if it didn't exist already
 		if _, err := os.Stat(volume); os.IsNotExist(err) {
 			logrus.Infof("Creating directory %s", volume)
-			v.snapshotFiles = append(v.snapshotFiles, volume)
+			v.snapshotFiles = []string{volume}
 			if err := os.MkdirAll(volume, 0755); err != nil {
 				return fmt.Errorf("Could not create directory for volume %s: %s", volume, err)
 			}

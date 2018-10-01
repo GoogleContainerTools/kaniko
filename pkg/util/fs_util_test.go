@@ -50,21 +50,9 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	}
 
 	actualWhitelist, err := fileSystemWhitelist(path)
-	expectedWhitelist := []WhitelistEntry{
-		{"/kaniko", false},
-		{"/proc", false},
-		{"/dev", false},
-		{"/dev/pts", false},
-		{"/sys", false},
-		{"/var/run", false},
-		{"/etc/mtab", false},
-	}
-	sort.Slice(actualWhitelist, func(i, j int) bool {
-		return actualWhitelist[i].Path < actualWhitelist[j].Path
-	})
-	sort.Slice(expectedWhitelist, func(i, j int) bool {
-		return expectedWhitelist[i].Path < expectedWhitelist[j].Path
-	})
+	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys", "/var/run", "/etc/mtab"}
+	sort.Strings(actualWhitelist)
+	sort.Strings(expectedWhitelist)
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
 }
 
@@ -179,7 +167,7 @@ func Test_ParentDirectories(t *testing.T) {
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
-		whitelist []WhitelistEntry
+		whitelist []string
 	}
 	tests := []struct {
 		name string
@@ -190,7 +178,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "file whitelisted",
 			args: args{
 				path:      "/foo",
-				whitelist: []WhitelistEntry{{"/foo", false}},
+				whitelist: []string{"/foo"},
 			},
 			want: true,
 		},
@@ -198,7 +186,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "directory whitelisted",
 			args: args{
 				path:      "/foo/bar",
-				whitelist: []WhitelistEntry{{"/foo", false}},
+				whitelist: []string{"/foo"},
 			},
 			want: true,
 		},
@@ -206,7 +194,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "grandparent whitelisted",
 			args: args{
 				path:      "/foo/bar/baz",
-				whitelist: []WhitelistEntry{{"/foo", false}},
+				whitelist: []string{"/foo"},
 			},
 			want: true,
 		},
@@ -214,7 +202,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "sibling whitelisted",
 			args: args{
 				path:      "/foo/bar/baz",
-				whitelist: []WhitelistEntry{{"/foo/bat", false}},
+				whitelist: []string{"/foo/bat"},
 			},
 			want: false,
 		},
@@ -239,9 +227,8 @@ func Test_CheckWhitelist(t *testing.T) {
 
 func TestHasFilepathPrefix(t *testing.T) {
 	type args struct {
-		path            string
-		prefix          string
-		prefixMatchOnly bool
+		path   string
+		prefix string
 	}
 	tests := []struct {
 		name string
@@ -251,61 +238,47 @@ func TestHasFilepathPrefix(t *testing.T) {
 		{
 			name: "parent",
 			args: args{
-				path:            "/foo/bar",
-				prefix:          "/foo",
-				prefixMatchOnly: false,
+				path:   "/foo/bar",
+				prefix: "/foo",
 			},
 			want: true,
 		},
 		{
 			name: "nested parent",
 			args: args{
-				path:            "/foo/bar/baz",
-				prefix:          "/foo/bar",
-				prefixMatchOnly: false,
+				path:   "/foo/bar/baz",
+				prefix: "/foo/bar",
 			},
 			want: true,
 		},
 		{
 			name: "sibling",
 			args: args{
-				path:            "/foo/bar",
-				prefix:          "/bar",
-				prefixMatchOnly: false,
+				path:   "/foo/bar",
+				prefix: "/bar",
 			},
 			want: false,
 		},
 		{
 			name: "nested sibling",
 			args: args{
-				path:            "/foo/bar/baz",
-				prefix:          "/foo/bar",
-				prefixMatchOnly: false,
+				path:   "/foo/bar/baz",
+				prefix: "/foo/bar",
 			},
 			want: true,
 		},
 		{
 			name: "name prefix",
 			args: args{
-				path:            "/foo2/bar",
-				prefix:          "/foo",
-				prefixMatchOnly: false,
-			},
-			want: false,
-		},
-		{
-			name: "prefix match only (volume)",
-			args: args{
-				path:            "/foo",
-				prefix:          "/foo",
-				prefixMatchOnly: true,
+				path:   "/foo2/bar",
+				prefix: "/foo",
 			},
 			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix, tt.args.prefixMatchOnly); got != tt.want {
+			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix); got != tt.want {
 				t.Errorf("HasFilepathPrefix() = %v, want %v", got, tt.want)
 			}
 		})
