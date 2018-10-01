@@ -307,7 +307,7 @@ func saveStageAsTarball(stageIndex int, image v1.Image) error {
 	}
 	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(stageIndex))
 	logrus.Infof("Storing source image from stage %d at path %s", stageIndex, tarPath)
-	return tarball.WriteToFile(tarPath, destRef, image, nil)
+	return tarball.WriteToFile(tarPath, destRef, image)
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {

@@ -66,7 +66,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		for _, destRef := range destRefs {
 			tagToImage[destRef] = image
 		}
-		return tarball.MultiWriteToFile(opts.TarPath, tagToImage, nil)
+		return tarball.MultiWriteToFile(opts.TarPath, tagToImage)
 	}
 
 	// continue pushing unless an error occurs
@@ -98,7 +98,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
+		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
