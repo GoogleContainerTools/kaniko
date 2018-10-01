@@ -43,8 +43,18 @@ func (s *CompositeCache) AddKey(k ...string) {
 	s.keys = append(s.keys, k...)
 }
 
-// AddDir adds the contents of a directory to the composite key.
-func (s *CompositeCache) AddDir(p string) error {
+// Key returns the human readable composite key as a string.
+func (s *CompositeCache) Key() string {
+	return strings.Join(s.keys, "-")
+}
+
+// Hash returns the composite key in a string SHA256 format.
+func (s *CompositeCache) Hash() (string, error) {
+	return util.SHA256(strings.NewReader(s.Key()))
+}
+
+// HashDir returns a hash of the directory.
+func HashDir(p string) (string, error) {
 	sha := sha256.New()
 	if err := filepath.Walk(p, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -59,19 +69,8 @@ func (s *CompositeCache) AddDir(p string) error {
 		}
 		return nil
 	}); err != nil {
-		return err
+		return "", err
 	}
 
-	s.AddKey(string(sha.Sum(nil)))
-	return nil
-}
-
-// Key returns the human readable composite key as a string.
-func (s *CompositeCache) Key() string {
-	return strings.Join(s.keys, "-")
-}
-
-// Hash returns the composite key in a string SHA256 format.
-func (s *CompositeCache) Hash() (string, error) {
-	return util.SHA256(strings.NewReader(s.Key()))
+	return string(sha.Sum(nil)), nil
 }

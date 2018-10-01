@@ -124,7 +124,8 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	compositeKey := NewCompositeCache(s.baseImageDigest)
-	if err := compositeKey.AddDir(opts.SrcContext); err != nil {
+	contextHash, err := HashDir(opts.SrcContext)
+	if err != nil {
 		return err
 	}
 	compositeKey.AddKey(opts.BuildArgs...)
@@ -142,6 +143,9 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 
 		// Add the next command to the cache key.
 		compositeKey.AddKey(command.String())
+		if command.UsesContext() {
+			compositeKey.AddKey(contextHash)
+		}
 		logrus.Info(command.String())
 
 		ck, err := compositeKey.Hash()

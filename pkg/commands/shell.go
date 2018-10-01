@@ -23,6 +23,7 @@ import (
 )
 
 type ShellCommand struct {
+	BaseCommand
 	cmd *instructions.ShellCommand
 }
 
@@ -32,17 +33,7 @@ func (s *ShellCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.B
 	return nil
 }
 
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (s *ShellCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (s *ShellCommand) String() string {
 	return s.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (s *ShellCommand) CacheCommand() bool {
-	return false
 }

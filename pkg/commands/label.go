@@ -26,6 +26,7 @@ import (
 )
 
 type LabelCommand struct {
+	BaseCommand
 	cmd *instructions.LabelCommand
 }
 
@@ -64,17 +65,7 @@ func updateLabels(labels []instructions.KeyValuePair, config *v1.Config, buildAr
 
 }
 
-// No files have changed, this command only touches metadata.
-func (r *LabelCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (r *LabelCommand) String() string {
 	return r.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (r *LabelCommand) CacheCommand() bool {
-	return false
 }

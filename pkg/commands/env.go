@@ -25,6 +25,7 @@ import (
 )
 
 type EnvCommand struct {
+	BaseCommand
 	cmd *instructions.EnvCommand
 }
 
@@ -34,17 +35,7 @@ func (e *EnvCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	return util.UpdateConfigEnv(newEnvs, config, replacementEnvs)
 }
 
-// We know that no files have changed, so return an empty array
-func (e *EnvCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (e *EnvCommand) String() string {
 	return e.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (e *EnvCommand) CacheCommand() bool {
-	return false
 }

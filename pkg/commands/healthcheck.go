@@ -23,6 +23,7 @@ import (
 )
 
 type HealthCheckCommand struct {
+	BaseCommand
 	cmd *instructions.HealthCheckCommand
 }
 
@@ -34,17 +35,7 @@ func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	return nil
 }
 
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (h *HealthCheckCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (h *HealthCheckCommand) String() string {
 	return h.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (h *HealthCheckCommand) CacheCommand() bool {
-	return false
 }

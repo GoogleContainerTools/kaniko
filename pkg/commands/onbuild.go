@@ -24,6 +24,7 @@ import (
 )
 
 type OnBuildCommand struct {
+	BaseCommand
 	cmd *instructions.OnbuildCommand
 }
 
@@ -39,17 +40,7 @@ func (o *OnBuildCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 	return nil
 }
 
-// FilesToSnapshot returns that no files have changed, this command only touches metadata.
-func (o *OnBuildCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (o *OnBuildCommand) String() string {
 	return o.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (o *OnBuildCommand) CacheCommand() bool {
-	return false
 }

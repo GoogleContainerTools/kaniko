@@ -29,6 +29,7 @@ import (
 )
 
 type VolumeCommand struct {
+	BaseCommand
 	cmd           *instructions.VolumeCommand
 	snapshotFiles []string
 }
@@ -73,9 +74,4 @@ func (v *VolumeCommand) FilesToSnapshot() []string {
 
 func (v *VolumeCommand) String() string {
 	return v.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (v *VolumeCommand) CacheCommand() bool {
-	return false
 }
