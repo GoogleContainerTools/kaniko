@@ -14,24 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package main
 
-// KanikoOptions are options that are set by command line arguments
-type KanikoOptions struct {
-	DockerfilePath string
-	SrcContext     string
-	SnapshotMode   string
-	Bucket         string
-	TarPath        string
-	Target         string
-	CacheRepo      string
-	CacheDir       string
-	Destinations   multiArg
-	BuildArgs      multiArg
-	InsecurePush   bool
-	SkipTLSVerify  bool
-	SingleSnapshot bool
-	Reproducible   bool
-	NoPush         bool
-	Cache          bool
+import (
+	"os"
+
+	"github.com/GoogleContainerTools/kaniko/cmd/executor/cmd"
+)
+
+func main() {
+	if err := cmd.RootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

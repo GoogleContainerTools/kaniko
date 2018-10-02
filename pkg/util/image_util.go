@@ -30,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/sirupsen/logrus"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
@@ -41,7 +42,7 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image, error) {
+func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string, opts *config.KanikoOptions) (v1.Image, error) {
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
@@ -55,6 +56,12 @@ func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image
 	// If so, retrieve the image from the stored tarball
 	if stage.BaseImageStoredLocally {
 		return retrieveTarImage(stage.BaseImageIndex)
+	}
+
+	// Next, check if local caching is enabled
+	// If so, look in the local cache before trying the remote registry
+	if opts.Cache && opts.CacheDir != "" {
+		return cachedImage(opts, currentBaseName)
 	}
 
 	// Otherwise, initialize image as usual
@@ -91,4 +98,8 @@ func remoteImage(image string) (v1.Image, error) {
 	}
 	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
 	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
+}
+
+func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
+	return cache.LocalDestination(opts, image)
 }
