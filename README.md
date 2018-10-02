@@ -317,6 +317,10 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+#### --cleanup
+
+Set this flag to cleanup the filesystem at the end, leaving a clean kaniko container (if you want to build multiple images in the same container, using the debug kaniko image)
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.

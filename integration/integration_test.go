@@ -32,6 +32,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
@@ -57,8 +58,8 @@ func (i imageDetails) String() string {
 
 func initGCPConfig() *gcpConfig {
 	var c gcpConfig
-	flag.StringVar(&c.gcsBucket, "bucket", "", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
-	flag.StringVar(&c.imageRepo, "repo", "", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
+	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
+	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
 	flag.Parse()
 
 	if c.gcsBucket == "" || c.imageRepo == "" {
@@ -211,11 +212,8 @@ func TestRun(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":     10,
+		"Dockerfile_test_add":     11,
 		"Dockerfile_test_scratch": 3,
-		// the Docker built image combined some of the dirs defined by separate VOLUME commands into one layer
-		// which is why this offset exists
-		"Dockerfile_test_volume": 1,
 	}
 	for dockerfile, built := range imageBuilder.FilesBuilt {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
@@ -269,13 +267,30 @@ func TestCache(t *testing.T) {
 	}
 }
 
+type fileDiff struct {
+	Name string
+	Size int
+}
+
+type diffOutput struct {
+	Image1   string
+	Image2   string
+	DiffType string
+	Diff     struct {
+		Adds []fileDiff
+		Dels []fileDiff
+	}
+}
+
+var allowedDiffPaths = []string{"/sys"}
+
 func checkContainerDiffOutput(t *testing.T, diff []byte, expected string) {
 	// Let's compare the json objects themselves instead of strings to avoid
 	// issues with spaces and indents
 	t.Helper()
 
-	var diffInt interface{}
-	var expectedInt interface{}
+	diffInt := []diffOutput{}
+	expectedInt := []diffOutput{}
 
 	err := json.Unmarshal(diff, &diffInt)
 	if err != nil {
@@ -287,7 +302,28 @@ func checkContainerDiffOutput(t *testing.T, diff []byte, expected string) {
 		t.Error(err)
 	}
 
+	// Some differences (whitelisted paths, etc.) are known and expected.
+	diffInt[0].Diff.Adds = filterDiff(diffInt[0].Diff.Adds)
+	diffInt[0].Diff.Dels = filterDiff(diffInt[0].Diff.Dels)
+
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedInt, diffInt)
+}
+
+func filterDiff(f []fileDiff) []fileDiff {
+	var newDiffs []fileDiff
+	for _, diff := range f {
+		isWhitelisted := false
+		for _, p := range allowedDiffPaths {
+			if util.HasFilepathPrefix(diff.Name, p, false) {
+				isWhitelisted = true
+				break
+			}
+		}
+		if !isWhitelisted {
+			newDiffs = append(newDiffs, diff)
+		}
+	}
+	return newDiffs
 }
 
 func checkLayers(t *testing.T, image1, image2 string, offset int) {

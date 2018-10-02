@@ -14,6 +14,10 @@ ADD $contextenv/* /tmp/${contextenv}/
 ADD context/tars/fil* /tars/
 ADD context/tars/file.tar /tars_again
 
+# This tar has some directories that should be whitelisted inside it.
+
+ADD context/tars/sys.tar.gz /
+
 # Test with ARG
 ARG file
 COPY $file /arg

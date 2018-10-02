@@ -34,4 +34,5 @@ type KanikoOptions struct {
 	Reproducible   bool
 	NoPush         bool
 	Cache          bool
+	Cleanup        bool
 }
