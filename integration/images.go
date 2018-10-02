@@ -63,7 +63,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_target":  {"--target=second"},
 }
 
-var bucketContextTests = []string{"Dockerfile_test_copy_bucket"}
+var gitRepoTests = []string{"Dockerfile_test_git"}
 var reproducibleTests = []string{"Dockerfile_test_reproducible"}
 
 // GetDockerImage constructs the name of the docker image that would be built with
@@ -162,10 +162,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 
 	contextFlag := "-c"
 	contextPath := buildContextPath
-	for _, d := range bucketContextTests {
+	for _, d := range gitRepoTests {
 		if d == dockerfile {
 			contextFlag = "-b"
-			contextPath = gcsBucket
+			contextPath = "https://github.com/GoogleContainerTools/kaniko"
 			break
 		}
 	}
