@@ -17,9 +17,6 @@ limitations under the License.
 package dockerfile
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -27,7 +24,7 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
-func Test_ResolveStages(t *testing.T) {
+func Test_resolveStages(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
@@ -42,7 +39,7 @@ func Test_ResolveStages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ResolveStages(stages)
+	resolveStages(stages)
 	for index, stage := range stages {
 		if index == 0 {
 			continue
@@ -55,7 +52,7 @@ func Test_ResolveStages(t *testing.T) {
 	}
 }
 
-func Test_ValidateTarget(t *testing.T) {
+func Test_targetStage(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
@@ -71,70 +68,44 @@ func Test_ValidateTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	tests := []struct {
-		name      string
-		target    string
-		shouldErr bool
+		name        string
+		target      string
+		targetIndex int
+		shouldErr   bool
 	}{
 		{
-			name:      "test valid target",
-			target:    "second",
-			shouldErr: false,
+			name:        "test valid target",
+			target:      "second",
+			targetIndex: 1,
+			shouldErr:   false,
 		},
 		{
-			name:      "test invalid target",
-			target:    "invalid",
-			shouldErr: true,
+			name:        "test no target",
+			target:      "",
+			targetIndex: 2,
+			shouldErr:   false,
+		},
+		{
+			name:        "test invalid target",
+			target:      "invalid",
+			targetIndex: -1,
+			shouldErr:   true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actualErr := ValidateTarget(stages, test.target)
-			testutil.CheckError(t, test.shouldErr, actualErr)
+			target, err := targetStage(stages, test.target)
+			testutil.CheckError(t, test.shouldErr, err)
+			if !test.shouldErr {
+				if target != test.targetIndex {
+					t.Errorf("got incorrect target, expected %d got %d", test.targetIndex, target)
+				}
+			}
 		})
 	}
 }
 
 func Test_SaveStage(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("couldn't create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-	files := map[string]string{
-		"Dockerfile": `
-		FROM scratch
-		RUN echo hi > /hi
-		
-		FROM scratch AS second
-		COPY --from=0 /hi /hi2
-	
-		FROM second
-		RUN xxx
-		
-		FROM scratch
-		COPY --from=second /hi2 /hi3
-
-		FROM ubuntu:16.04 AS base
-		ENV DEBIAN_FRONTEND noninteractive
-		ENV LC_ALL C.UTF-8
-
-		FROM base AS development
-		ENV PS1 " 🐳 \[\033[1;36m\]\W\[\033[0;35m\] # \[\033[0m\]"
-
-		FROM development AS test
-		ENV ORG_ENV UnitTest
-
-		FROM base AS production
-		COPY . /code
-		`,
-	}
-	if err := testutil.SetupFiles(tempDir, files); err != nil {
-		t.Fatalf("couldn't create dockerfile: %v", err)
-	}
-	stages, err := Stages(filepath.Join(tempDir, "Dockerfile"), "")
-	if err != nil {
-		t.Fatalf("couldn't retrieve stages from Dockerfile: %v", err)
-	}
 	tests := []struct {
 		name     string
 		index    int
@@ -171,10 +142,51 @@ func Test_SaveStage(t *testing.T) {
 			expected: false,
 		},
 	}
+	stages, err := Parse([]byte(testutil.Dockerfile))
+	if err != nil {
+		t.Fatalf("couldn't retrieve stages from Dockerfile: %v", err)
+	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := SaveStage(test.index, stages)
+			actual := saveStage(test.index, stages)
 			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
+		})
+	}
+}
+
+func Test_baseImageIndex(t *testing.T) {
+	tests := []struct {
+		name         string
+		currentStage int
+		expected     int
+	}{
+		{
+			name:         "stage that is built off of a previous stage",
+			currentStage: 2,
+			expected:     1,
+		},
+		{
+			name:         "another stage that is built off of a previous stage",
+			currentStage: 5,
+			expected:     4,
+		},
+		{
+			name:         "stage that isn't built off of a previous stage",
+			currentStage: 4,
+			expected:     -1,
+		},
+	}
+
+	stages, err := Parse([]byte(testutil.Dockerfile))
+	if err != nil {
+		t.Fatalf("couldn't retrieve stages from Dockerfile: %v", err)
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := baseImageIndex(test.currentStage, stages)
+			if actual != test.expected {
+				t.Fatalf("unexpected result, expected %d got %d", test.expected, actual)
+			}
 		})
 	}
 }

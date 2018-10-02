@@ -56,9 +56,16 @@ const (
 	LocalDirBuildContextPrefix = "dir://"
 	GitBuildContextPrefix      = "git://"
 
+	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME
-	HOME             = "HOME"
 	DefaultHOMEValue = "/root"
+
+	// Docker command names
+	Cmd        = "cmd"
+	Entrypoint = "entrypoint"
+
+	// VolumeCmdName is the name of the volume command
+	VolumeCmdName = "volume"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko

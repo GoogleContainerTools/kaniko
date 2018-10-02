@@ -17,8 +17,9 @@ limitations under the License.
 package dockerfile
 
 import (
-	d "github.com/docker/docker/builder/dockerfile"
 	"strings"
+
+	d "github.com/docker/docker/builder/dockerfile"
 )
 
 type BuildArgs struct {
@@ -36,14 +37,14 @@ func NewBuildArgs(args []string) *BuildArgs {
 		}
 	}
 	return &BuildArgs{
-		*d.NewBuildArgs(argsFromOptions),
+		BuildArgs: *d.NewBuildArgs(argsFromOptions),
 	}
 }
 
 func (b *BuildArgs) Clone() *BuildArgs {
 	clone := b.BuildArgs.Clone()
 	return &BuildArgs{
-		*clone,
+		BuildArgs: *clone,
 	}
 }
 

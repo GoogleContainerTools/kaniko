@@ -17,8 +17,6 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -32,7 +30,6 @@ type LabelCommand struct {
 }
 
 func (r *LabelCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: LABEL")
 	return updateLabels(r.cmd.Labels, config, buildArgs)
 }
 
@@ -72,11 +69,12 @@ func (r *LabelCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (r *LabelCommand) CreatedBy() string {
-	l := []string{r.cmd.Name()}
-	for _, kvp := range r.cmd.Labels {
-		l = append(l, kvp.String())
-	}
-	return strings.Join(l, " ")
+// String returns some information about the command for the image config history
+func (r *LabelCommand) String() string {
+	return r.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (r *LabelCommand) CacheCommand() bool {
+	return false
 }

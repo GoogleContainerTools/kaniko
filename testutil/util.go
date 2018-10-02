@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // SetupFiles creates files at path
@@ -46,7 +48,8 @@ func CheckErrorAndDeepEqual(t *testing.T, shouldErr bool, err error, expected, a
 		return
 	}
 	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("%T differ.\nExpected\n%+v\nActual\n%+v", expected, expected, actual)
+		diff := cmp.Diff(actual, expected)
+		t.Errorf("%T differ (-got, +want): %s", expected, diff)
 		return
 	}
 }

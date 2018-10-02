@@ -17,14 +17,11 @@ limitations under the License.
 package commands
 
 import (
-	"strings"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type EnvCommand struct {
@@ -32,7 +29,6 @@ type EnvCommand struct {
 }
 
 func (e *EnvCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: ENV")
 	newEnvs := e.cmd.Env
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	return util.UpdateConfigEnv(newEnvs, config, replacementEnvs)
@@ -43,11 +39,12 @@ func (e *EnvCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (e *EnvCommand) CreatedBy() string {
-	envArray := []string{e.cmd.Name()}
-	for _, pair := range e.cmd.Env {
-		envArray = append(envArray, pair.Key+"="+pair.Value)
-	}
-	return strings.Join(envArray, " ")
+// String returns some information about the command for the image config history
+func (e *EnvCommand) String() string {
+	return e.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (e *EnvCommand) CacheCommand() bool {
+	return false
 }

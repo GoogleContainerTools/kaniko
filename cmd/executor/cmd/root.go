@@ -17,14 +17,15 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
-	"github.com/GoogleContainerTools/kaniko/pkg/options"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
@@ -33,7 +34,7 @@ import (
 )
 
 var (
-	opts     = &options.KanikoOptions{}
+	opts     = &config.KanikoOptions{}
 	logLevel string
 	force    bool
 )
@@ -54,26 +55,31 @@ var RootCmd = &cobra.Command{
 		if !opts.NoPush && len(opts.Destinations) == 0 {
 			return errors.New("You must provide --destination, or use --no-push")
 		}
+		if err := cacheFlagsValid(); err != nil {
+			return errors.Wrap(err, "cache flags invalid")
+		}
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
 		}
 		return resolveDockerfilePath()
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		if !checkContained() {
 			if !force {
-				return errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue")
+				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
 		if err := os.Chdir("/"); err != nil {
-			return errors.Wrap(err, "error changing to root dir")
+			exit(errors.Wrap(err, "error changing to root dir"))
 		}
 		image, err := executor.DoBuild(opts)
 		if err != nil {
-			return errors.Wrap(err, "error building image")
+			exit(errors.Wrap(err, "error building image"))
 		}
-		return executor.DoPush(image, opts)
+		if err := executor.DoPush(image, opts); err != nil {
+			exit(errors.Wrap(err, "error pushing image"))
+		}
 	},
 }
 
@@ -86,12 +92,15 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePush, "insecure", "", false, "Push to insecure registry using plain HTTP")
-	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTlsVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
 	RootCmd.PersistentFlags().BoolVarP(&opts.NoPush, "no-push", "", false, "Do not push the image to the registry")
+	RootCmd.PersistentFlags().StringVarP(&opts.CacheRepo, "cache-repo", "", "", "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -105,6 +114,19 @@ func addHiddenFlags(cmd *cobra.Command) {
 func checkContained() bool {
 	_, err := container.DetectRuntime()
 	return err == nil
+}
+
+// cacheFlagsValid makes sure the flags passed in related to caching are valid
+func cacheFlagsValid() error {
+	if !opts.Cache {
+		return nil
+	}
+	// If --cache=true and --no-push=true, then cache repo must be provided
+	// since cache can't be inferred from destination
+	if opts.CacheRepo == "" && opts.NoPush {
+		return errors.New("if using cache with --no-push, specify cache repo with --cache-repo")
+	}
+	return nil
 }
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
@@ -145,7 +167,7 @@ func resolveSourceContext() error {
 			opts.SrcContext = opts.Bucket
 		}
 	}
-	// if no prefix use Google Cloud Storage as default for backwards compability
+	// if no prefix use Google Cloud Storage as default for backwards compatibility
 	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
 	if err != nil {
 		return err
@@ -157,4 +179,9 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
+}
+
+func exit(err error) {
+	fmt.Println(err)
+	os.Exit(1)
 }

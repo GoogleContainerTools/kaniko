@@ -23,7 +23,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type CmdCommand struct {
@@ -33,7 +32,6 @@ type CmdCommand struct {
 // ExecuteCommand executes the CMD command
 // Argument handling is the same as RUN.
 func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: CMD")
 	var newCommand []string
 	if c.cmd.PrependShell {
 		// This is the default shell on Linux
@@ -49,7 +47,6 @@ func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		newCommand = c.cmd.CmdLine
 	}
 
-	logrus.Infof("Replacing CMD in config with %v", newCommand)
 	config.Cmd = newCommand
 	config.ArgsEscaped = true
 	return nil
@@ -60,15 +57,12 @@ func (c *CmdCommand) FilesToSnapshot() []string {
 	return []string{}
 }
 
-// CreatedBy returns some information about the command for the image config history
-func (c *CmdCommand) CreatedBy() string {
-	cmd := []string{"CMD"}
-	cmdLine := strings.Join(c.cmd.CmdLine, " ")
-	if c.cmd.PrependShell {
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
-		appendedShell := append(cmd, shell...)
-		return strings.Join(append(appendedShell, cmdLine), " ")
-	}
-	return strings.Join(append(cmd, cmdLine), " ")
+// String returns some information about the command for the image config history
+func (c *CmdCommand) String() string {
+	return c.cmd.String()
+}
+
+// CacheCommand returns false since this command shouldn't be cached
+func (c *CmdCommand) CacheCommand() bool {
+	return false
 }

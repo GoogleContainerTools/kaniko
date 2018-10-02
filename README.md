@@ -23,6 +23,7 @@ We do **not** recommend running the kaniko executor binary in another image, as 
     - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
     - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
     - [Running kaniko locally](#running-kaniko-locally)
+  - [Caching](#caching)
   - [Pushing to Different Registries](#pushing-to-different-registries)
   - [Additional Flags](#additional-flags)
   - [Debug Image](#debug-image)
@@ -192,6 +193,16 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
   ```
 
+### Caching
+kaniko currently can cache layers created by `RUN` commands in a remote repository. 
+Before executing a command, kaniko checks the cache for the layer.
+If it exists, kaniko will pull and extract the cached layer instead of executing the command.
+If not, kaniko will execute the command and then push the newly created layer to the cache.
+
+Users can opt in to caching by setting the `--cache=true` flag.
+A remote repository for storing cached layers can be provided via the `--cache-repo` flag.
+If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.  
+
 ### Pushing to Different Registries
 
 kaniko uses Docker credential helpers to push images to a registry.
@@ -296,6 +307,23 @@ Set this flag if you want to connect to a plain HTTP registry. It is supposed to
 #### --skip-tls-verify
 
 Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --cache
+
+Set this flag as `--cache=true` to opt in to caching with kaniko.
+
+#### --cache-repo
+
+Set this flag to specify a remote repository which will be used to store cached layers.
+
+If this flag is not provided, a cache repo will be inferred from the `--destination` flag.
+If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored in `gcr.io/kaniko-project/test/cache`.
+
+_This flag must be used in conjunction with the `--cache=true` flag._
+
+#### --cleanup
+
+Set this flag to cleanup the filesystem at the end, leaving a clean kaniko container (if you want to build multiple images in the same container, using the debug kaniko image)
 
 ### Debug Image
 

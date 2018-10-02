@@ -50,9 +50,21 @@ func Test_fileSystemWhitelist(t *testing.T) {
 	}
 
 	actualWhitelist, err := fileSystemWhitelist(path)
-	expectedWhitelist := []string{"/kaniko", "/proc", "/dev", "/dev/pts", "/sys", "/var/run"}
-	sort.Strings(actualWhitelist)
-	sort.Strings(expectedWhitelist)
+	expectedWhitelist := []WhitelistEntry{
+		{"/kaniko", false},
+		{"/proc", false},
+		{"/dev", false},
+		{"/dev/pts", false},
+		{"/sys", false},
+		{"/var/run", false},
+		{"/etc/mtab", false},
+	}
+	sort.Slice(actualWhitelist, func(i, j int) bool {
+		return actualWhitelist[i].Path < actualWhitelist[j].Path
+	})
+	sort.Slice(expectedWhitelist, func(i, j int) bool {
+		return expectedWhitelist[i].Path < expectedWhitelist[j].Path
+	})
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
 }
 
@@ -167,7 +179,7 @@ func Test_ParentDirectories(t *testing.T) {
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
-		whitelist []string
+		whitelist []WhitelistEntry
 	}
 	tests := []struct {
 		name string
@@ -178,7 +190,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "file whitelisted",
 			args: args{
 				path:      "/foo",
-				whitelist: []string{"/foo"},
+				whitelist: []WhitelistEntry{{"/foo", false}},
 			},
 			want: true,
 		},
@@ -186,7 +198,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "directory whitelisted",
 			args: args{
 				path:      "/foo/bar",
-				whitelist: []string{"/foo"},
+				whitelist: []WhitelistEntry{{"/foo", false}},
 			},
 			want: true,
 		},
@@ -194,7 +206,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "grandparent whitelisted",
 			args: args{
 				path:      "/foo/bar/baz",
-				whitelist: []string{"/foo"},
+				whitelist: []WhitelistEntry{{"/foo", false}},
 			},
 			want: true,
 		},
@@ -202,7 +214,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "sibling whitelisted",
 			args: args{
 				path:      "/foo/bar/baz",
-				whitelist: []string{"/foo/bat"},
+				whitelist: []WhitelistEntry{{"/foo/bat", false}},
 			},
 			want: false,
 		},
@@ -227,8 +239,9 @@ func Test_CheckWhitelist(t *testing.T) {
 
 func TestHasFilepathPrefix(t *testing.T) {
 	type args struct {
-		path   string
-		prefix string
+		path            string
+		prefix          string
+		prefixMatchOnly bool
 	}
 	tests := []struct {
 		name string
@@ -238,47 +251,61 @@ func TestHasFilepathPrefix(t *testing.T) {
 		{
 			name: "parent",
 			args: args{
-				path:   "/foo/bar",
-				prefix: "/foo",
+				path:            "/foo/bar",
+				prefix:          "/foo",
+				prefixMatchOnly: false,
 			},
 			want: true,
 		},
 		{
 			name: "nested parent",
 			args: args{
-				path:   "/foo/bar/baz",
-				prefix: "/foo/bar",
+				path:            "/foo/bar/baz",
+				prefix:          "/foo/bar",
+				prefixMatchOnly: false,
 			},
 			want: true,
 		},
 		{
 			name: "sibling",
 			args: args{
-				path:   "/foo/bar",
-				prefix: "/bar",
+				path:            "/foo/bar",
+				prefix:          "/bar",
+				prefixMatchOnly: false,
 			},
 			want: false,
 		},
 		{
 			name: "nested sibling",
 			args: args{
-				path:   "/foo/bar/baz",
-				prefix: "/foo/bar",
+				path:            "/foo/bar/baz",
+				prefix:          "/foo/bar",
+				prefixMatchOnly: false,
 			},
 			want: true,
 		},
 		{
 			name: "name prefix",
 			args: args{
-				path:   "/foo2/bar",
-				prefix: "/foo",
+				path:            "/foo2/bar",
+				prefix:          "/foo",
+				prefixMatchOnly: false,
+			},
+			want: false,
+		},
+		{
+			name: "prefix match only (volume)",
+			args: args{
+				path:            "/foo",
+				prefix:          "/foo",
+				prefixMatchOnly: true,
 			},
 			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix); got != tt.want {
+			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix, tt.args.prefixMatchOnly); got != tt.want {
 				t.Errorf("HasFilepathPrefix() = %v, want %v", got, tt.want)
 			}
 		})
@@ -343,8 +370,8 @@ func filesAreHardlinks(first, second string) checker {
 		if err != nil {
 			t.Fatalf("error getting file %s", second)
 		}
-		stat1 := getSyscallStat_t(fi1)
-		stat2 := getSyscallStat_t(fi2)
+		stat1 := getSyscallStatT(fi1)
+		stat2 := getSyscallStatT(fi2)
 		if stat1.Ino != stat2.Ino {
 			t.Errorf("%s and %s aren't hardlinks as they dont' have the same inode", first, second)
 		}

@@ -59,7 +59,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/home/newuser",
+				"HOME=/",
 			},
 		},
 	}

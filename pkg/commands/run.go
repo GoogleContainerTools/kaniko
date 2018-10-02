@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"strconv"
 	"strings"
 	"syscall"
@@ -116,19 +117,29 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
-func addDefaultHOME(user string, envs []string) []string {
+func addDefaultHOME(u string, envs []string) []string {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
 			return envs
 		}
 	}
+
 	// If user isn't set, set default value of HOME
-	if user == "" {
+	if u == "" {
 		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
 	}
-	// If user is set, set value of HOME to /home/${user}
-	return append(envs, fmt.Sprintf("%s=/home/%s", constants.HOME, user))
+
+	// If user is set to username, set value of HOME to /home/${user}
+	// Otherwise the user is set to uid and HOME is /
+	home := fmt.Sprintf("%s=/", constants.HOME)
+	userObj, err := user.Lookup(u)
+	if err == nil {
+		u = userObj.Username
+		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
+	}
+
+	return append(envs, home)
 }
 
 // FilesToSnapshot returns nil for this command because we don't know which files
@@ -137,13 +148,12 @@ func (r *RunCommand) FilesToSnapshot() []string {
 	return nil
 }
 
-// CreatedBy returns some information about the command for the image config
-func (r *RunCommand) CreatedBy() string {
-	cmdLine := strings.Join(r.cmd.CmdLine, " ")
-	if r.cmd.PrependShell {
-		// TODO: Support shell command here
-		shell := []string{"/bin/sh", "-c"}
-		return strings.Join(append(shell, cmdLine), " ")
-	}
-	return cmdLine
+// String returns some information about the command for the image config
+func (r *RunCommand) String() string {
+	return r.cmd.String()
+}
+
+// CacheCommand returns true since this command should be cached
+func (r *RunCommand) CacheCommand() bool {
+	return true
 }
