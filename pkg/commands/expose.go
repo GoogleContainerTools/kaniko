@@ -29,6 +29,7 @@ import (
 )
 
 type ExposeCommand struct {
+	BaseCommand
 	cmd *instructions.ExposeCommand
 }
 
@@ -72,15 +73,6 @@ func validProtocol(protocol string) bool {
 	return false
 }
 
-func (r *ExposeCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 func (r *ExposeCommand) String() string {
 	return r.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (r *ExposeCommand) CacheCommand() bool {
-	return false
 }

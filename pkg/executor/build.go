@@ -18,7 +18,6 @@ package executor
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -85,23 +84,6 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	}, nil
 }
 
-// key will return a string representation of the build at the cmd
-func (s *stageBuilder) key(cmd string) (string, error) {
-	fsKey, err := s.snapshotter.Key()
-	if err != nil {
-		return "", err
-	}
-	c := bytes.NewBuffer([]byte{})
-	enc := json.NewEncoder(c)
-	enc.Encode(s.cf)
-	cf, err := util.SHA256(c)
-	if err != nil {
-		return "", err
-	}
-	logrus.Debugf("%s\n%s\n%s\n%s\n", s.baseImageDigest, fsKey, cf, cmd)
-	return util.SHA256(bytes.NewReader([]byte(s.baseImageDigest + fsKey + cf + cmd)))
-}
-
 // extractCachedLayer will extract the cached layer and append it to the config file
 func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
 	logrus.Infof("Found cached layer, extracting to filesystem")
@@ -139,6 +121,15 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		return err
 	}
 	var volumes []string
+
+	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
+	compositeKey := NewCompositeCache(s.baseImageDigest)
+	contextHash, err := HashDir(opts.SrcContext)
+	if err != nil {
+		return err
+	}
+	compositeKey.AddKey(opts.BuildArgs...)
+
 	args := dockerfile.NewBuildArgs(opts.BuildArgs)
 	for index, cmd := range s.stage.Commands {
 		finalCmd := index == len(s.stage.Commands)-1
@@ -149,13 +140,21 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		if command == nil {
 			continue
 		}
-		logrus.Info(command.String())
-		cacheKey, err := s.key(command.String())
-		if err != nil {
-			return errors.Wrap(err, "getting key")
+
+		// Add the next command to the cache key.
+		compositeKey.AddKey(command.String())
+		if command.UsesContext() {
+			compositeKey.AddKey(contextHash)
 		}
+		logrus.Info(command.String())
+
+		ck, err := compositeKey.Hash()
+		if err != nil {
+			return err
+		}
+
 		if command.CacheCommand() && opts.Cache {
-			image, err := cache.RetrieveLayer(opts, cacheKey)
+			image, err := cache.RetrieveLayer(opts, ck)
 			if err == nil {
 				if err := s.extractCachedLayer(image, command.String()); err != nil {
 					return errors.Wrap(err, "extracting cached layer")
@@ -222,7 +221,7 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 		}
 		// Push layer to cache now along with new config file
 		if command.CacheCommand() && opts.Cache {
-			if err := pushLayerToCache(opts, cacheKey, layer, command.String()); err != nil {
+			if err := pushLayerToCache(opts, ck, layer, command.String()); err != nil {
 				return err
 			}
 		}

@@ -51,7 +51,7 @@ func TestStopsignalExecuteCmd(t *testing.T) {
 
 	for _, test := range stopsignalTests {
 		cmd := StopSignalCommand{
-			&instructions.StopSignalCommand{
+			cmd: &instructions.StopSignalCommand{
 				Signal: test.signal,
 			},
 		}

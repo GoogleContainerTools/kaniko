@@ -29,6 +29,7 @@ import (
 )
 
 type CopyCommand struct {
+	BaseCommand
 	cmd           *instructions.CopyCommand
 	buildcontext  string
 	snapshotFiles []string
@@ -103,7 +104,6 @@ func (c *CopyCommand) String() string {
 	return c.cmd.String()
 }
 
-// CacheCommand returns true since this command should be cached
-func (c *CopyCommand) CacheCommand() bool {
-	return false
+func (c *CopyCommand) UsesContext() bool {
+	return true
 }

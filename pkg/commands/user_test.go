@@ -91,7 +91,7 @@ func TestUpdateUser(t *testing.T) {
 			},
 		}
 		cmd := UserCommand{
-			&instructions.UserCommand{
+			cmd: &instructions.UserCommand{
 				User: test.user,
 			},
 		}

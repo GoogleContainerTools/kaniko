@@ -60,7 +60,7 @@ func TestExecuteOnbuild(t *testing.T) {
 		}
 
 		onbuildCmd := &OnBuildCommand{
-			&instructions.OnbuildCommand{
+			cmd: &instructions.OnbuildCommand{
 				Expression: test.expression,
 			},
 		}
