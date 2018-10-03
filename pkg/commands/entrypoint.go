@@ -26,6 +26,7 @@ import (
 )
 
 type EntrypointCommand struct {
+	BaseCommand
 	cmd *instructions.EntrypointCommand
 }
 
@@ -50,17 +51,7 @@ func (e *EntrypointCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerf
 	return nil
 }
 
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (e *EntrypointCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (e *EntrypointCommand) String() string {
 	return e.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (e *EntrypointCommand) CacheCommand() bool {
-	return false
 }

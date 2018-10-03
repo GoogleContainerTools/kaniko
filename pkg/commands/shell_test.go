@@ -45,7 +45,7 @@ func TestShellExecuteCmd(t *testing.T) {
 
 	for _, test := range shellTests {
 		cmd := ShellCommand{
-			&instructions.ShellCommand{
+			cmd: &instructions.ShellCommand{
 				Shell: test.cmdLine,
 			},
 		}
