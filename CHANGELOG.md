@@ -54,7 +54,7 @@
 * Extract intermediate stages to filesystem [#266](https://github.com/GoogleContainerTools/kaniko/pull/266)
 * Fix process group handling. [#271](https://github.com/GoogleContainerTools/kaniko/pull/271)
 * Only add whiteout files once [#270](https://github.com/GoogleContainerTools/kaniko/pull/270)
-* Fix handling of the volume directive [#334](https://github.com/GoogleContainerTools/kaniko/pull/334
+* Fix handling of the volume directive [#334](https://github.com/GoogleContainerTools/kaniko/pull/334)
 
 
 # v0.3.0 Release - 7/31/2018
