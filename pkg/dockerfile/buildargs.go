@@ -29,12 +29,11 @@ type BuildArgs struct {
 func NewBuildArgs(args []string) *BuildArgs {
 	argsFromOptions := make(map[string]*string)
 	for _, a := range args {
-		s := strings.Split(a, "=")
+		s := strings.SplitN(a, "=", 2)
 		if len(s) == 1 {
 			argsFromOptions[s[0]] = nil
 		} else {
-			val := strings.Join(s[1:], "=")
-			argsFromOptions[s[0]] = &val
+			argsFromOptions[s[0]] = &s[1]
 		}
 	}
 	return &BuildArgs{
