@@ -33,8 +33,8 @@ func NewBuildArgs(args []string) *BuildArgs {
 		if len(s) == 1 {
 			argsFromOptions[s[0]] = nil
 		} else {
-			s := strings.Join(s[1:], "=")
-			argsFromOptions[s[0]] = &s
+			val := strings.Join(s[1:], "=")
+			argsFromOptions[s[0]] = &val
 		}
 	}
 	return &BuildArgs{
