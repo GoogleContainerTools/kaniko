@@ -19,22 +19,17 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	opts     = &config.KanikoOptions{}
+	opts     = &config.WarmerOptions{}
 	logLevel string
 	force    bool
 )
@@ -57,21 +52,8 @@ var RootCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if !checkContained() {
-			if !force {
-				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
-			}
-			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
-		}
-		if err := os.Chdir("/"); err != nil {
-			exit(errors.Wrap(err, "error changing to root dir"))
-		}
-		image, err := executor.DoBuild(opts)
-		if err != nil {
-			exit(errors.Wrap(err, "error building image"))
-		}
-		if err := executor.DoPush(image, opts); err != nil {
-			exit(errors.Wrap(err, "error pushing image"))
+		if err := cache.WarmCache(opts); err != nil {
+			exit(errors.Wrap(err, "Failed warming cache"))
 		}
 	},
 }
