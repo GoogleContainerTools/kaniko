@@ -6,9 +6,9 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=dockerfiles/Dockerfile_test_add",
-            "--context=gs://sharif-test/context_1533688591445158884.tar.gz",
-            "--destination=gcr.io/sharif-test/kaniko-test:cache"]
+    args: ["--dockerfile=<dockerfile>",
+            "--context=<context>",
+            "--destination=<destination>"]
     volumeMounts:
       - name: kaniko-secret
         mountPath: /secret
