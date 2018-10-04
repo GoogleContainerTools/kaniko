@@ -35,6 +35,7 @@ import (
 )
 
 type RunCommand struct {
+	BaseCommand
 	cmd *instructions.RunCommand
 }
 
@@ -142,15 +143,13 @@ func addDefaultHOME(u string, envs []string) []string {
 	return append(envs, home)
 }
 
-// FilesToSnapshot returns nil for this command because we don't know which files
-// have changed, so we snapshot the entire system.
-func (r *RunCommand) FilesToSnapshot() []string {
-	return nil
-}
-
 // String returns some information about the command for the image config
 func (r *RunCommand) String() string {
 	return r.cmd.String()
+}
+
+func (r *RunCommand) FilesToSnapshot() []string {
+	return nil
 }
 
 // CacheCommand returns true since this command should be cached

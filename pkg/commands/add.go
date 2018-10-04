@@ -29,6 +29,7 @@ import (
 )
 
 type AddCommand struct {
+	BaseCommand
 	cmd           *instructions.AddCommand
 	buildcontext  string
 	snapshotFiles []string
@@ -110,7 +111,6 @@ func (a *AddCommand) String() string {
 	return a.cmd.String()
 }
 
-// CacheCommand returns false since this command shouldn't be cached
-func (a *AddCommand) CacheCommand() bool {
-	return false
+func (a *AddCommand) UsesContext() bool {
+	return true
 }

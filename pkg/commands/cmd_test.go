@@ -48,7 +48,7 @@ func TestExecuteCmd(t *testing.T) {
 
 	for _, test := range cmdTests {
 		cmd := CmdCommand{
-			&instructions.CmdCommand{
+			cmd: &instructions.CmdCommand{
 				ShellDependantCmdLine: instructions.ShellDependantCmdLine{
 					PrependShell: test.prependShell,
 					CmdLine:      test.cmdLine,

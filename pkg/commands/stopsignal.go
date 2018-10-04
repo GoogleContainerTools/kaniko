@@ -26,6 +26,7 @@ import (
 )
 
 type StopSignalCommand struct {
+	BaseCommand
 	cmd *instructions.StopSignalCommand
 }
 
@@ -52,17 +53,7 @@ func (s *StopSignalCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerf
 	return nil
 }
 
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (s *StopSignalCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (s *StopSignalCommand) String() string {
 	return s.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (s *StopSignalCommand) CacheCommand() bool {
-	return false
 }

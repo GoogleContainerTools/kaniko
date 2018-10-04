@@ -468,6 +468,22 @@
   revision = "03167950e20ac82689f50828811e69cdd9e02af2"
 
 [[projects]]
+  digest = "1:f4f203acd8b11b8747bdcd91696a01dbc95ccb9e2ca2db6abf81c3a4f5e950ce"
+  name = "github.com/google/go-github"
+  packages = ["github"]
+  pruneopts = "NUT"
+  revision = "f55b50f38167644bb7e4be03d9a2bde71d435239"
+  version = "v18.2.0"
+
+[[projects]]
+  digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = "NUT"
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
@@ -1336,6 +1352,7 @@
     "github.com/google/go-containerregistry/pkg/v1/partial",
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
+    "github.com/google/go-github/github",
     "github.com/moby/buildkit/frontend/dockerfile/instructions",
     "github.com/moby/buildkit/frontend/dockerfile/parser",
     "github.com/moby/buildkit/frontend/dockerfile/shell",
@@ -1343,6 +1360,7 @@
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "golang.org/x/net/context",
+    "golang.org/x/oauth2",
     "gopkg.in/src-d/go-git.v4",
     "k8s.io/client-go/discovery",
   ]

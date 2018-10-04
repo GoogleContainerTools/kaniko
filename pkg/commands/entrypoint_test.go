@@ -48,7 +48,7 @@ func TestEntrypointExecuteCmd(t *testing.T) {
 
 	for _, test := range entrypointTests {
 		cmd := EntrypointCommand{
-			&instructions.EntrypointCommand{
+			cmd: &instructions.EntrypointCommand{
 				ShellDependantCmdLine: instructions.ShellDependantCmdLine{
 					PrependShell: test.prependShell,
 					CmdLine:      test.cmdLine,

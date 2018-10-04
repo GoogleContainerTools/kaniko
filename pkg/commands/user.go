@@ -27,6 +27,7 @@ import (
 )
 
 type UserCommand struct {
+	BaseCommand
 	cmd *instructions.UserCommand
 }
 
@@ -59,15 +60,6 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	return nil
 }
 
-func (r *UserCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 func (r *UserCommand) String() string {
 	return r.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (r *UserCommand) CacheCommand() bool {
-	return false
 }
