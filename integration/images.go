@@ -152,7 +152,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		append([]string{"build",
 			"-t", dockerImage,
 			"-f", path.Join(dockerfilesPath, dockerfile),
-			"."},
+			"../"},
 			additionalFlags...)...,
 	)
 	_, err := RunCommandWithoutTest(dockerCmd)
