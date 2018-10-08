@@ -62,9 +62,6 @@ const (
 	// Docker command names
 	Cmd        = "cmd"
 	Entrypoint = "entrypoint"
-
-	// VolumeCmdName is the name of the volume command
-	VolumeCmdName = "volume"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko
