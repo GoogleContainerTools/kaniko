@@ -31,7 +31,6 @@ import (
 var (
 	opts     = &config.WarmerOptions{}
 	logLevel string
-	force    bool
 )
 
 func init() {
@@ -66,6 +65,7 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
 func addHiddenFlags(cmd *cobra.Command) {
+	RootCmd.PersistentFlags().MarkHidden("azure-container-registry-config")
 }
 
 func exit(err error) {

@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -101,5 +102,11 @@ func remoteImage(image string) (v1.Image, error) {
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
-	return cache.LocalDestination(opts, image)
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return nil, err
+	}
+	cacheKey := ref.Name()
+	fmt.Printf("CACHEKEY=%s", cacheKey)
+	return cache.LocalDestination(opts, cacheKey)
 }

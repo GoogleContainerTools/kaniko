@@ -96,5 +96,6 @@ func LocalDestination(opts *config.KanikoOptions, cacheKey string) (v1.Image, er
 		return nil, errors.Wrap(err, "getting layer from tarball")
 	}
 
+	fmt.Printf("Found %s in local cache", tag.Name())
 	return imgTar, nil
 }

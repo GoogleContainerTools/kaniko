@@ -32,38 +32,38 @@ import (
 func WarmCache(opts *config.WarmerOptions) error {
 	cacheDir := opts.CacheDir
 	images := opts.Images
-	fmt.Printf("WARMER: cachedir = %s\n", cacheDir)
-	fmt.Printf("WARMER: images = %v\n", images)
+	logrus.Debugf("%s\n", cacheDir)
+	logrus.Debugf("%s\n", images)
 
 	for _, image := range images {
 		cacheRef, err := name.NewTag(image, name.WeakValidation)
 		if err != nil {
-			fmt.Print(err)
+			logrus.Debugf("Failed to verify image name %v", err)
 			errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
 		k8sc, err := k8schain.NewNoClient()
 		if err != nil {
-			fmt.Print(err)
+			logrus.Debugf("Failed to create auth keychain: %v", err)
 			errors.Wrap(err, fmt.Sprintf("Failed to create auth keychain: %s", image))
 		}
 		img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(k8sc))
 		if err != nil {
-			fmt.Print(err)
+			logrus.Debugf("Failed to retrieve image: %v", err)
 			errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}
 
 		digest, err := img.Digest()
 		if err != nil {
-			fmt.Print(err)
+			logrus.Debugf("Failed to retrieve digest: %v", err)
 			errors.Wrap(err, fmt.Sprintf("Failed to retrieve digest: %s", image))
 		}
 		cachePath := path.Join(cacheDir, digest.String())
+		logrus.Debugf("CACHE PATH = %s\n", cachePath)
 		err = tarball.WriteToFile(cachePath, cacheRef, img)
 		if err != nil {
-			fmt.Print(err)
+			logrus.Debugf("Failed to write to cache %v", err)
 			errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
 		} else {
-			fmt.Printf("Wrote %s to cache", image)
 			logrus.Debugf("Wrote %s to cache", image)
 		}
 

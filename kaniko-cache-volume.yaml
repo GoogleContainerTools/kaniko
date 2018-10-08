@@ -11,4 +11,4 @@ spec:
   accessModes:
     - ReadOnlyMany
   hostPath:
-    path: "/mnt/data"
+    path: "/tmp/kaniko-cache"

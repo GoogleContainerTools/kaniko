@@ -56,3 +56,4 @@ integration-test:
 images:
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
 	docker build -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
