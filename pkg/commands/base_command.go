@@ -16,19 +16,23 @@ limitations under the License.
 
 package commands
 
+import (
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/google/go-containerregistry/pkg/v1"
+)
+
 type BaseCommand struct {
-	cache       bool
-	usesContext bool
+	cache bool
 }
 
 func (b *BaseCommand) CacheCommand() bool {
 	return b.cache
 }
 
-func (b *BaseCommand) UsesContext() bool {
-	return b.usesContext
-}
-
 func (b *BaseCommand) FilesToSnapshot() []string {
 	return []string{}
+}
+
+func (b *BaseCommand) FilesUsedFromContext(_ *v1.Config, _ *dockerfile.BuildArgs) ([]string, error) {
+	return []string{}, nil
 }

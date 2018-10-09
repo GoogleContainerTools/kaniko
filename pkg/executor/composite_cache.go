@@ -53,6 +53,32 @@ func (s *CompositeCache) Hash() (string, error) {
 	return util.SHA256(strings.NewReader(s.Key()))
 }
 
+func (s *CompositeCache) AddPath(p string) error {
+	sha := sha256.New()
+	fi, err := os.Lstat(p)
+	if err != nil {
+		return err
+	}
+	if fi.Mode().IsDir() {
+		k, err := HashDir(p)
+		if err != nil {
+			return err
+		}
+		s.keys = append(s.keys, k)
+		return nil
+	}
+	fh, err := util.CacheHasher()(p)
+	if err != nil {
+		return err
+	}
+	if _, err := sha.Write([]byte(fh)); err != nil {
+		return err
+	}
+
+	s.keys = append(s.keys, string(sha.Sum(nil)))
+	return nil
+}
+
 // HashDir returns a hash of the directory.
 func HashDir(p string) (string, error) {
 	sha := sha256.New()

@@ -125,10 +125,6 @@ func (s *stageBuilder) build() error {
 
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	compositeKey := NewCompositeCache(s.baseImageDigest)
-	contextHash, err := HashDir(s.opts.SrcContext)
-	if err != nil {
-		return err
-	}
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	cmds := []commands.DockerCommand{}
@@ -148,8 +144,16 @@ func (s *stageBuilder) build() error {
 
 		// Add the next command to the cache key.
 		compositeKey.AddKey(command.String())
-		if command.UsesContext() {
-			compositeKey.AddKey(contextHash)
+
+		// If the command uses files from the context, add them.
+		files, err := command.FilesUsedFromContext(&s.cf.Config, args)
+		if err != nil {
+			return err
+		}
+		for _, f := range files {
+			if err := compositeKey.AddPath(f); err != nil {
+				return err
+			}
 		}
 		logrus.Info(command.String())
 
@@ -172,7 +176,7 @@ func (s *stageBuilder) build() error {
 		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
 			return err
 		}
-		files := command.FilesToSnapshot()
+		files = command.FilesToSnapshot()
 		var contents []byte
 
 		if !s.shouldTakeSnapshot(index, files) {

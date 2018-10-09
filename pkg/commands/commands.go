@@ -39,7 +39,7 @@ type DockerCommand interface {
 	CacheCommand() bool
 
 	// Return true if this command depends on the build context.
-	UsesContext() bool
+	FilesUsedFromContext(*v1.Config, *dockerfile.BuildArgs) ([]string, error)
 }
 
 func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {
