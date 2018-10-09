@@ -8,7 +8,9 @@ spec:
     image: gcr.io/kaniko-project/executor:latest
     args: ["--dockerfile=<dockerfile>",
             "--context=<context>",
-            "--destination=<destination>"]
+            "--destination=<destination>",
+            "--cache",
+            "--cache-dir=/cache"]
     volumeMounts:
       - name: kaniko-secret
         mountPath: /secret

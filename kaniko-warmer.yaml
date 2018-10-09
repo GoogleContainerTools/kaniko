@@ -5,10 +5,9 @@ metadata:
 spec:
   containers:
   - name: kaniko-warmer
-    image: gcr.io/sharif-test/warmer@sha256:9bf8affcf6630a9b17298e54b79247a22516aebff0c88733f04e6e2974ca58c4
-    args: ["-c /cache",
-           "-i gcr.io/google-appengine/debian9",
-           "-vdebug"]
+    image: gcr.io/kaniko-project/warmer:latest
+    args: ["--cache-dir=/cache",
+           "--image=gcr.io/google-appengine/debian9"]
     volumeMounts:
       - name: kaniko-secret
         mountPath: /secret
@@ -21,7 +20,7 @@ spec:
   volumes:
     - name: kaniko-secret
       secret:
-        secretName: default-token-wtlnt
+        secretName: kaniko-secret
     - name: kaniko-cache
       persistentVolumeClaim:
               claimName: kaniko-cache-claim

@@ -33,10 +33,6 @@ import (
 
 // RetrieveLayer checks the specified cache for a layer with the tag :cacheKey
 func RetrieveLayer(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
-	if local, _ := LocalDestination(opts, cacheKey); local != nil {
-		return local, nil
-	}
-
 	cache, err := Destination(opts, cacheKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting cache destination")
@@ -75,21 +71,17 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
 
-func LocalDestination(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
+func LocalSource(opts *config.KanikoOptions, cacheKey string, source string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {
 		return nil, nil
 	}
 
 	path := path.Join(cache, cacheKey)
-	destination := opts.Destinations[0]
-	destRef, err := name.NewTag(destination, name.WeakValidation)
+
+	tag, err := name.NewTag(source, name.WeakValidation)
 	if err != nil {
-		return nil, errors.Wrap(err, "volume cache: getting tag for destination")
-	}
-	tag, err := name.NewTag(fmt.Sprintf("%s/cache:%s", destRef.Context(), cacheKey), name.WeakValidation)
-	if err != nil {
-		return nil, errors.Wrap(err, "volume cache: create new cache tag")
+		return nil, errors.Wrap(err, "volume cache: creating new cache tag")
 	}
 	imgTar, err := tarball.ImageFromPath(path, &tag)
 	if err != nil {

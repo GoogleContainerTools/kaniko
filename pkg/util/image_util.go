@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -106,7 +105,22 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	cacheKey := ref.Name()
-	fmt.Printf("CACHEKEY=%s", cacheKey)
-	return cache.LocalDestination(opts, cacheKey)
+
+	k8sc, err := k8schain.NewNoClient()
+	if err != nil {
+		return nil, err
+	}
+	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
+
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(kc))
+	if err != nil {
+		return nil, err
+	}
+
+	cacheKey, err := img.Digest()
+	if err != nil {
+		return nil, err
+	}
+
+	return cache.LocalSource(opts, cacheKey.String(), image)
 }
