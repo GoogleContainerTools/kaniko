@@ -21,7 +21,6 @@ import (
 	"path"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -40,11 +39,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 		if err != nil {
 			errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
-		k8sc, err := k8schain.NewNoClient()
-		if err != nil {
-			errors.Wrap(err, fmt.Sprintf("Failed to create auth keychain: %s", image))
-		}
-		img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(k8sc))
+		img, err := remote.Image(cacheRef)
 		if err != nil {
 			errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}

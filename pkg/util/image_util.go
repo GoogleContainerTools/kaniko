@@ -106,13 +106,7 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 		return nil, err
 	}
 
-	k8sc, err := k8schain.NewNoClient()
-	if err != nil {
-		return nil, err
-	}
-	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(kc))
+	img, err := remote.Image(ref)
 	if err != nil {
 		return nil, err
 	}
