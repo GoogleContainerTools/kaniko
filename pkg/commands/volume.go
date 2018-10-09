@@ -30,8 +30,7 @@ import (
 
 type VolumeCommand struct {
 	BaseCommand
-	cmd           *instructions.VolumeCommand
-	snapshotFiles []string
+	cmd *instructions.VolumeCommand
 }
 
 func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -57,7 +56,6 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 		// Only create and snapshot the dir if it didn't exist already
 		if _, err := os.Stat(volume); os.IsNotExist(err) {
 			logrus.Infof("Creating directory %s", volume)
-			v.snapshotFiles = append(v.snapshotFiles, volume)
 			if err := os.MkdirAll(volume, 0755); err != nil {
 				return fmt.Errorf("Could not create directory for volume %s: %s", volume, err)
 			}
@@ -69,7 +67,7 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 }
 
 func (v *VolumeCommand) FilesToSnapshot() []string {
-	return v.snapshotFiles
+	return []string{}
 }
 
 func (v *VolumeCommand) String() string {
