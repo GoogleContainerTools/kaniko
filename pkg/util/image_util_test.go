@@ -57,7 +57,7 @@ func Test_StandardImage(t *testing.T) {
 	retrieveRemoteImage = mock
 	actual, err := RetrieveSourceImage(config.KanikoStage{
 		Stage: stages[0],
-	}, nil, nil)
+	}, nil, &config.KanikoOptions{})
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 func Test_ScratchImage(t *testing.T) {
@@ -89,7 +89,7 @@ func Test_TarImage(t *testing.T) {
 		BaseImageStoredLocally: true,
 		BaseImageIndex:         0,
 		Stage:                  stages[2],
-	}, nil, nil)
+	}, nil, &config.KanikoOptions{})
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 
