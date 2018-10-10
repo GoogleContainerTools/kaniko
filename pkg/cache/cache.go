@@ -81,7 +81,7 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 
 	imgTar, err := tarball.ImageFromPath(path, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "getting layer from tarball")
+		return nil, errors.Wrap(err, "getting image from path")
 	}
 
 	fmt.Printf("Found %s in local cache", cacheKey)
