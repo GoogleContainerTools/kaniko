@@ -106,15 +106,22 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 		return nil, err
 	}
 
-	img, err := remote.Image(ref)
-	if err != nil {
-		return nil, err
+	var cacheKey string
+	if d, ok := ref.(name.Digest); ok {
+		cacheKey = d.DigestStr()
+	} else {
+		img, err := remote.Image(ref)
+		if err != nil {
+			return nil, err
+		}
+
+		d, err := img.Digest()
+		if err != nil {
+			return nil, err
+		}
+
+		cacheKey = d.String()
 	}
 
-	cacheKey, err := img.Digest()
-	if err != nil {
-		return nil, err
-	}
-
-	return cache.LocalSource(opts, cacheKey.String(), image)
+	return cache.LocalSource(opts, cacheKey)
 }

@@ -71,7 +71,7 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
 
-func LocalSource(opts *config.KanikoOptions, cacheKey string, source string) (v1.Image, error) {
+func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {
 		return nil, nil
@@ -79,15 +79,11 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string, source string) (v1
 
 	path := path.Join(cache, cacheKey)
 
-	tag, err := name.NewTag(source, name.WeakValidation)
-	if err != nil {
-		return nil, errors.Wrap(err, "volume cache: creating new cache tag")
-	}
-	imgTar, err := tarball.ImageFromPath(path, &tag)
+	imgTar, err := tarball.ImageFromPath(path, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting layer from tarball")
 	}
 
-	fmt.Printf("Found %s in local cache", tag.Name())
+	fmt.Printf("Found %s in local cache", cacheKey)
 	return imgTar, nil
 }
