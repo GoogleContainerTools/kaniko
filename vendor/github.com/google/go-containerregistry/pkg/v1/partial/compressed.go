@@ -125,6 +125,11 @@ func (i *compressedImageExtender) Layers() ([]v1.Layer, error) {
 
 // LayerByDigest implements v1.Image
 func (i *compressedImageExtender) LayerByDigest(h v1.Hash) (v1.Layer, error) {
+	if cfgName, err := i.ConfigName(); err != nil {
+		return nil, err
+	} else if cfgName == h {
+		return ConfigLayer(i)
+	}
 	cl, err := i.CompressedImageCore.LayerByDigest(h)
 	if err != nil {
 		return nil, err
