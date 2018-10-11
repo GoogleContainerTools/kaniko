@@ -84,6 +84,6 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 		return nil, errors.Wrap(err, "getting image from path")
 	}
 
-	fmt.Printf("Found %s in local cache", cacheKey)
+	logrus.Infof("Found %s in local cache", cacheKey)
 	return imgTar, nil
 }
