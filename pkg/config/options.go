@@ -25,6 +25,7 @@ type KanikoOptions struct {
 	TarPath        string
 	Target         string
 	CacheRepo      string
+	CacheDir       string
 	Destinations   multiArg
 	BuildArgs      multiArg
 	InsecurePush   bool
@@ -34,4 +35,10 @@ type KanikoOptions struct {
 	NoPush         bool
 	Cache          bool
 	Cleanup        bool
+}
+
+// WarmerOptions are options that are set by command line arguments to the cache warmer.
+type WarmerOptions struct {
+	Images   multiArg
+	CacheDir string
 }

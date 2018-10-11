@@ -54,7 +54,7 @@ type stageBuilder struct {
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
-	sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs)
+	sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs, opts)
 	if err != nil {
 		return nil, err
 	}

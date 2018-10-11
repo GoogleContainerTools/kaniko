@@ -30,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/sirupsen/logrus"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
@@ -41,7 +42,7 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image, error) {
+func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string, opts *config.KanikoOptions) (v1.Image, error) {
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
@@ -55,6 +56,19 @@ func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image
 	// If so, retrieve the image from the stored tarball
 	if stage.BaseImageStoredLocally {
 		return retrieveTarImage(stage.BaseImageIndex)
+	}
+
+	// Next, check if local caching is enabled
+	// If so, look in the local cache before trying the remote registry
+	if opts.Cache && opts.CacheDir != "" {
+		cachedImage, err := cachedImage(opts, currentBaseName)
+		if cachedImage != nil {
+			return cachedImage, nil
+		}
+
+		if err != nil {
+			logrus.Warnf("Error while retrieving image from cache: %v", err)
+		}
 	}
 
 	// Otherwise, initialize image as usual
@@ -91,4 +105,30 @@ func remoteImage(image string) (v1.Image, error) {
 	}
 	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
 	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
+}
+
+func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return nil, err
+	}
+
+	var cacheKey string
+	if d, ok := ref.(name.Digest); ok {
+		cacheKey = d.DigestStr()
+	} else {
+		img, err := remote.Image(ref)
+		if err != nil {
+			return nil, err
+		}
+
+		d, err := img.Digest()
+		if err != nil {
+			return nil, err
+		}
+
+		cacheKey = d.String()
+	}
+
+	return cache.LocalSource(opts, cacheKey)
 }

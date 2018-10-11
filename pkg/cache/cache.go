@@ -18,6 +18,7 @@ package cache
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -25,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -67,4 +69,21 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 		return fmt.Sprintf("%s/cache:%s", destRef.Context(), cacheKey), nil
 	}
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
+}
+
+func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
+	cache := opts.CacheDir
+	if cache == "" {
+		return nil, nil
+	}
+
+	path := path.Join(cache, cacheKey)
+
+	imgTar, err := tarball.ImageFromPath(path, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting image from path")
+	}
+
+	logrus.Infof("Found %s in local cache", cacheKey)
+	return imgTar, nil
 }

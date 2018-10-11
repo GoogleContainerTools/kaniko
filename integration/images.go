@@ -30,10 +30,13 @@ import (
 const (
 	// ExecutorImage is the name of the kaniko executor image
 	ExecutorImage = "executor-image"
+	WarmerImage   = "warmer-image"
 
 	dockerPrefix     = "docker-"
 	kanikoPrefix     = "kaniko-"
 	buildContextPath = "/workspace"
+	cacheDir         = "/workspace/cache"
+	baseImageToCache = "gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0"
 )
 
 // Arguments to build Dockerfiles with, used for both docker and kaniko builds
@@ -201,6 +204,26 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	return nil
 }
 
+func populateVolumeCache() error {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+	warmerCmd := exec.Command("docker",
+		append([]string{"run",
+			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+			"-v", cwd + ":/workspace",
+			WarmerImage,
+			"-c", cacheDir,
+			"-i", baseImageToCache},
+		)...,
+	)
+
+	if _, err := RunCommandWithoutTest(warmerCmd); err != nil {
+		return fmt.Errorf("Failed to warm kaniko cache: %s", err)
+	}
+
+	return nil
+}
+
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
 func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesPath string, version int) error {
 	_, ex, _, _ := runtime.Caller(0)
@@ -219,7 +242,8 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 				"-d", kanikoImage,
 				"-c", buildContextPath,
 				cacheFlag,
-				"--cache-repo", cacheRepo})...,
+				"--cache-repo", cacheRepo,
+				"--cache-dir", cacheDir})...,
 		)
 
 		if _, err := RunCommandWithoutTest(kanikoCmd); err != nil {

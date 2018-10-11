@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<dockerfile>",
+            "--context=<context>",
+            "--destination=<destination>",
+            "--cache",
+            "--cache-dir=/cache"]
+    volumeMounts:
+      - name: kaniko-secret
+        mountPath: /secret
+      - name: kaniko-cache
+        mountPath: /cache
+    env:
+      - name: GOOGLE_APPLICATION_CREDENTIALS
+        value: /secret/kaniko-secret.json
+  restartPolicy: Never
+  volumes:
+    - name: kaniko-secret
+      secret:
+        secretName: kaniko-secret
+    - name: kaniko-cache
+      persistentVolumeClaim:
+              claimName: kaniko-cache-claim
+
