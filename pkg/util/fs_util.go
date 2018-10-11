@@ -260,7 +260,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		// Check if something already exists at path
 		// If so, delete it
 		if FilepathExists(path) {
-			if err := os.Remove(path); err != nil {
+			if err := os.RemoveAll(path); err != nil {
 				return errors.Wrapf(err, "error removing %s to make way for new symlink", hdr.Name)
 			}
 		}
