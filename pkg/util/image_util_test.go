@@ -67,7 +67,7 @@ func Test_ScratchImage(t *testing.T) {
 	}
 	actual, err := RetrieveSourceImage(config.KanikoStage{
 		Stage: stages[1],
-	}, nil, nil)
+	}, nil, &config.KanikoOptions{})
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
 }
