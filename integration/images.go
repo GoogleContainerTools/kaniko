@@ -37,6 +37,7 @@ const (
 	buildContextPath = "/workspace"
 	cacheDir         = "/workspace/cache"
 	baseImageToCache = "gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0"
+	testDirPath      = "test/dir/path"
 )
 
 // Arguments to build Dockerfiles with, used for both docker and kaniko builds
@@ -54,7 +55,7 @@ var argsMap = map[string][]string{
 	"Dockerfile_test_multistage": {"file=/foo2"},
 }
 
-var filesToIgnore = []string{"context/bar/*", "context/tars/"}
+var filesToIgnore = []string{"test/*"}
 
 func ignoreFlags() []string {
 	var f []string
@@ -174,6 +175,9 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			additionalFlags...)...,
 	)
 	if d.includeDockerIgnore(dockerfile) {
+		if err := setupTestDir(); err != nil {
+			return err
+		}
 		if err := generateDockerIgnore(); err != nil {
 			return err
 		}
@@ -188,7 +192,11 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		if err := deleteDockerIgnore(); err != nil {
 			return err
 		}
+		if err := setupTestDir(); err != nil {
+			return err
+		}
 	}
+	defer removeTestDir()
 
 	contextFlag := "-c"
 	contextPath := buildContextPath
@@ -287,6 +295,14 @@ func (d *DockerFileBuilder) includeDockerIgnore(dockerfile string) bool {
 		}
 	}
 	return false
+}
+
+func setupTestDir() error {
+	return os.MkdirAll(testDirPath, 0644)
+}
+
+func removeTestDir() error {
+	return os.RemoveAll(testDirPath)
 }
 
 func generateDockerIgnore() error {
