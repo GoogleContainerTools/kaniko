@@ -1,2 +1,2 @@
-# Tests extraction of a symlink to a path that is a non-empty directory
-FROM registry.access.redhat.com/jboss-eap-7/eap71-openshift:1.3-10
+# Tests extraction of symlink, hardlink and regular files to a path that is a non-empty directory
+FROM gcr.io/kaniko-test/extraction-base-image:latest
