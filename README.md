@@ -321,6 +321,10 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 
 Set this flag to cleanup the filesystem at the end, leaving a clean kaniko container (if you want to build multiple images in the same container, using the debug kaniko image)
 
+#### --ignore
+
+Set this flag to ignore files in your build context. For examples, set `--ignore pkg/*` to ignore all files in the `pkg` directory. 
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.

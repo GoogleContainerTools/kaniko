@@ -61,6 +61,9 @@ var RootCmd = &cobra.Command{
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
 		}
+		if err := removeIgnoredFiles(); err != nil {
+			return errors.Wrap(err, "error removing ignored files from build context")
+		}
 		return resolveDockerfilePath()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -91,6 +94,7 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
+	RootCmd.PersistentFlags().VarP(&opts.Ignore, "ignore", "", "Set this flag to ignore files in the build context. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePush, "insecure", "", false, "Push to insecure registry using plain HTTP")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
@@ -180,6 +184,35 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
+}
+
+func removeIgnoredFiles() error {
+	logrus.Infof("Removing ignored files from build context: %s", opts.Ignore)
+	for r, i := range opts.Ignore {
+		opts.Ignore[r] = filepath.Clean(filepath.Join(opts.SrcContext, i))
+	}
+	err := filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
+		if ignoreFile(path) {
+			if err := os.RemoveAll(path); err != nil {
+				logrus.Debugf("error removing %s from buildcontext", path)
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func ignoreFile(path string) bool {
+	for _, i := range opts.Ignore {
+		matched, err := filepath.Match(i, path)
+		if err != nil {
+			return false
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func exit(err error) {

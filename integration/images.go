@@ -54,6 +54,16 @@ var argsMap = map[string][]string{
 	"Dockerfile_test_multistage": {"file=/foo2"},
 }
 
+var filesToIgnore = []string{"context/bar/*", "context/tars/"}
+
+func ignoreFlags() []string {
+	var f []string
+	for _, i := range filesToIgnore {
+		f = append(f, fmt.Sprintf("--ignore=%s", i))
+	}
+	return f
+}
+
 // Arguments to build Dockerfiles with when building with docker
 var additionalDockerFlagsMap = map[string][]string{
 	"Dockerfile_test_target": {"--target=second"},
@@ -64,6 +74,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_add":     {"--single-snapshot"},
 	"Dockerfile_test_scratch": {"--single-snapshot"},
 	"Dockerfile_test_target":  {"--target=second"},
+	"Dockerfile_test_ignore":  ignoreFlags(),
 }
 
 var bucketContextTests = []string{"Dockerfile_test_copy_bucket"}
@@ -110,9 +121,10 @@ func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 // keeps track of which files have been built.
 type DockerFileBuilder struct {
 	// Holds all available docker files and whether or not they've been built
-	FilesBuilt           map[string]bool
-	DockerfilesToIgnore  map[string]struct{}
-	TestCacheDockerfiles map[string]struct{}
+	FilesBuilt            map[string]bool
+	DockerfilesToIgnore   map[string]struct{}
+	TestCacheDockerfiles  map[string]struct{}
+	TestIgnoreDockerfiles map[string]struct{}
 }
 
 // NewDockerFileBuilder will create a DockerFileBuilder initialized with dockerfiles, which
@@ -129,6 +141,9 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 	d.TestCacheDockerfiles = map[string]struct{}{
 		"Dockerfile_test_cache":         {},
 		"Dockerfile_test_cache_install": {},
+	}
+	d.TestIgnoreDockerfiles = map[string]struct{}{
+		"Dockerfile_test_ignore": {},
 	}
 	return &d
 }
@@ -158,9 +173,21 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			"."},
 			additionalFlags...)...,
 	)
+	if d.includeDockerIgnore(dockerfile) {
+		if err := generateDockerIgnore(); err != nil {
+			return err
+		}
+	}
+
 	_, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)
+	}
+
+	if d.includeDockerIgnore(dockerfilesPath) {
+		if err := deleteDockerIgnore(); err != nil {
+			return err
+		}
 	}
 
 	contextFlag := "-c"
@@ -251,4 +278,30 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 		}
 	}
 	return nil
+}
+
+func (d *DockerFileBuilder) includeDockerIgnore(dockerfile string) bool {
+	for i := range d.TestIgnoreDockerfiles {
+		if i == dockerfile {
+			return true
+		}
+	}
+	return false
+}
+
+func generateDockerIgnore() error {
+	f, err := os.Create(".dockerignore")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	contents := strings.Join(filesToIgnore, "\n")
+	if _, err := f.Write([]byte(contents)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteDockerIgnore() error {
+	return os.Remove(".dockerignore")
 }
