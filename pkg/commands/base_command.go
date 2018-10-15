@@ -22,11 +22,10 @@ import (
 )
 
 type BaseCommand struct {
-	cache bool
 }
 
-func (b *BaseCommand) CacheCommand() bool {
-	return b.cache
+func (b *BaseCommand) CacheCommand(v1.Image) DockerCommand {
+	return nil
 }
 
 func (b *BaseCommand) FilesToSnapshot() []string {
