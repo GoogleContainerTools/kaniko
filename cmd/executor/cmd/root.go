@@ -52,8 +52,8 @@ var RootCmd = &cobra.Command{
 		if err := util.ConfigureLogging(logLevel); err != nil {
 			return err
 		}
-		if !opts.NoPush && len(opts.Destinations) == 0 {
-			return errors.New("You must provide --destination, or use --no-push")
+		if !opts.NoPush && opts.TarPath == "" && len(opts.Destinations) == 0 {
+			return errors.New("You must provide --destination or --tarPath, or use --no-push")
 		}
 		if err := cacheFlagsValid(); err != nil {
 			return errors.Wrap(err, "cache flags invalid")
