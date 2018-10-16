@@ -1,3 +1,22 @@
+# v0.5.0 Release - 10/16/2018
+
+## New Features
+* Persistent volume caching for base images [#383](https://github.com/GoogleContainerTools/kaniko/pull/383)
+
+## Updates
+* Use only the necessary files in the cache keys. [#387](https://github.com/GoogleContainerTools/kaniko/pull/387)
+* Change loglevel for copying files to debug (#303) [#393](https://github.com/GoogleContainerTools/kaniko/pull/393)
+* Improve IsDestDir functionality with filesystem info [#390](https://github.com/GoogleContainerTools/kaniko/pull/390)
+* Refactor the build loop. [#385](https://github.com/GoogleContainerTools/kaniko/pull/385)
+* Rework cache key generation a bit. [#375](https://github.com/GoogleContainerTools/kaniko/pull/375)
+
+## Bug Fixes
+* fix mispell [#396](https://github.com/GoogleContainerTools/kaniko/pull/396)
+* Update go-containerregistry dependency [#388](https://github.com/GoogleContainerTools/kaniko/pull/388)
+* chore: fix broken markdown (CHANGELOG.md) [#382](https://github.com/GoogleContainerTools/kaniko/pull/382)
+* Don't cut everything after an equals sign [#381](https://github.com/GoogleContainerTools/kaniko/pull/381)
+
+
 # v0.4.0 Release - 10/01/2018
 
 ## New Features
