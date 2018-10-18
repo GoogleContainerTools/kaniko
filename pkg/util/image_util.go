@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -42,7 +43,13 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string, opts *config.KanikoOptions) (v1.Image, error) {
+func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions, metaArgs map[string]string) (v1.Image, error) {
+	buildArgs := opts.BuildArgs
+	var metaArgsString []string
+	for key, value := range metaArgs {
+		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", key, value))
+	}
+	buildArgs = append(buildArgs, metaArgsString...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err

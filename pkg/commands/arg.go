@@ -21,6 +21,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 type ArgCommand struct {
@@ -32,6 +33,7 @@ type ArgCommand struct {
 func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedKey, err := util.ResolveEnvironmentReplacement(r.cmd.Key, replacementEnvs, false)
+	logrus.Infof("ARG: KEY = %s", resolvedKey)
 	if err != nil {
 		return err
 	}
@@ -42,7 +44,20 @@ func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			return err
 		}
 		resolvedValue = &value
+	} else {
+		meta := buildArgs.GetAllMeta()
+		for k, v := range meta {
+			logrus.Infof("ARG: META KEY = %s", k)
+			logrus.Infof("ARG: META VALUE = %s", v)
+			if k == resolvedKey {
+				logrus.Infof("ARG: FOUND KEY. VALUE = %s", v)
+				resolvedValue = &v
+				break
+			}
+		}
 	}
+
+	logrus.Infof("ARG: VALUE = %s", *resolvedValue)
 	buildArgs.AddArg(resolvedKey, resolvedValue)
 	return nil
 }

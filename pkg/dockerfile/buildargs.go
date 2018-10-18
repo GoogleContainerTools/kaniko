@@ -17,6 +17,7 @@ limitations under the License.
 package dockerfile
 
 import (
+	"github.com/sirupsen/logrus"
 	"strings"
 
 	d "github.com/docker/docker/builder/dockerfile"
@@ -52,4 +53,16 @@ func (b *BuildArgs) Clone() *BuildArgs {
 func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 	filtered := b.FilterAllowed(envs)
 	return append(envs, filtered...)
+}
+
+func (b *BuildArgs) AddMetaArgs(metaArgs map[string]string) *BuildArgs {
+	for key, value := range metaArgs {
+		logrus.Infof("META ARG: adding %s = %s", key, value)
+		b.AddMetaArg(key, &value)
+	}
+
+	for k, v := range b.GetAllMeta() {
+		logrus.Infof("META ARG: getting %s = %s", k, v)
+	}
+	return b
 }

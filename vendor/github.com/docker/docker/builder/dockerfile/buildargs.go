@@ -90,6 +90,7 @@ func (b *BuildArgs) ResetAllowed() {
 
 // AddMetaArg adds a new meta arg that can be used by FROM directives
 func (b *BuildArgs) AddMetaArg(key string, value *string) {
+	fmt.Printf("SAVING META ARG %s = %s", key, *value)
 	b.allowedMetaArgs[key] = value
 }
 

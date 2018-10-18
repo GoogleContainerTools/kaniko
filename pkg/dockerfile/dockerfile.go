@@ -31,25 +31,25 @@ import (
 )
 
 // Stages parses a Dockerfile and returns an array of KanikoStage
-func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
+func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, []instructions.ArgCommand, error) {
 	d, err := ioutil.ReadFile(opts.DockerfilePath)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
-	stages, err := Parse(d)
+	stages, metaArgs, err := Parse(d)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing dockerfile")
+		return nil, nil, errors.Wrap(err, "parsing dockerfile")
 	}
 	targetStage, err := targetStage(stages, opts.Target)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	resolveStages(stages)
 	var kanikoStages []config.KanikoStage
 	for index, stage := range stages {
 		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, opts.BuildArgs, false)
 		if err != nil {
-			return nil, errors.Wrap(err, "resolving base name")
+			return nil, nil, errors.Wrap(err, "resolving base name")
 		}
 		stage.Name = resolvedBaseName
 		kanikoStages = append(kanikoStages, config.KanikoStage{
@@ -63,7 +63,8 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			break
 		}
 	}
-	return kanikoStages, nil
+
+	return kanikoStages, metaArgs, nil
 }
 
 // baseImageIndex returns the index of the stage the current stage is built off
@@ -81,16 +82,16 @@ func baseImageIndex(currentStage int, stages []instructions.Stage) int {
 }
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
-func Parse(b []byte) ([]instructions.Stage, error) {
+func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	p, err := parser.Parse(bytes.NewReader(b))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	stages, _, err := instructions.Parse(p.AST)
+	stages, metaArgs, err := instructions.Parse(p.AST)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return stages, err
+	return stages, metaArgs, err
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
