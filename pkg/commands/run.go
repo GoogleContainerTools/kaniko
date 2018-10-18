@@ -127,7 +127,7 @@ func addDefaultHOME(u string, envs []string) []string {
 	}
 
 	// If user isn't set, set default value of HOME
-	if u == "" {
+	if u == "" || u == constants.RootUser {
 		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
 	}
 
