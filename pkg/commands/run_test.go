@@ -62,6 +62,17 @@ func Test_addDefaultHOME(t *testing.T) {
 				"HOME=/",
 			},
 		},
+		{
+			name: "HOME isn't set, user is set to root",
+			user: "root",
+			initial: []string{
+				"PATH=/something/else",
+			},
+			expected: []string{
+				"PATH=/something/else",
+				"HOME=/root",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
