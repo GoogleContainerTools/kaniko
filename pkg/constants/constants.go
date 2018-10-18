@@ -58,6 +58,7 @@ const (
 	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME
 	DefaultHOMEValue = "/root"
+	RootUser         = "root"
 
 	// Docker command names
 	Cmd        = "cmd"
