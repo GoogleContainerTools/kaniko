@@ -25,6 +25,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -94,7 +95,6 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
-	RootCmd.PersistentFlags().VarP(&opts.Ignore, "ignore", "", "Set this flag to ignore files in the build context. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePush, "insecure", "", false, "Push to insecure registry using plain HTTP")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
@@ -187,23 +187,34 @@ func resolveSourceContext() error {
 }
 
 func removeIgnoredFiles() error {
-	logrus.Infof("Removing ignored files from build context: %s", opts.Ignore)
-	for r, i := range opts.Ignore {
-		opts.Ignore[r] = filepath.Clean(filepath.Join(opts.SrcContext, i))
+	if !dockerfile.DockerignoreExists(opts) {
+		return nil
 	}
-	err := filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
-		if ignoreFile(path) {
+	ignore, err := dockerfile.ParseDockerignore(opts)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Removing ignored files from build context: %s", ignore)
+	for r, i := range ignore {
+		ignore[r] = filepath.Clean(filepath.Join(opts.SrcContext, i))
+	}
+	err = filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
+		if ignoreFile(path, ignore) {
 			if err := os.RemoveAll(path); err != nil {
 				logrus.Debugf("error removing %s from buildcontext", path)
 			}
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(opts.SrcContext, ".dockerignore")
+	return os.Remove(path)
 }
 
-func ignoreFile(path string) bool {
-	for _, i := range opts.Ignore {
+func ignoreFile(path string, ignore []string) bool {
+	for _, i := range ignore {
 		matched, err := filepath.Match(i, path)
 		if err != nil {
 			return false
