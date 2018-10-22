@@ -32,11 +32,11 @@ var (
 	dockerfile = `
 	FROM gcr.io/distroless/base:latest as base
 	COPY . .
-	
+
 	FROM scratch as second
 	ENV foopath context/foo
 	COPY --from=0 $foopath context/b* /foo/
-	
+
 	FROM base
 	ARG file
 	COPY --from=second /foo $file`
@@ -51,7 +51,7 @@ func Test_StandardImage(t *testing.T) {
 	defer func() {
 		retrieveRemoteImage = original
 	}()
-	mock := func(image string) (v1.Image, error) {
+	mock := func(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, nil
 	}
 	retrieveRemoteImage = mock

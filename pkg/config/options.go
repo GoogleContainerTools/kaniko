@@ -28,7 +28,7 @@ type KanikoOptions struct {
 	CacheDir       string
 	Destinations   multiArg
 	BuildArgs      multiArg
-	InsecurePush   bool
+	Insecure       bool
 	SkipTLSVerify  bool
 	SingleSnapshot bool
 	Reproducible   bool
