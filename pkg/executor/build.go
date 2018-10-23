@@ -273,7 +273,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	// Parse and apply args declared before any stage.
 	kanikoMetaArgs := map[string]string{}
 	for _, arg := range metaArgs {
-		kanikoMetaArgs[arg.Key] = *arg.Value
+		var v string
+		if arg.Value != nil {
+			v = *arg.Value
+		}
+		kanikoMetaArgs[arg.Key] = v
 	}
 	for index, stage := range stages {
 		sb, err := newStageBuilder(opts, stage, kanikoMetaArgs)
