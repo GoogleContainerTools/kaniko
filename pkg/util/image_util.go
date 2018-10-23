@@ -17,7 +17,9 @@ limitations under the License.
 package util
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strconv"
 
@@ -79,7 +81,7 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions, m
 	}
 
 	// Otherwise, initialize image as usual
-	return retrieveRemoteImage(currentBaseName)
+	return retrieveRemoteImage(currentBaseName, opts)
 }
 
 // RetrieveConfigFile returns the config file for an image
@@ -100,18 +102,41 @@ func tarballImage(index int) (v1.Image, error) {
 	return tarball.ImageFromPath(tarPath, nil)
 }
 
-func remoteImage(image string) (v1.Image, error) {
+func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	logrus.Infof("Downloading base image %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
 	}
+
+	if opts.Insecure {
+		newReg, err := name.NewInsecureRegistry(ref.Context().RegistryStr(), name.WeakValidation)
+		if err != nil {
+			return nil, err
+		}
+		if tag, ok := ref.(name.Tag); ok {
+			tag.Repository.Registry = newReg
+			ref = tag
+		}
+		if digest, ok := ref.(name.Digest); ok {
+			digest.Repository.Registry = newReg
+			ref = digest
+		}
+	}
+
+	tr := http.DefaultTransport.(*http.Transport)
+	if opts.SkipTLSVerify {
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
 	k8sc, err := k8schain.NewNoClient()
 	if err != nil {
 		return nil, err
 	}
 	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
+	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(kc))
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
