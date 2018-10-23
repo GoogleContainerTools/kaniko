@@ -139,7 +139,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
-	args = args.AddMetaArgs(s.metaArgs)
+	args.AddMetaArgs(s.metaArgs)
 	for index, command := range cmds {
 		if command == nil {
 			continue
