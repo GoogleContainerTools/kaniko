@@ -21,7 +21,7 @@ We do **not** recommend running the kaniko executor binary in another image, as 
   - [Running kaniko](#running-kaniko)
     - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
     - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-    - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
+    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
     - [Running kaniko locally](#running-kaniko-locally)
   - [Caching](#caching)
   - [Pushing to Different Registries](#pushing-to-different-registries)
@@ -87,7 +87,7 @@ There are several different ways to deploy and run kaniko:
 
 - [In a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
 - [In gVisor](#running-kaniko-in-gvisor)
-- [In Google Container Builder](#running-kaniko-in-google-container-builder)
+- [In Google Cloud Build](#running-kaniko-in-google-cloud-build)
 - [Locally](#running-kaniko-locally)
 
 #### Running kaniko in a Kubernetes cluster
@@ -154,7 +154,7 @@ gcr.io/kaniko-project/executor:latest \
 We pass in `--runtime=runsc` to use gVisor.
 This example mounts the current directory to `/workspace` for the build context and the `~/.config` directory for GCR credentials.
 
-#### Running kaniko in Google Container Builder
+#### Running kaniko in Google Cloud Build
 
 To run kaniko in GCB, add it to your build config as a build step:
 
