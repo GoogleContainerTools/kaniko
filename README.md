@@ -298,11 +298,19 @@ Set this flag if you only want to build the image, without pushing to a registry
 
 #### --insecure
 
-Set this flag if you want to connect to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --skip-tls-verify
 
-Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when pushing images to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --insecure-pull
+
+Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling images from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --cache
 
