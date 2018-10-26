@@ -17,6 +17,7 @@ set -e
 
 if [ $# -ne 3 ];
     then echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag>"
+    exit 1
 fi
 
 dockerfile=$1
