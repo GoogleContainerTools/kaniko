@@ -22,7 +22,7 @@ We do **not** recommend running the kaniko executor binary in another image, as 
     - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
     - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
     - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-    - [Running kaniko locally](#running-kaniko-locally)
+    - [Running kaniko in Docker](#running-kaniko-in-Docker)
   - [Caching](#caching)
   - [Pushing to Different Registries](#pushing-to-different-registries)
   - [Additional Flags](#additional-flags)
@@ -57,8 +57,20 @@ To use kaniko to build and push an image for you, you will need:
 
 ### kaniko Build Contexts
 
-kaniko currently supports local directories, Google Cloud Storage and Amazon S3 as build contexts.
-If using a GCS or S3 bucket, the bucket should contain a compressed tar of the build context, which kaniko will unpack and use. 
+kaniko's build context is very similar to the build context you would send your Docker daemon for an image build; it represents a directory containing a Dockerfile which kaniko will use to build your image.
+For example, a `COPY` command in your Dockerfile should refer to a file in the build context.
+
+You will need to store your build context in a place that kaniko can access. 
+Right now, kaniko supports these storage solutions:
+- GCS Bucket
+- S3 Bucket
+- Local Directory
+
+_Note: the local directory option refers to a directory within the kaniko container.
+If you wish to use this option, you will need to mount in your build context into the container as a directory._
+
+If using a GCS or S3 bucket, you will first need to create a compressed tar of your build context and upload it to your bucket. 
+Once running, kaniko will then download and unpack the compressed tar of the build context before starting the image build.
 
 To create a compressed tar, you can run:
 ```shell
@@ -70,11 +82,11 @@ For example, we can copy over the compressed tar to a GCS bucket with gsutil:
 gsutil cp context.tar.gz gs://<bucket name>
 ```
 
-Use the `--context` flag with the appropriate prefix to specify your build context:
+When running kaniko, use the `--context` flag with the appropriate prefix to specify the location of your build context:
 
 |  Source | Prefix  |
 |---------|---------|
-| Local Directory  | dir://[path to directory]  |
+| Local Directory  | dir://[path to a directory in the kaniko container]  |
 | GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     | 
 | S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
 
@@ -88,7 +100,7 @@ There are several different ways to deploy and run kaniko:
 - [In a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
 - [In gVisor](#running-kaniko-in-gvisor)
 - [In Google Cloud Build](#running-kaniko-in-google-cloud-build)
-- [Locally](#running-kaniko-locally)
+- [In Docker](#running-kaniko-in-docker)
 
 #### Running kaniko in a Kubernetes cluster
 
@@ -96,18 +108,23 @@ Requirements:
 
 - Standard Kubernetes cluster (e.g. using [GKE](https://cloud.google.com/kubernetes-engine/))
 - [Kubernetes Secret](#kubernetes-secret)
+- A [build context](#kaniko-build-contexts)
 
 ##### Kubernetes secret
 
 To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image.
 
-To create the secret, first you will need to create a service account in the Google Cloud Console project you want to push the final image to, with `Storage Admin` permissions.
-You can download a JSON key for this service account, and rename it `kaniko-secret.json`.
-To create the secret, run:
+To create a secret to authenticate to Google Cloud Registry, follow these steps:
+1. Create a service account in the Google Cloud Console project you want to push the final image to with `Storage Admin` permissions.
+2. Download a JSON key for this service account
+3. Rename the key to `kaniko-secret.json`
+4. To create the secret, run:
 
 ```shell
 kubectl create secret generic kaniko-secret --from-file=<path to kaniko-secret.json>
 ```
+
+_Note: If using a GCS bucket in the same GCP project as a build context, this service account should now also have permissions to read from that bucket._ 
 
 The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
 
@@ -120,7 +137,7 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile>",
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
             "--context=gs://<GCS bucket>/<path to .tar.gz>",
             "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
     volumeMounts:
@@ -156,19 +173,22 @@ This example mounts the current directory to `/workspace` for the build context 
 
 #### Running kaniko in Google Cloud Build
 
+Requirements:
+- A [build context](#kaniko-build-contexts)
+
 To run kaniko in GCB, add it to your build config as a build step:
 
 ```yaml
 steps:
   - name: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile>",
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
            "--context=dir://<path to build context>",
            "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
 ```
 
 kaniko will build and push the final image in this build step.
 
-#### Running kaniko locally
+#### Running kaniko in Docker
 
 Requirements:
 
@@ -245,7 +265,7 @@ To configure credentials, you will need to do the following:
     containers:
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      args: ["--dockerfile=<path to Dockerfile>",
+      args: ["--dockerfile=<path to Dockerfile within the build context>",
               "--context=s3://<bucket name>/<path to .tar.gz>",
               "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
       volumeMounts:

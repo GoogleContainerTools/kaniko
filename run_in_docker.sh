@@ -22,7 +22,7 @@ fi
 
 dockerfile=$1
 context=$2
-tag=$3
+destination=$3
 
 if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
     echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
@@ -33,4 +33,4 @@ docker run \
     -v $HOME/.config/gcloud:/root/.config/gcloud \
     -v ${context}:/workspace \
     gcr.io/kaniko-project/executor:latest \
-    -f ${dockerfile} -d ${tag} -c /workspace/
+    --dockerfile ${dockerfile} --destination ${destination} --context dir:///workspace/
