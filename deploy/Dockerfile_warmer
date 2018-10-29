@@ -17,7 +17,7 @@
 FROM golang:1.10
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 COPY . .
-RUN make
+RUN make out/warmer
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
