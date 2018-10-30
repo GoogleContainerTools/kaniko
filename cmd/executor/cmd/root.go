@@ -198,8 +198,8 @@ func removeIgnoredFiles() error {
 	for r, i := range ignore {
 		ignore[r] = filepath.Clean(filepath.Join(opts.SrcContext, i))
 	}
-	// first, remove all files in .dockerignore
-	err = filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
+	// remove all files in .dockerignore
+	return filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
 		if ignoreFile(path, ignore) {
 			if err := os.RemoveAll(path); err != nil {
 				// don't return error, because this path could have been removed already
@@ -208,12 +208,6 @@ func removeIgnoredFiles() error {
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	// then, remove .dockerignore
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	return os.Remove(path)
 }
 
 // ignoreFile returns true if the path matches any of the paths in ignore
