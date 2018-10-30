@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -167,4 +168,24 @@ func saveStage(index int, stages []instructions.Stage) bool {
 		}
 	}
 	return false
+}
+
+// DockerignoreExists returns true if .dockerignore exists in the source context
+func DockerignoreExists(opts *config.KanikoOptions) bool {
+	path := filepath.Join(opts.SrcContext, ".dockerignore")
+	return util.FilepathExists(path)
+}
+
+// ParseDockerignore returns a list of all paths in .dockerignore
+func ParseDockerignore(opts *config.KanikoOptions) ([]string, error) {
+	path := filepath.Join(opts.SrcContext, ".dockerignore")
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing .dockerignore")
+	}
+	return strings.FieldsFunc(string(contents), split), nil
+}
+
+func split(r rune) bool {
+	return r == '\n' || r == ' '
 }

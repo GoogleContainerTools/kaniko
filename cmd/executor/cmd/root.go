@@ -25,6 +25,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -60,6 +61,9 @@ var RootCmd = &cobra.Command{
 		}
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
+		}
+		if err := removeIgnoredFiles(); err != nil {
+			return errors.Wrap(err, "error removing .dockerignore files from build context")
 		}
 		return resolveDockerfilePath()
 	},
@@ -182,6 +186,44 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
+}
+
+func removeIgnoredFiles() error {
+	if !dockerfile.DockerignoreExists(opts) {
+		return nil
+	}
+	ignore, err := dockerfile.ParseDockerignore(opts)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Removing ignored files from build context: %s", ignore)
+	for r, i := range ignore {
+		ignore[r] = filepath.Clean(filepath.Join(opts.SrcContext, i))
+	}
+	// remove all files in .dockerignore
+	return filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
+		if ignoreFile(path, ignore) {
+			if err := os.RemoveAll(path); err != nil {
+				// don't return error, because this path could have been removed already
+				logrus.Debugf("error removing %s from buildcontext", path)
+			}
+		}
+		return nil
+	})
+}
+
+// ignoreFile returns true if the path matches any of the paths in ignore
+func ignoreFile(path string, ignore []string) bool {
+	for _, i := range ignore {
+		matched, err := filepath.Match(i, path)
+		if err != nil {
+			return false
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func exit(err error) {
