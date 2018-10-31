@@ -28,6 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -62,10 +63,10 @@ var RootCmd = &cobra.Command{
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
 		}
-		if err := removeIgnoredFiles(); err != nil {
-			return errors.Wrap(err, "error removing .dockerignore files from build context")
+		if err := resolveDockerfilePath(); err != nil {
+			return errors.Wrap(err, "error resolving dockerfile path")
 		}
-		return resolveDockerfilePath()
+		return removeIgnoredFiles()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if !checkContained() {
@@ -144,7 +145,7 @@ func resolveDockerfilePath() error {
 			return errors.Wrap(err, "getting absolute path for dockerfile")
 		}
 		opts.DockerfilePath = abs
-		return nil
+		return copyDockerfile()
 	}
 	// Otherwise, check if the path relative to the build context exists
 	if util.FilepathExists(filepath.Join(opts.SrcContext, opts.DockerfilePath)) {
@@ -153,9 +154,19 @@ func resolveDockerfilePath() error {
 			return errors.Wrap(err, "getting absolute path for src context/dockerfile path")
 		}
 		opts.DockerfilePath = abs
-		return nil
+		return copyDockerfile()
 	}
 	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
+}
+
+// copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
+// it won't be copied into the image
+func copyDockerfile() error {
+	if err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath); err != nil {
+		return errors.Wrap(err, "copying dockerfile")
+	}
+	opts.DockerfilePath = constants.DockerfilePath
+	return nil
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a bucket
@@ -197,33 +208,18 @@ func removeIgnoredFiles() error {
 		return err
 	}
 	logrus.Infof("Removing ignored files from build context: %s", ignore)
-	for r, i := range ignore {
-		ignore[r] = filepath.Clean(filepath.Join(opts.SrcContext, i))
+	files, err := util.RelativeFiles("", opts.SrcContext)
+	if err != nil {
+		return errors.Wrap(err, "getting all files in src context")
 	}
-	// remove all files in .dockerignore
-	return filepath.Walk(opts.SrcContext, func(path string, fi os.FileInfo, _ error) error {
-		if ignoreFile(path, ignore) {
-			if err := os.RemoveAll(path); err != nil {
-				// don't return error, because this path could have been removed already
-				logrus.Debugf("error removing %s from buildcontext", path)
+	for _, f := range files {
+		if rm, _ := fileutils.Matches(f, ignore); rm {
+			if err := os.RemoveAll(f); err != nil {
+				logrus.Errorf("Error removing %s from build context", f)
 			}
 		}
-		return nil
-	})
-}
-
-// ignoreFile returns true if the path matches any of the paths in ignore
-func ignoreFile(path string, ignore []string) bool {
-	for _, i := range ignore {
-		matched, err := filepath.Match(i, path)
-		if err != nil {
-			return false
-		}
-		if matched {
-			return true
-		}
 	}
-	return false
+	return nil
 }
 
 func exit(err error) {

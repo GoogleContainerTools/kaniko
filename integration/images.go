@@ -37,7 +37,6 @@ const (
 	buildContextPath = "/workspace"
 	cacheDir         = "/workspace/cache"
 	baseImageToCache = "gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0"
-	testDirPath      = "context/test"
 )
 
 // Arguments to build Dockerfiles with, used for both docker and kaniko builds
@@ -54,8 +53,6 @@ var argsMap = map[string][]string{
 	},
 	"Dockerfile_test_multistage": {"file=/foo2"},
 }
-
-var filesToIgnore = []string{"context/test/*"}
 
 // Arguments to build Dockerfiles with when building with docker
 var additionalDockerFlagsMap = map[string][]string{
@@ -161,23 +158,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			"."},
 			additionalFlags...)...,
 	)
-	if err := setupTestDir(); err != nil {
-		return err
-	}
-	if err := generateDockerIgnore(); err != nil {
-		return err
-	}
 
 	_, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)
-	}
-
-	if err := setupTestDir(); err != nil {
-		return err
-	}
-	if err := generateDockerIgnore(); err != nil {
-		return err
 	}
 
 	contextFlag := "-c"
@@ -266,31 +250,6 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 		if _, err := RunCommandWithoutTest(kanikoCmd); err != nil {
 			return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
 		}
-	}
-	return nil
-}
-
-func setupTestDir() error {
-	if err := os.MkdirAll(testDirPath, 0750); err != nil {
-		return err
-	}
-	p := filepath.Join(testDirPath, "foo")
-	f, err := os.Create(p)
-	if err != nil {
-		return err
-	}
-	return f.Close()
-}
-
-func generateDockerIgnore() error {
-	f, err := os.Create(".dockerignore")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	contents := strings.Join(filesToIgnore, "\n")
-	if _, err := f.Write([]byte(contents)); err != nil {
-		return err
 	}
 	return nil
 }
