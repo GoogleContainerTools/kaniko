@@ -33,6 +33,9 @@ const (
 
 	Author = "kaniko"
 
+	// DockerfilePath is the path the Dockerfile is copied to
+	DockerfilePath = "/kaniko/Dockerfile"
+
 	// ContextTar is the default name of the tar uploaded to GCS buckets
 	ContextTar = "context.tar.gz"
 

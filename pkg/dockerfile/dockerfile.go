@@ -26,6 +26,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/builder/dockerignore"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/pkg/errors"
@@ -183,9 +184,6 @@ func ParseDockerignore(opts *config.KanikoOptions) ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing .dockerignore")
 	}
-	return strings.FieldsFunc(string(contents), split), nil
-}
-
-func split(r rune) bool {
-	return r == '\n' || r == ' '
+	reader := bytes.NewBuffer(contents)
+	return dockerignore.ReadAll(reader)
 }
