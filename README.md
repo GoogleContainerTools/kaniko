@@ -210,6 +210,8 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ```
 
 ### Caching
+
+#### Caching Layers
 kaniko currently can cache layers created by `RUN` commands in a remote repository. 
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
@@ -218,6 +220,21 @@ If not, kaniko will execute the command and then push the newly created layer to
 Users can opt in to caching by setting the `--cache=true` flag.
 A remote repository for storing cached layers can be provided via the `--cache-repo` flag.
 If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.  
+
+#### Caching Base Images
+kaniko can cache images in a local directory that can be volume mounted into the kaniko image. 
+To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming 
+image at `gcr.io/kaniko-project/warmer`:
+
+```shell
+docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --image=<image to cache> --image=<another image to cache>
+```
+
+`--image` can be specified for any number of desired images. 
+This command will cache those images by digest in a local directory named `cache`.
+Once the cache is populated, caching is opted into with the same `--cache=true` flag as above. 
+The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer. 
+See the `examples` directory for how to use with kubernetes clusters and persistent cache volumes.
 
 ### Pushing to Different Registries
 
@@ -342,6 +359,12 @@ Set this flag to specify a remote repository which will be used to store cached 
 
 If this flag is not provided, a cache repo will be inferred from the `--destination` flag.
 If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored in `gcr.io/kaniko-project/test/cache`.
+
+_This flag must be used in conjunction with the `--cache=true` flag._
+
+#### --cache-dir
+
+Set this flag to specify a local directory cache for base images. Defaults to `/cache`.
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
