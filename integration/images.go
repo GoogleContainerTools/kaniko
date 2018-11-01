@@ -158,6 +158,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			"."},
 			additionalFlags...)...,
 	)
+
 	_, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)

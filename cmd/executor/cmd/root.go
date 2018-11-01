@@ -25,8 +25,10 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -61,7 +63,10 @@ var RootCmd = &cobra.Command{
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
 		}
-		return resolveDockerfilePath()
+		if err := resolveDockerfilePath(); err != nil {
+			return errors.Wrap(err, "error resolving dockerfile path")
+		}
+		return removeIgnoredFiles()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if !checkContained() {
@@ -91,8 +96,10 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
-	RootCmd.PersistentFlags().BoolVarP(&opts.Insecure, "insecure", "", false, "Pull and push to insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Insecure, "insecure", "", false, "Push to insecure registry using plain HTTP")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePull, "insecure-pull", "", false, "Pull from insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerifyPull, "skip-tls-verify-pull", "", false, "Pull from insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
@@ -138,7 +145,7 @@ func resolveDockerfilePath() error {
 			return errors.Wrap(err, "getting absolute path for dockerfile")
 		}
 		opts.DockerfilePath = abs
-		return nil
+		return copyDockerfile()
 	}
 	// Otherwise, check if the path relative to the build context exists
 	if util.FilepathExists(filepath.Join(opts.SrcContext, opts.DockerfilePath)) {
@@ -147,9 +154,19 @@ func resolveDockerfilePath() error {
 			return errors.Wrap(err, "getting absolute path for src context/dockerfile path")
 		}
 		opts.DockerfilePath = abs
-		return nil
+		return copyDockerfile()
 	}
 	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
+}
+
+// copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
+// it won't be copied into the image
+func copyDockerfile() error {
+	if err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath); err != nil {
+		return errors.Wrap(err, "copying dockerfile")
+	}
+	opts.DockerfilePath = constants.DockerfilePath
+	return nil
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a bucket
@@ -179,6 +196,29 @@ func resolveSourceContext() error {
 		return err
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
+	return nil
+}
+
+func removeIgnoredFiles() error {
+	if !dockerfile.DockerignoreExists(opts) {
+		return nil
+	}
+	ignore, err := dockerfile.ParseDockerignore(opts)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Removing ignored files from build context: %s", ignore)
+	files, err := util.RelativeFiles("", opts.SrcContext)
+	if err != nil {
+		return errors.Wrap(err, "getting all files in src context")
+	}
+	for _, f := range files {
+		if rm, _ := fileutils.Matches(f, ignore); rm {
+			if err := os.RemoveAll(f); err != nil {
+				logrus.Errorf("Error removing %s from build context", f)
+			}
+		}
+	}
 	return nil
 }
 

@@ -31,9 +31,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// RetrieveLayer checks the specified cache for a layer with the tag :cacheKey
-func RetrieveLayer(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
-	cache, err := Destination(opts, cacheKey)
+type LayerCache interface {
+	RetrieveLayer(string) (v1.Image, error)
+}
+
+type RegistryCache struct {
+	Opts *config.KanikoOptions
+}
+
+func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
+	cache, err := Destination(rc.Opts, ck)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting cache destination")
 	}
@@ -52,8 +59,11 @@ func RetrieveLayer(opts *config.KanikoOptions, cacheKey string) (v1.Image, error
 	if err != nil {
 		return nil, err
 	}
-	_, err = img.Layers()
-	return img, err
+	// Force the manifest to be populated
+	if _, err := img.RawManifest(); err != nil {
+		return nil, err
+	}
+	return img, nil
 }
 
 // Destination returns the repo where the layer should be stored

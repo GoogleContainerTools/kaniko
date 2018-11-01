@@ -88,33 +88,6 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, metaA
 	}, nil
 }
 
-// extractCachedLayer will extract the cached layer and append it to the config file
-func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
-	logrus.Infof("Found cached layer, extracting to filesystem")
-	extractedFiles, err := util.GetFSFromImage(constants.RootDir, layer)
-	if err != nil {
-		return errors.Wrap(err, "extracting fs from image")
-	}
-	if _, err := s.snapshotter.TakeSnapshot(extractedFiles); err != nil {
-		return err
-	}
-	logrus.Infof("Appending cached layer to base image")
-	l, err := layer.Layers()
-	if err != nil {
-		return errors.Wrap(err, "getting cached layer from image")
-	}
-	s.image, err = mutate.Append(s.image,
-		mutate.Addendum{
-			Layer: l[0],
-			History: v1.History{
-				Author:    constants.Author,
-				CreatedBy: createdBy,
-			},
-		},
-	)
-	return err
-}
-
 func (s *stageBuilder) build() error {
 	// Unpack file system to root
 	if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
@@ -136,6 +109,32 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 		cmds = append(cmds, command)
+	}
+
+	layerCache := &cache.RegistryCache{
+		Opts: s.opts,
+	}
+	if s.opts.Cache {
+		// Possibly replace commands with their cached implementations.
+		for i, command := range cmds {
+			if command == nil {
+				continue
+			}
+			ck, err := compositeKey.Hash()
+			if err != nil {
+				return err
+			}
+			img, err := layerCache.RetrieveLayer(ck)
+			if err != nil {
+				logrus.Infof("No cached layer found for cmd %s", command.String())
+				break
+			}
+
+			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
+				logrus.Infof("Using caching version of cmd: %s", command.String())
+				cmds[i] = cacheCmd
+			}
+		}
 	}
 
 	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
@@ -160,22 +159,6 @@ func (s *stageBuilder) build() error {
 		}
 		logrus.Info(command.String())
 
-		ck, err := compositeKey.Hash()
-		if err != nil {
-			return err
-		}
-
-		if command.CacheCommand() && s.opts.Cache {
-			image, err := cache.RetrieveLayer(s.opts, ck)
-			if err == nil {
-				if err := s.extractCachedLayer(image, command.String()); err != nil {
-					return errors.Wrap(err, "extracting cached layer")
-				}
-				continue
-			}
-			logrus.Info("No cached layer found, executing command...")
-		}
-
 		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
 			return err
 		}
@@ -199,7 +182,11 @@ func (s *stageBuilder) build() error {
 		if err != nil {
 			return err
 		}
-		if err := s.saveSnapshot(command, ck, contents); err != nil {
+		ck, err := compositeKey.Hash()
+		if err != nil {
+			return err
+		}
+		if err := s.saveSnapshot(command.String(), ck, contents); err != nil {
 			return err
 		}
 	}
@@ -231,7 +218,7 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	return true
 }
 
-func (s *stageBuilder) saveSnapshot(command commands.DockerCommand, ck string, contents []byte) error {
+func (s *stageBuilder) saveSnapshot(createdBy string, ck string, contents []byte) error {
 	if contents == nil {
 		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 		return nil
@@ -245,8 +232,8 @@ func (s *stageBuilder) saveSnapshot(command commands.DockerCommand, ck string, c
 		return err
 	}
 	// Push layer to cache now along with new config file
-	if command.CacheCommand() && s.opts.Cache {
-		if err := pushLayerToCache(s.opts, ck, layer, command.String()); err != nil {
+	if s.opts.Cache {
+		if err := pushLayerToCache(s.opts, ck, layer, createdBy); err != nil {
 			return err
 		}
 	}
@@ -255,7 +242,7 @@ func (s *stageBuilder) saveSnapshot(command commands.DockerCommand, ck string, c
 			Layer: layer,
 			History: v1.History{
 				Author:    constants.Author,
-				CreatedBy: command.String(),
+				CreatedBy: createdBy,
 			},
 		},
 	)
