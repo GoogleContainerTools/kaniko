@@ -14,4 +14,4 @@ FROM ${REGISTRY}/${REPO}/debian9
 COPY --from=stage1 /hello /tmp
 
 # /tmp/hey should not get created without the ARG statement
-RUN touch /${WORD2}
+RUN touch /tmp/${WORD2}

@@ -190,6 +190,7 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 		}
 	}
 
+	addedPaths := []string{}
 	// Now create the tar.
 	for path := range memFs {
 		whitelisted, err := util.CheckWhitelist(path)
@@ -208,11 +209,17 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 		}
 		if maybeAdd {
 			logrus.Debugf("Adding %s to layer, because it was changed.", path)
+			addedPaths = append(addedPaths, path)
 			filesAdded = true
 			if err := t.AddFileToTar(path); err != nil {
 				return false, err
 			}
 		}
+	}
+
+	if filesAdded && len(addedPaths) == 1 && addedPaths[0] == "/" {
+		logrus.Infof("Only added /, not taking snapshot.")
+		return false, nil
 	}
 
 	return filesAdded, nil
