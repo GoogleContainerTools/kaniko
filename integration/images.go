@@ -64,6 +64,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 }
 
 var gitRepoTests = []string{"Dockerfile_test_git"}
+var bucketContextTests = []string{"Dockerfile_test_copy_bucket"}
 var reproducibleTests = []string{"Dockerfile_test_reproducible"}
 
 // GetDockerImage constructs the name of the docker image that would be built with
@@ -148,11 +149,17 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	// build docker image
 	additionalFlags := append(buildArgs, additionalDockerFlagsMap[dockerfile]...)
 	dockerImage := strings.ToLower(imageRepo + dockerPrefix + dockerfile)
+	dockerPath := "."
+	contextTest := bucketContextTests
+	if dockerfile == "Dockerfile_test_git" {
+		dockerPath = "../"
+		contextTest = gitRepoTests
+	}
 	dockerCmd := exec.Command("docker",
 		append([]string{"build",
 			"-t", dockerImage,
 			"-f", path.Join(dockerfilesPath, dockerfile),
-			"../"},
+			dockerPath},
 			additionalFlags...)...,
 	)
 	_, err := RunCommandWithoutTest(dockerCmd)
@@ -162,10 +169,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 
 	contextFlag := "-c"
 	contextPath := buildContextPath
-	for _, d := range gitRepoTests {
+	for _, d := range contextTest {
 		if d == dockerfile {
 			contextFlag = "-b"
-			contextPath = "https://github.com/GoogleContainerTools/kaniko"
+			contextPath = "git://github.com/GoogleContainerTools/kaniko"
 			break
 		}
 	}
