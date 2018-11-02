@@ -193,7 +193,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		// Check if something already exists at path (symlinks etc.)
 		// If so, delete it
 		if FilepathExists(path) {
-			if err := os.Remove(path); err != nil {
+			if err := os.RemoveAll(path); err != nil {
 				return errors.Wrapf(err, "error removing %s to make way for new file.", path)
 			}
 		}
@@ -242,7 +242,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		// Check if something already exists at path
 		// If so, delete it
 		if FilepathExists(path) {
-			if err := os.Remove(path); err != nil {
+			if err := os.RemoveAll(path); err != nil {
 				return errors.Wrapf(err, "error removing %s to make way for new link", hdr.Name)
 			}
 		}
@@ -260,7 +260,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		// Check if something already exists at path
 		// If so, delete it
 		if FilepathExists(path) {
-			if err := os.Remove(path); err != nil {
+			if err := os.RemoveAll(path); err != nil {
 				return errors.Wrapf(err, "error removing %s to make way for new symlink", hdr.Name)
 			}
 		}
@@ -468,7 +468,7 @@ func CopyDir(src, dest string) ([]string, error) {
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
-			logrus.Infof("Creating directory %s", destPath)
+			logrus.Debugf("Creating directory %s", destPath)
 
 			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
 			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
@@ -511,7 +511,7 @@ func CopyFile(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	logrus.Infof("Copying file %s to %s", src, dest)
+	logrus.Debugf("Copying file %s to %s", src, dest)
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err

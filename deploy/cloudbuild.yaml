@@ -13,7 +13,16 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
            "-t", "gcr.io/kaniko-project/executor:debug", "."]
+  # Then, we want to build the cache warmer
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile_warmer",
+           "-t", "gcr.io/kaniko-project/warmer:${COMMIT_SHA}", "."]
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "deploy/Dockerfile_warmer",
+           "-t", "gcr.io/kaniko-project/warmer:latest", "."]
 images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}",
          "gcr.io/kaniko-project/executor:latest",
          "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}",
-         "gcr.io/kaniko-project/executor:debug"]
+         "gcr.io/kaniko-project/executor:debug",
+         "gcr.io/kaniko-project/warmer:${COMMIT_SHA}",
+         "gcr.io/kaniko-project/warmer:latest"]

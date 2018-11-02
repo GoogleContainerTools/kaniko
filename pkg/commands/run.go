@@ -127,7 +127,7 @@ func addDefaultHOME(u string, envs []string) []string {
 	}
 
 	// If user isn't set, set default value of HOME
-	if u == "" {
+	if u == "" || u == constants.RootUser {
 		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
 	}
 
@@ -153,6 +153,35 @@ func (r *RunCommand) FilesToSnapshot() []string {
 }
 
 // CacheCommand returns true since this command should be cached
-func (r *RunCommand) CacheCommand() bool {
-	return true
+func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
+
+	return &CachingRunCommand{
+		img: img,
+		cmd: r.cmd,
+	}
+}
+
+type CachingRunCommand struct {
+	BaseCommand
+	img            v1.Image
+	extractedFiles []string
+	cmd            *instructions.RunCommand
+}
+
+func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Infof("Found cached layer, extracting to filesystem")
+	var err error
+	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	if err != nil {
+		return errors.Wrap(err, "extracting fs from image")
+	}
+	return nil
+}
+
+func (cr *CachingRunCommand) FilesToSnapshot() []string {
+	return cr.extractedFiles
+}
+
+func (cr *CachingRunCommand) String() string {
+	return cr.cmd.String()
 }

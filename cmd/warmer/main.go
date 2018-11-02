@@ -14,24 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package commands
+package main
 
 import (
-	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/google/go-containerregistry/pkg/v1"
+	"os"
+
+	"github.com/GoogleContainerTools/kaniko/cmd/warmer/cmd"
 )
 
-type BaseCommand struct {
-}
-
-func (b *BaseCommand) CacheCommand(v1.Image) DockerCommand {
-	return nil
-}
-
-func (b *BaseCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
-func (b *BaseCommand) FilesUsedFromContext(_ *v1.Config, _ *dockerfile.BuildArgs) ([]string, error) {
-	return []string{}, nil
+func main() {
+	if err := cmd.RootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

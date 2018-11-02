@@ -18,6 +18,7 @@ package cache
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -25,13 +26,21 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-// RetrieveLayer checks the specified cache for a layer with the tag :cacheKey
-func RetrieveLayer(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
-	cache, err := Destination(opts, cacheKey)
+type LayerCache interface {
+	RetrieveLayer(string) (v1.Image, error)
+}
+
+type RegistryCache struct {
+	Opts *config.KanikoOptions
+}
+
+func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
+	cache, err := Destination(rc.Opts, ck)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting cache destination")
 	}
@@ -50,8 +59,11 @@ func RetrieveLayer(opts *config.KanikoOptions, cacheKey string) (v1.Image, error
 	if err != nil {
 		return nil, err
 	}
-	_, err = img.Layers()
-	return img, err
+	// Force the manifest to be populated
+	if _, err := img.RawManifest(); err != nil {
+		return nil, err
+	}
+	return img, nil
 }
 
 // Destination returns the repo where the layer should be stored
@@ -67,4 +79,21 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 		return fmt.Sprintf("%s/cache:%s", destRef.Context(), cacheKey), nil
 	}
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
+}
+
+func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
+	cache := opts.CacheDir
+	if cache == "" {
+		return nil, nil
+	}
+
+	path := path.Join(cache, cacheKey)
+
+	imgTar, err := tarball.ImageFromPath(path, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting image from path")
+	}
+
+	logrus.Infof("Found %s in local cache", cacheKey)
+	return imgTar, nil
 }

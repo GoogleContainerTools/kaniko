@@ -21,8 +21,8 @@ We do **not** recommend running the kaniko executor binary in another image, as 
   - [Running kaniko](#running-kaniko)
     - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
     - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-    - [Running kaniko in Google Container Builder](#running-kaniko-in-google-container-builder)
-    - [Running kaniko locally](#running-kaniko-locally)
+    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
+    - [Running kaniko in Docker](#running-kaniko-in-Docker)
   - [Caching](#caching)
   - [Pushing to Different Registries](#pushing-to-different-registries)
   - [Additional Flags](#additional-flags)
@@ -57,8 +57,20 @@ To use kaniko to build and push an image for you, you will need:
 
 ### kaniko Build Contexts
 
-kaniko currently supports local directories, Google Cloud Storage, Amazon S3 and Git Repositories as build contexts.
-If using a GCS or S3 bucket, the bucket should contain a compressed tar of the build context, which kaniko will unpack and use. 
+kaniko's build context is very similar to the build context you would send your Docker daemon for an image build; it represents a directory containing a Dockerfile which kaniko will use to build your image.
+For example, a `COPY` command in your Dockerfile should refer to a file in the build context.
+
+You will need to store your build context in a place that kaniko can access. 
+Right now, kaniko supports these storage solutions:
+- GCS Bucket
+- S3 Bucket
+- Local Directory
+
+_Note: the local directory option refers to a directory within the kaniko container.
+If you wish to use this option, you will need to mount in your build context into the container as a directory._
+
+If using a GCS or S3 bucket, you will first need to create a compressed tar of your build context and upload it to your bucket. 
+Once running, kaniko will then download and unpack the compressed tar of the build context before starting the image build.
 
 To create a compressed tar, you can run:
 ```shell
@@ -70,11 +82,11 @@ For example, we can copy over the compressed tar to a GCS bucket with gsutil:
 gsutil cp context.tar.gz gs://<bucket name>
 ```
 
-Use the `--context` flag with the appropriate prefix to specify your build context:
+When running kaniko, use the `--context` flag with the appropriate prefix to specify the location of your build context:
 
 |  Source | Prefix  |
 |---------|---------|
-| Local Directory  | dir://[path to directory]  |
+| Local Directory  | dir://[path to a directory in the kaniko container]  |
 | GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     | 
 | S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
 | Git Repository   | git://[repository url]     |
@@ -91,8 +103,8 @@ There are several different ways to deploy and run kaniko:
 
 - [In a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
 - [In gVisor](#running-kaniko-in-gvisor)
-- [In Google Container Builder](#running-kaniko-in-google-container-builder)
-- [Locally](#running-kaniko-locally)
+- [In Google Cloud Build](#running-kaniko-in-google-cloud-build)
+- [In Docker](#running-kaniko-in-docker)
 
 #### Running kaniko in a Kubernetes cluster
 
@@ -100,18 +112,23 @@ Requirements:
 
 - Standard Kubernetes cluster (e.g. using [GKE](https://cloud.google.com/kubernetes-engine/))
 - [Kubernetes Secret](#kubernetes-secret)
+- A [build context](#kaniko-build-contexts)
 
 ##### Kubernetes secret
 
 To run kaniko in a Kubernetes cluster, you will need a standard running Kubernetes cluster and a Kubernetes secret, which contains the auth required to push the final image.
 
-To create the secret, first you will need to create a service account in the Google Cloud Console project you want to push the final image to, with `Storage Admin` permissions.
-You can download a JSON key for this service account, and rename it `kaniko-secret.json`.
-To create the secret, run:
+To create a secret to authenticate to Google Cloud Registry, follow these steps:
+1. Create a service account in the Google Cloud Console project you want to push the final image to with `Storage Admin` permissions.
+2. Download a JSON key for this service account
+3. Rename the key to `kaniko-secret.json`
+4. To create the secret, run:
 
 ```shell
 kubectl create secret generic kaniko-secret --from-file=<path to kaniko-secret.json>
 ```
+
+_Note: If using a GCS bucket in the same GCP project as a build context, this service account should now also have permissions to read from that bucket._ 
 
 The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
 
@@ -124,7 +141,7 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile>",
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
             "--context=gs://<GCS bucket>/<path to .tar.gz>",
             "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
     volumeMounts:
@@ -158,21 +175,24 @@ gcr.io/kaniko-project/executor:latest \
 We pass in `--runtime=runsc` to use gVisor.
 This example mounts the current directory to `/workspace` for the build context and the `~/.config` directory for GCR credentials.
 
-#### Running kaniko in Google Container Builder
+#### Running kaniko in Google Cloud Build
+
+Requirements:
+- A [build context](#kaniko-build-contexts)
 
 To run kaniko in GCB, add it to your build config as a build step:
 
 ```yaml
 steps:
   - name: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile>",
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
            "--context=dir://<path to build context>",
            "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
 ```
 
 kaniko will build and push the final image in this build step.
 
-#### Running kaniko locally
+#### Running kaniko in Docker
 
 Requirements:
 
@@ -194,6 +214,8 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ```
 
 ### Caching
+
+#### Caching Layers
 kaniko currently can cache layers created by `RUN` commands in a remote repository. 
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
@@ -202,6 +224,21 @@ If not, kaniko will execute the command and then push the newly created layer to
 Users can opt in to caching by setting the `--cache=true` flag.
 A remote repository for storing cached layers can be provided via the `--cache-repo` flag.
 If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.  
+
+#### Caching Base Images
+kaniko can cache images in a local directory that can be volume mounted into the kaniko image. 
+To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming 
+image at `gcr.io/kaniko-project/warmer`:
+
+```shell
+docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --image=<image to cache> --image=<another image to cache>
+```
+
+`--image` can be specified for any number of desired images. 
+This command will cache those images by digest in a local directory named `cache`.
+Once the cache is populated, caching is opted into with the same `--cache=true` flag as above. 
+The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer. 
+See the `examples` directory for how to use with kubernetes clusters and persistent cache volumes.
 
 ### Pushing to Different Registries
 
@@ -249,7 +286,7 @@ To configure credentials, you will need to do the following:
     containers:
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      args: ["--dockerfile=<path to Dockerfile>",
+      args: ["--dockerfile=<path to Dockerfile within the build context>",
               "--context=s3://<bucket name>/<path to .tar.gz>",
               "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
       volumeMounts:
@@ -302,11 +339,19 @@ Set this flag if you only want to build the image, without pushing to a registry
 
 #### --insecure
 
-Set this flag if you want to connect to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --skip-tls-verify
 
-Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when pushing images to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --insecure-pull
+
+Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling images from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --cache
 
@@ -318,6 +363,12 @@ Set this flag to specify a remote repository which will be used to store cached 
 
 If this flag is not provided, a cache repo will be inferred from the `--destination` flag.
 If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored in `gcr.io/kaniko-project/test/cache`.
+
+_This flag must be used in conjunction with the `--cache=true` flag._
+
+#### --cache-dir
+
+Set this flag to specify a local directory cache for base images. Defaults to `/cache`.
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 

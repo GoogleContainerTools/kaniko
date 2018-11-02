@@ -145,6 +145,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	fmt.Println("Building cache warmer image")
+	cmd = exec.Command("docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", "..")
+	if _, err = RunCommandWithoutTest(cmd); err != nil {
+		fmt.Printf("Building kaniko's cache warmer failed: %s", err)
+		os.Exit(1)
+	}
+
 	fmt.Println("Building onbuild base image")
 	buildOnbuildBase := exec.Command("docker", "build", "-t", config.onbuildBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", ".")
 	if err := buildOnbuildBase.Run(); err != nil {
@@ -238,6 +245,7 @@ func TestLayers(t *testing.T) {
 
 // Build each image with kaniko twice, and then make sure they're exactly the same
 func TestCache(t *testing.T) {
+	populateVolumeCache()
 	for dockerfile := range imageBuilder.TestCacheDockerfiles {
 		t.Run("test_cache_"+dockerfile, func(t *testing.T) {
 			cache := filepath.Join(config.imageRepo, "cache", fmt.Sprintf("%v", time.Now().UnixNano()))
@@ -265,6 +273,31 @@ func TestCache(t *testing.T) {
 			checkContainerDiffOutput(t, diff, expected)
 		})
 	}
+}
+
+func TestDockerignore(t *testing.T) {
+	t.Run(fmt.Sprintf("test_%s", ignoreDockerfile), func(t *testing.T) {
+		if err := setupIgnoreTestDir(); err != nil {
+			t.Fatalf("error setting up ignore test dir: %v", err)
+		}
+		if err := generateDockerignoreImages(config.imageRepo); err != nil {
+			t.Fatalf("error generating dockerignore test images: %v", err)
+		}
+
+		dockerImage := GetDockerImage(config.imageRepo, ignoreDockerfile)
+		kanikoImage := GetKanikoImage(config.imageRepo, ignoreDockerfile)
+
+		// container-diff
+		daemonDockerImage := daemonPrefix + dockerImage
+		containerdiffCmd := exec.Command("container-diff", "diff",
+			daemonDockerImage, kanikoImage,
+			"-q", "--type=file", "--type=metadata", "--json")
+		diff := RunCommand(containerdiffCmd, t)
+		t.Logf("diff = %s", string(diff))
+
+		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+		checkContainerDiffOutput(t, diff, expected)
+	})
 }
 
 type fileDiff struct {

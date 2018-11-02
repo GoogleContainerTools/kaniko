@@ -49,11 +49,12 @@ type stageBuilder struct {
 	cf              *v1.ConfigFile
 	snapshotter     *snapshot.Snapshotter
 	baseImageDigest string
+	opts            *config.KanikoOptions
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
-	sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs)
+	sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -81,37 +82,11 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 		cf:              imageConfig,
 		snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
+		opts:            opts,
 	}, nil
 }
 
-// extractCachedLayer will extract the cached layer and append it to the config file
-func (s *stageBuilder) extractCachedLayer(layer v1.Image, createdBy string) error {
-	logrus.Infof("Found cached layer, extracting to filesystem")
-	extractedFiles, err := util.GetFSFromImage(constants.RootDir, layer)
-	if err != nil {
-		return errors.Wrap(err, "extracting fs from image")
-	}
-	if _, err := s.snapshotter.TakeSnapshot(extractedFiles); err != nil {
-		return err
-	}
-	logrus.Infof("Appending cached layer to base image")
-	l, err := layer.Layers()
-	if err != nil {
-		return errors.Wrap(err, "getting cached layer from image")
-	}
-	s.image, err = mutate.Append(s.image,
-		mutate.Addendum{
-			Layer: l[0],
-			History: v1.History{
-				Author:    constants.Author,
-				CreatedBy: createdBy,
-			},
-		},
-	)
-	return err
-}
-
-func (s *stageBuilder) build(opts *config.KanikoOptions) error {
+func (s *stageBuilder) build() error {
 	// Unpack file system to root
 	if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 		return err
@@ -120,125 +95,156 @@ func (s *stageBuilder) build(opts *config.KanikoOptions) error {
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
-	var volumes []string
 
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	compositeKey := NewCompositeCache(s.baseImageDigest)
-	contextHash, err := HashDir(opts.SrcContext)
-	if err != nil {
-		return err
-	}
-	compositeKey.AddKey(opts.BuildArgs...)
+	compositeKey.AddKey(s.opts.BuildArgs...)
 
-	args := dockerfile.NewBuildArgs(opts.BuildArgs)
-	for index, cmd := range s.stage.Commands {
-		finalCmd := index == len(s.stage.Commands)-1
-		command, err := commands.GetCommand(cmd, opts.SrcContext)
+	cmds := []commands.DockerCommand{}
+	for _, cmd := range s.stage.Commands {
+		command, err := commands.GetCommand(cmd, s.opts.SrcContext)
 		if err != nil {
 			return err
 		}
+		cmds = append(cmds, command)
+	}
+
+	layerCache := &cache.RegistryCache{
+		Opts: s.opts,
+	}
+	if s.opts.Cache {
+		// Possibly replace commands with their cached implementations.
+		for i, command := range cmds {
+			if command == nil {
+				continue
+			}
+			ck, err := compositeKey.Hash()
+			if err != nil {
+				return err
+			}
+			img, err := layerCache.RetrieveLayer(ck)
+			if err != nil {
+				logrus.Infof("No cached layer found for cmd %s", command.String())
+				break
+			}
+
+			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
+				logrus.Infof("Using caching version of cmd: %s", command.String())
+				cmds[i] = cacheCmd
+			}
+		}
+	}
+
+	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
+	for index, command := range cmds {
 		if command == nil {
 			continue
 		}
 
 		// Add the next command to the cache key.
 		compositeKey.AddKey(command.String())
-		if command.UsesContext() {
-			compositeKey.AddKey(contextHash)
+
+		// If the command uses files from the context, add them.
+		files, err := command.FilesUsedFromContext(&s.cf.Config, args)
+		if err != nil {
+			return err
+		}
+		for _, f := range files {
+			if err := compositeKey.AddPath(f); err != nil {
+				return err
+			}
 		}
 		logrus.Info(command.String())
 
+		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
+			return err
+		}
+		files = command.FilesToSnapshot()
+		var contents []byte
+
+		if !s.shouldTakeSnapshot(index, files) {
+			continue
+		}
+
+		if files == nil || s.opts.SingleSnapshot {
+			contents, err = s.snapshotter.TakeSnapshotFS()
+		} else {
+			// Volumes are very weird. They get created in their command, but snapshotted in the next one.
+			// Add them to the list of files to snapshot.
+			for v := range s.cf.Config.Volumes {
+				files = append(files, v)
+			}
+			contents, err = s.snapshotter.TakeSnapshot(files)
+		}
+		if err != nil {
+			return err
+		}
 		ck, err := compositeKey.Hash()
 		if err != nil {
 			return err
 		}
-
-		if command.CacheCommand() && opts.Cache {
-			image, err := cache.RetrieveLayer(opts, ck)
-			if err == nil {
-				if err := s.extractCachedLayer(image, command.String()); err != nil {
-					return errors.Wrap(err, "extracting cached layer")
-				}
-				continue
-			}
-			logrus.Info("No cached layer found, executing command...")
-		}
-		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
-			return err
-		}
-		files := command.FilesToSnapshot()
-		if cmd.Name() == constants.VolumeCmdName {
-			volumes = append(volumes, files...)
-			continue
-		}
-		var contents []byte
-
-		// If this is an intermediate stage, we only snapshot for the last command and we
-		// want to snapshot the entire filesystem since we aren't tracking what was changed
-		// by previous commands.
-		if !s.stage.Final {
-			if finalCmd {
-				contents, err = s.snapshotter.TakeSnapshotFS()
-			}
-		} else {
-			// If we are in single snapshot mode, we only take a snapshot once, after all
-			// commands have completed.
-			if opts.SingleSnapshot {
-				if finalCmd {
-					contents, err = s.snapshotter.TakeSnapshotFS()
-				}
-			} else {
-				// Otherwise, in the final stage we take a snapshot at each command. If we know
-				// the files that were changed, we'll snapshot those explicitly, otherwise we'll
-				// check if anything in the filesystem changed.
-				if files != nil {
-					if len(files) > 0 {
-						files = append(files, volumes...)
-						volumes = []string{}
-					}
-					contents, err = s.snapshotter.TakeSnapshot(files)
-				} else {
-					contents, err = s.snapshotter.TakeSnapshotFS()
-					volumes = []string{}
-				}
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("Error taking snapshot of files for command %s: %s", command, err)
-		}
-
-		if contents == nil {
-			logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
-			continue
-		}
-		// Append the layer to the image
-		opener := func() (io.ReadCloser, error) {
-			return ioutil.NopCloser(bytes.NewReader(contents)), nil
-		}
-		layer, err := tarball.LayerFromOpener(opener)
-		if err != nil {
-			return err
-		}
-		// Push layer to cache now along with new config file
-		if command.CacheCommand() && opts.Cache {
-			if err := pushLayerToCache(opts, ck, layer, command.String()); err != nil {
-				return err
-			}
-		}
-		s.image, err = mutate.Append(s.image,
-			mutate.Addendum{
-				Layer: layer,
-				History: v1.History{
-					Author:    constants.Author,
-					CreatedBy: command.String(),
-				},
-			},
-		)
-		if err != nil {
+		if err := s.saveSnapshot(command.String(), ck, contents); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
+	isLastCommand := index == len(s.stage.Commands)-1
+
+	// We only snapshot the very end of intermediate stages.
+	if !s.stage.Final {
+		return isLastCommand
+	}
+
+	// We only snapshot the very end with single snapshot mode on.
+	if s.opts.SingleSnapshot {
+		return isLastCommand
+	}
+
+	// nil means snapshot everything.
+	if files == nil {
+		return true
+	}
+
+	// Don't snapshot an empty list.
+	if len(files) == 0 {
+		return false
+	}
+	return true
+}
+
+func (s *stageBuilder) saveSnapshot(createdBy string, ck string, contents []byte) error {
+	if contents == nil {
+		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
+		return nil
+	}
+	// Append the layer to the image
+	opener := func() (io.ReadCloser, error) {
+		return ioutil.NopCloser(bytes.NewReader(contents)), nil
+	}
+	layer, err := tarball.LayerFromOpener(opener)
+	if err != nil {
+		return err
+	}
+	// Push layer to cache now along with new config file
+	if s.opts.Cache {
+		if err := pushLayerToCache(s.opts, ck, layer, createdBy); err != nil {
+			return err
+		}
+	}
+	s.image, err = mutate.Append(s.image,
+		mutate.Addendum{
+			Layer: layer,
+			History: v1.History{
+				Author:    constants.Author,
+				CreatedBy: createdBy,
+			},
+		},
+	)
+	return err
+
 }
 
 // DoBuild executes building the Dockerfile
@@ -253,7 +259,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("getting stage builder for stage %d", index))
 		}
-		if err := sb.build(opts); err != nil {
+		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
 		reviewConfig(stage, &sb.cf.Config)

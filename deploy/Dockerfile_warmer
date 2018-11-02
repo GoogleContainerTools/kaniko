@@ -12,22 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0
-RUN useradd testuser
-RUN groupadd testgroup
-USER testuser:testgroup
-RUN echo "hey" > /tmp/foo
-USER testuser:1001
-RUN echo "hey2" >> /tmp/foo
+# Builds the static Go image to execute in a Kubernetes job
 
-USER root
-RUN echo "hi" > $HOME/file
-COPY context/foo $HOME/foo
+FROM golang:1.10
+WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
+COPY . .
+RUN make out/warmer
 
-RUN useradd -ms /bin/bash newuser
-USER newuser
-RUN echo "hi" > $HOME/file
-COPY context/foo $HOME/foo
-
-USER 1001
-RUN echo $HOME
+FROM scratch
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
+COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY files/config.json /kaniko/.docker/
+ENV HOME /root
+ENV USER /root
+ENV PATH /usr/local/bin:/kaniko
+ENV SSL_CERT_DIR=/kaniko/ssl/certs
+ENV DOCKER_CONFIG /kaniko/.docker/
+WORKDIR /workspace
+ENTRYPOINT ["/kaniko/warmer"]
