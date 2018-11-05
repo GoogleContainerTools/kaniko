@@ -45,11 +45,11 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions, metaArgs map[string]string) (v1.Image, error) {
+func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
 	buildArgs := opts.BuildArgs
 	var metaArgsString []string
-	for key, value := range metaArgs {
-		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", key, value))
+	for _, arg := range stage.MetaArgs {
+		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
 	}
 	buildArgs = append(buildArgs, metaArgsString...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)

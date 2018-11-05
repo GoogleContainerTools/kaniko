@@ -33,25 +33,25 @@ import (
 )
 
 // Stages parses a Dockerfile and returns an array of KanikoStage
-func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, []instructions.ArgCommand, error) {
+func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	d, err := ioutil.ReadFile(opts.DockerfilePath)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
+		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
 	stages, metaArgs, err := Parse(d)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "parsing dockerfile")
+		return nil, errors.Wrap(err, "parsing dockerfile")
 	}
 	targetStage, err := targetStage(stages, opts.Target)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	resolveStages(stages)
 	var kanikoStages []config.KanikoStage
 	for index, stage := range stages {
 		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, opts.BuildArgs, false)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "resolving base name")
+			return nil, errors.Wrap(err, "resolving base name")
 		}
 		stage.Name = resolvedBaseName
 		kanikoStages = append(kanikoStages, config.KanikoStage{
@@ -60,13 +60,14 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, []instructions.Ar
 			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
 			SaveStage:              saveStage(index, stages),
 			Final:                  index == targetStage,
+			MetaArgs:               metaArgs,
 		})
 		if index == targetStage {
 			break
 		}
 	}
 
-	return kanikoStages, metaArgs, nil
+	return kanikoStages, nil
 }
 
 // baseImageIndex returns the index of the stage the current stage is built off

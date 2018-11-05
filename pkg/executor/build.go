@@ -54,8 +54,8 @@ type stageBuilder struct {
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, metaArgs map[string]string) (*stageBuilder, error) {
-	sourceImage, err := util.RetrieveSourceImage(stage, opts, metaArgs)
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
+	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,6 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, metaA
 		snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
 		opts:            opts,
-		metaArgs:        metaArgs,
 	}, nil
 }
 
@@ -138,7 +137,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
-	args.AddMetaArgs(s.metaArgs)
+	args.AddMetaArgs(s.stage.MetaArgs)
 	for index, command := range cmds {
 		if command == nil {
 			continue
@@ -253,21 +252,12 @@ func (s *stageBuilder) saveSnapshot(createdBy string, ck string, contents []byte
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	// Parse dockerfile and unpack base image to root
-	stages, metaArgs, err := dockerfile.Stages(opts)
+	stages, err := dockerfile.Stages(opts)
 	if err != nil {
 		return nil, err
 	}
-	// Parse and apply args declared before any stage.
-	kanikoMetaArgs := map[string]string{}
-	for _, arg := range metaArgs {
-		var v string
-		if arg.Value != nil {
-			v = *arg.Value
-		}
-		kanikoMetaArgs[arg.Key] = v
-	}
 	for index, stage := range stages {
-		sb, err := newStageBuilder(opts, stage, kanikoMetaArgs)
+		sb, err := newStageBuilder(opts, stage)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("getting stage builder for stage %d", index))
 		}
