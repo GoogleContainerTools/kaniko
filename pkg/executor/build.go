@@ -50,7 +50,6 @@ type stageBuilder struct {
 	snapshotter     *snapshot.Snapshotter
 	baseImageDigest string
 	opts            *config.KanikoOptions
-	metaArgs        map[string]string
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
