@@ -38,7 +38,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
-	stages, err := Parse(d)
+	stages, metaArgs, err := Parse(d)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing dockerfile")
 	}
@@ -60,11 +60,13 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
 			SaveStage:              saveStage(index, stages),
 			Final:                  index == targetStage,
+			MetaArgs:               metaArgs,
 		})
 		if index == targetStage {
 			break
 		}
 	}
+
 	return kanikoStages, nil
 }
 
@@ -83,16 +85,16 @@ func baseImageIndex(currentStage int, stages []instructions.Stage) int {
 }
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
-func Parse(b []byte) ([]instructions.Stage, error) {
+func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	p, err := parser.Parse(bytes.NewReader(b))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	stages, _, err := instructions.Parse(p.AST)
+	stages, metaArgs, err := instructions.Parse(p.AST)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return stages, err
+	return stages, metaArgs, err
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build

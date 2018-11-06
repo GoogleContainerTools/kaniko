@@ -25,4 +25,5 @@ type KanikoStage struct {
 	Final                  bool
 	BaseImageStoredLocally bool
 	SaveStage              bool
+	MetaArgs               []instructions.ArgCommand
 }

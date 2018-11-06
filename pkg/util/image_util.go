@@ -18,6 +18,7 @@ package util
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -44,7 +45,13 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string, opts *config.KanikoOptions) (v1.Image, error) {
+func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
+	buildArgs := opts.BuildArgs
+	var metaArgsString []string
+	for _, arg := range stage.MetaArgs {
+		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+	}
+	buildArgs = append(buildArgs, metaArgsString...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
