@@ -17,7 +17,6 @@ package snapshot
 
 import (
 	"archive/tar"
-	"bytes"
 	"io"
 	"io/ioutil"
 	"os"
@@ -30,9 +29,8 @@ import (
 )
 
 func TestSnapshotFSFileChange(t *testing.T) {
-
-	testDir, snapshotter, err := setUpTestDir()
-	defer os.RemoveAll(testDir)
+	testDir, snapshotter, cleanup, err := setUpTestDir()
+	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,16 +43,17 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		t.Fatalf("Error setting up fs: %s", err)
 	}
 	// Take another snapshot
-	contents, err := snapshotter.TakeSnapshotFS()
+	tarPath, err := snapshotter.TakeSnapshotFS()
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
-	if contents == nil {
-		t.Fatal("No files added to snapshot.")
+
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
-	reader := bytes.NewReader(contents)
-	tr := tar.NewReader(reader)
+	tr := tar.NewReader(f)
 	fooPath := filepath.Join(testDir, "foo")
 	batPath := filepath.Join(testDir, "bar/bat")
 	snapshotFiles := map[string]string{
@@ -82,8 +81,8 @@ func TestSnapshotFSFileChange(t *testing.T) {
 }
 
 func TestSnapshotFSChangePermissions(t *testing.T) {
-	testDir, snapshotter, err := setUpTestDir()
-	defer os.RemoveAll(testDir)
+	testDir, snapshotter, cleanup, err := setUpTestDir()
+	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,16 +92,16 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		t.Fatalf("Error changing permissions on %s: %v", batPath, err)
 	}
 	// Take another snapshot
-	contents, err := snapshotter.TakeSnapshotFS()
+	tarPath, err := snapshotter.TakeSnapshotFS()
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
-	if contents == nil {
-		t.Fatal("No files added to snapshot.")
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
-	reader := bytes.NewReader(contents)
-	tr := tar.NewReader(reader)
+	tr := tar.NewReader(f)
 	snapshotFiles := map[string]string{
 		batPath: "baz2",
 	}
@@ -127,8 +126,8 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 }
 
 func TestSnapshotFiles(t *testing.T) {
-	testDir, snapshotter, err := setUpTestDir()
-	defer os.RemoveAll(testDir)
+	testDir, snapshotter, cleanup, err := setUpTestDir()
+	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,15 +141,20 @@ func TestSnapshotFiles(t *testing.T) {
 	filesToSnapshot := []string{
 		filepath.Join(testDir, "foo"),
 	}
-	contents, err := snapshotter.TakeSnapshot(filesToSnapshot)
+	tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(tarPath)
+
 	expectedFiles := []string{"/", "/tmp", filepath.Join(testDir, "foo")}
 
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
-	reader := bytes.NewReader(contents)
-	tr := tar.NewReader(reader)
+	tr := tar.NewReader(f)
 	var actualFiles []string
 	for {
 		hdr, err := tr.Next()
@@ -166,27 +170,42 @@ func TestSnapshotFiles(t *testing.T) {
 }
 
 func TestEmptySnapshotFS(t *testing.T) {
-	testDir, snapshotter, err := setUpTestDir()
-	defer os.RemoveAll(testDir)
+	_, snapshotter, cleanup, err := setUpTestDir()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
+
 	// Take snapshot with no changes
-	contents, err := snapshotter.TakeSnapshotFS()
+	tarPath, err := snapshotter.TakeSnapshotFS()
 	if err != nil {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
-	// Since we took a snapshot with no changes, contents should be nil
-	if contents != nil {
-		t.Fatal("Files added even though no changes to file system were made.")
+
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := tar.NewReader(f)
+
+	if _, err := tr.Next(); err != io.EOF {
+		t.Fatal("no files expected in tar, found files.")
 	}
 }
 
-func setUpTestDir() (string, *Snapshotter, error) {
+func setUpTestDir() (string, *Snapshotter, func(), error) {
 	testDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return testDir, nil, errors.Wrap(err, "setting up temp dir")
+		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
 	}
+
+	snapshotPath, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
+	}
+
+	snapshotPathPrefix = snapshotPath
+
 	files := map[string]string{
 		"foo":         "baz1",
 		"bar/bat":     "baz2",
@@ -194,14 +213,20 @@ func setUpTestDir() (string, *Snapshotter, error) {
 	}
 	// Set up initial files
 	if err := testutil.SetupFiles(testDir, files); err != nil {
-		return testDir, nil, errors.Wrap(err, "setting up file system")
+		return "", nil, nil, errors.Wrap(err, "setting up file system")
 	}
 
 	// Take the initial snapshot
 	l := NewLayeredMap(util.Hasher(), util.CacheHasher())
 	snapshotter := NewSnapshotter(l, testDir)
 	if err := snapshotter.Init(); err != nil {
-		return testDir, nil, errors.Wrap(err, "initializing snapshotter")
+		return "", nil, nil, errors.Wrap(err, "initializing snapshotter")
 	}
-	return testDir, snapshotter, nil
+
+	cleanup := func() {
+		os.RemoveAll(snapshotPath)
+		os.RemoveAll(testDir)
+	}
+
+	return testDir, snapshotter, cleanup, nil
 }

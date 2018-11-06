@@ -17,17 +17,20 @@ limitations under the License.
 package snapshot
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 )
+
+// For testing
+var snapshotPathPrefix = constants.KanikoDir
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
@@ -42,10 +45,8 @@ func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
 
 // Init initializes a new snapshotter
 func (s *Snapshotter) Init() error {
-	if _, err := s.snapShotFS(ioutil.Discard); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.TakeSnapshotFS()
+	return err
 }
 
 // Key returns a string based on the current state of the file system
@@ -55,46 +56,21 @@ func (s *Snapshotter) Key() (string, error) {
 
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the whitelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshot(files []string) ([]byte, error) {
-	buf := bytes.NewBuffer([]byte{})
-	filesAdded, err := s.snapshotFiles(buf, files)
+func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
+	f, err := ioutil.TempFile(snapshotPathPrefix, "")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	contents := buf.Bytes()
-	if !filesAdded {
-		return nil, nil
-	}
-	return contents, err
-}
+	defer f.Close()
 
-// TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates
-// a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshotFS() ([]byte, error) {
-	buf := bytes.NewBuffer([]byte{})
-	filesAdded, err := s.snapShotFS(buf)
-	if err != nil {
-		return nil, err
-	}
-	contents := buf.Bytes()
-	if !filesAdded {
-		return nil, nil
-	}
-	return contents, err
-}
-
-// snapshotFiles creates a snapshot (tar) and adds the specified files.
-// It will not add files which are whitelisted.
-func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 	s.l.Snapshot()
 	if len(files) == 0 {
 		logrus.Info("No files changed in this command, skipping snapshotting.")
-		return false, nil
+		return "", nil
 	}
 	logrus.Info("Taking snapshot of files...")
 	logrus.Debugf("Taking snapshot of files %v", files)
 	snapshottedFiles := make(map[string]bool)
-	filesAdded := false
 
 	t := util.NewTar(f)
 	defer t.Close()
@@ -114,15 +90,14 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 
 		fileAdded, err := s.l.MaybeAdd(file)
 		if err != nil {
-			return false, fmt.Errorf("Unable to add parent dir %s to layered map: %s", file, err)
+			return "", fmt.Errorf("Unable to add parent dir %s to layered map: %s", file, err)
 		}
 
 		if fileAdded {
 			err = t.AddFileToTar(file)
 			if err != nil {
-				return false, fmt.Errorf("Error adding parent dir %s to tar: %s", file, err)
+				return "", fmt.Errorf("Error adding parent dir %s to tar: %s", file, err)
 			}
-			filesAdded = true
 		}
 	}
 	// Next add the files themselves to the tar
@@ -134,20 +109,25 @@ func (s *Snapshotter) snapshotFiles(f io.Writer, files []string) (bool, error) {
 		snapshottedFiles[file] = true
 
 		if err := s.l.Add(file); err != nil {
-			return false, fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
+			return "", fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
 		}
 		if err := t.AddFileToTar(file); err != nil {
-			return false, fmt.Errorf("Error adding file %s to tar: %s", file, err)
+			return "", fmt.Errorf("Error adding file %s to tar: %s", file, err)
 		}
-		filesAdded = true
 	}
-	return filesAdded, nil
+	return f.Name(), nil
 }
 
-// shapShotFS creates a snapshot (tar) of all files in the system which are not
-// whitelisted and which have changed.
-func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
+// TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates
+// a tarball of the changed files.
+func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	logrus.Info("Taking snapshot of full filesystem...")
+
+	f, err := ioutil.TempFile(snapshotPathPrefix, "")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
 
 	// Some of the operations that follow (e.g. hashing) depend on the file system being synced,
 	// for example the hashing function that determines if files are equal uses the mtime of the files,
@@ -157,7 +137,6 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 
 	s.l.Snapshot()
 	existingPaths := s.l.GetFlattenedPathsForWhiteOut()
-	filesAdded := false
 	t := util.NewTar(f)
 	defer t.Close()
 
@@ -176,15 +155,10 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 		// Only add the whiteout if the directory for the file still exists.
 		dir := filepath.Dir(path)
 		if _, ok := memFs[dir]; ok {
-			addWhiteout, err := s.l.MaybeAddWhiteout(path)
-			if err != nil {
-				return false, nil
-			}
-			if addWhiteout {
+			if s.l.MaybeAddWhiteout(path) {
 				logrus.Infof("Adding whiteout for %s", path)
-				filesAdded = true
 				if err := t.Whiteout(path); err != nil {
-					return false, err
+					return "", err
 				}
 			}
 		}
@@ -194,7 +168,7 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 	for path := range memFs {
 		whitelisted, err := util.CheckWhitelist(path)
 		if err != nil {
-			return false, err
+			return "", err
 		}
 		if whitelisted {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
@@ -204,16 +178,15 @@ func (s *Snapshotter) snapShotFS(f io.Writer) (bool, error) {
 		// Only add to the tar if we add it to the layeredmap.
 		maybeAdd, err := s.l.MaybeAdd(path)
 		if err != nil {
-			return false, err
+			return "", err
 		}
 		if maybeAdd {
 			logrus.Debugf("Adding %s to layer, because it was changed.", path)
-			filesAdded = true
 			if err := t.AddFileToTar(path); err != nil {
-				return false, err
+				return "", err
 			}
 		}
 	}
 
-	return filesAdded, nil
+	return f.Name(), nil
 }
