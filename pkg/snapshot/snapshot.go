@@ -190,9 +190,15 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		}
 	}
 
-	if len(addedPaths) == 1 && addedPaths[0] == "/" {
-		logrus.Infof("Only added /, not taking snapshot.")
-		return "", nil
+	if len(addedPaths) == 1 {
+		d, err := os.Stat(addedPaths[0])
+		if err != nil {
+			return "", nil
+		}
+		if d.IsDir() {
+			logrus.Infof("Only added one directory, not taking snapshot.")
+			return "", nil
+		}
 	}
 
 	return f.Name(), nil
