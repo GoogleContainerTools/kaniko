@@ -17,10 +17,7 @@ limitations under the License.
 package executor
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -41,6 +38,9 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
+
+// This is the size of an empty tar in Go
+const emptyTarSize = 1024
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
@@ -161,34 +161,37 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 		files = command.FilesToSnapshot()
-		var contents []byte
 
 		if !s.shouldTakeSnapshot(index, files) {
 			continue
 		}
 
-		if files == nil || s.opts.SingleSnapshot {
-			contents, err = s.snapshotter.TakeSnapshotFS()
-		} else {
-			// Volumes are very weird. They get created in their command, but snapshotted in the next one.
-			// Add them to the list of files to snapshot.
-			for v := range s.cf.Config.Volumes {
-				files = append(files, v)
-			}
-			contents, err = s.snapshotter.TakeSnapshot(files)
-		}
+		tarPath, err := s.takeSnapshot(files)
 		if err != nil {
 			return err
 		}
+
 		ck, err := compositeKey.Hash()
 		if err != nil {
 			return err
 		}
-		if err := s.saveSnapshot(command.String(), ck, contents); err != nil {
+		if err := s.saveSnapshotToImage(command.String(), ck, tarPath); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
+	if files == nil || s.opts.SingleSnapshot {
+		return s.snapshotter.TakeSnapshotFS()
+	}
+	// Volumes are very weird. They get created in their command, but snapshotted in the next one.
+	// Add them to the list of files to snapshot.
+	for v := range s.cf.Config.Volumes {
+		files = append(files, v)
+	}
+	return s.snapshotter.TakeSnapshot(files)
 }
 
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
@@ -216,16 +219,20 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	return true
 }
 
-func (s *stageBuilder) saveSnapshot(createdBy string, ck string, contents []byte) error {
-	if contents == nil {
+func (s *stageBuilder) saveSnapshotToImage(createdBy string, ck string, tarPath string) error {
+	if tarPath == "" {
+		return nil
+	}
+	fi, err := os.Stat(tarPath)
+	if err != nil {
+		return err
+	}
+	if fi.Size() <= emptyTarSize {
 		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 		return nil
 	}
-	// Append the layer to the image
-	opener := func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewReader(contents)), nil
-	}
-	layer, err := tarball.LayerFromOpener(opener)
+
+	layer, err := tarball.LayerFromFile(tarPath)
 	if err != nil {
 		return err
 	}
@@ -307,7 +314,7 @@ func extractImageToDependecyDir(index int, image v1.Image) error {
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}
-	logrus.Infof("trying to extract to %s", dependencyDir)
+	logrus.Debugf("trying to extract to %s", dependencyDir)
 	_, err := util.GetFSFromImage(dependencyDir, image)
 	return err
 }

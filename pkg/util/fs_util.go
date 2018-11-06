@@ -74,7 +74,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	extractedFiles := []string{}
 
 	for i, l := range layers {
-		logrus.Infof("Extracting layer %d", i)
+		logrus.Debugf("Extracting layer %d", i)
 		r, err := l.Uncompressed()
 		if err != nil {
 			return nil, err
