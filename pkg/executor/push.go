@@ -126,7 +126,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, layer v1.Laye
 	if err != nil {
 		return errors.Wrap(err, "appending layer onto empty image")
 	}
-	return DoPush(empty, &config.KanikoOptions{
-		Destinations: []string{cache},
-	})
+	cacheOpts := *opts
+	cacheOpts.Destinations = []string{cache}
+	return DoPush(empty, &cacheOpts)
 }
