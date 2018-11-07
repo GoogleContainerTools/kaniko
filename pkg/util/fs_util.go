@@ -501,8 +501,7 @@ func CopySymlink(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	linkDst := filepath.Join(dest, link)
-	return os.Symlink(linkDst, dest)
+	return os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest
