@@ -1,3 +1,28 @@
+# v0.6.0 Release - 11/06/2018
+
+## New Features
+* parse arg commands at the top of dockerfiles [#404](https://github.com/GoogleContainerTools/kaniko/pull/404)
+* Add buffering for large layers. [#428](https://github.com/GoogleContainerTools/kaniko/pull/428)
+* Separate Insecure Pull Options [#409](https://github.com/GoogleContainerTools/kaniko/pull/409)
+* Add support for .dockerignore file [#394](https://github.com/GoogleContainerTools/kaniko/pull/394)
+* Support insecure pull [#401](https://github.com/GoogleContainerTools/kaniko/pull/401)
+
+## Updates
+* Preserve options when doing a cache push [#423](https://github.com/GoogleContainerTools/kaniko/pull/423)
+* More cache cleanups: [#397](https://github.com/GoogleContainerTools/kaniko/pull/397)
+*  adding documentation for base image caching [#421](https://github.com/GoogleContainerTools/kaniko/pull/421)
+* Update go-containerregistry [#420](https://github.com/GoogleContainerTools/kaniko/pull/420)
+* Update README [#419](https://github.com/GoogleContainerTools/kaniko/pull/419)
+* Use remoteImage function when getting digest for cache [#413](https://github.com/GoogleContainerTools/kaniko/pull/413)
+* adding exit 1 when there are not enough command line vars passed to `… [#415](https://github.com/GoogleContainerTools/kaniko/pull/415)
+* "Container Builder" - > "Cloud Build" [#414](https://github.com/GoogleContainerTools/kaniko/pull/414)
+* adding the cache warmer to the release process [#412](https://github.com/GoogleContainerTools/kaniko/pull/412)
+
+## Bug Fixes
+* Fix bugs with .dockerignore and improve integration test [#424](https://github.com/GoogleContainerTools/kaniko/pull/424)
+* fix releasing the cache warmer [#418](https://github.com/GoogleContainerTools/kaniko/pull/418)
+
+
 # v0.5.0 Release - 10/16/2018
 
 ## New Features
