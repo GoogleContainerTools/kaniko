@@ -41,6 +41,8 @@ type DockerCommand interface {
 
 	// Return true if this command depends on the build context.
 	FilesUsedFromContext(*v1.Config, *dockerfile.BuildArgs) ([]string, error)
+
+	MetadataOnly() bool
 }
 
 func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {

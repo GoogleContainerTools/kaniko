@@ -35,3 +35,7 @@ func (b *BaseCommand) FilesToSnapshot() []string {
 func (b *BaseCommand) FilesUsedFromContext(_ *v1.Config, _ *dockerfile.BuildArgs) ([]string, error) {
 	return []string{}, nil
 }
+
+func (b *BaseCommand) MetadataOnly() bool {
+	return true
+}

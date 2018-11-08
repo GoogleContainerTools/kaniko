@@ -134,3 +134,7 @@ func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerf
 	logrus.Infof("Using files from context: %v", files)
 	return files, nil
 }
+
+func (c *CopyCommand) MetadataOnly() bool {
+	return false
+}
