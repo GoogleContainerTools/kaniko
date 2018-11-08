@@ -165,6 +165,10 @@ func (r *RunCommand) MetadataOnly() bool {
 	return false
 }
 
+func (r *RunCommand) RequiresUnpackedFS() bool {
+	return true
+}
+
 type CachingRunCommand struct {
 	BaseCommand
 	img            v1.Image

@@ -62,8 +62,7 @@ var whitelist = []WhitelistEntry{
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
 func GetFSFromImage(root string, img v1.Image) ([]string, error) {
-	whitelist, err := fileSystemWhitelist(constants.WhitelistPath)
-	if err != nil {
+	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return nil, err
 	}
 	logrus.Debugf("Mounted directories: %v", whitelist)
@@ -303,10 +302,10 @@ func checkWhitelistRoot(root string) bool {
 // (1)(2)(3)   (4)   (5)      (6)      (7)   (8) (9)   (10)         (11)
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
-func fileSystemWhitelist(path string) ([]WhitelistEntry, error) {
+func DetectFilesystemWhitelist(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer f.Close()
 	reader := bufio.NewReader(f)
@@ -314,7 +313,7 @@ func fileSystemWhitelist(path string) ([]WhitelistEntry, error) {
 		line, err := reader.ReadString('\n')
 		logrus.Debugf("Read the following line from %s: %s", path, line)
 		if err != nil && err != io.EOF {
-			return nil, err
+			return err
 		}
 		lineArr := strings.Split(line, " ")
 		if len(lineArr) < 5 {
@@ -336,7 +335,7 @@ func fileSystemWhitelist(path string) ([]WhitelistEntry, error) {
 			break
 		}
 	}
-	return whitelist, nil
+	return nil
 }
 
 // RelativeFiles returns a list of all files at the filepath relative to root

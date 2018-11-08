@@ -43,6 +43,8 @@ type DockerCommand interface {
 	FilesUsedFromContext(*v1.Config, *dockerfile.BuildArgs) ([]string, error)
 
 	MetadataOnly() bool
+
+	RequiresUnpackedFS() bool
 }
 
 func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {
