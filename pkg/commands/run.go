@@ -161,6 +161,10 @@ func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
 	}
 }
 
+func (r *RunCommand) MetadataOnly() bool {
+	return false
+}
+
 type CachingRunCommand struct {
 	BaseCommand
 	img            v1.Image

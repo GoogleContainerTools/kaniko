@@ -86,6 +86,63 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	}, nil
 }
 
+func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds []commands.DockerCommand) error {
+	if !s.opts.Cache {
+		return nil
+	}
+
+	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
+	args.AddMetaArgs(s.stage.MetaArgs)
+
+	layerCache := &cache.RegistryCache{
+		Opts: s.opts,
+	}
+
+	// Possibly replace commands with their cached implementations.
+	// We walk through all the commands, running any commands that only operate on metadata.
+	// We throw the metadata away after, but we need it to properly track command dependencies
+	// for things like COPY ${FOO} or RUN commands that use environment variables.
+	for i, command := range cmds {
+		if command == nil {
+			continue
+		}
+		compositeKey.AddKey(command.String())
+		// If the command uses files from the context, add them.
+		files, err := command.FilesUsedFromContext(&cfg, args)
+		if err != nil {
+			return err
+		}
+		for _, f := range files {
+			if err := compositeKey.AddPath(f); err != nil {
+				return err
+			}
+		}
+
+		ck, err := compositeKey.Hash()
+		if err != nil {
+			return err
+		}
+		img, err := layerCache.RetrieveLayer(ck)
+		if err != nil {
+			logrus.Infof("No cached layer found for cmd %s", command.String())
+			break
+		}
+
+		if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
+			logrus.Infof("Using caching version of cmd: %s", command.String())
+			cmds[i] = cacheCmd
+		}
+
+		// Mutate the config for any commands that require it.
+		if command.MetadataOnly() {
+			if err := command.ExecuteCommand(&cfg, args); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (s *stageBuilder) build() error {
 	// Unpack file system to root
 	if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
@@ -109,34 +166,13 @@ func (s *stageBuilder) build() error {
 		cmds = append(cmds, command)
 	}
 
-	layerCache := &cache.RegistryCache{
-		Opts: s.opts,
-	}
-	if s.opts.Cache {
-		// Possibly replace commands with their cached implementations.
-		for i, command := range cmds {
-			if command == nil {
-				continue
-			}
-			ck, err := compositeKey.Hash()
-			if err != nil {
-				return err
-			}
-			img, err := layerCache.RetrieveLayer(ck)
-			if err != nil {
-				logrus.Infof("No cached layer found for cmd %s", command.String())
-				break
-			}
-
-			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
-				logrus.Infof("Using caching version of cmd: %s", command.String())
-				cmds[i] = cacheCmd
-			}
-		}
-	}
-
 	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
 	args.AddMetaArgs(s.stage.MetaArgs)
+
+	// Apply optimizations to the instructions.
+	if err := s.optimize(*compositeKey, s.cf.Config, cmds); err != nil {
+		return err
+	}
 	for index, command := range cmds {
 		if command == nil {
 			continue
