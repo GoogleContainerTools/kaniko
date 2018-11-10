@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -119,15 +121,17 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds
 		if err != nil {
 			return err
 		}
-		img, err := layerCache.RetrieveLayer(ck)
-		if err != nil {
-			logrus.Infof("No cached layer found for cmd %s", command.String())
-			break
-		}
+		if command.ShouldCacheOutput() {
+			img, err := layerCache.RetrieveLayer(ck)
+			if err != nil {
+				logrus.Infof("No cached layer found for cmd %s", command.String())
+				break
+			}
 
-		if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
-			logrus.Infof("Using caching version of cmd: %s", command.String())
-			cmds[i] = cacheCmd
+			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
+				logrus.Infof("Using caching version of cmd: %s", command.String())
+				cmds[i] = cacheCmd
+			}
 		}
 
 		// Mutate the config for any commands that require it.
@@ -184,6 +188,7 @@ func (s *stageBuilder) build() error {
 		return err
 	}
 
+	cacheGroup := errgroup.Group{}
 	for index, command := range cmds {
 		if command == nil {
 			continue
@@ -222,9 +227,18 @@ func (s *stageBuilder) build() error {
 		if err != nil {
 			return err
 		}
-		if err := s.saveSnapshotToImage(command.String(), ck, tarPath); err != nil {
+		// Push layer to cache (in parallel) now along with new config file
+		if s.opts.Cache && command.ShouldCacheOutput() {
+			cacheGroup.Go(func() error {
+				return pushLayerToCache(s.opts, ck, tarPath, command.String())
+			})
+		}
+		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
 			return err
 		}
+	}
+	if err := cacheGroup.Wait(); err != nil {
+		logrus.Warnf("error uploading layer to cache: %s", err)
 	}
 	return nil
 }
@@ -266,7 +280,7 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	return true
 }
 
-func (s *stageBuilder) saveSnapshotToImage(createdBy string, ck string, tarPath string) error {
+func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) error {
 	if tarPath == "" {
 		return nil
 	}
@@ -282,12 +296,6 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, ck string, tarPath 
 	layer, err := tarball.LayerFromFile(tarPath)
 	if err != nil {
 		return err
-	}
-	// Push layer to cache now along with new config file
-	if s.opts.Cache {
-		if err := pushLayerToCache(s.opts, ck, layer, createdBy); err != nil {
-			return err
-		}
 	}
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
