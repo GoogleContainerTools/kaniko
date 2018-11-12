@@ -43,3 +43,7 @@ func (b *BaseCommand) MetadataOnly() bool {
 func (b *BaseCommand) RequiresUnpackedFS() bool {
 	return false
 }
+
+func (b *BaseCommand) ShouldCacheOutput() bool {
+	return false
+}

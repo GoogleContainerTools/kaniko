@@ -36,6 +36,7 @@ type DockerCommand interface {
 	String() string
 	// A list of files to snapshot, empty for metadata commands or nil if we don't know
 	FilesToSnapshot() []string
+
 	// Return a cache-aware implementation of this command, if it exists.
 	CacheCommand(v1.Image) DockerCommand
 
@@ -45,6 +46,8 @@ type DockerCommand interface {
 	MetadataOnly() bool
 
 	RequiresUnpackedFS() bool
+
+	ShouldCacheOutput() bool
 }
 
 func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {
