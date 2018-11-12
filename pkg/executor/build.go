@@ -86,13 +86,10 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	}, nil
 }
 
-func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds []commands.DockerCommand) error {
+func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds []commands.DockerCommand, args *dockerfile.BuildArgs) error {
 	if !s.opts.Cache {
 		return nil
 	}
-
-	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
-	args.AddMetaArgs(s.stage.MetaArgs)
 
 	layerCache := &cache.RegistryCache{
 		Opts: s.opts,
@@ -144,15 +141,6 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds
 }
 
 func (s *stageBuilder) build() error {
-	// Unpack file system to root
-	if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
-		return err
-	}
-	// Take initial snapshot
-	if err := s.snapshotter.Init(); err != nil {
-		return err
-	}
-
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	compositeKey := NewCompositeCache(s.baseImageDigest)
 	compositeKey.AddKey(s.opts.BuildArgs...)
@@ -170,9 +158,32 @@ func (s *stageBuilder) build() error {
 	args.AddMetaArgs(s.stage.MetaArgs)
 
 	// Apply optimizations to the instructions.
-	if err := s.optimize(*compositeKey, s.cf.Config, cmds); err != nil {
+	if err := s.optimize(*compositeKey, s.cf.Config, cmds, args); err != nil {
 		return err
 	}
+
+	// Unpack file system to root if we need to.
+	shouldUnpack := false
+	for _, cmd := range cmds {
+		if cmd.RequiresUnpackedFS() {
+			logrus.Infof("Unpacking rootfs as cmd %s requires it.", cmd.String())
+			shouldUnpack = true
+			break
+		}
+	}
+	if shouldUnpack {
+		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
+			return err
+		}
+	}
+	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
+		return err
+	}
+	// Take initial snapshot
+	if err := s.snapshotter.Init(); err != nil {
+		return err
+	}
+
 	for index, command := range cmds {
 		if command == nil {
 			continue

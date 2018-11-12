@@ -39,3 +39,7 @@ func (b *BaseCommand) FilesUsedFromContext(_ *v1.Config, _ *dockerfile.BuildArgs
 func (b *BaseCommand) MetadataOnly() bool {
 	return true
 }
+
+func (b *BaseCommand) RequiresUnpackedFS() bool {
+	return false
+}
