@@ -155,6 +155,9 @@ func (s *stageBuilder) build() error {
 		if err != nil {
 			return err
 		}
+		if command == nil {
+			continue
+		}
 		cmds = append(cmds, command)
 	}
 
