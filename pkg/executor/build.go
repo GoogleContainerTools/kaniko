@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/stream"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -296,10 +298,11 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 		return nil
 	}
 
-	layer, err := tarball.LayerFromFile(tarPath)
+	f, err := os.Open(tarPath)
 	if err != nil {
 		return err
 	}
+	layer := stream.NewLayer(f)
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
 			Layer: layer,

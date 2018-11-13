@@ -54,8 +54,9 @@ func Image(byteSize, layers int64) (v1.Image, error) {
 		var b bytes.Buffer
 		tw := tar.NewWriter(&b)
 		if err := tw.WriteHeader(&tar.Header{
-			Name: fmt.Sprintf("random_file_%d.txt", i),
-			Size: byteSize,
+			Name:     fmt.Sprintf("random_file_%d.txt", i),
+			Size:     byteSize,
+			Typeflag: tar.TypeRegA,
 		}); err != nil {
 			return nil, err
 		}
