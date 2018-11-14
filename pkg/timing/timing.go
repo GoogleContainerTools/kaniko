@@ -18,7 +18,6 @@ package timing
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 	"text/template"
 	"time"

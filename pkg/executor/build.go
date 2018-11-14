@@ -202,7 +202,7 @@ func (s *stageBuilder) build() error {
 
 		// Add the next command to the cache key.
 		compositeKey.AddKey(command.String())
-		t := timing.Start(command.String())
+		t := timing.Start("\t" + command.String())
 		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&s.cf.Config, args)
 		if err != nil {
