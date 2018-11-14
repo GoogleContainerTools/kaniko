@@ -63,10 +63,12 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 		return nil, err
 	}
 	timing.DefaultRun.Stop(t)
+	t = timing.Start("RetrieveConfigFile")
 	imageConfig, err := util.RetrieveConfigFile(sourceImage)
 	if err != nil {
 		return nil, err
 	}
+	timing.DefaultRun.Stop(t)
 	if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
 		return nil, err
 	}
@@ -202,7 +204,7 @@ func (s *stageBuilder) build() error {
 
 		// Add the next command to the cache key.
 		compositeKey.AddKey(command.String())
-		t := timing.Start("\t" + command.String())
+		t := timing.Start("Command: " + command.String())
 		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&s.cf.Config, args)
 		if err != nil {
@@ -327,7 +329,9 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Build")
 	// Parse dockerfile and unpack base image to root
+	t1 := timing.Start("Parse Dockerfile")
 	stages, err := dockerfile.Stages(opts)
+	timing.DefaultRun.Stop(t1)
 	if err != nil {
 		return nil, err
 	}
