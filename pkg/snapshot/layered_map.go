@@ -92,13 +92,13 @@ func (l *LayeredMap) GetWhiteout(s string) (string, bool) {
 	return "", false
 }
 
-func (l *LayeredMap) MaybeAddWhiteout(s string) (bool, error) {
+func (l *LayeredMap) MaybeAddWhiteout(s string) bool {
 	whiteout, ok := l.GetWhiteout(s)
 	if ok && whiteout == s {
-		return false, nil
+		return false
 	}
 	l.whiteouts[len(l.whiteouts)-1][s] = s
-	return true, nil
+	return true
 }
 
 // Add will add the specified file s to the layered map.

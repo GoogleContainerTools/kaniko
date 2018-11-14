@@ -67,3 +67,7 @@ func (w *WorkdirCommand) FilesToSnapshot() []string {
 func (w *WorkdirCommand) String() string {
 	return w.cmd.String()
 }
+
+func (w *WorkdirCommand) MetadataOnly() bool {
+	return false
+}

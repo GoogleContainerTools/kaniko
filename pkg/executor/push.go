@@ -107,7 +107,11 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache
 // if opts.Cache doesn't exist, infer the cache from the given destination
-func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, layer v1.Layer, createdBy string) error {
+func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath string, createdBy string) error {
+	layer, err := tarball.LayerFromFile(tarPath)
+	if err != nil {
+		return err
+	}
 	cache, err := cache.Destination(opts, cacheKey)
 	if err != nil {
 		return errors.Wrap(err, "getting cache destination")
@@ -126,7 +130,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, layer v1.Laye
 	if err != nil {
 		return errors.Wrap(err, "appending layer onto empty image")
 	}
-	return DoPush(empty, &config.KanikoOptions{
-		Destinations: []string{cache},
-	})
+	cacheOpts := *opts
+	cacheOpts.Destinations = []string{cache}
+	return DoPush(empty, &cacheOpts)
 }

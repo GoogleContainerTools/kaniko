@@ -17,14 +17,13 @@ limitations under the License.
 package executor
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
@@ -42,6 +41,9 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
+// This is the size of an empty tar in Go
+const emptyTarSize = 1024
+
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
 	stage           config.KanikoStage
@@ -54,7 +56,7 @@ type stageBuilder struct {
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
-	sourceImage, err := util.RetrieveSourceImage(stage, opts.BuildArgs, opts)
+	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -86,42 +88,40 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	}, nil
 }
 
-func (s *stageBuilder) build() error {
-	// Unpack file system to root
-	if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
-		return err
-	}
-	// Take initial snapshot
-	if err := s.snapshotter.Init(); err != nil {
-		return err
-	}
-
-	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
-	compositeKey := NewCompositeCache(s.baseImageDigest)
-	compositeKey.AddKey(s.opts.BuildArgs...)
-
-	cmds := []commands.DockerCommand{}
-	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, s.opts.SrcContext)
-		if err != nil {
-			return err
-		}
-		cmds = append(cmds, command)
+func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds []commands.DockerCommand, args *dockerfile.BuildArgs) error {
+	if !s.opts.Cache {
+		return nil
 	}
 
 	layerCache := &cache.RegistryCache{
 		Opts: s.opts,
 	}
-	if s.opts.Cache {
-		// Possibly replace commands with their cached implementations.
-		for i, command := range cmds {
-			if command == nil {
-				continue
-			}
-			ck, err := compositeKey.Hash()
-			if err != nil {
+
+	// Possibly replace commands with their cached implementations.
+	// We walk through all the commands, running any commands that only operate on metadata.
+	// We throw the metadata away after, but we need it to properly track command dependencies
+	// for things like COPY ${FOO} or RUN commands that use environment variables.
+	for i, command := range cmds {
+		if command == nil {
+			continue
+		}
+		compositeKey.AddKey(command.String())
+		// If the command uses files from the context, add them.
+		files, err := command.FilesUsedFromContext(&cfg, args)
+		if err != nil {
+			return err
+		}
+		for _, f := range files {
+			if err := compositeKey.AddPath(f); err != nil {
 				return err
 			}
+		}
+
+		ck, err := compositeKey.Hash()
+		if err != nil {
+			return err
+		}
+		if command.ShouldCacheOutput() {
 			img, err := layerCache.RetrieveLayer(ck)
 			if err != nil {
 				logrus.Infof("No cached layer found for cmd %s", command.String())
@@ -133,9 +133,65 @@ func (s *stageBuilder) build() error {
 				cmds[i] = cacheCmd
 			}
 		}
+
+		// Mutate the config for any commands that require it.
+		if command.MetadataOnly() {
+			if err := command.ExecuteCommand(&cfg, args); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *stageBuilder) build() error {
+	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
+	compositeKey := NewCompositeCache(s.baseImageDigest)
+	compositeKey.AddKey(s.opts.BuildArgs...)
+
+	cmds := []commands.DockerCommand{}
+	for _, cmd := range s.stage.Commands {
+		command, err := commands.GetCommand(cmd, s.opts.SrcContext)
+		if err != nil {
+			return err
+		}
+		if command == nil {
+			continue
+		}
+		cmds = append(cmds, command)
 	}
 
 	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
+	args.AddMetaArgs(s.stage.MetaArgs)
+
+	// Apply optimizations to the instructions.
+	if err := s.optimize(*compositeKey, s.cf.Config, cmds, args); err != nil {
+		return err
+	}
+
+	// Unpack file system to root if we need to.
+	shouldUnpack := false
+	for _, cmd := range cmds {
+		if cmd.RequiresUnpackedFS() {
+			logrus.Infof("Unpacking rootfs as cmd %s requires it.", cmd.String())
+			shouldUnpack = true
+			break
+		}
+	}
+	if shouldUnpack {
+		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
+			return err
+		}
+	}
+	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
+		return err
+	}
+	// Take initial snapshot
+	if err := s.snapshotter.Init(); err != nil {
+		return err
+	}
+
+	cacheGroup := errgroup.Group{}
 	for index, command := range cmds {
 		if command == nil {
 			continue
@@ -160,34 +216,46 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 		files = command.FilesToSnapshot()
-		var contents []byte
 
 		if !s.shouldTakeSnapshot(index, files) {
 			continue
 		}
 
-		if files == nil || s.opts.SingleSnapshot {
-			contents, err = s.snapshotter.TakeSnapshotFS()
-		} else {
-			// Volumes are very weird. They get created in their command, but snapshotted in the next one.
-			// Add them to the list of files to snapshot.
-			for v := range s.cf.Config.Volumes {
-				files = append(files, v)
-			}
-			contents, err = s.snapshotter.TakeSnapshot(files)
-		}
+		tarPath, err := s.takeSnapshot(files)
 		if err != nil {
 			return err
 		}
+
 		ck, err := compositeKey.Hash()
 		if err != nil {
 			return err
 		}
-		if err := s.saveSnapshot(command.String(), ck, contents); err != nil {
+		// Push layer to cache (in parallel) now along with new config file
+		if s.opts.Cache && command.ShouldCacheOutput() {
+			cacheGroup.Go(func() error {
+				return pushLayerToCache(s.opts, ck, tarPath, command.String())
+			})
+		}
+		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
 			return err
 		}
 	}
+	if err := cacheGroup.Wait(); err != nil {
+		logrus.Warnf("error uploading layer to cache: %s", err)
+	}
 	return nil
+}
+
+func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
+	if files == nil || s.opts.SingleSnapshot {
+		return s.snapshotter.TakeSnapshotFS()
+	}
+	// Volumes are very weird. They get created in their command, but snapshotted in the next one.
+	// Add them to the list of files to snapshot.
+	for v := range s.cf.Config.Volumes {
+		files = append(files, v)
+	}
+	return s.snapshotter.TakeSnapshot(files)
 }
 
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
@@ -215,24 +283,22 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	return true
 }
 
-func (s *stageBuilder) saveSnapshot(createdBy string, ck string, contents []byte) error {
-	if contents == nil {
-		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
+func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) error {
+	if tarPath == "" {
 		return nil
 	}
-	// Append the layer to the image
-	opener := func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewReader(contents)), nil
-	}
-	layer, err := tarball.LayerFromOpener(opener)
+	fi, err := os.Stat(tarPath)
 	if err != nil {
 		return err
 	}
-	// Push layer to cache now along with new config file
-	if s.opts.Cache {
-		if err := pushLayerToCache(s.opts, ck, layer, createdBy); err != nil {
-			return err
-		}
+	if fi.Size() <= emptyTarSize {
+		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
+		return nil
+	}
+
+	layer, err := tarball.LayerFromFile(tarPath)
+	if err != nil {
+		return err
 	}
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
@@ -306,7 +372,7 @@ func extractImageToDependecyDir(index int, image v1.Image) error {
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}
-	logrus.Infof("trying to extract to %s", dependencyDir)
+	logrus.Debugf("trying to extract to %s", dependencyDir)
 	_, err := util.GetFSFromImage(dependencyDir, image)
 	return err
 }

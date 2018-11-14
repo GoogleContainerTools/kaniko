@@ -33,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -114,9 +115,9 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 // addHiddenFlags marks certain flags as hidden from the executor help text
 func addHiddenFlags(cmd *cobra.Command) {
 	// This flag is added in a vendored directory, hide so that it doesn't come up via --help
-	RootCmd.PersistentFlags().MarkHidden("azure-container-registry-config")
+	pflag.CommandLine.MarkHidden("azure-container-registry-config")
 	// Hide this flag as we want to encourage people to use the --context flag instead
-	RootCmd.PersistentFlags().MarkHidden("bucket")
+	cmd.PersistentFlags().MarkHidden("bucket")
 }
 
 func checkContained() bool {

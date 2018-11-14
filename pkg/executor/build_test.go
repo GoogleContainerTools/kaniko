@@ -66,7 +66,7 @@ func Test_reviewConfig(t *testing.T) {
 }
 
 func stage(t *testing.T, d string) config.KanikoStage {
-	stages, err := dockerfile.Parse([]byte(d))
+	stages, _, err := dockerfile.Parse([]byte(d))
 	if err != nil {
 		t.Fatalf("error parsing dockerfile: %v", err)
 	}

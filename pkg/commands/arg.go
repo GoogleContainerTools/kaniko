@@ -42,7 +42,13 @@ func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			return err
 		}
 		resolvedValue = &value
+	} else {
+		meta := buildArgs.GetAllMeta()
+		if value, ok := meta[resolvedKey]; ok {
+			resolvedValue = &value
+		}
 	}
+
 	buildArgs.AddArg(resolvedKey, resolvedValue)
 	return nil
 }

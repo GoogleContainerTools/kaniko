@@ -161,6 +161,18 @@ func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
 	}
 }
 
+func (r *RunCommand) MetadataOnly() bool {
+	return false
+}
+
+func (r *RunCommand) RequiresUnpackedFS() bool {
+	return true
+}
+
+func (r *RunCommand) ShouldCacheOutput() bool {
+	return true
+}
+
 type CachingRunCommand struct {
 	BaseCommand
 	img            v1.Image

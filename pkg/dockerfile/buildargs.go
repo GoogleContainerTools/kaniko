@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	d "github.com/docker/docker/builder/dockerfile"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
 type BuildArgs struct {
@@ -52,4 +53,12 @@ func (b *BuildArgs) Clone() *BuildArgs {
 func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 	filtered := b.FilterAllowed(envs)
 	return append(envs, filtered...)
+}
+
+// AddMetaArgs adds the supplied args map to b's allowedMetaArgs
+func (b *BuildArgs) AddMetaArgs(metaArgs []instructions.ArgCommand) {
+	for _, arg := range metaArgs {
+		v := arg.Value
+		b.AddMetaArg(arg.Key, v)
+	}
 }

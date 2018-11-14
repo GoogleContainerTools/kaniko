@@ -131,3 +131,7 @@ func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfi
 	logrus.Infof("Using files from context: %v", files)
 	return files, nil
 }
+
+func (a *AddCommand) MetadataOnly() bool {
+	return false
+}

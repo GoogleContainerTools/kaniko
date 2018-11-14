@@ -29,7 +29,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-func Test_fileSystemWhitelist(t *testing.T) {
+func Test_DetectFilesystemWhitelist(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatalf("Error creating tempdir: %s", err)
@@ -49,7 +49,7 @@ func Test_fileSystemWhitelist(t *testing.T) {
 		t.Fatalf("Error writing file contents to %s: %s", path, err)
 	}
 
-	actualWhitelist, err := fileSystemWhitelist(path)
+	err = DetectFilesystemWhitelist(path)
 	expectedWhitelist := []WhitelistEntry{
 		{"/kaniko", false},
 		{"/proc", false},
@@ -59,6 +59,7 @@ func Test_fileSystemWhitelist(t *testing.T) {
 		{"/var/run", false},
 		{"/etc/mtab", false},
 	}
+	actualWhitelist := whitelist
 	sort.Slice(actualWhitelist, func(i, j int) bool {
 		return actualWhitelist[i].Path < actualWhitelist[j].Path
 	})
