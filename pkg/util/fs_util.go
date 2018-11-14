@@ -270,6 +270,15 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	return nil
 }
 
+func IsInWhitelist(path string) bool {
+	for _, wl := range whitelist {
+		if !wl.PrefixMatchOnly && path == wl.Path {
+			return true
+		}
+	}
+	return false
+}
+
 func CheckWhitelist(path string) (bool, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
