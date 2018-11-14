@@ -361,7 +361,14 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			timing.DefaultRun.Stop(t)
-			logrus.Infof("TIMING SUMMARY: %s", timing.DefaultRun.Summary())
+			if opts.BenchmarkFile != "" {
+				f, err := os.Create(opts.BenchmarkFile)
+				if err != nil {
+					logrus.Warnf("Unable to create benchmarking file %s: %s", opts.BenchmarkFile, err)
+				}
+				defer f.Close()
+				f.WriteString(timing.Summary())
+			}
 			return sourceImage, nil
 		}
 		if stage.SaveStage {

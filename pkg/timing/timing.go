@@ -42,7 +42,6 @@ func (tr *TimedRun) Stop(t *Timer) {
 	if _, ok := tr.categories[t.category]; !ok {
 		tr.categories[t.category] = 0
 	}
-	fmt.Println(stop)
 	tr.cl.Lock()
 	defer tr.cl.Unlock()
 	tr.categories[t.category] += stop.Sub(t.startTime)
