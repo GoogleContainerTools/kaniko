@@ -143,6 +143,14 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	// Save the fs state in a map to iterate over later.
 	memFs := map[string]os.FileInfo{}
 	filepath.Walk(s.directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if util.IsInWhitelist(path) {
+			logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
+			return filepath.SkipDir
+		}
+
 		memFs[path] = info
 		return nil
 	})
@@ -174,7 +182,6 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}
-
 		// Only add to the tar if we add it to the layeredmap.
 		maybeAdd, err := s.l.MaybeAdd(path)
 		if err != nil {
