@@ -44,6 +44,7 @@ type gcpConfig struct {
 	imageRepo         string
 	onbuildBaseImage  string
 	hardlinkBaseImage string
+	benchmark         bool
 }
 
 type imageDetails struct {
@@ -60,6 +61,7 @@ func initGCPConfig() *gcpConfig {
 	var c gcpConfig
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
+	flag.BoolVar(&c.benchmark, "benchmark", false, "If true, displays benchmarking information.")
 	flag.Parse()
 
 	if c.gcsBucket == "" || c.imageRepo == "" {
@@ -194,7 +196,7 @@ func TestRun(t *testing.T) {
 				t.SkipNow()
 			}
 			if !built {
-				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile)
+				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile, config.benchmark)
 				if err != nil {
 					t.Fatalf("Failed to build kaniko and docker images for %s: %s", dockerfile, err)
 				}
@@ -228,7 +230,7 @@ func TestLayers(t *testing.T) {
 				t.SkipNow()
 			}
 			if !built {
-				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile)
+				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile, config.benchmark)
 				if err != nil {
 					t.Fatalf("Failed to build kaniko and docker images for %s: %s", dockerfile, err)
 				}

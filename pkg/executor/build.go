@@ -184,17 +184,21 @@ func (s *stageBuilder) build() error {
 		}
 	}
 	if shouldUnpack {
+		t := timing.Start("Unpack FS")
 		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 			return err
 		}
+		timing.DefaultRun.Stop(t)
 	}
 	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return err
 	}
 	// Take initial snapshot
+	t := timing.Start("Initial snapshot")
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
+	timing.DefaultRun.Stop(t)
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range cmds {
@@ -329,9 +333,7 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Build")
 	// Parse dockerfile and unpack base image to root
-	t1 := timing.Start("Parse Dockerfile")
 	stages, err := dockerfile.Stages(opts)
-	timing.DefaultRun.Stop(t1)
 	if err != nil {
 		return nil, err
 	}

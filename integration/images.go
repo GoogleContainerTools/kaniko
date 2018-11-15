@@ -136,7 +136,7 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 // BuildImage will build dockerfile (located at dockerfilesPath) using both kaniko and docker.
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
-func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile string) error {
+func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile string, benchmark bool) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -182,6 +182,11 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		}
 	}
 
+	benchmarkFile := ""
+	if benchmark {
+		benchmarkFile = "--benchmark-file=/workspace/benchmarks/" + dockerfile
+	}
+
 	// build kaniko image
 	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
@@ -191,7 +196,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			"-v", cwd + ":/workspace",
 			ExecutorImage,
 			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-			"-d", kanikoImage, reproducibleFlag,
+			"-d", kanikoImage, reproducibleFlag, benchmarkFile,
 			contextFlag, contextPath},
 			additionalFlags...)...,
 	)
