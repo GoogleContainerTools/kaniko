@@ -25,6 +25,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 )
 
 const (
@@ -136,7 +138,7 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 // BuildImage will build dockerfile (located at dockerfilesPath) using both kaniko and docker.
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
-func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile string, benchmark bool) error {
+func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile string) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -159,7 +161,9 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			additionalFlags...)...,
 	)
 
+	timer := timing.Start("docker_" + dockerfile)
 	_, err := RunCommandWithoutTest(dockerCmd)
+	timing.DefaultRun.Stop(timer)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)
 	}
@@ -183,7 +187,8 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	}
 
 	benchmarkFile := ""
-	if benchmark {
+	if os.Getenv("BENCHMARK") == "true" {
+		os.Mkdir("benchmarks", 0755)
 		benchmarkFile = "--benchmark-file=/workspace/benchmarks/" + dockerfile
 	}
 
@@ -201,7 +206,9 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			additionalFlags...)...,
 	)
 
+	timer = timing.Start("kaniko_" + dockerfile)
 	_, err = RunCommandWithoutTest(kanikoCmd)
+	timing.DefaultRun.Stop(timer)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s", dockerImage, kanikoCmd.Args, err)
 	}
