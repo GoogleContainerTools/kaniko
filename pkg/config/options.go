@@ -37,7 +37,6 @@ type KanikoOptions struct {
 	NoPush            bool
 	Cache             bool
 	Cleanup           bool
-	BenchmarkFile     string
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.

@@ -161,7 +161,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			additionalFlags...)...,
 	)
 
-	timer := timing.Start("docker_" + dockerfile)
+	timer := timing.Start(dockerfile + "_docker")
 	_, err := RunCommandWithoutTest(dockerCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
@@ -186,10 +186,12 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		}
 	}
 
-	benchmarkFile := ""
 	if os.Getenv("BENCHMARK") == "true" {
 		os.Mkdir("benchmarks", 0755)
-		benchmarkFile = "--benchmark-file=/workspace/benchmarks/" + dockerfile
+		err := os.Setenv("BENCHMARK_FILE", "/workspace/benchmarks/"+dockerfile)
+		if err != nil {
+			fmt.Printf("Failed to set benchmark env var: %s", err)
+		}
 	}
 
 	// build kaniko image
@@ -201,12 +203,12 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			"-v", cwd + ":/workspace",
 			ExecutorImage,
 			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-			"-d", kanikoImage, reproducibleFlag, benchmarkFile,
+			"-d", kanikoImage, reproducibleFlag,
 			contextFlag, contextPath},
 			additionalFlags...)...,
 	)
 
-	timer = timing.Start("kaniko_" + dockerfile)
+	timer = timing.Start(dockerfile + "_kaniko")
 	_, err = RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {

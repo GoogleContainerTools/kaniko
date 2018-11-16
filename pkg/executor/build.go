@@ -367,10 +367,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			timing.DefaultRun.Stop(t)
-			if opts.BenchmarkFile != "" {
-				f, err := os.Create(opts.BenchmarkFile)
+			benchmarkFile := os.Getenv("BENCHMARK_FILE")
+			if benchmarkFile != "" {
+				f, err := os.Create(benchmarkFile)
 				if err != nil {
-					logrus.Warnf("Unable to create benchmarking file %s: %s", opts.BenchmarkFile, err)
+					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
 				}
 				defer f.Close()
 				f.WriteString(timing.Summary())

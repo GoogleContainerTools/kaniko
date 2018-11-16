@@ -111,7 +111,6 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "", "/cache", "Specify a local directory to use as a cache.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
-	RootCmd.PersistentFlags().StringVarP(&opts.BenchmarkFile, "benchmark-file", "", "", "If set, run benchmark timings and output to given file.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
