@@ -219,12 +219,12 @@ func TestRun(t *testing.T) {
 
 	if os.Getenv("BENCHMARK") == "true" {
 		f, err := os.Create("benchmark")
-		defer f.Close()
 		if err != nil {
 			t.Logf("Failed to create benchmark file")
 		} else {
 			f.WriteString(timing.Summary())
 		}
+		defer f.Close()
 	}
 }
 
