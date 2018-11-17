@@ -1,3 +1,13 @@
+FROM composer@sha256:5c4bd89217b50125f28e08d9f16414ecb75f90ce9b773605472b35cd55f3e5c0 AS composer
+FROM php@sha256:9fe20c8003a12f5907ffdc1d7ec435b4ca4226fa4342b94cec4d66189a439f17
+COPY --from=composer /usr/bin/composer /usr/bin/composer
+COPY ./ /app
+WORKDIR /app
+RUN ls -l
+
+# make sure hardlink extracts correctly
+FROM jboss/base-jdk@sha256:138591422fdab93a5844c13f6cbcc685631b37a16503675e9f340d2503617a41
+
 FROM gcr.io/kaniko-test/hardlink-base:latest
 RUN ls -al /usr/libexec/git-core/git /usr/bin/git /usr/libexec/git-core/git-diff
 RUN stat /usr/bin/git
