@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/builder/dockerignore"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/pkg/errors"
@@ -36,7 +38,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
-	stages, err := Parse(d)
+	stages, metaArgs, err := Parse(d)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing dockerfile")
 	}
@@ -54,21 +56,23 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 		stage.Name = resolvedBaseName
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
-			BaseImageIndex:         baseImageIndex(opts, index, stages),
-			BaseImageStoredLocally: (baseImageIndex(opts, index, stages) != -1),
+			BaseImageIndex:         baseImageIndex(index, stages),
+			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
 			SaveStage:              saveStage(index, stages),
-			FinalStage:             index == targetStage,
+			Final:                  index == targetStage,
+			MetaArgs:               metaArgs,
 		})
 		if index == targetStage {
 			break
 		}
 	}
+
 	return kanikoStages, nil
 }
 
 // baseImageIndex returns the index of the stage the current stage is built off
 // returns -1 if the current stage isn't built off a previous stage
-func baseImageIndex(opts *config.KanikoOptions, currentStage int, stages []instructions.Stage) int {
+func baseImageIndex(currentStage int, stages []instructions.Stage) int {
 	for i, stage := range stages {
 		if i > currentStage {
 			break
@@ -81,16 +85,16 @@ func baseImageIndex(opts *config.KanikoOptions, currentStage int, stages []instr
 }
 
 // Parse parses the contents of a Dockerfile and returns a list of commands
-func Parse(b []byte) ([]instructions.Stage, error) {
+func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	p, err := parser.Parse(bytes.NewReader(b))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	stages, _, err := instructions.Parse(p.AST)
+	stages, metaArgs, err := instructions.Parse(p.AST)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return stages, err
+	return stages, metaArgs, err
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
@@ -167,4 +171,21 @@ func saveStage(index int, stages []instructions.Stage) bool {
 		}
 	}
 	return false
+}
+
+// DockerignoreExists returns true if .dockerignore exists in the source context
+func DockerignoreExists(opts *config.KanikoOptions) bool {
+	path := filepath.Join(opts.SrcContext, ".dockerignore")
+	return util.FilepathExists(path)
+}
+
+// ParseDockerignore returns a list of all paths in .dockerignore
+func ParseDockerignore(opts *config.KanikoOptions) ([]string, error) {
+	path := filepath.Join(opts.SrcContext, ".dockerignore")
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing .dockerignore")
+	}
+	reader := bytes.NewBuffer(contents)
+	return dockerignore.ReadAll(reader)
 }

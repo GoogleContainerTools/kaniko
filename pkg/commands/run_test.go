@@ -59,7 +59,18 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/home/newuser",
+				"HOME=/",
+			},
+		},
+		{
+			name: "HOME isn't set, user is set to root",
+			user: "root",
+			initial: []string{
+				"PATH=/something/else",
+			},
+			expected: []string{
+				"PATH=/something/else",
+				"HOME=/root",
 			},
 		},
 	}

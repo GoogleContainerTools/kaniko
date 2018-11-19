@@ -20,36 +20,20 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type ShellCommand struct {
+	BaseCommand
 	cmd *instructions.ShellCommand
 }
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
 func (s *ShellCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: SHELL")
-	var newShell []string
-
-	newShell = s.cmd.Shell
-
-	logrus.Infof("Replacing Shell in config with %v", newShell)
-	config.Shell = newShell
+	config.Shell = s.cmd.Shell
 	return nil
-}
-
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (s *ShellCommand) FilesToSnapshot() []string {
-	return []string{}
 }
 
 // String returns some information about the command for the image config history
 func (s *ShellCommand) String() string {
 	return s.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (s *ShellCommand) CacheCommand() bool {
-	return false
 }

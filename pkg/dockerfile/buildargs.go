@@ -17,8 +17,10 @@ limitations under the License.
 package dockerfile
 
 import (
-	d "github.com/docker/docker/builder/dockerfile"
 	"strings"
+
+	d "github.com/docker/docker/builder/dockerfile"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
 type BuildArgs struct {
@@ -28,7 +30,7 @@ type BuildArgs struct {
 func NewBuildArgs(args []string) *BuildArgs {
 	argsFromOptions := make(map[string]*string)
 	for _, a := range args {
-		s := strings.Split(a, "=")
+		s := strings.SplitN(a, "=", 2)
 		if len(s) == 1 {
 			argsFromOptions[s[0]] = nil
 		} else {
@@ -36,14 +38,14 @@ func NewBuildArgs(args []string) *BuildArgs {
 		}
 	}
 	return &BuildArgs{
-		*d.NewBuildArgs(argsFromOptions),
+		BuildArgs: *d.NewBuildArgs(argsFromOptions),
 	}
 }
 
 func (b *BuildArgs) Clone() *BuildArgs {
 	clone := b.BuildArgs.Clone()
 	return &BuildArgs{
-		*clone,
+		BuildArgs: *clone,
 	}
 }
 
@@ -51,4 +53,12 @@ func (b *BuildArgs) Clone() *BuildArgs {
 func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 	filtered := b.FilterAllowed(envs)
 	return append(envs, filtered...)
+}
+
+// AddMetaArgs adds the supplied args map to b's allowedMetaArgs
+func (b *BuildArgs) AddMetaArgs(metaArgs []instructions.ArgCommand) {
+	for _, arg := range metaArgs {
+		v := arg.Value
+		b.AddMetaArg(arg.Key, v)
+	}
 }

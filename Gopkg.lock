@@ -417,8 +417,20 @@
   revision = "e89373fe6b4a7413d7acd6da1725b83ef713e6e4"
 
 [[projects]]
-  branch = "master"
-  digest = "1:8ea12d703d8f36fec3db5e0dd85c9d3cc0b8b05ea8f9d090dcd41129cd392fd2"
+  digest = "1:2e3c336fc7fde5c984d2841455a658a6d626450b1754a854b3b32e7a8f49a07a"
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "NUT"
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
+  digest = "1:f1b23f53418c1b035a5965ac2600a28b16c08643683d5213fb581ecf4e79a02a"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
@@ -437,7 +449,23 @@
     "pkg/v1/v1util",
   ]
   pruneopts = "NUT"
-  revision = "6cfedf31db7d9e06c5beba68e9e1987a44fd844f"
+  revision = "88d8d18eb1bde1fcef23c745205c738074290515"
+
+[[projects]]
+  digest = "1:f4f203acd8b11b8747bdcd91696a01dbc95ccb9e2ca2db6abf81c3a4f5e950ce"
+  name = "github.com/google/go-github"
+  packages = ["github"]
+  pruneopts = "NUT"
+  revision = "f55b50f38167644bb7e4be03d9a2bde71d435239"
+  version = "v18.2.0"
+
+[[projects]]
+  digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = "NUT"
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -1149,6 +1177,7 @@
     "github.com/docker/docker/pkg/archive",
     "github.com/docker/docker/pkg/signal",
     "github.com/genuinetools/amicontained/container",
+    "github.com/google/go-cmp/cmp",
     "github.com/google/go-containerregistry/pkg/authn",
     "github.com/google/go-containerregistry/pkg/authn/k8schain",
     "github.com/google/go-containerregistry/pkg/name",
@@ -1156,8 +1185,10 @@
     "github.com/google/go-containerregistry/pkg/v1/daemon",
     "github.com/google/go-containerregistry/pkg/v1/empty",
     "github.com/google/go-containerregistry/pkg/v1/mutate",
+    "github.com/google/go-containerregistry/pkg/v1/partial",
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
+    "github.com/google/go-github/github",
     "github.com/moby/buildkit/frontend/dockerfile/instructions",
     "github.com/moby/buildkit/frontend/dockerfile/parser",
     "github.com/moby/buildkit/frontend/dockerfile/shell",
@@ -1165,6 +1196,7 @@
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "golang.org/x/net/context",
+    "golang.org/x/oauth2",
     "k8s.io/client-go/discovery",
   ]
   solver-name = "gps-cdcl"

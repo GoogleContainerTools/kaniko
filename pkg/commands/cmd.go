@@ -23,10 +23,10 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type CmdCommand struct {
+	BaseCommand
 	cmd *instructions.CmdCommand
 }
 
@@ -48,23 +48,12 @@ func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		newCommand = c.cmd.CmdLine
 	}
 
-	logrus.Infof("Replacing CMD in config with %v", newCommand)
 	config.Cmd = newCommand
 	config.ArgsEscaped = true
 	return nil
 }
 
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (c *CmdCommand) FilesToSnapshot() []string {
-	return []string{}
-}
-
 // String returns some information about the command for the image config history
 func (c *CmdCommand) String() string {
 	return c.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (c *CmdCommand) CacheCommand() bool {
-	return false
 }

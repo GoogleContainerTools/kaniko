@@ -33,7 +33,7 @@ func Test_EnvExecute(t *testing.T) {
 	}
 
 	envCmd := &EnvCommand{
-		&instructions.EnvCommand{
+		cmd: &instructions.EnvCommand{
 			Env: []instructions.KeyValuePair{
 				{
 					Key:   "path",

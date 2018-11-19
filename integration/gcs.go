@@ -36,7 +36,7 @@ func CreateIntegrationTarball() (string, error) {
 	}
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return "", fmt.Errorf("Failed to create temporary directoy to hold tarball: %s", err)
+		return "", fmt.Errorf("Failed to create temporary directory to hold tarball: %s", err)
 	}
 	contextFile := fmt.Sprintf("%s/context_%d.tar.gz", tempDir, time.Now().UnixNano())
 	cmd := exec.Command("tar", "-C", dir, "-zcvf", contextFile, ".")

@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-warmer
+spec:
+  containers:
+  - name: kaniko-warmer
+    image: gcr.io/kaniko-project/warmer:latest
+    args: ["--cache-dir=/cache",
+           "--image=gcr.io/google-appengine/debian9"]
+    volumeMounts:
+      - name: kaniko-secret
+        mountPath: /secret
+      - name: kaniko-cache
+        mountPath: /cache
+    env:
+      - name: GOOGLE_APPLICATION_CREDENTIALS
+        value: /secret/kaniko-secret.json
+  restartPolicy: Never
+  volumes:
+    - name: kaniko-secret
+      secret:
+        secretName: kaniko-secret
+    - name: kaniko-cache
+      persistentVolumeClaim:
+              claimName: kaniko-cache-claim
+

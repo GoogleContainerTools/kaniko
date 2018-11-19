@@ -133,7 +133,14 @@ func matchSources(srcs, files []string) ([]string, error) {
 }
 
 func IsDestDir(path string) bool {
-	return strings.HasSuffix(path, "/") || path == "."
+	// try to stat the path
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		// fall back to string-based determination
+		return strings.HasSuffix(path, "/") || path == "."
+	}
+	// if it's a real path, check the fs response
+	return fileInfo.IsDir()
 }
 
 // DestinationFilepath returns the destination filepath from the build context to the image filesystem
@@ -228,10 +235,7 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 		return false
 	}
 	_, err = http.Get(rawurl)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func UpdateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {

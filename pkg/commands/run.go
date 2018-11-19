@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"strconv"
 	"strings"
 	"syscall"
@@ -34,6 +35,7 @@ import (
 )
 
 type RunCommand struct {
+	BaseCommand
 	cmd *instructions.RunCommand
 }
 
@@ -116,25 +118,29 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
-func addDefaultHOME(user string, envs []string) []string {
+func addDefaultHOME(u string, envs []string) []string {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
 			return envs
 		}
 	}
+
 	// If user isn't set, set default value of HOME
-	if user == "" {
+	if u == "" || u == constants.RootUser {
 		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
 	}
-	// If user is set, set value of HOME to /home/${user}
-	return append(envs, fmt.Sprintf("%s=/home/%s", constants.HOME, user))
-}
 
-// FilesToSnapshot returns nil for this command because we don't know which files
-// have changed, so we snapshot the entire system.
-func (r *RunCommand) FilesToSnapshot() []string {
-	return nil
+	// If user is set to username, set value of HOME to /home/${user}
+	// Otherwise the user is set to uid and HOME is /
+	home := fmt.Sprintf("%s=/", constants.HOME)
+	userObj, err := user.Lookup(u)
+	if err == nil {
+		u = userObj.Username
+		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
+	}
+
+	return append(envs, home)
 }
 
 // String returns some information about the command for the image config
@@ -142,7 +148,52 @@ func (r *RunCommand) String() string {
 	return r.cmd.String()
 }
 
+func (r *RunCommand) FilesToSnapshot() []string {
+	return nil
+}
+
 // CacheCommand returns true since this command should be cached
-func (r *RunCommand) CacheCommand() bool {
+func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
+
+	return &CachingRunCommand{
+		img: img,
+		cmd: r.cmd,
+	}
+}
+
+func (r *RunCommand) MetadataOnly() bool {
+	return false
+}
+
+func (r *RunCommand) RequiresUnpackedFS() bool {
 	return true
+}
+
+func (r *RunCommand) ShouldCacheOutput() bool {
+	return true
+}
+
+type CachingRunCommand struct {
+	BaseCommand
+	img            v1.Image
+	extractedFiles []string
+	cmd            *instructions.RunCommand
+}
+
+func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Infof("Found cached layer, extracting to filesystem")
+	var err error
+	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	if err != nil {
+		return errors.Wrap(err, "extracting fs from image")
+	}
+	return nil
+}
+
+func (cr *CachingRunCommand) FilesToSnapshot() []string {
+	return cr.extractedFiles
+}
+
+func (cr *CachingRunCommand) String() string {
+	return cr.cmd.String()
 }

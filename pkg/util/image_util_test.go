@@ -32,11 +32,11 @@ var (
 	dockerfile = `
 	FROM gcr.io/distroless/base:latest as base
 	COPY . .
-	
+
 	FROM scratch as second
 	ENV foopath context/foo
 	COPY --from=0 $foopath context/b* /foo/
-	
+
 	FROM base
 	ARG file
 	COPY --from=second /foo $file`
@@ -51,13 +51,13 @@ func Test_StandardImage(t *testing.T) {
 	defer func() {
 		retrieveRemoteImage = original
 	}()
-	mock := func(image string) (v1.Image, error) {
+	mock := func(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, nil
 	}
 	retrieveRemoteImage = mock
 	actual, err := RetrieveSourceImage(config.KanikoStage{
 		Stage: stages[0],
-	}, nil)
+	}, &config.KanikoOptions{})
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 func Test_ScratchImage(t *testing.T) {
@@ -67,7 +67,7 @@ func Test_ScratchImage(t *testing.T) {
 	}
 	actual, err := RetrieveSourceImage(config.KanikoStage{
 		Stage: stages[1],
-	}, nil)
+	}, &config.KanikoOptions{})
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
 }
@@ -89,7 +89,7 @@ func Test_TarImage(t *testing.T) {
 		BaseImageStoredLocally: true,
 		BaseImageIndex:         0,
 		Stage:                  stages[2],
-	}, nil)
+	}, &config.KanikoOptions{})
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
 

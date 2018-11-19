@@ -21,8 +21,9 @@ import "github.com/moby/buildkit/frontend/dockerfile/instructions"
 // KanikoStage wraps a stage of the Dockerfile and provides extra information
 type KanikoStage struct {
 	instructions.Stage
-	FinalStage             bool
-	BaseImageStoredLocally bool
 	BaseImageIndex         int
+	Final                  bool
+	BaseImageStoredLocally bool
 	SaveStage              bool
+	MetaArgs               []instructions.ArgCommand
 }

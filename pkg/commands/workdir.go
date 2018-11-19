@@ -29,6 +29,7 @@ import (
 )
 
 type WorkdirCommand struct {
+	BaseCommand
 	cmd           *instructions.WorkdirCommand
 	snapshotFiles []string
 }
@@ -67,7 +68,6 @@ func (w *WorkdirCommand) String() string {
 	return w.cmd.String()
 }
 
-// CacheCommand returns false since this command shouldn't be cached
-func (w *WorkdirCommand) CacheCommand() bool {
+func (w *WorkdirCommand) MetadataOnly() bool {
 	return false
 }

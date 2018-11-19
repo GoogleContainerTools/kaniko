@@ -14,7 +14,7 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 3
+VERSION_MINOR ?= 6
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
@@ -35,10 +35,14 @@ GO_LDFLAGS += -w -s # Drop debugging symbols.
 GO_LDFLAGS += '
 
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
+WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
 
 out/executor: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(EXECUTOR_PACKAGE)
+
+out/warmer: $(GO_FILES)
+	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(WARMER_PACKAGE)
 
 .PHONY: test
 test: out/executor
@@ -52,3 +56,4 @@ integration-test:
 images:
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
 	docker build -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .

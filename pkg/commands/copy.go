@@ -21,15 +21,18 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
 type CopyCommand struct {
+	BaseCommand
 	cmd           *instructions.CopyCommand
 	buildcontext  string
 	snapshotFiles []string
@@ -40,15 +43,10 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
 	}
+
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	// First, resolve any environment replacement
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(c.cmd.SourcesAndDest, replacementEnvs, true)
-	if err != nil {
-		return err
-	}
-	dest := resolvedEnvs[len(resolvedEnvs)-1]
-	// Resolve wildcards and get a list of resolved sources
-	srcs, err := util.ResolveSources(resolvedEnvs, c.buildcontext)
+
+	srcs, dest, err := resolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
 		return err
 	}
@@ -123,6 +121,18 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	return nil
 }
 
+func resolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
+	// First, resolve any environment replacement
+	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(sd, envs, true)
+	if err != nil {
+		return nil, "", err
+	}
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err := util.ResolveSources(resolvedEnvs, buildcontext)
+	return srcs, dest, err
+}
+
 // FilesToSnapshot should return an empty array if still nil; no files were changed
 func (c *CopyCommand) FilesToSnapshot() []string {
 	return c.snapshotFiles
@@ -133,7 +143,27 @@ func (c *CopyCommand) String() string {
 	return c.cmd.String()
 }
 
-// CacheCommand returns true since this command should be cached
-func (c *CopyCommand) CacheCommand() bool {
+func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
+	// We don't use the context if we're performing a copy --from.
+	if c.cmd.From != "" {
+		return nil, nil
+	}
+
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	srcs, _, err := resolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	if err != nil {
+		return nil, err
+	}
+
+	files := []string{}
+	for _, src := range srcs {
+		fullPath := filepath.Join(c.buildcontext, src)
+		files = append(files, fullPath)
+	}
+	logrus.Infof("Using files from context: %v", files)
+	return files, nil
+}
+
+func (c *CopyCommand) MetadataOnly() bool {
 	return false
 }

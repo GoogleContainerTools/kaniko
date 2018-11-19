@@ -14,22 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+EXAMPLES_DIR=${DIR}/../examples
 
-#!/bin/bash
-set -e -o pipefail
+# you can pass your github token with --token here if you run out of requests
+go run ${DIR}/release_notes/listpullreqs.go
 
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-install_gometalinter() {
-	echo "Installing gometalinter.v2"
-	go get -u gopkg.in/alecthomas/gometalinter.v2
-	gometalinter.v2 --install
-}
-
-if ! [ -x "$(command -v gometalinter.v2)" ]; then
-  install_gometalinter
-fi
-
-gometalinter.v2 \
-	${GOMETALINTER_OPTS:--deadine 5m} \
-	--config $SCRIPTDIR/gometalinter.json ./...
+echo "Huge thank you for this release towards our contributors: "
+git log "$(git describe  --abbrev=0)".. --format="%aN" --reverse | sort | uniq | awk '{printf "- %s\n", $0 }'

@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,12 +25,15 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -54,26 +58,34 @@ var RootCmd = &cobra.Command{
 		if !opts.NoPush && len(opts.Destinations) == 0 {
 			return errors.New("You must provide --destination, or use --no-push")
 		}
+		if err := cacheFlagsValid(); err != nil {
+			return errors.Wrap(err, "cache flags invalid")
+		}
 		if err := resolveSourceContext(); err != nil {
 			return errors.Wrap(err, "error resolving source context")
 		}
-		return resolveDockerfilePath()
+		if err := resolveDockerfilePath(); err != nil {
+			return errors.Wrap(err, "error resolving dockerfile path")
+		}
+		return removeIgnoredFiles()
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		if !checkContained() {
 			if !force {
-				return errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue")
+				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
 		if err := os.Chdir("/"); err != nil {
-			return errors.Wrap(err, "error changing to root dir")
+			exit(errors.Wrap(err, "error changing to root dir"))
 		}
 		image, err := executor.DoBuild(opts)
 		if err != nil {
-			return errors.Wrap(err, "error building image")
+			exit(errors.Wrap(err, "error building image"))
 		}
-		return executor.DoPush(image, opts)
+		if err := executor.DoPush(image, opts); err != nil {
+			exit(errors.Wrap(err, "error pushing image"))
+		}
 	},
 }
 
@@ -85,26 +97,45 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
-	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePush, "insecure", "", false, "Push to insecure registry using plain HTTP")
-	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTlsVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Insecure, "insecure", "", false, "Push to insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePull, "insecure-pull", "", false, "Pull from insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerifyPull, "skip-tls-verify-pull", "", false, "Pull from insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
 	RootCmd.PersistentFlags().BoolVarP(&opts.NoPush, "no-push", "", false, "Do not push the image to the registry")
+	RootCmd.PersistentFlags().StringVarP(&opts.CacheRepo, "cache-repo", "", "", "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided")
+	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "", "/cache", "Specify a local directory to use as a cache.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
 func addHiddenFlags(cmd *cobra.Command) {
 	// This flag is added in a vendored directory, hide so that it doesn't come up via --help
-	RootCmd.PersistentFlags().MarkHidden("azure-container-registry-config")
+	pflag.CommandLine.MarkHidden("azure-container-registry-config")
 	// Hide this flag as we want to encourage people to use the --context flag instead
-	RootCmd.PersistentFlags().MarkHidden("bucket")
+	cmd.PersistentFlags().MarkHidden("bucket")
 }
 
 func checkContained() bool {
 	_, err := container.DetectRuntime()
 	return err == nil
+}
+
+// cacheFlagsValid makes sure the flags passed in related to caching are valid
+func cacheFlagsValid() error {
+	if !opts.Cache {
+		return nil
+	}
+	// If --cache=true and --no-push=true, then cache repo must be provided
+	// since cache can't be inferred from destination
+	if opts.CacheRepo == "" && opts.NoPush {
+		return errors.New("if using cache with --no-push, specify cache repo with --cache-repo")
+	}
+	return nil
 }
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
@@ -115,7 +146,7 @@ func resolveDockerfilePath() error {
 			return errors.Wrap(err, "getting absolute path for dockerfile")
 		}
 		opts.DockerfilePath = abs
-		return nil
+		return copyDockerfile()
 	}
 	// Otherwise, check if the path relative to the build context exists
 	if util.FilepathExists(filepath.Join(opts.SrcContext, opts.DockerfilePath)) {
@@ -124,9 +155,19 @@ func resolveDockerfilePath() error {
 			return errors.Wrap(err, "getting absolute path for src context/dockerfile path")
 		}
 		opts.DockerfilePath = abs
-		return nil
+		return copyDockerfile()
 	}
 	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
+}
+
+// copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
+// it won't be copied into the image
+func copyDockerfile() error {
+	if err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath); err != nil {
+		return errors.Wrap(err, "copying dockerfile")
+	}
+	opts.DockerfilePath = constants.DockerfilePath
+	return nil
 }
 
 // resolveSourceContext unpacks the source context if it is a tar in a bucket
@@ -145,7 +186,7 @@ func resolveSourceContext() error {
 			opts.SrcContext = opts.Bucket
 		}
 	}
-	// if no prefix use Google Cloud Storage as default for backwards compability
+	// if no prefix use Google Cloud Storage as default for backwards compatibility
 	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
 	if err != nil {
 		return err
@@ -157,4 +198,32 @@ func resolveSourceContext() error {
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
+}
+
+func removeIgnoredFiles() error {
+	if !dockerfile.DockerignoreExists(opts) {
+		return nil
+	}
+	ignore, err := dockerfile.ParseDockerignore(opts)
+	if err != nil {
+		return err
+	}
+	logrus.Infof("Removing ignored files from build context: %s", ignore)
+	files, err := util.RelativeFiles("", opts.SrcContext)
+	if err != nil {
+		return errors.Wrap(err, "getting all files in src context")
+	}
+	for _, f := range files {
+		if rm, _ := fileutils.Matches(f, ignore); rm {
+			if err := os.RemoveAll(f); err != nil {
+				logrus.Errorf("Error removing %s from build context", f)
+			}
+		}
+	}
+	return nil
+}
+
+func exit(err error) {
+	fmt.Println(err)
+	os.Exit(1)
 }

@@ -21,12 +21,16 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -62,12 +66,12 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		for _, destRef := range destRefs {
 			tagToImage[destRef] = image
 		}
-		return tarball.MultiWriteToFile(opts.TarPath, tagToImage, nil)
+		return tarball.MultiWriteToFile(opts.TarPath, tagToImage)
 	}
 
 	// continue pushing unless an error occurs
 	for _, destRef := range destRefs {
-		if opts.InsecurePush {
+		if opts.Insecure {
 			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
@@ -87,16 +91,46 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 		// Create a transport to set our user-agent.
 		tr := http.DefaultTransport
-		if opts.SkipTlsVerify {
+		if opts.SkipTLSVerify {
 			tr.(*http.Transport).TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}
 		}
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, pushAuth, rt, remote.WriteOptions{}); err != nil {
+		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
 	return nil
+}
+
+// pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache
+// if opts.Cache doesn't exist, infer the cache from the given destination
+func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath string, createdBy string) error {
+	layer, err := tarball.LayerFromFile(tarPath)
+	if err != nil {
+		return err
+	}
+	cache, err := cache.Destination(opts, cacheKey)
+	if err != nil {
+		return errors.Wrap(err, "getting cache destination")
+	}
+	logrus.Infof("Pushing layer %s to cache now", cache)
+	empty := empty.Image
+	empty, err = mutate.Append(empty,
+		mutate.Addendum{
+			Layer: layer,
+			History: v1.History{
+				Author:    constants.Author,
+				CreatedBy: createdBy,
+			},
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "appending layer onto empty image")
+	}
+	cacheOpts := *opts
+	cacheOpts.Destinations = []string{cache}
+	return DoPush(empty, &cacheOpts)
 }

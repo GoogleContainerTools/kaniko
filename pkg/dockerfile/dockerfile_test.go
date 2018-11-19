@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
@@ -36,7 +35,7 @@ func Test_resolveStages(t *testing.T) {
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
-	stages, err := Parse([]byte(dockerfile))
+	stages, _, err := Parse([]byte(dockerfile))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +63,7 @@ func Test_targetStage(t *testing.T) {
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
-	stages, err := Parse([]byte(dockerfile))
+	stages, _, err := Parse([]byte(dockerfile))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +142,7 @@ func Test_SaveStage(t *testing.T) {
 			expected: false,
 		},
 	}
-	stages, err := Parse([]byte(testutil.Dockerfile))
+	stages, _, err := Parse([]byte(testutil.Dockerfile))
 	if err != nil {
 		t.Fatalf("couldn't retrieve stages from Dockerfile: %v", err)
 	}
@@ -178,13 +177,13 @@ func Test_baseImageIndex(t *testing.T) {
 		},
 	}
 
-	stages, err := Parse([]byte(testutil.Dockerfile))
+	stages, _, err := Parse([]byte(testutil.Dockerfile))
 	if err != nil {
 		t.Fatalf("couldn't retrieve stages from Dockerfile: %v", err)
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := baseImageIndex(&config.KanikoOptions{}, test.currentStage, stages)
+			actual := baseImageIndex(test.currentStage, stages)
 			if actual != test.expected {
 				t.Fatalf("unexpected result, expected %d got %d", test.expected, actual)
 			}

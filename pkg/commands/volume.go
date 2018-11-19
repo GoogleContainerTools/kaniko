@@ -29,8 +29,8 @@ import (
 )
 
 type VolumeCommand struct {
-	cmd           *instructions.VolumeCommand
-	snapshotFiles []string
+	BaseCommand
+	cmd *instructions.VolumeCommand
 }
 
 func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -48,7 +48,7 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 	for _, volume := range resolvedVolumes {
 		var x struct{}
 		existingVolumes[volume] = x
-		err := util.AddPathToVolumeWhitelist(volume)
+		err := util.AddVolumePathToWhitelist(volume)
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,6 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 		// Only create and snapshot the dir if it didn't exist already
 		if _, err := os.Stat(volume); os.IsNotExist(err) {
 			logrus.Infof("Creating directory %s", volume)
-			v.snapshotFiles = []string{volume}
 			if err := os.MkdirAll(volume, 0755); err != nil {
 				return fmt.Errorf("Could not create directory for volume %s: %s", volume, err)
 			}
@@ -68,14 +67,9 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 }
 
 func (v *VolumeCommand) FilesToSnapshot() []string {
-	return v.snapshotFiles
+	return []string{}
 }
 
 func (v *VolumeCommand) String() string {
 	return v.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (v *VolumeCommand) CacheCommand() bool {
-	return false
 }

@@ -33,6 +33,9 @@ const (
 
 	Author = "kaniko"
 
+	// DockerfilePath is the path the Dockerfile is copied to
+	DockerfilePath = "/kaniko/Dockerfile"
+
 	// ContextTar is the default name of the tar uploaded to GCS buckets
 	ContextTar = "context.tar.gz"
 
@@ -55,9 +58,14 @@ const (
 	S3BuildContextPrefix       = "s3://"
 	LocalDirBuildContextPrefix = "dir://"
 
+	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME
-	HOME             = "HOME"
 	DefaultHOMEValue = "/root"
+	RootUser         = "root"
+
+	// Docker command names
+	Cmd        = "cmd"
+	Entrypoint = "entrypoint"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko

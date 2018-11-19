@@ -24,6 +24,7 @@ import (
 )
 
 type ArgCommand struct {
+	BaseCommand
 	cmd *instructions.ArgCommand
 }
 
@@ -41,22 +42,18 @@ func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			return err
 		}
 		resolvedValue = &value
+	} else {
+		meta := buildArgs.GetAllMeta()
+		if value, ok := meta[resolvedKey]; ok {
+			resolvedValue = &value
+		}
 	}
+
 	buildArgs.AddArg(resolvedKey, resolvedValue)
 	return nil
-}
-
-// FilesToSnapshot returns an empty array since this command only touches metadata.
-func (r *ArgCommand) FilesToSnapshot() []string {
-	return []string{}
 }
 
 // String returns some information about the command for the image config history
 func (r *ArgCommand) String() string {
 	return r.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (r *ArgCommand) CacheCommand() bool {
-	return false
 }

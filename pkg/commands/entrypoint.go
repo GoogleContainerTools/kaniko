@@ -23,10 +23,10 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	"github.com/sirupsen/logrus"
 )
 
 type EntrypointCommand struct {
+	BaseCommand
 	cmd *instructions.EntrypointCommand
 }
 
@@ -47,22 +47,11 @@ func (e *EntrypointCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerf
 		newCommand = e.cmd.CmdLine
 	}
 
-	logrus.Infof("Replacing Entrypoint in config with %v", newCommand)
 	config.Entrypoint = newCommand
 	return nil
-}
-
-// FilesToSnapshot returns an empty array since this is a metadata command
-func (e *EntrypointCommand) FilesToSnapshot() []string {
-	return []string{}
 }
 
 // String returns some information about the command for the image config history
 func (e *EntrypointCommand) String() string {
 	return e.cmd.String()
-}
-
-// CacheCommand returns false since this command shouldn't be cached
-func (e *EntrypointCommand) CacheCommand() bool {
-	return false
 }

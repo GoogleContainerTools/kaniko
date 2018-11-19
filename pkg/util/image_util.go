@@ -17,6 +17,9 @@ limitations under the License.
 package util
 
 import (
+	"crypto/tls"
+	"fmt"
+	"net/http"
 	"path/filepath"
 	"strconv"
 
@@ -25,10 +28,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/sirupsen/logrus"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
@@ -40,7 +45,13 @@ var (
 )
 
 // RetrieveSourceImage returns the base image of the stage at index
-func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image, error) {
+func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
+	buildArgs := opts.BuildArgs
+	var metaArgsString []string
+	for _, arg := range stage.MetaArgs {
+		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+	}
+	buildArgs = append(buildArgs, metaArgsString...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
@@ -56,12 +67,25 @@ func RetrieveSourceImage(stage config.KanikoStage, buildArgs []string) (v1.Image
 		return retrieveTarImage(stage.BaseImageIndex)
 	}
 
+	// Next, check if local caching is enabled
+	// If so, look in the local cache before trying the remote registry
+	if opts.Cache && opts.CacheDir != "" {
+		cachedImage, err := cachedImage(opts, currentBaseName)
+		if cachedImage != nil {
+			return cachedImage, nil
+		}
+
+		if err != nil {
+			logrus.Warnf("Error while retrieving image from cache: %v", err)
+		}
+	}
+
 	// Otherwise, initialize image as usual
-	return retrieveRemoteImage(currentBaseName)
+	return retrieveRemoteImage(currentBaseName, opts)
 }
 
 // RetrieveConfigFile returns the config file for an image
-func RetrieveConfigFile(sourceImage v1.Image) (*v1.ConfigFile, error) {
+func RetrieveConfigFile(sourceImage partial.WithConfigFile) (*v1.ConfigFile, error) {
 	imageConfig, err := sourceImage.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -78,16 +102,65 @@ func tarballImage(index int) (v1.Image, error) {
 	return tarball.ImageFromPath(tarPath, nil)
 }
 
-func remoteImage(image string) (v1.Image, error) {
+func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	logrus.Infof("Downloading base image %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
 	}
+
+	if opts.InsecurePull {
+		newReg, err := name.NewInsecureRegistry(ref.Context().RegistryStr(), name.WeakValidation)
+		if err != nil {
+			return nil, err
+		}
+		if tag, ok := ref.(name.Tag); ok {
+			tag.Repository.Registry = newReg
+			ref = tag
+		}
+		if digest, ok := ref.(name.Digest); ok {
+			digest.Repository.Registry = newReg
+			ref = digest
+		}
+	}
+
+	tr := http.DefaultTransport.(*http.Transport)
+	if opts.SkipTLSVerifyPull {
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
 	k8sc, err := k8schain.NewNoClient()
 	if err != nil {
 		return nil, err
 	}
 	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-	return remote.Image(ref, remote.WithAuthFromKeychain(kc))
+	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(kc))
+}
+
+func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return nil, err
+	}
+
+	var cacheKey string
+	if d, ok := ref.(name.Digest); ok {
+		cacheKey = d.DigestStr()
+	} else {
+		img, err := remoteImage(image, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		d, err := img.Digest()
+		if err != nil {
+			return nil, err
+		}
+
+		cacheKey = d.String()
+	}
+
+	return cache.LocalSource(opts, cacheKey)
 }

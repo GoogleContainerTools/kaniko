@@ -24,6 +24,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type CurrentCacheKey func() (string, error)
+
 type DockerCommand interface {
 	// ExecuteCommand is responsible for:
 	// 	1. Making required changes to the filesystem (ex. copying files for ADD/COPY or setting ENV variables)
@@ -34,9 +36,18 @@ type DockerCommand interface {
 	String() string
 	// A list of files to snapshot, empty for metadata commands or nil if we don't know
 	FilesToSnapshot() []string
-	// Return true if this command should be true
-	// Currently only true for RUN
-	CacheCommand() bool
+
+	// Return a cache-aware implementation of this command, if it exists.
+	CacheCommand(v1.Image) DockerCommand
+
+	// Return true if this command depends on the build context.
+	FilesUsedFromContext(*v1.Config, *dockerfile.BuildArgs) ([]string, error)
+
+	MetadataOnly() bool
+
+	RequiresUnpackedFS() bool
+
+	ShouldCacheOutput() bool
 }
 
 func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {

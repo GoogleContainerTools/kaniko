@@ -19,16 +19,18 @@ package commands
 import (
 	"path/filepath"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 )
 
 type AddCommand struct {
+	BaseCommand
 	cmd           *instructions.AddCommand
 	buildcontext  string
 	snapshotFiles []string
@@ -43,18 +45,13 @@ type AddCommand struct {
 // 	2. If <src> is a local tar archive:
 // 		-If <src> is a local tar archive, it is unpacked at the dest, as 'tar -x' would
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	// First, resolve any environment replacement
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(a.cmd.SourcesAndDest, replacementEnvs, true)
+
+	srcs, dest, err := resolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
 	if err != nil {
 		return err
 	}
-	dest := resolvedEnvs[len(resolvedEnvs)-1]
-	// Resolve wildcards and get a list of resolved sources
-	srcs, err := util.ResolveSources(resolvedEnvs, a.buildcontext)
-	if err != nil {
-		return err
-	}
+
 	var unresolvedSrcs []string
 	// If any of the sources are local tar archives:
 	// 	1. Unpack them to the specified destination
@@ -93,6 +90,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		},
 		buildcontext: a.buildcontext,
 	}
+
 	if err := copyCmd.ExecuteCommand(config, buildArgs); err != nil {
 		return err
 	}
@@ -110,7 +108,30 @@ func (a *AddCommand) String() string {
 	return a.cmd.String()
 }
 
-// CacheCommand returns false since this command shouldn't be cached
-func (a *AddCommand) CacheCommand() bool {
+func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+
+	srcs, _, err := resolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
+	if err != nil {
+		return nil, err
+	}
+
+	files := []string{}
+	for _, src := range srcs {
+		if util.IsSrcRemoteFileURL(src) {
+			continue
+		}
+		if util.IsFileLocalTarArchive(src) {
+			continue
+		}
+		fullPath := filepath.Join(a.buildcontext, src)
+		files = append(files, fullPath)
+	}
+
+	logrus.Infof("Using files from context: %v", files)
+	return files, nil
+}
+
+func (a *AddCommand) MetadataOnly() bool {
 	return false
 }

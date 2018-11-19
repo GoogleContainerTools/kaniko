@@ -48,7 +48,7 @@ func TestUpdateExposedPorts(t *testing.T) {
 	}
 
 	exposeCmd := &ExposeCommand{
-		&instructions.ExposeCommand{
+		cmd: &instructions.ExposeCommand{
 			Ports: ports,
 		},
 	}
@@ -77,7 +77,7 @@ func TestInvalidProtocol(t *testing.T) {
 	}
 
 	exposeCmd := &ExposeCommand{
-		&instructions.ExposeCommand{
+		cmd: &instructions.ExposeCommand{
 			Ports: ports,
 		},
 	}
