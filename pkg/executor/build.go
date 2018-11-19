@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -236,7 +237,7 @@ func (s *stageBuilder) build() error {
 				return pushLayerToCache(s.opts, ck, tarPath, command.String())
 			})
 		}
-		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
+		if err := s.saveSnapshotToImage(&s.cf.Config, command.RequiresUnpackedFS(), command.String(), tarPath); err != nil {
 			return err
 		}
 	}
@@ -247,13 +248,15 @@ func (s *stageBuilder) build() error {
 }
 
 func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
-	if files == nil || s.opts.SingleSnapshot {
+	if s.opts.SingleSnapshot {
 		return s.snapshotter.TakeSnapshotFS()
 	}
 	// Volumes are very weird. They get created in their command, but snapshotted in the next one.
 	// Add them to the list of files to snapshot.
-	for v := range s.cf.Config.Volumes {
-		files = append(files, v)
+	if files != nil {
+		for v := range s.cf.Config.Volumes {
+			files = append(files, v)
+		}
 	}
 	return s.snapshotter.TakeSnapshot(files)
 }
@@ -276,14 +279,23 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 		return true
 	}
 
-	// Don't snapshot an empty list.
-	if len(files) == 0 {
-		return false
-	}
 	return true
 }
 
-func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) error {
+func buildHistoryMessage(shell []string, noOpCommand bool, createdBy string) string {
+	var shellString string
+	if len(shell) == 0 {
+		shellString = "/bin/sh -c"
+	} else {
+		shellString = strings.Join(shell, " ")
+	}
+	if !noOpCommand {
+		return shellString + " #(nop)  " + createdBy
+	}
+	return shellString + " " + createdBy
+}
+
+func (s *stageBuilder) saveSnapshotToImage(config *v1.Config, isNoOpCommand bool, createdBy string, tarPath string) error {
 	if tarPath == "" {
 		return nil
 	}
@@ -292,20 +304,20 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 		return err
 	}
 	if fi.Size() <= emptyTarSize {
-		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
-		return nil
+		logrus.Info("No files were changed, appending empty layer to config.")
 	}
 
 	layer, err := tarball.LayerFromFile(tarPath)
 	if err != nil {
 		return err
 	}
+	createdByMessage := buildHistoryMessage(config.Shell, isNoOpCommand, createdBy)
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
 			Layer: layer,
 			History: v1.History{
 				Author:    constants.Author,
-				CreatedBy: createdBy,
+				CreatedBy: createdByMessage,
 			},
 		},
 	)

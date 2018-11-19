@@ -66,7 +66,6 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	s.l.Snapshot()
 	if len(files) == 0 {
 		logrus.Info("No files changed in this command, skipping snapshotting.")
-		return "", nil
 	}
 	logrus.Info("Taking snapshot of files...")
 	logrus.Debugf("Taking snapshot of files %v", files)
