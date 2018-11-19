@@ -367,7 +367,7 @@ func filesAreHardlinks(first, second string) checker {
 		if err != nil {
 			t.Fatalf("error getting file %s", first)
 		}
-		fi2, err := os.Stat(filepath.Join(second))
+		fi2, err := os.Stat(filepath.Join(root, second))
 		if err != nil {
 			t.Fatalf("error getting file %s", second)
 		}
@@ -499,11 +499,11 @@ func TestExtractFile(t *testing.T) {
 			tmpdir: "/tmp/hardlink",
 			hdrs: []*tar.Header{
 				fileHeader("/bin/gzip", "gzip-binary", 0751),
-				hardlinkHeader("/bin/uncompress", "/tmp/hardlink/bin/gzip"),
+				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
 			},
 			checkers: []checker{
 				fileExists("/bin/gzip"),
-				filesAreHardlinks("/bin/uncompress", "/tmp/hardlink/bin/gzip"),
+				filesAreHardlinks("/bin/uncompress", "/bin/gzip"),
 			},
 		},
 	}
