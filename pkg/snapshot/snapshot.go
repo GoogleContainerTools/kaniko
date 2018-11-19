@@ -147,8 +147,11 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 			return err
 		}
 		if util.IsInWhitelist(path) {
-			logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
-			return filepath.SkipDir
+			if util.IsDestDir(path) {
+				logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
 		memFs[path] = info
