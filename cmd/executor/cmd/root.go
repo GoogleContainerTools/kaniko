@@ -163,7 +163,7 @@ func resolveDockerfilePath() error {
 // copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
 // it won't be copied into the image
 func copyDockerfile() error {
-	if err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath); err != nil {
+	if err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, -1, -1); err != nil {
 		return errors.Wrap(err, "copying dockerfile")
 	}
 	opts.DockerfilePath = constants.DockerfilePath
