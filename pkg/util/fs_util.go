@@ -479,7 +479,7 @@ func determineChownUIDGid(fileInfo os.FileInfo, chownUID, chownGid int) (uint32,
 // CopyDir copies the file or directory at src to dest
 // will chown the file or directory to the uid/gid if non-negative
 // It returns a list of files it copied over
-func CopyDir(src string, dest string, chownUID int, chownGid int) ([]string, error) {
+func CopyDir(src, dest string, chownUID, chownGid int) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err

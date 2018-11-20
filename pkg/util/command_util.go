@@ -318,12 +318,7 @@ func GetUIDGidFromUserString(commandUserStr string, replacementEnvs []string) (s
 		return "", "", err
 	}
 
-	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr)
-	if err != nil {
-		return "", "", err
-	}
-
-	return uidStr, gidStr, err
+	return GetUserFromUsername(userStr, groupStr)
 }
 
 func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
