@@ -245,8 +245,8 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return errors.Wrapf(err, "error removing %s to make way for new link", hdr.Name)
 			}
 		}
-
-		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+		link := filepath.Clean(filepath.Join(dest, hdr.Linkname))
+		if err := os.Link(link, path); err != nil {
 			return err
 		}
 
