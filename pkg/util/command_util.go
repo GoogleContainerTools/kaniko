@@ -312,7 +312,7 @@ func ResolveUserAndGroup(commandUserStr string, replacementEnvs []string) (strin
 // for the corresponding user as a string, replacing any build arguments
 // and environment variables.  Group is not required to be specified, and
 // if left off, gid will be empty
-func GetUidGidFromUserString(commandUserStr string, replacementEnvs []string) (string, string, error) {
+func GetUIDGidFromUserString(commandUserStr string, replacementEnvs []string) (string, string, error) {
 	userStr, groupStr, err := ResolveUserAndGroup(commandUserStr, replacementEnvs)
 	if err != nil {
 		return "", "", err

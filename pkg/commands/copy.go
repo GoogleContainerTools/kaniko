@@ -55,7 +55,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	uid, gid := -1, -1
 	if c.cmd.Chown != "" {
 		// Resolve the chown string to a uid:gid format
-		uidStr, gidStr, err := util.GetUidGidFromUserString(c.cmd.Chown, replacementEnvs)
+		uidStr, gidStr, err := util.GetUIDGidFromUserString(c.cmd.Chown, replacementEnvs)
 		if err != nil {
 			return err
 		}

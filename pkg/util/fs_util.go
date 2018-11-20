@@ -463,9 +463,9 @@ func DownloadFileToDest(rawurl, dest string) error {
 // If the given uid/gid are negative, returns the uid/gid from the
 // file info.
 // Otherwise returns the given uid/gid
-func determineChownUidGid(fileInfo os.FileInfo, chownUid, chownGid int) (uint32, uint32) {
-	uid := uint32(chownUid)
-	if chownUid < 0 {
+func determineChownUIDGid(fileInfo os.FileInfo, chownUID, chownGid int) (uint32, uint32) {
+	uid := uint32(chownUID)
+	if chownUID < 0 {
 		uid = fileInfo.Sys().(*syscall.Stat_t).Uid
 	}
 
@@ -479,7 +479,7 @@ func determineChownUidGid(fileInfo os.FileInfo, chownUid, chownGid int) (uint32,
 // CopyDir copies the file or directory at src to dest
 // will chown the file or directory to the uid/gid if non-negative
 // It returns a list of files it copied over
-func CopyDir(src string, dest string, chownUid int, chownGid int) ([]string, error) {
+func CopyDir(src string, dest string, chownUID int, chownGid int) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err
@@ -492,7 +492,7 @@ func CopyDir(src string, dest string, chownUid int, chownGid int) ([]string, err
 			return nil, err
 		}
 
-		uid, gid := determineChownUidGid(fi, chownUid, chownGid)
+		uid, gid := determineChownUIDGid(fi, chownUID, chownGid)
 
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
@@ -506,12 +506,12 @@ func CopyDir(src string, dest string, chownUid int, chownGid int) ([]string, err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := CopySymlink(fullPath, destPath, chownUid, chownGid); err != nil {
+			if err := CopySymlink(fullPath, destPath, chownUID, chownGid); err != nil {
 				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if err := CopyFile(fullPath, destPath, chownUid, chownGid); err != nil {
+			if err := CopyFile(fullPath, destPath, chownUID, chownGid); err != nil {
 				return nil, err
 			}
 		}
@@ -535,7 +535,7 @@ func CopySymlink(src, dest string, uidSigned, gidSigned int) error {
 	if err != nil {
 		return err
 	}
-	uid, gid := determineChownUidGid(fi, uidSigned, gidSigned)
+	uid, gid := determineChownUIDGid(fi, uidSigned, gidSigned)
 
 	return os.Chown(dest, int(uid), int(gid))
 }
@@ -555,7 +555,7 @@ func CopyFile(src, dest string, uidSigned, gidSigned int) error {
 	}
 	defer srcFile.Close()
 
-	uid, gid := determineChownUidGid(fi, uidSigned, gidSigned)
+	uid, gid := determineChownUIDGid(fi, uidSigned, gidSigned)
 	return CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
