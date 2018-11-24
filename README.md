@@ -357,7 +357,7 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 
 #### --cleanup
 
-Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to clean the filesystem at the end of the build.
 
 #### --insecure-pull
 
