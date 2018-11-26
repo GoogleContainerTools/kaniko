@@ -275,6 +275,34 @@ func TestCache(t *testing.T) {
 	}
 }
 
+func TestDockerignore(t *testing.T) {
+	// TODO (priyawadhwa@): remove this once .dockerignore is implemented correctly
+	t.Skip()
+
+	t.Run(fmt.Sprintf("test_%s", ignoreDockerfile), func(t *testing.T) {
+		if err := setupIgnoreTestDir(); err != nil {
+			t.Fatalf("error setting up ignore test dir: %v", err)
+		}
+		if err := generateDockerignoreImages(config.imageRepo); err != nil {
+			t.Fatalf("error generating dockerignore test images: %v", err)
+		}
+
+		dockerImage := GetDockerImage(config.imageRepo, ignoreDockerfile)
+		kanikoImage := GetKanikoImage(config.imageRepo, ignoreDockerfile)
+
+		// container-diff
+		daemonDockerImage := daemonPrefix + dockerImage
+		containerdiffCmd := exec.Command("container-diff", "diff",
+			daemonDockerImage, kanikoImage,
+			"-q", "--type=file", "--type=metadata", "--json")
+		diff := RunCommand(containerdiffCmd, t)
+		t.Logf("diff = %s", string(diff))
+
+		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+		checkContainerDiffOutput(t, diff, expected)
+	})
+}
+
 type fileDiff struct {
 	Name string
 	Size int
