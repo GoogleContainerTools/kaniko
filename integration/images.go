@@ -32,7 +32,8 @@ import (
 const (
 	// ExecutorImage is the name of the kaniko executor image
 	ExecutorImage = "executor-image"
-	WarmerImage   = "warmer-image"
+	//WarmerImage is the name of the kaniko cache warmer image
+	WarmerImage = "warmer-image"
 
 	dockerPrefix     = "docker-"
 	kanikoPrefix     = "kaniko-"
@@ -186,12 +187,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		}
 	}
 
+	benchmarkEnv := ""
 	if os.Getenv("BENCHMARK") == "true" {
 		os.Mkdir("benchmarks", 0755)
-		err := os.Setenv("BENCHMARK_FILE", "/workspace/benchmarks/"+dockerfile)
-		if err != nil {
-			fmt.Printf("Failed to set benchmark env var: %s", err)
-		}
+		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
 	}
 
 	// build kaniko image
@@ -201,6 +200,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		append([]string{"run",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
 			"-v", cwd + ":/workspace",
+			"-e", benchmarkEnv,
 			ExecutorImage,
 			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 			"-d", kanikoImage, reproducibleFlag,
