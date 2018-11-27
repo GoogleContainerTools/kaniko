@@ -187,7 +187,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		}
 	}
 
-	benchmarkEnv := ""
+	benchmarkEnv := "BENCHMARK_FILE=false"
 	if os.Getenv("BENCHMARK") == "true" {
 		os.Mkdir("benchmarks", 0755)
 		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
