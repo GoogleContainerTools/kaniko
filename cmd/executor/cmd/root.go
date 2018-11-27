@@ -25,10 +25,8 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/pkg/fileutils"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -68,7 +66,7 @@ var RootCmd = &cobra.Command{
 		if err := resolveDockerfilePath(); err != nil {
 			return errors.Wrap(err, "error resolving dockerfile path")
 		}
-		return removeIgnoredFiles()
+		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if !checkContained() {
@@ -198,29 +196,6 @@ func resolveSourceContext() error {
 		return err
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
-	return nil
-}
-
-func removeIgnoredFiles() error {
-	if !dockerfile.DockerignoreExists(opts) {
-		return nil
-	}
-	ignore, err := dockerfile.ParseDockerignore(opts)
-	if err != nil {
-		return err
-	}
-	logrus.Infof("Removing ignored files from build context: %s", ignore)
-	files, err := util.RelativeFiles("", opts.SrcContext)
-	if err != nil {
-		return errors.Wrap(err, "getting all files in src context")
-	}
-	for _, f := range files {
-		if rm, _ := fileutils.Matches(f, ignore); rm {
-			if err := os.RemoveAll(f); err != nil {
-				logrus.Errorf("Error removing %s from build context", f)
-			}
-		}
-	}
 	return nil
 }
 
