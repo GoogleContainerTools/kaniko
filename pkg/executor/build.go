@@ -38,6 +38,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
@@ -56,14 +57,18 @@ type stageBuilder struct {
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
+	t := timing.Start("Retrieving Source Image")
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
 	}
+	timing.DefaultRun.Stop(t)
+	t = timing.Start("Retrieving Config File")
 	imageConfig, err := util.RetrieveConfigFile(sourceImage)
 	if err != nil {
 		return nil, err
 	}
+	timing.DefaultRun.Stop(t)
 	if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
 		return nil, err
 	}
@@ -179,17 +184,21 @@ func (s *stageBuilder) build() error {
 		}
 	}
 	if shouldUnpack {
+		t := timing.Start("FS Unpacking")
 		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 			return err
 		}
+		timing.DefaultRun.Stop(t)
 	}
 	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return err
 	}
 	// Take initial snapshot
+	t := timing.Start("Initial FS snapshot")
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
+	timing.DefaultRun.Stop(t)
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range cmds {
@@ -199,7 +208,7 @@ func (s *stageBuilder) build() error {
 
 		// Add the next command to the cache key.
 		compositeKey.AddKey(command.String())
-
+		t := timing.Start("Command: " + command.String())
 		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&s.cf.Config, args)
 		if err != nil {
@@ -239,6 +248,7 @@ func (s *stageBuilder) build() error {
 		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
 			return err
 		}
+		timing.DefaultRun.Stop(t)
 	}
 	if err := cacheGroup.Wait(); err != nil {
 		logrus.Warnf("error uploading layer to cache: %s", err)
@@ -247,15 +257,21 @@ func (s *stageBuilder) build() error {
 }
 
 func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
+	var snapshot string
+	var err error
+	t := timing.Start("Snapshotting FS")
 	if files == nil || s.opts.SingleSnapshot {
-		return s.snapshotter.TakeSnapshotFS()
+		snapshot, err = s.snapshotter.TakeSnapshotFS()
+	} else {
+		// Volumes are very weird. They get created in their command, but snapshotted in the next one.
+		// Add them to the list of files to snapshot.
+		for v := range s.cf.Config.Volumes {
+			files = append(files, v)
+		}
+		snapshot, err = s.snapshotter.TakeSnapshot(files)
 	}
-	// Volumes are very weird. They get created in their command, but snapshotted in the next one.
-	// Add them to the list of files to snapshot.
-	for v := range s.cf.Config.Volumes {
-		files = append(files, v)
-	}
-	return s.snapshotter.TakeSnapshot(files)
+	timing.DefaultRun.Stop(t)
+	return snapshot, err
 }
 
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
@@ -315,6 +331,7 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
+	t := timing.Start("Total Build Time")
 	// Parse dockerfile and unpack base image to root
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
@@ -349,6 +366,17 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 					return nil, err
 				}
 			}
+			timing.DefaultRun.Stop(t)
+			benchmarkFile := os.Getenv("BENCHMARK_FILE")
+			// false is a keyword for integration tests to turn off benchmarking
+			if benchmarkFile != "" && benchmarkFile != "false" {
+				f, err := os.Create(benchmarkFile)
+				if err != nil {
+					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
+				}
+				defer f.Close()
+				f.WriteString(timing.Summary())
+			}
 			return sourceImage, nil
 		}
 		if stage.SaveStage {
@@ -364,6 +392,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 	}
+
 	return nil, err
 }
 

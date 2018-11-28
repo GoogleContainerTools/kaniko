@@ -25,12 +25,15 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 )
 
 const (
 	// ExecutorImage is the name of the kaniko executor image
 	ExecutorImage = "executor-image"
-	WarmerImage   = "warmer-image"
+	//WarmerImage is the name of the kaniko cache warmer image
+	WarmerImage = "warmer-image"
 
 	dockerPrefix     = "docker-"
 	kanikoPrefix     = "kaniko-"
@@ -159,7 +162,9 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			additionalFlags...)...,
 	)
 
+	timer := timing.Start(dockerfile + "_docker")
 	_, err := RunCommandWithoutTest(dockerCmd)
+	timing.DefaultRun.Stop(timer)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)
 	}
@@ -182,6 +187,12 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		}
 	}
 
+	benchmarkEnv := "BENCHMARK_FILE=false"
+	if os.Getenv("BENCHMARK") == "true" {
+		os.Mkdir("benchmarks", 0755)
+		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
+	}
+
 	// build kaniko image
 	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
@@ -189,6 +200,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		append([]string{"run",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
 			"-v", cwd + ":/workspace",
+			"-e", benchmarkEnv,
 			ExecutorImage,
 			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 			"-d", kanikoImage, reproducibleFlag,
@@ -196,7 +208,9 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 			additionalFlags...)...,
 	)
 
+	timer = timing.Start(dockerfile + "_kaniko")
 	_, err = RunCommandWithoutTest(kanikoCmd)
+	timing.DefaultRun.Stop(timer)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s", dockerImage, kanikoCmd.Args, err)
 	}

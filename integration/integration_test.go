@@ -32,6 +32,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -214,6 +215,16 @@ func TestRun(t *testing.T) {
 			checkContainerDiffOutput(t, diff, expected)
 
 		})
+	}
+
+	if os.Getenv("BENCHMARK") == "true" {
+		f, err := os.Create("benchmark")
+		if err != nil {
+			t.Logf("Failed to create benchmark file")
+		} else {
+			f.WriteString(timing.Summary())
+		}
+		defer f.Close()
 	}
 }
 

@@ -47,6 +47,7 @@ func init() {
 	addHiddenFlags(RootCmd)
 }
 
+// RootCmd is the kaniko command that is run
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
