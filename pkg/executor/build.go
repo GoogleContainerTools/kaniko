@@ -57,13 +57,13 @@ type stageBuilder struct {
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
-	t := timing.Start("RetrieveSourceImage")
+	t := timing.Start("Retrieving Source Image")
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
 	}
 	timing.DefaultRun.Stop(t)
-	t = timing.Start("RetrieveConfigFile")
+	t = timing.Start("Retrieving Config File")
 	imageConfig, err := util.RetrieveConfigFile(sourceImage)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (s *stageBuilder) build() error {
 		}
 	}
 	if shouldUnpack {
-		t := timing.Start("Unpack FS")
+		t := timing.Start("FS Unpacking")
 		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 			return err
 		}
@@ -194,7 +194,7 @@ func (s *stageBuilder) build() error {
 		return err
 	}
 	// Take initial snapshot
-	t := timing.Start("Initial snapshot")
+	t := timing.Start("Initial FS snapshot")
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func (s *stageBuilder) build() error {
 func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	var snapshot string
 	var err error
-	t := timing.Start("Snapshot")
+	t := timing.Start("Snapshotting FS")
 	if files == nil || s.opts.SingleSnapshot {
 		snapshot, err = s.snapshotter.TakeSnapshotFS()
 	} else {
@@ -331,7 +331,7 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
-	t := timing.Start("Build")
+	t := timing.Start("Total Build Time")
 	// Parse dockerfile and unpack base image to root
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
