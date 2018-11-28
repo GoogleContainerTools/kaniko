@@ -97,6 +97,27 @@ Requirements:
 
 These tests will be kicked off by [reviewers](#reviews) for submitted PRs.
 
+### Benchmarking
+
+The goal is for Kaniko to be at least as fast at building Dockerfiles as Docker is, and to that end, we've built 
+in benchmarking to check the speed of not only each full run, but also how long each step of each run takes. To turn
+on benchmarking, just set the `BENCHMARK_FILE` environment variable, and kaniko will output all the benchmark info 
+of each run to that file location.
+
+```shell
+docker run -v $(pwd):/workspace -v ~/.config:/root/.config \
+-e BENCHMARK_FILE=/workspace/benchmark_file \
+gcr.io/kaniko-project/executor:latest \
+--dockerfile=<path to Dockerfile> --context=/workspace \
+--destination=gcr.io/my-repo/my-image
+```
+Additionally, the integration tests can output benchmarking information to a `benchmarks` directory under the 
+`integration` directory if the `BENCHMARK` environment variable is set to `true.`
+
+```shell
+BENCHMARK=true go test -v --bucket $GCS_BUCKET --repo $IMAGE_REPO
+```
+
 ## Creating a PR
 
 When you have changes you would like to propose to kaniko, you will need to:
