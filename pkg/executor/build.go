@@ -226,7 +226,7 @@ func (s *stageBuilder) build() error {
 		}
 		files = command.FilesToSnapshot()
 
-		if !s.shouldTakeSnapshot(index, files) {
+		if !s.shouldTakeSnapshot(index, files) && !s.opts.Cache {
 			continue
 		}
 
