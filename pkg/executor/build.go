@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -337,6 +339,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Some stages may refer to other random images, not previous stages
+	if err := fetchExtraStages(stages, opts); err != nil {
+		return nil, err
+	}
 	for index, stage := range stages {
 		sb, err := newStageBuilder(opts, stage)
 		if err != nil {
@@ -380,10 +386,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return sourceImage, nil
 		}
 		if stage.SaveStage {
-			if err := saveStageAsTarball(index, sourceImage); err != nil {
+			if err := saveStageAsTarball(strconv.Itoa(index), sourceImage); err != nil {
 				return nil, err
 			}
-			if err := extractImageToDependecyDir(index, sourceImage); err != nil {
+			if err := extractImageToDependecyDir(strconv.Itoa(index), sourceImage); err != nil {
 				return nil, err
 			}
 		}
@@ -396,8 +402,38 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	return nil, err
 }
 
-func extractImageToDependecyDir(index int, image v1.Image) error {
-	dependencyDir := filepath.Join(constants.KanikoDir, strconv.Itoa(index))
+func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
+	for _, s := range stages {
+		for _, cmd := range s.Commands {
+			c, ok := cmd.(*instructions.CopyCommand)
+			if !ok || c.From == "" {
+				continue
+			}
+
+			// FROMs at this point are guaranteed to be either an integer referring to a previous stage or
+			// a name of a remote image.
+			if _, err := strconv.Atoi(c.From); err == nil {
+				continue
+			}
+			// This must be an image name, fetch it.
+			logrus.Debugf("Found extra base image stage %s", c.From)
+			sourceImage, err := util.RetrieveRemoteImage(c.From, opts)
+			if err != nil {
+				return err
+			}
+			if err := saveStageAsTarball(c.From, sourceImage); err != nil {
+				return err
+			}
+			if err := extractImageToDependecyDir(c.From, sourceImage); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func extractImageToDependecyDir(name string, image v1.Image) error {
+	dependencyDir := filepath.Join(constants.KanikoDir, name)
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}
@@ -406,16 +442,16 @@ func extractImageToDependecyDir(index int, image v1.Image) error {
 	return err
 }
 
-func saveStageAsTarball(stageIndex int, image v1.Image) error {
+func saveStageAsTarball(path string, image v1.Image) error {
 	destRef, err := name.NewTag("temp/tag", name.WeakValidation)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(constants.KanikoIntermediateStagesDir, 0750); err != nil {
+	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, path)
+	logrus.Infof("Storing source image from stage %d at path %s", path, tarPath)
+	if err := os.MkdirAll(filepath.Dir(tarPath), 0750); err != nil {
 		return err
 	}
-	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(stageIndex))
-	logrus.Infof("Storing source image from stage %d at path %s", stageIndex, tarPath)
 	return tarball.WriteToFile(tarPath, destRef, image)
 }
 
