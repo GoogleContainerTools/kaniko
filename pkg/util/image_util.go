@@ -68,7 +68,7 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	}
 
 	// Otherwise, initialize image as usual
-	return RetrieveRemoteImage(currentBaseName, opts)
+	return RetrieveRemoteImage(currentBaseName, opts, false)
 }
 
 // RetrieveConfigFile returns the config file for an image
@@ -89,11 +89,11 @@ func tarballImage(index int) (v1.Image, error) {
 	return tarball.ImageFromPath(tarPath, nil)
 }
 
-func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
+func remoteImage(image string, opts *config.KanikoOptions, forceNoCache bool) (v1.Image, error) {
 	logrus.Infof("Downloading base image %s", image)
 	// First, check if local caching is enabled
 	// If so, look in the local cache before trying the remote registry
-	if opts.Cache && opts.CacheDir != "" {
+	if opts.Cache && opts.CacheDir != "" && forceNoCache == false {
 		cachedImage, err := cachedImage(opts, image)
 		if cachedImage != nil {
 			return cachedImage, nil
@@ -148,7 +148,7 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 	if d, ok := ref.(name.Digest); ok {
 		cacheKey = d.DigestStr()
 	} else {
-		img, err := remoteImage(image, opts)
+		img, err := remoteImage(image, opts, true)
 		if err != nil {
 			return nil, err
 		}
