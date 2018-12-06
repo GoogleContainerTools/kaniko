@@ -15,3 +15,4 @@ FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5a
 FROM base
 ARG file
 COPY --from=second /foo ${file}
+COPY --from=gcr.io/google-appengine/debian9@sha256:00109fa40230a081f5ecffe0e814725042ff62a03e2d1eae0563f1f82eaeae9b /etc/os-release /new
