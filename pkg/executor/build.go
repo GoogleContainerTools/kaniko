@@ -226,7 +226,7 @@ func (s *stageBuilder) build() error {
 		}
 		files = command.FilesToSnapshot()
 
-		if !s.shouldTakeSnapshot(index, files) && !s.opts.Cache {
+		if !s.shouldTakeSnapshot(index, files) {
 			continue
 		}
 
@@ -277,13 +277,18 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	isLastCommand := index == len(s.stage.Commands)-1
 
-	// We only snapshot the very end of intermediate stages.
-	if !s.stage.Final {
+	// We only snapshot the very end with single snapshot mode on.
+	if s.opts.SingleSnapshot {
 		return isLastCommand
 	}
 
-	// We only snapshot the very end with single snapshot mode on.
-	if s.opts.SingleSnapshot {
+	// Always take snapshots if we're using the cache.
+	if s.opts.Cache {
+		return true
+	}
+
+	// We only snapshot the very end of intermediate stages.
+	if !s.stage.Final {
 		return isLastCommand
 	}
 
@@ -296,6 +301,7 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	if len(files) == 0 {
 		return false
 	}
+
 	return true
 }
 
