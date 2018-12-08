@@ -93,7 +93,7 @@ func remoteImage(image string, opts *config.KanikoOptions, forceNoCache bool) (v
 	logrus.Infof("Downloading base image %s", image)
 	// First, check if local caching is enabled
 	// If so, look in the local cache before trying the remote registry
-	if opts.Cache && opts.CacheDir != "" && forceNoCache == false {
+	if opts.Cache && opts.CacheDir != "" && !forceNoCache {
 		cachedImage, err := cachedImage(opts, image)
 		if cachedImage != nil {
 			return cachedImage, nil
