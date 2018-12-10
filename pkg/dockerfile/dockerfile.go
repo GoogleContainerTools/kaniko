@@ -20,13 +20,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/pkg/errors"
@@ -171,21 +169,4 @@ func saveStage(index int, stages []instructions.Stage) bool {
 		}
 	}
 	return false
-}
-
-// DockerignoreExists returns true if .dockerignore exists in the source context
-func DockerignoreExists(opts *config.KanikoOptions) bool {
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	return util.FilepathExists(path)
-}
-
-// ParseDockerignore returns a list of all paths in .dockerignore
-func ParseDockerignore(opts *config.KanikoOptions) ([]string, error) {
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing .dockerignore")
-	}
-	reader := bytes.NewBuffer(contents)
-	return dockerignore.ReadAll(reader)
 }

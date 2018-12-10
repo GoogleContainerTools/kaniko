@@ -19,7 +19,9 @@ package util
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,10 +29,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/docker/docker/builder/dockerignore"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
 )
 
@@ -462,7 +465,7 @@ func DownloadFileToDest(rawurl, dest string) error {
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest string) ([]string, error) {
+func CopyDir(src, dest, buildcontext string) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err
@@ -473,6 +476,10 @@ func CopyDir(src, dest string) ([]string, error) {
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return nil, err
+		}
+		if excludeFile(fullPath, buildcontext) {
+			logrus.Debugf("%s found in .dockerignore, ignoring", src)
+			continue
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
@@ -489,12 +496,12 @@ func CopyDir(src, dest string) ([]string, error) {
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := CopySymlink(fullPath, destPath); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if err := CopyFile(fullPath, destPath); err != nil {
+			if _, err := CopyFile(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		}
@@ -504,37 +511,78 @@ func CopyDir(src, dest string) ([]string, error) {
 }
 
 // CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest string) error {
+func CopySymlink(src, dest, buildcontext string) (bool, error) {
+	if excludeFile(src, buildcontext) {
+		logrus.Debugf("%s found in .dockerignore, ignoring", src)
+		return true, nil
+	}
 	link, err := os.Readlink(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if FilepathExists(dest) {
 		if err := os.RemoveAll(dest); err != nil {
-			return err
+			return false, err
 		}
 	}
-	return os.Symlink(link, dest)
+	return false, os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest string) error {
+func CopyFile(src, dest, buildcontext string) (bool, error) {
+	if excludeFile(src, buildcontext) {
+		logrus.Debugf("%s found in .dockerignore, ignoring", src)
+		return true, nil
+	}
 	fi, err := os.Stat(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	logrus.Debugf("Copying file %s to %s", src, dest)
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer srcFile.Close()
 	uid := fi.Sys().(*syscall.Stat_t).Uid
 	gid := fi.Sys().(*syscall.Stat_t).Gid
-	return CreateFile(dest, srcFile, fi.Mode(), uid, gid)
+	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
-// HasFilepathPrefix checks if the given file path begins with prefix
+// excludeFile returns true if the .dockerignore specified this file should be ignored
+func excludeFile(path, buildcontext string) bool {
+	excluded, err := parseDockerignore(buildcontext)
+	if err != nil {
+		return false
+	}
+	if HasFilepathPrefix(path, buildcontext, false) {
+		path, err = filepath.Rel(buildcontext, path)
+		if err != nil {
+			return false
+		}
+	}
+	match, err := fileutils.Matches(path, excluded)
+	if err != nil {
+		return false
+	}
+	return match
+}
+
+// parseDockerignore returns a list of all paths in .dockerignore
+func parseDockerignore(buildcontext string) ([]string, error) {
+	path := filepath.Join(buildcontext, ".dockerignore")
+	if !FilepathExists(path) {
+		return nil, nil
+	}
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing .dockerignore")
+	}
+	reader := bytes.NewBuffer(contents)
+	return dockerignore.ReadAll(reader)
+}
+
+// HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)
