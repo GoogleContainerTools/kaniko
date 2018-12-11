@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -409,6 +409,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
+	t := timing.Start("Fetching Extra Stages")
+	defer timing.DefaultRun.Stop(t)
 	for _, s := range stages {
 		for _, cmd := range s.Commands {
 			c, ok := cmd.(*instructions.CopyCommand)
@@ -439,6 +441,8 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 }
 
 func extractImageToDependecyDir(name string, image v1.Image) error {
+	t := timing.Start("Extracting Image to Dependency Dir")
+	defer timing.DefaultRun.Stop(t)
 	dependencyDir := filepath.Join(constants.KanikoDir, name)
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
@@ -449,6 +453,8 @@ func extractImageToDependecyDir(name string, image v1.Image) error {
 }
 
 func saveStageAsTarball(path string, image v1.Image) error {
+	t := timing.Start("Saving stage as tarball")
+	defer timing.DefaultRun.Stop(t)
 	destRef, err := name.NewTag("temp/tag", name.WeakValidation)
 	if err != nil {
 		return err
