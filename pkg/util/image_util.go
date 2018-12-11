@@ -39,8 +39,8 @@ import (
 )
 
 var (
-	// For testing
-	retrieveRemoteImage = remoteImage
+	// RetrieveRemoteImage downloads an image from a remote location
+	RetrieveRemoteImage = remoteImage
 	retrieveTarImage    = tarballImage
 )
 
@@ -67,21 +67,8 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 		return retrieveTarImage(stage.BaseImageIndex)
 	}
 
-	// Next, check if local caching is enabled
-	// If so, look in the local cache before trying the remote registry
-	if opts.Cache && opts.CacheDir != "" {
-		cachedImage, err := cachedImage(opts, currentBaseName)
-		if cachedImage != nil {
-			return cachedImage, nil
-		}
-
-		if err != nil {
-			logrus.Warnf("Error while retrieving image from cache: %v", err)
-		}
-	}
-
 	// Otherwise, initialize image as usual
-	return retrieveRemoteImage(currentBaseName, opts)
+	return RetrieveRemoteImage(currentBaseName, opts, false)
 }
 
 // RetrieveConfigFile returns the config file for an image
@@ -102,8 +89,20 @@ func tarballImage(index int) (v1.Image, error) {
 	return tarball.ImageFromPath(tarPath, nil)
 }
 
-func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
+func remoteImage(image string, opts *config.KanikoOptions, forceNoCache bool) (v1.Image, error) {
 	logrus.Infof("Downloading base image %s", image)
+	// First, check if local caching is enabled
+	// If so, look in the local cache before trying the remote registry
+	if opts.Cache && opts.CacheDir != "" && !forceNoCache {
+		cachedImage, err := cachedImage(opts, image)
+		if cachedImage != nil {
+			return cachedImage, nil
+		}
+
+		if err != nil {
+			logrus.Warnf("Error while retrieving image from cache: %v", err)
+		}
+	}
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
@@ -149,7 +148,7 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 	if d, ok := ref.(name.Digest); ok {
 		cacheKey = d.DigestStr()
 	} else {
-		img, err := remoteImage(image, opts)
+		img, err := remoteImage(image, opts, true)
 		if err != nil {
 			return nil, err
 		}

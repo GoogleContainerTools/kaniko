@@ -1,3 +1,17 @@
+# v0.7.0 Release - 12/10/2018
+
+## New Features
+* Add support for COPY --from an unrelated image
+
+## Updates
+* Speed up snapshotting by using filepath.SkipDir
+* Improve layer cache upload performance
+* Skip unpacking the base image in certain cases
+
+## Bug Fixes
+* Fix bug with call loop
+* Fix caching for multi-step builds
+
 # v0.6.0 Release - 11/06/2018
 
 ## New Features
