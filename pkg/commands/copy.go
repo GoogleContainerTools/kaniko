@@ -70,21 +70,29 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				// we need to add '/' to the end to indicate the destination is a directory
 				dest = filepath.Join(cwd, dest) + "/"
 			}
-			copiedFiles, err := util.CopyDir(fullPath, dest)
+			copiedFiles, err := util.CopyDir(fullPath, dest, c.buildcontext)
 			if err != nil {
 				return err
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := util.CopySymlink(fullPath, destPath); err != nil {
+			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
+			if err != nil {
 				return err
+			}
+			if exclude {
+				continue
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			if err := util.CopyFile(fullPath, destPath); err != nil {
+			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext)
+			if err != nil {
 				return err
+			}
+			if exclude {
+				continue
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		}
