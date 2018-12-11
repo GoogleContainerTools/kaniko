@@ -553,16 +553,19 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 func excludeFile(path, buildcontext string) bool {
 	excluded, err := parseDockerignore(buildcontext)
 	if err != nil {
+		logrus.Errorf("unable to parse dockerignore, including %s in build: %v", path, err)
 		return false
 	}
 	if HasFilepathPrefix(path, buildcontext, false) {
 		path, err = filepath.Rel(buildcontext, path)
 		if err != nil {
+			logrus.Errorf("unable to get relative path, including %s in build: %v", path, err)
 			return false
 		}
 	}
 	match, err := fileutils.Matches(path, excluded)
 	if err != nil {
+		logrus.Errorf("error matching, including %s in build: %v", path, err)
 		return false
 	}
 	return match
