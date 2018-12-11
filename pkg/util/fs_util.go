@@ -62,6 +62,8 @@ var whitelist = []WhitelistEntry{
 	},
 }
 
+var excluded []string
+
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
 func GetFSFromImage(root string, img v1.Image) ([]string, error) {
@@ -549,14 +551,25 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
+// GetExcludedFiles gets a list of files to exclude from the .dockerignore
+func GetExcludedFiles(buildcontext string) error {
+	path := filepath.Join(buildcontext, ".dockerignore")
+	if !FilepathExists(path) {
+		return nil
+	}
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrap(err, "parsing .dockerignore")
+	}
+	reader := bytes.NewBuffer(contents)
+	excluded, err = dockerignore.ReadAll(reader)
+	return err
+}
+
 // excludeFile returns true if the .dockerignore specified this file should be ignored
 func excludeFile(path, buildcontext string) bool {
-	excluded, err := parseDockerignore(buildcontext)
-	if err != nil {
-		logrus.Errorf("unable to parse dockerignore, including %s in build: %v", path, err)
-		return false
-	}
 	if HasFilepathPrefix(path, buildcontext, false) {
+		var err error
 		path, err = filepath.Rel(buildcontext, path)
 		if err != nil {
 			logrus.Errorf("unable to get relative path, including %s in build: %v", path, err)
@@ -569,20 +582,6 @@ func excludeFile(path, buildcontext string) bool {
 		return false
 	}
 	return match
-}
-
-// parseDockerignore returns a list of all paths in .dockerignore
-func parseDockerignore(buildcontext string) ([]string, error) {
-	path := filepath.Join(buildcontext, ".dockerignore")
-	if !FilepathExists(path) {
-		return nil, nil
-	}
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing .dockerignore")
-	}
-	reader := bytes.NewBuffer(contents)
-	return dockerignore.ReadAll(reader)
 }
 
 // HasFilepathPrefix checks  if the given file path begins with prefix

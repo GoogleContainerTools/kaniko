@@ -337,6 +337,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := util.GetExcludedFiles(opts.SrcContext); err != nil {
+		return nil, err
+	}
 	for index, stage := range stages {
 		sb, err := newStageBuilder(opts, stage)
 		if err != nil {
