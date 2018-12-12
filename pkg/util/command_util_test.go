@@ -249,11 +249,13 @@ func Test_MatchSources(t *testing.T) {
 }
 
 var isSrcValidTests = []struct {
+	name            string
 	srcsAndDest     []string
 	resolvedSources []string
 	shouldErr       bool
 }{
 	{
+		name: "dest isn't directory",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/bar",
@@ -266,6 +268,7 @@ var isSrcValidTests = []struct {
 		shouldErr: true,
 	},
 	{
+		name: "dest is directory",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/bar",
@@ -278,6 +281,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy file to file",
 		srcsAndDest: []string{
 			"context/bar/bam",
 			"dest",
@@ -288,16 +292,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
-		srcsAndDest: []string{
-			"context/foo",
-			"dest",
-		},
-		resolvedSources: []string{
-			"context/foo",
-		},
-		shouldErr: false,
-	},
-	{
+		name: "copy files with wildcards to dir",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/b*",
@@ -310,6 +305,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy multilple files with wildcards to file",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/b*",
@@ -322,6 +318,7 @@ var isSrcValidTests = []struct {
 		shouldErr: true,
 	},
 	{
+		name: "copy two files to file, one of which doesn't exist",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/doesntexist*",
@@ -333,6 +330,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy dir to dest not specified as dir",
 		srcsAndDest: []string{
 			"context/",
 			"dest",
@@ -343,6 +341,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy url to file",
 		srcsAndDest: []string{
 			testURL,
 			"dest",
@@ -352,12 +351,43 @@ var isSrcValidTests = []struct {
 		},
 		shouldErr: false,
 	},
+	{
+		name: "copy two srcs, one excluded, to file",
+		srcsAndDest: []string{
+			"ignore/foo",
+			"ignore/bar",
+			"dest",
+		},
+		resolvedSources: []string{
+			"ignore/foo",
+			"ignore/bar",
+		},
+		shouldErr: false,
+	},
+	{
+		name: "copy two srcs, both excluded, to file",
+		srcsAndDest: []string{
+			"ignore/baz",
+			"ignore/bar",
+			"dest",
+		},
+		resolvedSources: []string{
+			"ignore/baz",
+			"ignore/bar",
+		},
+		shouldErr: true,
+	},
 }
 
 func Test_IsSrcsValid(t *testing.T) {
 	for _, test := range isSrcValidTests {
-		err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
-		testutil.CheckError(t, test.shouldErr, err)
+		t.Run(test.name, func(t *testing.T) {
+			if err := GetExcludedFiles(buildContextPath); err != nil {
+				t.Fatalf("error getting excluded files: %v", err)
+			}
+			err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
+			testutil.CheckError(t, test.shouldErr, err)
+		})
 	}
 }
 

@@ -583,7 +583,7 @@ func TestCopySymlink(t *testing.T) {
 			if err := os.Symlink(tc.linkTarget, link); err != nil {
 				t.Fatal(err)
 			}
-			if err := CopySymlink(link, dest); err != nil {
+			if _, err := CopySymlink(link, dest, ""); err != nil {
 				t.Fatal(err)
 			}
 			got, err := os.Readlink(dest)
