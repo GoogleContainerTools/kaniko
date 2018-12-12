@@ -38,7 +38,7 @@ type LayerCache interface {
 	RetrieveLayer(string) (v1.Image, error)
 }
 
-// Registry Cache is the registry cache
+// RegistryCache is the registry cache
 type RegistryCache struct {
 	Opts *config.KanikoOptions
 }
@@ -65,7 +65,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 		return nil, err
 	}
 
-	/* cf, err := img.ConfigFile()
+	cf, err := img.ConfigFile()
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("retrieving config file for %s", cache))
 	}
@@ -74,7 +74,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	// Layer is stale, rebuild it.
 	if expiry.Before(time.Now()) {
 		return nil, errors.Wrap(nil, fmt.Sprintf("Cache entry expired: %s", cache))
-	} */
+	}
 
 	// Force the manifest to be populated
 	if _, err := img.RawManifest(); err != nil {
