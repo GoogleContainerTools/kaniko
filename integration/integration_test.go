@@ -252,6 +252,15 @@ func TestLayers(t *testing.T) {
 			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
 		})
 	}
+	if os.Getenv("BENCHMARK") == "true" {
+		f, err := os.Create("benchmark_layers")
+		if err != nil {
+			t.Logf("Failed to create benchmark file")
+		} else {
+			f.WriteString(timing.Summary())
+		}
+		defer f.Close()
+	}
 }
 
 // Build each image with kaniko twice, and then make sure they're exactly the same
@@ -283,6 +292,15 @@ func TestCache(t *testing.T) {
 			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
 			checkContainerDiffOutput(t, diff, expected)
 		})
+	}
+	if os.Getenv("BENCHMARK") == "true" {
+		f, err := os.Create("benchmark_cache")
+		if err != nil {
+			t.Logf("Failed to create benchmark file")
+		} else {
+			f.WriteString(timing.Summary())
+		}
+		defer f.Close()
 	}
 }
 

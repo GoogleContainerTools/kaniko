@@ -71,9 +71,13 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	}
 
 	expiry := cf.Created.Add(rc.Opts.CacheTTL)
+	logrus.Infof("CREATED = %v", cf.Created)
+	logrus.Infof("TTL = %v", rc.Opts.CacheTTL)
+	logrus.Infof("EXPIRY = %v", expiry)
 	// Layer is stale, rebuild it.
 	if expiry.Before(time.Now()) {
-		return nil, errors.Wrap(nil, fmt.Sprintf("Cache entry expired: %s", cache))
+		logrus.Infof("Cache entry expired: %s", cache)
+		return nil, errors.New(fmt.Sprintf("Cache entry expired: %s", cache))
 	}
 
 	// Force the manifest to be populated
