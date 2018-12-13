@@ -396,11 +396,11 @@ func getImageDetails(image string) (*imageDetails, error) {
 func logBenchmarks(benchmark string) error {
 	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		f, err := os.Create(benchmark)
-		defer f.Close()
 		if err != nil {
 			return err
 		}
 		f.WriteString(timing.Summary())
+		defer f.Close()
 	}
 	return nil
 }
