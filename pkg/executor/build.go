@@ -412,7 +412,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
-	names := string[]{}
+	var names = []string{}
 
 	for stageIndex, s := range stages {
 		for _, cmd := range s.Commands {
