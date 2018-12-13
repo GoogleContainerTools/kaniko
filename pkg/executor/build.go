@@ -448,7 +448,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			}
 		}
 		// Store the name of the current stage in the list with names, if applicable.
-		if s.Name != nil && s.Name != "" {
+		if s.Name != "" {
 			names = append(names, s.Name)
 		}
 	}
