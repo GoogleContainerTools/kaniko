@@ -188,7 +188,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	}
 
 	benchmarkEnv := "BENCHMARK_FILE=false"
-	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil && b {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		os.Mkdir("benchmarks", 0755)
 		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
 	}
@@ -248,7 +248,7 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 
 	for dockerfile := range d.TestCacheDockerfiles {
 		benchmarkEnv := "BENCHMARK_FILE=false"
-		if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil && b {
+		if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 			os.Mkdir("benchmarks", 0755)
 			benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
 		}

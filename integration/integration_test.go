@@ -218,7 +218,7 @@ func TestRun(t *testing.T) {
 		})
 	}
 
-	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil && b {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		f, err := os.Create("benchmark")
 		if err != nil {
 			t.Logf("Failed to create benchmark file")
@@ -253,7 +253,7 @@ func TestLayers(t *testing.T) {
 			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
 		})
 	}
-	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil && b {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		f, err := os.Create("benchmark_layers")
 		if err != nil {
 			t.Logf("Failed to create benchmark file")
@@ -294,7 +294,7 @@ func TestCache(t *testing.T) {
 			checkContainerDiffOutput(t, diff, expected)
 		})
 	}
-	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil && b {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		f, err := os.Create("benchmark_cache")
 		if err != nil {
 			t.Logf("Failed to create benchmark file")
