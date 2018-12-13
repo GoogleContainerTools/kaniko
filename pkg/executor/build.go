@@ -421,9 +421,9 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 				continue
 			}
 
-			// FROMs at this point are guaranteed to be either an integer referring to a previous stage, 
+			// FROMs at this point are guaranteed to be either an integer referring to a previous stage,
 			// the name of a previous stage, or a name of a remote image.
-			
+
 			// If it is an integer stage index, validate that it is actually a previous index
 			if fromIndex, err := strconv.Atoi(c.From); err == nil && stageIndex > fromIndex && fromIndex >= 0 {
 				continue
