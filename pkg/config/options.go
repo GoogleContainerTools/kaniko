@@ -16,6 +16,10 @@ limitations under the License.
 
 package config
 
+import (
+	"time"
+)
+
 // KanikoOptions are options that are set by command line arguments
 type KanikoOptions struct {
 	DockerfilePath    string
@@ -37,6 +41,7 @@ type KanikoOptions struct {
 	NoPush            bool
 	Cache             bool
 	Cleanup           bool
+	CacheTTL          time.Duration
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.

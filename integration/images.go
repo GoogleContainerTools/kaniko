@@ -188,7 +188,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	}
 
 	benchmarkEnv := "BENCHMARK_FILE=false"
-	if os.Getenv("BENCHMARK") == "true" {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		os.Mkdir("benchmarks", 0755)
 		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
 	}
@@ -247,11 +247,17 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 	cacheFlag := "--cache=true"
 
 	for dockerfile := range d.TestCacheDockerfiles {
+		benchmarkEnv := "BENCHMARK_FILE=false"
+		if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
+			os.Mkdir("benchmarks", 0755)
+			benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
+		}
 		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
 		kanikoCmd := exec.Command("docker",
 			append([]string{"run",
 				"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
 				"-v", cwd + ":/workspace",
+				"-e", benchmarkEnv,
 				ExecutorImage,
 				"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 				"-d", kanikoImage,
@@ -261,7 +267,10 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 				"--cache-dir", cacheDir})...,
 		)
 
-		if _, err := RunCommandWithoutTest(kanikoCmd); err != nil {
+		timer := timing.Start(dockerfile + "_kaniko_cached_" + strconv.Itoa(version))
+		_, err := RunCommandWithoutTest(kanikoCmd)
+		timing.DefaultRun.Stop(timer)
+		if err != nil {
 			return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
 		}
 	}

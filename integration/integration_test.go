@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -217,14 +218,9 @@ func TestRun(t *testing.T) {
 		})
 	}
 
-	if os.Getenv("BENCHMARK") == "true" {
-		f, err := os.Create("benchmark")
-		if err != nil {
-			t.Logf("Failed to create benchmark file")
-		} else {
-			f.WriteString(timing.Summary())
-		}
-		defer f.Close()
+	err := logBenchmarks("benchmark")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
 	}
 }
 
@@ -251,6 +247,11 @@ func TestLayers(t *testing.T) {
 			RunCommand(pullCmd, t)
 			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
 		})
+	}
+
+	err := logBenchmarks("benchmark_layers")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
 	}
 }
 
@@ -283,6 +284,11 @@ func TestCache(t *testing.T) {
 			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
 			checkContainerDiffOutput(t, diff, expected)
 		})
+	}
+
+	err := logBenchmarks("benchmark_cache")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
 	}
 }
 
@@ -385,4 +391,16 @@ func getImageDetails(image string) (*imageDetails, error) {
 		numLayers: len(layers),
 		digest:    digest.Hex,
 	}, nil
+}
+
+func logBenchmarks(benchmark string) error {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
+		f, err := os.Create(benchmark)
+		if err != nil {
+			return err
+		}
+		f.WriteString(timing.Summary())
+		defer f.Close()
+	}
+	return nil
 }
