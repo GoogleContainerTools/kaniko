@@ -127,7 +127,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile)
+	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
 	if err != nil {
 		fmt.Println("Failed to upload build context", err)
 		os.Exit(1)
