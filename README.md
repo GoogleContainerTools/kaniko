@@ -379,6 +379,10 @@ This flag takes a single snapshot of the filesystem at the end of the build, so 
 
 Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
 #### --snapshotMode
 
 You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
