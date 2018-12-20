@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -215,6 +217,11 @@ func TestRun(t *testing.T) {
 
 		})
 	}
+
+	err := logBenchmarks("benchmark")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
+	}
 }
 
 func TestLayers(t *testing.T) {
@@ -240,6 +247,11 @@ func TestLayers(t *testing.T) {
 			RunCommand(pullCmd, t)
 			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
 		})
+	}
+
+	err := logBenchmarks("benchmark_layers")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
 	}
 }
 
@@ -273,31 +285,11 @@ func TestCache(t *testing.T) {
 			checkContainerDiffOutput(t, diff, expected)
 		})
 	}
-}
 
-func TestDockerignore(t *testing.T) {
-	t.Run(fmt.Sprintf("test_%s", ignoreDockerfile), func(t *testing.T) {
-		if err := setupIgnoreTestDir(); err != nil {
-			t.Fatalf("error setting up ignore test dir: %v", err)
-		}
-		if err := generateDockerignoreImages(config.imageRepo); err != nil {
-			t.Fatalf("error generating dockerignore test images: %v", err)
-		}
-
-		dockerImage := GetDockerImage(config.imageRepo, ignoreDockerfile)
-		kanikoImage := GetKanikoImage(config.imageRepo, ignoreDockerfile)
-
-		// container-diff
-		daemonDockerImage := daemonPrefix + dockerImage
-		containerdiffCmd := exec.Command("container-diff", "diff",
-			daemonDockerImage, kanikoImage,
-			"-q", "--type=file", "--type=metadata", "--json")
-		diff := RunCommand(containerdiffCmd, t)
-		t.Logf("diff = %s", string(diff))
-
-		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
-		checkContainerDiffOutput(t, diff, expected)
-	})
+	err := logBenchmarks("benchmark_cache")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
+	}
 }
 
 type fileDiff struct {
@@ -399,4 +391,16 @@ func getImageDetails(image string) (*imageDetails, error) {
 		numLayers: len(layers),
 		digest:    digest.Hex,
 	}, nil
+}
+
+func logBenchmarks(benchmark string) error {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
+		f, err := os.Create(benchmark)
+		if err != nil {
+			return err
+		}
+		f.WriteString(timing.Summary())
+		defer f.Close()
+	}
+	return nil
 }

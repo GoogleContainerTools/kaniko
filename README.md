@@ -12,36 +12,62 @@ This enables building container images in environments that can't easily or secu
 kaniko is meant to be run as an image, `gcr.io/kaniko-project/executor`.
 We do **not** recommend running the kaniko executor binary in another image, as it might not work.
 
-- [Kaniko](#kaniko)
-  - [How does kaniko work?](#how-does-kaniko-work)
-  - [Known Issues](#known-issues)
+_If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [How does kaniko work?](#how-does-kaniko-work)
+- [Known Issues](#known-issues)
 - [Demo](#demo)
 - [Using kaniko](#using-kaniko)
   - [kaniko Build Contexts](#kaniko-build-contexts)
   - [Running kaniko](#running-kaniko)
     - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+      - [Kubernetes secret](#kubernetes-secret)
     - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
     - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-    - [Running kaniko in Docker](#running-kaniko-in-Docker)
+    - [Running kaniko in Docker](#running-kaniko-in-docker)
   - [Caching](#caching)
+    - [Caching Layers](#caching-layers)
+    - [Caching Base Images](#caching-base-images)
   - [Pushing to Different Registries](#pushing-to-different-registries)
+    - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
   - [Additional Flags](#additional-flags)
+    - [--build-arg](#--build-arg)
+    - [--cache](#--cache)
+    - [--cache-dir](#--cache-dir)
+    - [--cache-repo](#--cache-repo)
+    - [--cleanup](#--cleanup)
+    - [--insecure](#--insecure)
+    - [--insecure-pull](#--insecure-pull)
+    - [--no-push](#--no-push)
+    - [--reproducible](#--reproducible)
+    - [--single-snapshot](#--single-snapshot)
+    - [--snapshotMode](#--snapshotmode)
+    - [--skip-tls-verify](#--skip-tls-verify)
+    - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
+    - [--target](#--target)
+    - [--tarPath](#--tarpath)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
 - [Community](#community)
 - [Limitations](#limitations)
+  - [mtime and snapshotting](#mtime-and-snapshotting)
 
-_If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-### How does kaniko work?
+## How does kaniko work?
 
 The kaniko executor image is responsible for building an image from a Dockerfile and pushing it to a registry.
 Within the executor image, we extract the filesystem of the base image (the FROM image in the Dockerfile).
 We then execute the commands in the Dockerfile, snapshotting the filesystem in userspace after each one.
 After each command, we append a layer of changed files to the base image (if there are any) and update image metadata.
 
-### Known Issues
+## Known Issues
+
 kaniko does not support building Windows containers.
 
 ## Demo
@@ -60,7 +86,7 @@ To use kaniko to build and push an image for you, you will need:
 kaniko's build context is very similar to the build context you would send your Docker daemon for an image build; it represents a directory containing a Dockerfile which kaniko will use to build your image.
 For example, a `COPY` command in your Dockerfile should refer to a file in the build context.
 
-You will need to store your build context in a place that kaniko can access. 
+You will need to store your build context in a place that kaniko can access.
 Right now, kaniko supports these storage solutions:
 - GCS Bucket
 - S3 Bucket
@@ -69,16 +95,18 @@ Right now, kaniko supports these storage solutions:
 _Note: the local directory option refers to a directory within the kaniko container.
 If you wish to use this option, you will need to mount in your build context into the container as a directory._
 
-If using a GCS or S3 bucket, you will first need to create a compressed tar of your build context and upload it to your bucket. 
+If using a GCS or S3 bucket, you will first need to create a compressed tar of your build context and upload it to your bucket.
 Once running, kaniko will then download and unpack the compressed tar of the build context before starting the image build.
 
 To create a compressed tar, you can run:
+
 ```shell
 tar -C <path to build context> -zcvf context.tar.gz .
 ```
-Then, copy over the compressed tar into your bucket. 
+Then, copy over the compressed tar into your bucket.
 For example, we can copy over the compressed tar to a GCS bucket with gsutil:
-```
+
+```shell
 gsutil cp context.tar.gz gs://<bucket name>
 ```
 
@@ -87,11 +115,11 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 |  Source | Prefix  |
 |---------|---------|
 | Local Directory  | dir://[path to a directory in the kaniko container]  |
-| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     | 
+| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     |
 | S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
-For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`. 
+For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
 
 ### Running kaniko
 
@@ -124,7 +152,7 @@ To create a secret to authenticate to Google Cloud Registry, follow these steps:
 kubectl create secret generic kaniko-secret --from-file=<path to kaniko-secret.json>
 ```
 
-_Note: If using a GCS bucket in the same GCP project as a build context, this service account should now also have permissions to read from that bucket._ 
+_Note: If using a GCS bucket in the same GCP project as a build context, this service account should now also have permissions to read from that bucket._
 
 The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
 
@@ -212,28 +240,29 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
 ### Caching
 
 #### Caching Layers
-kaniko currently can cache layers created by `RUN` commands in a remote repository. 
+kaniko currently can cache layers created by `RUN` commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
 
 Users can opt in to caching by setting the `--cache=true` flag.
 A remote repository for storing cached layers can be provided via the `--cache-repo` flag.
-If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.  
+If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.
 
 #### Caching Base Images
-kaniko can cache images in a local directory that can be volume mounted into the kaniko image. 
-To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming 
+
+kaniko can cache images in a local directory that can be volume mounted into the kaniko image.
+To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming
 image at `gcr.io/kaniko-project/warmer`:
 
 ```shell
 docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --image=<image to cache> --image=<another image to cache>
 ```
 
-`--image` can be specified for any number of desired images. 
+`--image` can be specified for any number of desired images.
 This command will cache those images by digest in a local directory named `cache`.
-Once the cache is populated, caching is opted into with the same `--cache=true` flag as above. 
-The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer. 
+Once the cache is populated, caching is opted into with the same `--cache=true` flag as above.
+The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer.
 See the `examples` directory for how to use with kubernetes clusters and persistent cache volumes.
 
 ### Pushing to Different Registries
@@ -302,56 +331,20 @@ To configure credentials, you will need to do the following:
 
 ### Additional Flags
 
-#### --snapshotMode
-
-You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
-If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
-[limitations related to mtime](#mtime-and-snapshotting)).
-
 #### --build-arg
 
 This flag allows you to pass in ARG values at build time, similarly to Docker.
 You can set it multiple times for multiple arguments.
 
-#### --single-snapshot
-
-This flag takes a single snapshot of the filesystem at the end of the build, so only one layer will be appended to the base image.
-
-#### --reproducible
-
-Set this flag to strip timestamps out of the built image and make it reproducible.
-
-#### --tarPath
-
-Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
-
-#### --target
-
-Set this flag to indicate which build stage is the target build stage.
-
-#### --no-push
-
-Set this flag if you only want to build the image, without pushing to a registry.
-
-#### --insecure
-
-Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
-
-#### --skip-tls-verify
-
-Set this flag to skip TLS certificate validation when pushing images to a registry. It is supposed to be used for testing purposes only and should not be used in production!
-
-#### --insecure-pull
-
-Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
-
-#### --skip-tls-verify-pull
-
-Set this flag to skip TLS certificate validation when pulling images from a registry. It is supposed to be used for testing purposes only and should not be used in production!
-
 #### --cache
 
 Set this flag as `--cache=true` to opt in to caching with kaniko.
+
+#### --cache-dir
+
+Set this flag to specify a local directory cache for base images. Defaults to `/cache`.
+
+_This flag must be used in conjunction with the `--cache=true` flag._
 
 #### --cache-repo
 
@@ -362,15 +355,43 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
-#### --cache-dir
-
-Set this flag to specify a local directory cache for base images. Defaults to `/cache`.
-
-_This flag must be used in conjunction with the `--cache=true` flag._
-
 #### --cleanup
 
-Set this flag to cleanup the filesystem at the end, leaving a clean kaniko container (if you want to build multiple images in the same container, using the debug kaniko image)
+Set this flag to clean the filesystem at the end of the build.
+
+#### --insecure-pull
+
+Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --no-push
+
+Set this flag if you only want to build the image, without pushing to a registry.
+
+#### --reproducible
+
+Set this flag to strip timestamps out of the built image and make it reproducible.
+
+#### --single-snapshot
+
+This flag takes a single snapshot of the filesystem at the end of the build, so only one layer will be appended to the base image.
+
+#### --skip-tls-verify
+
+Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --snapshotMode
+
+You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
+If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
+[limitations related to mtime](#mtime-and-snapshotting)).
+
+#### --target
+
+Set this flag to indicate which build stage is the target build stage.
+
+#### --tarPath
+
+Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
 
 ### Debug Image
 

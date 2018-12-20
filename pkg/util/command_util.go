@@ -186,7 +186,14 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	dest := srcsAndDest[len(srcsAndDest)-1]
 
 	if !ContainsWildcards(srcs) {
-		if len(srcs) > 1 && !IsDestDir(dest) {
+		totalSrcs := 0
+		for _, src := range srcs {
+			if excludeFile(src, root) {
+				continue
+			}
+			totalSrcs++
+		}
+		if totalSrcs > 1 && !IsDestDir(dest) {
 			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 		}
 	}
@@ -216,7 +223,12 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		if err != nil {
 			return err
 		}
-		totalFiles += len(files)
+		for _, file := range files {
+			if excludeFile(file, root) {
+				continue
+			}
+			totalFiles++
+		}
 	}
 	if totalFiles == 0 {
 		return errors.New("copy failed: no source files specified")

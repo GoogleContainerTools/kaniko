@@ -19,7 +19,9 @@ package util
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,10 +29,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/docker/docker/builder/dockerignore"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,6 +61,8 @@ var whitelist = []WhitelistEntry{
 		PrefixMatchOnly: false,
 	},
 }
+
+var excluded []string
 
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
@@ -245,8 +250,8 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return errors.Wrapf(err, "error removing %s to make way for new link", hdr.Name)
 			}
 		}
-
-		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+		link := filepath.Clean(filepath.Join(dest, hdr.Linkname))
+		if err := os.Link(link, path); err != nil {
 			return err
 		}
 
@@ -479,7 +484,7 @@ func determineChownUIDGid(fileInfo os.FileInfo, chownUID, chownGid int) (uint32,
 // CopyDir copies the file or directory at src to dest
 // will chown the file or directory to the uid/gid if non-negative
 // It returns a list of files it copied over
-func CopyDir(src, dest string, chownUID, chownGid int) ([]string, error) {
+func CopyDir(src, dest, buildcontext string, chownUID, chownGid int) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err
@@ -494,6 +499,10 @@ func CopyDir(src, dest string, chownUID, chownGid int) ([]string, error) {
 
 		uid, gid := determineChownUIDGid(fi, chownUID, chownGid)
 
+		if excludeFile(fullPath, buildcontext) {
+			logrus.Debugf("%s found in .dockerignore, ignoring", src)
+			continue
+		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
 			logrus.Debugf("Creating directory %s", destPath)
@@ -506,12 +515,12 @@ func CopyDir(src, dest string, chownUID, chownGid int) ([]string, error) {
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := CopySymlink(fullPath, destPath, chownUID, chownGid); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if err := CopyFile(fullPath, destPath, chownUID, chownGid); err != nil {
+			if _, err := CopyFile(fullPath, destPath, buildcontext, chownUID, chownGid); err != nil {
 				return nil, err
 			}
 		}
@@ -521,45 +530,85 @@ func CopyDir(src, dest string, chownUID, chownGid int) ([]string, error) {
 }
 
 // CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest string, uidSigned, gidSigned int) error {
+// NOTE: Docker does not allow for copying symlinks and will copy as a regular
+// file. Trying to stat/chown symlinks here like we do for CopyFile would result
+// in trying to stat/chown the underlying file (which therefore needs to exist, but won't in unit tests)
+// it also doesn't totally make sense to chown the actual link itself, so instead
+// we just don't allow COPY --chown for symlinks (since docker doesn't either)
+func CopySymlink(src, dest, buildcontext string) (bool, error) {
+	if excludeFile(src, buildcontext) {
+		logrus.Debugf("%s found in .dockerignore, ignoring", src)
+		return true, nil
+	}
 	link, err := os.Readlink(src)
 	if err != nil {
-		return err
+		return false, err
 	}
-	linkDst := filepath.Join(dest, link)
-	if err = os.Symlink(linkDst, dest); err != nil {
-		return err
+	if FilepathExists(dest) {
+		if err := os.RemoveAll(dest); err != nil {
+			return false, err
+		}
 	}
-
-	fi, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	uid, gid := determineChownUIDGid(fi, uidSigned, gidSigned)
-
-	return os.Chown(dest, int(uid), int(gid))
+	return false, os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest
 // If uid/gid are non-negative, files will be created with that owner/group
 // otherwise uid/gid will be preserved
-func CopyFile(src, dest string, uidSigned, gidSigned int) error {
+func CopyFile(src, dest, buildcontext string, uidSigned, gidSigned int) (bool, error) {
+	if excludeFile(src, buildcontext) {
+		logrus.Debugf("%s found in .dockerignore, ignoring", src)
+		return true, nil
+	}
 	fi, err := os.Stat(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	logrus.Debugf("Copying file %s to %s", src, dest)
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer srcFile.Close()
 
 	uid, gid := determineChownUIDGid(fi, uidSigned, gidSigned)
-	return CreateFile(dest, srcFile, fi.Mode(), uid, gid)
+	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
-// HasFilepathPrefix checks if the given file path begins with prefix
+// GetExcludedFiles gets a list of files to exclude from the .dockerignore
+func GetExcludedFiles(buildcontext string) error {
+	path := filepath.Join(buildcontext, ".dockerignore")
+	if !FilepathExists(path) {
+		return nil
+	}
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrap(err, "parsing .dockerignore")
+	}
+	reader := bytes.NewBuffer(contents)
+	excluded, err = dockerignore.ReadAll(reader)
+	return err
+}
+
+// excludeFile returns true if the .dockerignore specified this file should be ignored
+func excludeFile(path, buildcontext string) bool {
+	if HasFilepathPrefix(path, buildcontext, false) {
+		var err error
+		path, err = filepath.Rel(buildcontext, path)
+		if err != nil {
+			logrus.Errorf("unable to get relative path, including %s in build: %v", path, err)
+			return false
+		}
+	}
+	match, err := fileutils.Matches(path, excluded)
+	if err != nil {
+		logrus.Errorf("error matching, including %s in build: %v", path, err)
+		return false
+	}
+	return match
+}
+
+// HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)

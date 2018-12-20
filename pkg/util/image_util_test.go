@@ -47,14 +47,14 @@ func Test_StandardImage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	original := retrieveRemoteImage
+	original := RetrieveRemoteImage
 	defer func() {
-		retrieveRemoteImage = original
+		RetrieveRemoteImage = original
 	}()
-	mock := func(image string, opts *config.KanikoOptions) (v1.Image, error) {
+	mock := func(image string, opts *config.KanikoOptions, forceNoCache bool) (v1.Image, error) {
 		return nil, nil
 	}
-	retrieveRemoteImage = mock
+	RetrieveRemoteImage = mock
 	actual, err := RetrieveSourceImage(config.KanikoStage{
 		Stage: stages[0],
 	}, &config.KanikoOptions{})
