@@ -412,13 +412,13 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
-  t := timing.Start("Fetching Extra Stages")
+        t := timing.Start("Fetching Extra Stages")
 	defer timing.DefaultRun.Stop(t)
 
 	var names = []string{}
 
 	for stageIndex, s := range stages {
-    for _, cmd := range s.Commands {
+                for _, cmd := range s.Commands {
 			c, ok := cmd.(*instructions.CopyCommand)
 			if !ok || c.From == "" {
 				continue
