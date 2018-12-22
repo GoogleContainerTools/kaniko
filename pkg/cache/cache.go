@@ -18,7 +18,9 @@ package cache
 
 import (
 	"fmt"
+	"os"
 	"path"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -31,14 +33,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// LayerCache is the layer cache
 type LayerCache interface {
 	RetrieveLayer(string) (v1.Image, error)
 }
 
+// RegistryCache is the registry cache
 type RegistryCache struct {
 	Opts *config.KanikoOptions
 }
 
+// RetrieveLayer retrieves a layer from the cache given the cache key ck.
 func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	cache, err := Destination(rc.Opts, ck)
 	if err != nil {
@@ -59,6 +64,19 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	cf, err := img.ConfigFile()
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("retrieving config file for %s", cache))
+	}
+
+	expiry := cf.Created.Add(rc.Opts.CacheTTL)
+	// Layer is stale, rebuild it.
+	if expiry.Before(time.Now()) {
+		logrus.Infof("Cache entry expired: %s", cache)
+		return nil, errors.New(fmt.Sprintf("Cache entry expired: %s", cache))
+	}
+
 	// Force the manifest to be populated
 	if _, err := img.RawManifest(); err != nil {
 		return nil, err
@@ -81,6 +99,7 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
 
+// LocalSource retieves a source image from a local cache given cacheKey
 func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {
@@ -88,6 +107,18 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 	}
 
 	path := path.Join(cache, cacheKey)
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "geting file info")
+	}
+
+	// A stale cache is a bad cache
+	expiry := fi.ModTime().Add(opts.CacheTTL)
+	if expiry.Before(time.Now()) {
+		logrus.Debugf("Cached image is too old: %v", fi.ModTime())
+		return nil, nil
+	}
 
 	imgTar, err := tarball.ImageFromPath(path, nil)
 	if err != nil {

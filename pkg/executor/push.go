@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -118,6 +119,11 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	}
 	logrus.Infof("Pushing layer %s to cache now", cache)
 	empty := empty.Image
+	empty, err = mutate.CreatedAt(empty, v1.Time{Time: time.Now()})
+	if err != nil {
+		return errors.Wrap(err, "setting empty image created time")
+	}
+
 	empty, err = mutate.Append(empty,
 		mutate.Addendum{
 			Layer: layer,
