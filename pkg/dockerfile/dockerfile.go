@@ -48,7 +48,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
 
 	stages, metaArgs, err := Parse(d)
