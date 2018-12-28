@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -141,6 +142,9 @@ func cacheFlagsValid() error {
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
 func resolveDockerfilePath() error {
+	if match, _ := regexp.MatchString("^https?://", opts.DockerfilePath); match {
+		return nil
+	}
 	if util.FilepathExists(opts.DockerfilePath) {
 		abs, err := filepath.Abs(opts.DockerfilePath)
 		if err != nil {

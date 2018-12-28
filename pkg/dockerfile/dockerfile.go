@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -32,10 +34,23 @@ import (
 
 // Stages parses a Dockerfile and returns an array of KanikoStage
 func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
-	d, err := ioutil.ReadFile(opts.DockerfilePath)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
+	var err error
+	var d []uint8
+	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
+	if match {
+		response, err := http.Get(opts.DockerfilePath)
+		if err != nil {
+			return nil, err
+		}
+		d, err = ioutil.ReadAll(response.Body)
+	} else {
+		d, err = ioutil.ReadFile(opts.DockerfilePath)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	stages, metaArgs, err := Parse(d)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing dockerfile")
