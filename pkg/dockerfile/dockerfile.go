@@ -38,9 +38,9 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	var d []uint8
 	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
 	if match {
-		response, err := http.Get(opts.DockerfilePath)
-		if err != nil {
-			return nil, err
+		response, e := http.Get(opts.DockerfilePath)
+		if e != nil {
+			return nil, e
 		}
 		d, err = ioutil.ReadAll(response.Body)
 	} else {
