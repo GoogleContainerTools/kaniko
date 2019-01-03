@@ -3,9 +3,6 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile",
            "-t", "gcr.io/kaniko-project/executor:${COMMIT_SHA}", "."]
-  - name: "gcr.io/cloud-builders/docker"
-    args: ["build", "-f", "deploy/Dockerfile",
-           "-t", "gcr.io/kaniko-project/executor:latest", "."]
   # Then, we want to build kaniko:debug
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
@@ -17,12 +14,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_warmer",
            "-t", "gcr.io/kaniko-project/warmer:${COMMIT_SHA}", "."]
-  - name: "gcr.io/cloud-builders/docker"
-    args: ["build", "-f", "deploy/Dockerfile_warmer",
-           "-t", "gcr.io/kaniko-project/warmer:latest", "."]
 images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}",
-         "gcr.io/kaniko-project/executor:latest",
          "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}",
          "gcr.io/kaniko-project/executor:debug",
-         "gcr.io/kaniko-project/warmer:${COMMIT_SHA}",
-         "gcr.io/kaniko-project/warmer:latest"]
+         "gcr.io/kaniko-project/warmer:${COMMIT_SHA}"]
