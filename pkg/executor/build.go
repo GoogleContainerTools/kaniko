@@ -414,17 +414,28 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
 	t := timing.Start("Fetching Extra Stages")
 	defer timing.DefaultRun.Stop(t)
-	for _, s := range stages {
+
+	var names = []string{}
+
+	for stageIndex, s := range stages {
 		for _, cmd := range s.Commands {
 			c, ok := cmd.(*instructions.CopyCommand)
 			if !ok || c.From == "" {
 				continue
 			}
 
-			// FROMs at this point are guaranteed to be either an integer referring to a previous stage or
-			// a name of a remote image.
-			if _, err := strconv.Atoi(c.From); err == nil {
+			// FROMs at this point are guaranteed to be either an integer referring to a previous stage,
+			// the name of a previous stage, or a name of a remote image.
+
+			// If it is an integer stage index, validate that it is actually a previous index
+			if fromIndex, err := strconv.Atoi(c.From); err == nil && stageIndex > fromIndex && fromIndex >= 0 {
 				continue
+			}
+			// Check if the name is the alias of a previous stage
+			for _, name := range names {
+				if name == c.From {
+					continue
+				}
 			}
 			// This must be an image name, fetch it.
 			logrus.Debugf("Found extra base image stage %s", c.From)
@@ -439,10 +450,13 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 				return err
 			}
 		}
+		// Store the name of the current stage in the list with names, if applicable.
+		if s.Name != "" {
+			names = append(names, s.Name)
+		}
 	}
 	return nil
 }
-
 func extractImageToDependecyDir(name string, image v1.Image) error {
 	t := timing.Start("Extracting Image to Dependency Dir")
 	defer timing.DefaultRun.Stop(t)
