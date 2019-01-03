@@ -19,9 +19,10 @@ package snapshot
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/karrick/godirwalk"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
@@ -141,22 +142,22 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	defer t.Close()
 
 	// Save the fs state in a map to iterate over later.
-	memFs := map[string]os.FileInfo{}
-	filepath.Walk(s.directory, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if util.IsInWhitelist(path) {
-			if util.IsDestDir(path) {
-				logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
-				return filepath.SkipDir
+	memFs := map[string]*godirwalk.Dirent{}
+	godirwalk.Walk(s.directory, &godirwalk.Options{
+		Callback: func(path string, ent *godirwalk.Dirent) error {
+			if util.IsInWhitelist(path) {
+				if util.IsDestDir(path) {
+					logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
+					return filepath.SkipDir
+				}
+				return nil
 			}
+			memFs[path] = ent
 			return nil
-		}
-
-		memFs[path] = info
-		return nil
-	})
+		},
+		Unsorted: true,
+	},
+	)
 
 	// First handle whiteouts
 	for p := range memFs {
