@@ -38,6 +38,13 @@ type CopyCommand struct {
 	snapshotFiles []string
 }
 
+func (c *CopyCommand) RequiresUnpackedFS() bool {
+    // We want to unpack the root filesystem if the copy command is going
+    // to require resolving UIDs or GIDs that might have been defined
+    // in the base image
+    return c.cmd.Chown != ""
+}
+
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// Resolve from
 	if c.cmd.From != "" {
