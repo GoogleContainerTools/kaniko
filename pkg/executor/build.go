@@ -390,7 +390,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
 				}
 				defer f.Close()
-				f.WriteString(timing.Summary())
+				s, err := timing.JSON()
+				if err != nil {
+					logrus.Warnf("Unable to write benchmark file: %s", err)
+				}
+				f.WriteString(s)
 			}
 			return sourceImage, nil
 		}
