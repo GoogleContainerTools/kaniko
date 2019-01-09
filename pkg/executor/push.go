@@ -25,6 +25,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
@@ -53,6 +54,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		logrus.Info("Skipping push to container registry due to --no-push flag")
 		return nil
 	}
+	t := timing.Start("Total Push Time")
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
@@ -103,6 +105,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
+	timing.DefaultRun.Stop(t)
 	return nil
 }
 

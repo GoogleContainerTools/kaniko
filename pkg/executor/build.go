@@ -382,20 +382,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			timing.DefaultRun.Stop(t)
-			benchmarkFile := os.Getenv("BENCHMARK_FILE")
-			// false is a keyword for integration tests to turn off benchmarking
-			if benchmarkFile != "" && benchmarkFile != "false" {
-				f, err := os.Create(benchmarkFile)
-				if err != nil {
-					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
-				}
-				defer f.Close()
-				s, err := timing.JSON()
-				if err != nil {
-					logrus.Warnf("Unable to write benchmark file: %s", err)
-				}
-				f.WriteString(s)
-			}
 			return sourceImage, nil
 		}
 		if stage.SaveStage {
