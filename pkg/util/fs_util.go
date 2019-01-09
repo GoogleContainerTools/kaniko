@@ -428,10 +428,11 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	return dest.Chown(int(uid), int(gid))
 }
 
-// AddVolumePathToWhitelist adds the given path to the whitelist with
-// PrefixMatchOnly set to true. Snapshotting will ignore paths prefixed
+// AddPathToWhitelist adds the given path to the whitelist with
+// PrefixMatchOnly set to prefixMatch.
+// If true, Snapshotting will ignore paths prefixed
 // with the volume, but the volume itself will not be ignored.
-func AddVolumePathToWhitelist(path string) error {
+func AddPathToWhitelist(path string, prefixMatch bool) error {
 	logrus.Infof("adding volume %s to whitelist", path)
 	whitelist = append(whitelist, WhitelistEntry{
 		Path:            path,

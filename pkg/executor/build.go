@@ -385,6 +385,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			benchmarkFile := os.Getenv("BENCHMARK_FILE")
 			// false is a keyword for integration tests to turn off benchmarking
 			if benchmarkFile != "" && benchmarkFile != "false" {
+				util.AddPathToWhitelist(benchmarkFile, false)
 				f, err := os.Create(benchmarkFile)
 				if err != nil {
 					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)

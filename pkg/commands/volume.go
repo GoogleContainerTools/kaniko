@@ -48,7 +48,7 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 	for _, volume := range resolvedVolumes {
 		var x struct{}
 		existingVolumes[volume] = x
-		err := util.AddVolumePathToWhitelist(volume)
+		err := util.AddPathToWhitelist(volume, true)
 		if err != nil {
 			return err
 		}
