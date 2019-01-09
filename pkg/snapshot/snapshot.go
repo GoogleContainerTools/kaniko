@@ -77,34 +77,34 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	defer t.Close()
 
 	// First add to the tar any parent directories that haven't been added
-	parentDirs := []string{}
+	parentDirs := map[string]struct{}{}
 	for _, file := range files {
-		parents := util.ParentDirectories(file)
-		parentDirs = append(parentDirs, parents...)
-	}
-	for _, file := range parentDirs {
-		file = filepath.Clean(file)
-		if val, ok := snapshottedFiles[file]; ok && val {
-			continue
+		for _, p := range util.ParentDirectories(file) {
+			parentDirs[p] = struct{}{}
 		}
+	}
+	for file := range parentDirs {
+		file = filepath.Clean(file)
 		snapshottedFiles[file] = true
 
+		// The parent directory might already be in a previous layer.
 		fileAdded, err := s.l.MaybeAdd(file)
 		if err != nil {
 			return "", fmt.Errorf("Unable to add parent dir %s to layered map: %s", file, err)
 		}
 
 		if fileAdded {
-			err = t.AddFileToTar(file)
-			if err != nil {
+			if err = t.AddFileToTar(file); err != nil {
 				return "", fmt.Errorf("Error adding parent dir %s to tar: %s", file, err)
 			}
 		}
 	}
+
 	// Next add the files themselves to the tar
 	for _, file := range files {
+		// We might have already added the file above as a parent directory of another file.
 		file = filepath.Clean(file)
-		if val, ok := snapshottedFiles[file]; ok && val {
+		if _, ok := snapshottedFiles[file]; ok {
 			continue
 		}
 		snapshottedFiles[file] = true
