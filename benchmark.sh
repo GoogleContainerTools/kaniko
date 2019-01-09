@@ -14,5 +14,7 @@
 
 #!/bin/bash
 set -ex
+script_name=$0
+script_full_path=$(dirname "$0")
 export BENCHMARK=true
-./integration-test.sh
+./${script_full_path}/integration-test.sh
