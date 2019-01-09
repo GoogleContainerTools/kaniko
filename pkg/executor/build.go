@@ -227,6 +227,7 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 		files = command.FilesToSnapshot()
+		timing.DefaultRun.Stop(t)
 
 		if !s.shouldTakeSnapshot(index, files) {
 			continue
@@ -250,7 +251,6 @@ func (s *stageBuilder) build() error {
 		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
 			return err
 		}
-		timing.DefaultRun.Stop(t)
 	}
 	if err := cacheGroup.Wait(); err != nil {
 		logrus.Warnf("error uploading layer to cache: %s", err)
