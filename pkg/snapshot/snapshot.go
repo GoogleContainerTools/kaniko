@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+
 	"github.com/karrick/godirwalk"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -141,6 +143,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	t := util.NewTar(f)
 	defer t.Close()
 
+	timer := timing.Start("Walking filesystem")
 	// Save the fs state in a map to iterate over later.
 	memFs := map[string]*godirwalk.Dirent{}
 	godirwalk.Walk(s.directory, &godirwalk.Options{
@@ -158,6 +161,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		Unsorted: true,
 	},
 	)
+	timing.DefaultRun.Stop(timer)
 
 	// First handle whiteouts
 	for p := range memFs {
@@ -176,6 +180,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		}
 	}
 
+	timer = timing.Start("Writing tar file")
 	// Now create the tar.
 	for path := range memFs {
 		whitelisted, err := util.CheckWhitelist(path)
@@ -198,6 +203,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 			}
 		}
 	}
+	timing.DefaultRun.Stop(timer)
 
 	return f.Name(), nil
 }

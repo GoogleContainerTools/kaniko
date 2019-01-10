@@ -39,11 +39,11 @@ type TimedRun struct {
 // Stop stops the specified timer and increments the time spent in that category.
 func (tr *TimedRun) Stop(t *Timer) {
 	stop := currentTimeFunc()
+	tr.cl.Lock()
+	defer tr.cl.Unlock()
 	if _, ok := tr.categories[t.category]; !ok {
 		tr.categories[t.category] = 0
 	}
-	tr.cl.Lock()
-	defer tr.cl.Unlock()
 	tr.categories[t.category] += stop.Sub(t.startTime)
 }
 
