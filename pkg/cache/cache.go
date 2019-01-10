@@ -23,8 +23,7 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
+	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -55,12 +54,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("getting reference for %s", cache))
 	}
-	k8sc, err := k8schain.NewNoClient()
-	if err != nil {
-		return nil, err
-	}
-	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-	img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(kc))
+	img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(creds.GetKeychain()))
 	if err != nil {
 		return nil, err
 	}

@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
+	"github.com/GoogleContainerTools/kaniko/pkg/creds"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -130,12 +130,7 @@ func remoteImage(image string, opts *config.KanikoOptions, forceNoCache bool) (v
 		}
 	}
 
-	k8sc, err := k8schain.NewNoClient()
-	if err != nil {
-		return nil, err
-	}
-	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(kc))
+	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
