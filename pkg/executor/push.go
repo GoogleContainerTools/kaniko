@@ -25,10 +25,9 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -82,12 +81,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			destRef.Repository.Registry = newReg
 		}
 
-		k8sc, err := k8schain.NewNoClient()
-		if err != nil {
-			return errors.Wrap(err, "getting k8schain client")
-		}
-		kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-		pushAuth, err := kc.Resolve(destRef.Context().Registry)
+		pushAuth, err := creds.GetKeychain().Resolve(destRef.Context().Registry)
 		if err != nil {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
