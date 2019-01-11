@@ -17,4 +17,5 @@ set -ex
 script_name=$0
 script_full_path=$(dirname "$0")
 export BENCHMARK=true
+export IMAGE_REPO="gcr.io/kaniko-test-project/benchmarks"
 ./${script_full_path}/integration-test.sh
