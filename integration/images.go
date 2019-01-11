@@ -18,6 +18,7 @@ package integration
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -188,9 +189,12 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	}
 
 	benchmarkEnv := "BENCHMARK_FILE=false"
+	benchmarkDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
 	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
-		os.Mkdir("benchmarks", 0755)
-		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
+		benchmarkEnv = "BENCHMARK_FILE=/kaniko/benchmarks/" + dockerfile
 	}
 
 	// build kaniko image
@@ -199,6 +203,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	kanikoCmd := exec.Command("docker",
 		append([]string{"run",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+			"-v", benchmarkDir + ":/kaniko/benchmarks",
 			"-v", cwd + ":/workspace",
 			"-e", benchmarkEnv,
 			ExecutorImage,
