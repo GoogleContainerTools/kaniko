@@ -75,7 +75,10 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	extractedFiles := []string{}
+
+	// Store a map of files to their mtime. We need to set mtimes in a second pass because creating files
+	// can change the mtime of a directory.
+	extractedFiles := map[string]time.Time{}
 
 	for i, l := range layers {
 		logrus.Debugf("Extracting layer %d", i)
@@ -106,10 +109,17 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 			if err := extractFile(root, hdr, tr); err != nil {
 				return nil, err
 			}
-			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
+			extractedFiles[filepath.Join(root, filepath.Clean(hdr.Name))] = hdr.ModTime
 		}
 	}
-	return extractedFiles, nil
+
+	fileNames := []string{}
+	for f, t := range extractedFiles {
+		fileNames = append(fileNames, f)
+		os.Chtimes(f, time.Time{}, t)
+	}
+
+	return fileNames, nil
 }
 
 // DeleteFilesystem deletes the extracted image file system
@@ -272,6 +282,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -382,7 +393,8 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 }
 
 // ParentDirectories returns a list of paths to all parent directories
-// Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
+// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
+// This purposefully excludes the /.
 func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
