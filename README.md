@@ -359,6 +359,10 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 
 Set this flag to clean the filesystem at the end of the build.
 
+#### --insecure
+
+Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
 #### --insecure-pull
 
 Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
