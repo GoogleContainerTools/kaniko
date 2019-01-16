@@ -18,7 +18,6 @@ package integration
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"testing"
 )
@@ -26,14 +25,8 @@ import (
 // RunCommandWithoutTest will run cmd and if it fails will output relevant info
 // for debugging before returning an error. It can be run outside the context of a test.
 func RunCommandWithoutTest(cmd *exec.Cmd) ([]byte, error) {
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println(cmd.Args)
-		fmt.Println(stderr.String())
-		fmt.Println(string(output))
-	}
+	output, err := cmd.CombinedOutput()
+
 	return output, err
 }
 
