@@ -23,12 +23,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/partial"
+
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -59,21 +62,20 @@ type stageBuilder struct {
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
-	t := timing.Start("Retrieving Source Image")
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
 	}
-	timing.DefaultRun.Stop(t)
-	t = timing.Start("Retrieving Config File")
-	imageConfig, err := util.RetrieveConfigFile(sourceImage)
+
+	imageConfig, err := initializeConfig(sourceImage)
 	if err != nil {
 		return nil, err
 	}
-	timing.DefaultRun.Stop(t)
+
 	if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
 		return nil, err
 	}
+
 	hasher, err := getHasher(opts.SnapshotMode)
 	if err != nil {
 		return nil, err
@@ -93,6 +95,18 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 		baseImageDigest: digest.String(),
 		opts:            opts,
 	}, nil
+}
+
+func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
+	imageConfig, err := img.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+
+	if img == empty.Image {
+		imageConfig.Config.Env = constants.ScratchEnvVars
+	}
+	return imageConfig, nil
 }
 
 func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds []commands.DockerCommand, args *dockerfile.BuildArgs) error {
@@ -429,7 +443,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			}
 			// This must be an image name, fetch it.
 			logrus.Debugf("Found extra base image stage %s", c.From)
-			sourceImage, err := util.RetrieveRemoteImage(c.From, opts, false)
+			sourceImage, err := util.RetrieveRemoteImage(c.From, opts)
 			if err != nil {
 				return err
 			}
