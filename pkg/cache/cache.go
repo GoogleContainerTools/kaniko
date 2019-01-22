@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -114,11 +115,31 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 		return nil, nil
 	}
 
-	imgTar, err := tarball.ImageFromPath(path, nil)
+	logrus.Infof("Found %s in local cache", cacheKey)
+	return cachedImageFromPath(path)
+}
+
+// cachedImage represents a v1.Tarball that is cached locally in a CAS.
+// Computing the digest for a v1.Tarball is very expensive. If the tarball
+// is named with the digest we can store this and return it directly rather
+// than recompute it.
+type cachedImage struct {
+	digest string
+	v1.Image
+}
+
+func (c *cachedImage) Digest() (v1.Hash, error) {
+	return v1.NewHash(c.digest)
+}
+
+func cachedImageFromPath(p string) (v1.Image, error) {
+	imgTar, err := tarball.ImageFromPath(p, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting image from path")
 	}
 
-	logrus.Infof("Found %s in local cache", cacheKey)
-	return imgTar, nil
+	return &cachedImage{
+		digest: filepath.Base(p),
+		Image:  imgTar,
+	}, nil
 }
