@@ -73,8 +73,9 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 	// continue pushing unless an error occurs
 	for _, destRef := range destRefs {
-		if opts.Insecure {
-			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
+		registryName := destRef.Repository.Registry.Name()
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
@@ -88,7 +89,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 		// Create a transport to set our user-agent.
 		tr := http.DefaultTransport
-		if opts.SkipTLSVerify {
+		if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 			tr.(*http.Transport).TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}
@@ -135,5 +136,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	}
 	cacheOpts := *opts
 	cacheOpts.Destinations = []string{cache}
+	cacheOpts.InsecureRegistries = opts.InsecureRegistries
+	cacheOpts.SkipTLSVerifyRegistries = opts.SkipTLSVerifyRegistries
 	return DoPush(empty, &cacheOpts)
 }

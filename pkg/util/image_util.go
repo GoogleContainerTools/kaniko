@@ -108,8 +108,9 @@ func remoteImage(image string, opts *config.KanikoOptions, forceNoCache bool) (v
 		return nil, err
 	}
 
-	if opts.InsecurePull {
-		newReg, err := name.NewInsecureRegistry(ref.Context().RegistryStr(), name.WeakValidation)
+	registryName := ref.Context().RegistryStr()
+	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
+		newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +125,7 @@ func remoteImage(image string, opts *config.KanikoOptions, forceNoCache bool) (v
 	}
 
 	tr := http.DefaultTransport.(*http.Transport)
-	if opts.SkipTLSVerifyPull {
+	if opts.SkipTLSVerifyPull || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		tr.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
