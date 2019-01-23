@@ -146,6 +146,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds
 			img, err := layerCache.RetrieveLayer(ck)
 			if err != nil {
 				logrus.Infof("No cached layer found for cmd %s", command.String())
+				logrus.Debugf("Key missing was: %s", compositeKey.Key())
 				break
 			}
 
@@ -167,7 +168,11 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds
 
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
-	compositeKey := NewCompositeCache(s.baseImageDigest)
+	dgst, err := util.ReproducibleDigest(s.image)
+	if err != nil {
+		return err
+	}
+	compositeKey := NewCompositeCache(dgst)
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	cmds := []commands.DockerCommand{}

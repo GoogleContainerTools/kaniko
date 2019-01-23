@@ -54,6 +54,7 @@ func (t *Tar) Close() {
 
 // AddFileToTar adds the file at path p to the tar
 func (t *Tar) AddFileToTar(p string) error {
+	logrus.Debugf("Adding file %s to tar", p)
 	i, err := os.Lstat(p)
 	if err != nil {
 		return fmt.Errorf("Failed to get file info for %s: %s", p, err)
