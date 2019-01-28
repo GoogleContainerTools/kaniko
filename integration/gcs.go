@@ -55,9 +55,10 @@ func UploadFileToBucket(gcsBucket string, filePath string, gcsPath string) (stri
 	cmd := exec.Command("gsutil", "cp", filePath, dst)
 	out, err := RunCommandWithoutTest(cmd)
 	if err != nil {
+		log.Printf("Error uploading file %s to GCS at %s: %s", filePath, dst, err)
+		log.Println(string(out))
 		return "", fmt.Errorf("Failed to copy tarball to GCS bucket %s: %s", gcsBucket, err)
 	}
-	log.Println(string(out))
 
 	return dst, nil
 }
