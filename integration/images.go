@@ -197,7 +197,8 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		benchmarkEnv = "BENCHMARK_FILE=/kaniko/benchmarks/" + dockerfile
 		benchmarkFile := path.Join(benchmarkDir, dockerfile)
-		dst := path.Join("benchmarks/run_"+time.Now().Format("2006-01-02-15:04:05"), dockerfile)
+		fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
+		dst := path.Join("benchmarks", fileName)
 		defer UploadFileToBucket(gcsBucket, benchmarkFile, dst)
 	}
 
