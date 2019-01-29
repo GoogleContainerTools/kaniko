@@ -147,7 +147,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			args: args{
 				index: 0,
 			},
-			want: false,
+			want: true,
 		},
 		{
 			name: "caching enabled intermediate container",

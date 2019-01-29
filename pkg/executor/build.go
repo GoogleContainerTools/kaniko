@@ -309,11 +309,6 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 		return true
 	}
 
-	// We only snapshot the very end of intermediate stages.
-	if !s.stage.Final {
-		return isLastCommand
-	}
-
 	// nil means snapshot everything.
 	if files == nil {
 		return true
