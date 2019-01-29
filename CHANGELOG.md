@@ -1,3 +1,18 @@
+# v0.8.0 Release - 1/29/2019
+
+## New Features
+* Even faster snapshotting with godirwalk
+* Added TTL for caching
+
+## Updates
+* Change cache key calculation to be more reproducible.
+* Make the Digest calculation faster for locally-cached images.
+* Simplify snapshotting.
+
+## Bug Fixes
+* Fix bug with USER command and unpacking base images.
+* Added COPY --from=previous stage name/number validation
+
 # v0.7.0 Release - 12/10/2018
 
 ## New Features
