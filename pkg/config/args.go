@@ -42,3 +42,12 @@ func (b *multiArg) Set(value string) error {
 func (b *multiArg) Type() string {
 	return "multi-arg type"
 }
+
+func (b *multiArg) Contains(v string) bool {
+	for _, s := range *b {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}

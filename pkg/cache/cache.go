@@ -17,7 +17,9 @@ limitations under the License.
 package cache
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -55,7 +57,24 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("getting reference for %s", cache))
 	}
-	img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(creds.GetKeychain()))
+
+	registryName := cacheRef.Repository.Registry.Name()
+	if rc.Opts.InsecureRegistries.Contains(registryName) {
+		newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+		if err != nil {
+			return nil, err
+		}
+		cacheRef.Repository.Registry = newReg
+	}
+
+	tr := http.DefaultTransport.(*http.Transport)
+	if rc.Opts.SkipTLSVerifyRegistries.Contains(registryName) {
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
+	img, err := remote.Image(cacheRef, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
 	if err != nil {
 		return nil, err
 	}

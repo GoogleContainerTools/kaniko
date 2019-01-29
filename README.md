@@ -355,6 +355,16 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+#### --insecure-registry
+
+Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+You can set it multiple times for multiple registries.
+
+#### --skip-tls-verify-registry
+
+Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+You can set it multiple times for multiple registries.
+
 #### --cleanup
 
 Set this flag to clean the filesystem at the end of the build.
