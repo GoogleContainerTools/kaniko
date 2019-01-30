@@ -99,6 +99,7 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.Debugf("Parsed reference: %s from image %s", ref.String(), image)
 
 	registryName := ref.Context().RegistryStr()
 	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {

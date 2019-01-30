@@ -42,25 +42,9 @@ type WhitelistEntry struct {
 	PrefixMatchOnly bool
 }
 
-var whitelist = []WhitelistEntry{
-	{
-		Path:            "/kaniko",
-		PrefixMatchOnly: false,
-	},
-	{
-		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
-		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
-		// in the image with no way to tell if it came from the base image or not.
-		Path:            "/var/run",
-		PrefixMatchOnly: false,
-	},
-	{
-		// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
-		// from the base image
-		Path:            "/etc/mtab",
-		PrefixMatchOnly: false,
-	},
-}
+var whitelist = []WhitelistEntry{}
+
+var volumes = []WhitelistEntry{}
 
 var excluded []string
 
@@ -117,6 +101,25 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	for f, t := range extractedFiles {
 		fileNames = append(fileNames, f)
 		os.Chtimes(f, time.Time{}, t)
+	}
+
+	// Create directories for any volumes that exist.
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	for v := range cfg.Config.Volumes {
+		if _, ok := extractedFiles[v]; ok {
+			logrus.Debugf("Directory %s already exists, not creating for volume.", v)
+			continue
+		}
+		if err := os.MkdirAll(v, 0777); err != nil {
+			return nil, err
+		}
+		volumes = append(volumes, WhitelistEntry{
+			Path:            v,
+			PrefixMatchOnly: false,
+		})
 	}
 
 	return fileNames, nil
@@ -301,9 +304,12 @@ func CheckWhitelist(path string) (bool, error) {
 		logrus.Infof("unable to get absolute path for %s", path)
 		return false, err
 	}
-	for _, wl := range whitelist {
-		if HasFilepathPrefix(abs, wl.Path, wl.PrefixMatchOnly) {
-			return true, nil
+
+	for _, entries := range [][]WhitelistEntry{whitelist, volumes} {
+		for _, wl := range entries {
+			if HasFilepathPrefix(abs, wl.Path, wl.PrefixMatchOnly) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -328,6 +334,25 @@ func checkWhitelistRoot(root string) bool {
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func DetectFilesystemWhitelist(path string) error {
+	whitelist = []WhitelistEntry{
+		{
+			Path:            "/kaniko",
+			PrefixMatchOnly: false,
+		},
+		{
+			// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
+			// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
+			// in the image with no way to tell if it came from the base image or not.
+			Path:            "/var/run",
+			PrefixMatchOnly: false,
+		},
+		{
+			// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
+			// from the base image
+			Path:            "/etc/mtab",
+			PrefixMatchOnly: false,
+		},
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -445,7 +470,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 // with the volume, but the volume itself will not be ignored.
 func AddVolumePathToWhitelist(path string) error {
 	logrus.Infof("adding volume %s to whitelist", path)
-	whitelist = append(whitelist, WhitelistEntry{
+	volumes = append(volumes, WhitelistEntry{
 		Path:            path,
 		PrefixMatchOnly: true,
 	})

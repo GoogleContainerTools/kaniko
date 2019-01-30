@@ -142,6 +142,9 @@ func TestMain(m *testing.M) {
 	RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
 	defer DeleteFromBucket(fileInBucket)
 
+	out, _ := RunCommandWithoutTest(exec.Command("docker", "info"))
+	fmt.Println(string(out))
+
 	setupCommands := []struct {
 		name    string
 		command []string

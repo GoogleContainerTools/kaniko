@@ -17,7 +17,6 @@ limitations under the License.
 package snapshot
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"syscall"
@@ -55,70 +54,6 @@ func (s *Snapshotter) Init() error {
 // Key returns a string based on the current state of the file system
 func (s *Snapshotter) Key() (string, error) {
 	return s.l.Key()
-}
-
-// TakeSnapshot takes a snapshot of the specified files, avoiding directories in the whitelist, and creates
-// a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
-	f, err := ioutil.TempFile(snapshotPathPrefix, "")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	s.l.Snapshot()
-	if len(files) == 0 {
-		logrus.Info("No files changed in this command, skipping snapshotting.")
-		return "", nil
-	}
-	logrus.Info("Taking snapshot of files...")
-	logrus.Debugf("Taking snapshot of files %v", files)
-	snapshottedFiles := make(map[string]bool)
-
-	t := util.NewTar(f)
-	defer t.Close()
-
-	// First add to the tar any parent directories that haven't been added
-	parentDirs := map[string]struct{}{}
-	for _, file := range files {
-		for _, p := range util.ParentDirectories(file) {
-			parentDirs[p] = struct{}{}
-		}
-	}
-	for file := range parentDirs {
-		file = filepath.Clean(file)
-		snapshottedFiles[file] = true
-
-		// The parent directory might already be in a previous layer.
-		fileAdded, err := s.l.MaybeAdd(file)
-		if err != nil {
-			return "", fmt.Errorf("Unable to add parent dir %s to layered map: %s", file, err)
-		}
-
-		if fileAdded {
-			if err = t.AddFileToTar(file); err != nil {
-				return "", fmt.Errorf("Error adding parent dir %s to tar: %s", file, err)
-			}
-		}
-	}
-
-	// Next add the files themselves to the tar
-	for _, file := range files {
-		// We might have already added the file above as a parent directory of another file.
-		file = filepath.Clean(file)
-		if _, ok := snapshottedFiles[file]; ok {
-			continue
-		}
-		snapshottedFiles[file] = true
-
-		if err := s.l.Add(file); err != nil {
-			return "", fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
-		}
-		if err := t.AddFileToTar(file); err != nil {
-			return "", fmt.Errorf("Error adding file %s to tar: %s", file, err)
-		}
-	}
-	return f.Name(), nil
 }
 
 // TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates

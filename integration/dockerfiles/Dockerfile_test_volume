@@ -1,5 +1,9 @@
-FROM gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0
+FROM gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0 as stage1
+VOLUME /myvol
+
+FROM stage1
 RUN mkdir /foo
+RUN echo foo > /myvol/baz
 RUN echo "hello" > /foo/hey
 VOLUME /foo/bar /tmp /qux/quux
 ENV VOL /baz/bat

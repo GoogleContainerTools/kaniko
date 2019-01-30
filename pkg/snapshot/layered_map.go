@@ -119,7 +119,7 @@ func (l *LayeredMap) Add(s string) error {
 	return nil
 }
 
-// MaybeAdd will add the specified file s to the layered map if
+// MaybeAdd will add the specified files to the layered map if
 // the layered map's hashing function determines it has changed. If
 // it has not changed, it will not be added. Returns true if the file
 // was added.

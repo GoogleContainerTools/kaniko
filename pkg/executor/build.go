@@ -246,14 +246,18 @@ func (s *stageBuilder) build() error {
 		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
 			return err
 		}
-		files = command.FilesToSnapshot()
+		filesToSnapshot := command.FilesToSnapshot()
+
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files) {
+		if !s.shouldTakeSnapshot(index, filesToSnapshot) {
 			continue
 		}
 
-		tarPath, err := s.takeSnapshot(files)
+		t = timing.Start("Snapshotting FS")
+		tarPath, err := s.snapshotter.TakeSnapshotFS()
+		timing.DefaultRun.Stop(t)
+
 		if err != nil {
 			return err
 		}
@@ -276,24 +280,6 @@ func (s *stageBuilder) build() error {
 		logrus.Warnf("error uploading layer to cache: %s", err)
 	}
 	return nil
-}
-
-func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
-	var snapshot string
-	var err error
-	t := timing.Start("Snapshotting FS")
-	if files == nil || s.opts.SingleSnapshot {
-		snapshot, err = s.snapshotter.TakeSnapshotFS()
-	} else {
-		// Volumes are very weird. They get created in their command, but snapshotted in the next one.
-		// Add them to the list of files to snapshot.
-		for v := range s.cf.Config.Volumes {
-			files = append(files, v)
-		}
-		snapshot, err = s.snapshotter.TakeSnapshot(files)
-	}
-	timing.DefaultRun.Stop(t)
-	return snapshot, err
 }
 
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {

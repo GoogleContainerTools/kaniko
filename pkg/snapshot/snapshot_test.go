@@ -125,50 +125,6 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	}
 }
 
-func TestSnapshotFiles(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
-	defer cleanup()
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Make some changes to the filesystem
-	newFiles := map[string]string{
-		"foo": "newbaz1",
-	}
-	if err := testutil.SetupFiles(testDir, newFiles); err != nil {
-		t.Fatalf("Error setting up fs: %s", err)
-	}
-	filesToSnapshot := []string{
-		filepath.Join(testDir, "foo"),
-	}
-	tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tarPath)
-
-	expectedFiles := []string{"/", "/tmp", filepath.Join(testDir, "foo")}
-
-	f, err := os.Open(tarPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
-	tr := tar.NewReader(f)
-	var actualFiles []string
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		actualFiles = append(actualFiles, hdr.Name)
-	}
-	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
-}
-
 func TestEmptySnapshotFS(t *testing.T) {
 	_, snapshotter, cleanup, err := setUpTestDir()
 	if err != nil {
