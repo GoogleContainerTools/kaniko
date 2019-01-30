@@ -97,6 +97,8 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 		rt := &withUserAgent{t: tr}
 
+		logrus.Infof("pushing to destination %s", destRef)
+
 		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
@@ -137,6 +139,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	}
 	cacheOpts := *opts
 	cacheOpts.TarPath = "" // tarPath doesn't make sense for Docker layers
+	cacheOpts.NoPush = false // we want to push cached layers
 	cacheOpts.Destinations = []string{cache}
 	cacheOpts.InsecureRegistries = opts.InsecureRegistries
 	cacheOpts.SkipTLSVerifyRegistries = opts.SkipTLSVerifyRegistries
