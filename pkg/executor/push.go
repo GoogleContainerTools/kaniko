@@ -136,7 +136,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 		return errors.Wrap(err, "appending layer onto empty image")
 	}
 	cacheOpts := *opts
-	cacheOpts.TarPath = "" // tarPath doesn't make sense for Docker layers
+	cacheOpts.TarPath = ""   // tarPath doesn't make sense for Docker layers
 	cacheOpts.NoPush = false // we want to push cached layers
 	cacheOpts.Destinations = []string{cache}
 	cacheOpts.InsecureRegistries = opts.InsecureRegistries
