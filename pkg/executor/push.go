@@ -97,8 +97,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 		rt := &withUserAgent{t: tr}
 
-		logrus.Infof("pushing to destination %s", destRef)
-
 		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
