@@ -153,10 +153,8 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	additionalFlags := append(buildArgs, additionalDockerFlagsMap[dockerfile]...)
 	dockerImage := strings.ToLower(imageRepo + dockerPrefix + dockerfile)
 	dockerPath := "."
-	contextTest := bucketContextTests
 	if dockerfile == "Dockerfile_test_git" {
-		dockerPath = "../"
-		contextTest = gitRepoTests
+		dockerPath = "https://github.com/GoogleContainerTools/kaniko"
 	}
 	dockerCmd := exec.Command("docker",
 		append([]string{"build",
@@ -173,11 +171,16 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 
 	contextFlag := "-c"
 	contextPath := buildContextPath
-	for _, d := range contextTest {
+	for _, d := range bucketContextTests {
 		if d == dockerfile {
 			contextFlag = "-b"
-			contextPath = "git://github.com/GoogleContainerTools/kaniko"
-			break
+			contextPath = gcsBucket
+		}
+	}
+
+	for _, d := range gitRepoTests {
+		if d == dockerfile {
+			contextPath = "git://https://github.com/GoogleContainerTools/kaniko"
 		}
 	}
 
