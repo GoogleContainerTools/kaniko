@@ -591,6 +591,8 @@
   pruneopts = "NUT"
   revision = "81db2a75821ed34e682567d48be488a1c3121088"
   version = "0.5"
+
+[[projects]]
   digest = "1:75b5172f534d05a5abff749f1cf002351f834a2a5592812210aca5e139f9ddad"
   name = "github.com/karrick/godirwalk"
   packages = ["."]
