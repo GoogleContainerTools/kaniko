@@ -19,9 +19,12 @@ package snapshot
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+
+	"github.com/karrick/godirwalk"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
@@ -76,34 +79,34 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	defer t.Close()
 
 	// First add to the tar any parent directories that haven't been added
-	parentDirs := []string{}
+	parentDirs := map[string]struct{}{}
 	for _, file := range files {
-		parents := util.ParentDirectories(file)
-		parentDirs = append(parentDirs, parents...)
-	}
-	for _, file := range parentDirs {
-		file = filepath.Clean(file)
-		if val, ok := snapshottedFiles[file]; ok && val {
-			continue
+		for _, p := range util.ParentDirectories(file) {
+			parentDirs[p] = struct{}{}
 		}
+	}
+	for file := range parentDirs {
+		file = filepath.Clean(file)
 		snapshottedFiles[file] = true
 
+		// The parent directory might already be in a previous layer.
 		fileAdded, err := s.l.MaybeAdd(file)
 		if err != nil {
 			return "", fmt.Errorf("Unable to add parent dir %s to layered map: %s", file, err)
 		}
 
 		if fileAdded {
-			err = t.AddFileToTar(file)
-			if err != nil {
+			if err = t.AddFileToTar(file); err != nil {
 				return "", fmt.Errorf("Error adding parent dir %s to tar: %s", file, err)
 			}
 		}
 	}
+
 	// Next add the files themselves to the tar
 	for _, file := range files {
+		// We might have already added the file above as a parent directory of another file.
 		file = filepath.Clean(file)
-		if val, ok := snapshottedFiles[file]; ok && val {
+		if _, ok := snapshottedFiles[file]; ok {
 			continue
 		}
 		snapshottedFiles[file] = true
@@ -140,12 +143,25 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	t := util.NewTar(f)
 	defer t.Close()
 
+	timer := timing.Start("Walking filesystem")
 	// Save the fs state in a map to iterate over later.
-	memFs := map[string]os.FileInfo{}
-	filepath.Walk(s.directory, func(path string, info os.FileInfo, err error) error {
-		memFs[path] = info
-		return nil
-	})
+	memFs := map[string]*godirwalk.Dirent{}
+	godirwalk.Walk(s.directory, &godirwalk.Options{
+		Callback: func(path string, ent *godirwalk.Dirent) error {
+			if util.IsInWhitelist(path) {
+				if util.IsDestDir(path) {
+					logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			memFs[path] = ent
+			return nil
+		},
+		Unsorted: true,
+	},
+	)
+	timing.DefaultRun.Stop(timer)
 
 	// First handle whiteouts
 	for p := range memFs {
@@ -164,6 +180,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		}
 	}
 
+	timer = timing.Start("Writing tar file")
 	// Now create the tar.
 	for path := range memFs {
 		whitelisted, err := util.CheckWhitelist(path)
@@ -174,7 +191,6 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}
-
 		// Only add to the tar if we add it to the layeredmap.
 		maybeAdd, err := s.l.MaybeAdd(path)
 		if err != nil {
@@ -187,6 +203,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 			}
 		}
 	}
+	timing.DefaultRun.Stop(timer)
 
 	return f.Name(), nil
 }

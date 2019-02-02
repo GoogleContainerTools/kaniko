@@ -67,6 +67,9 @@ const (
 	// Docker command names
 	Cmd        = "cmd"
 	Entrypoint = "entrypoint"
+
+	// Name of the .dockerignore file
+	Dockerignore = ".dockerignore"
 )
 
 // KanikoBuildFiles is the list of files required to build kaniko

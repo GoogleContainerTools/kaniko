@@ -31,6 +31,10 @@ type UserCommand struct {
 	cmd *instructions.UserCommand
 }
 
+func (r *UserCommand) RequiresUnpackedFS() bool {
+	return true
+}
+
 func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: USER")
 	u := r.cmd.User

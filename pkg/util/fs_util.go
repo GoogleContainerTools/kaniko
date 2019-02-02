@@ -19,7 +19,9 @@ package util
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,10 +29,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/docker/docker/builder/dockerignore"
+	"github.com/docker/docker/pkg/fileutils"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/sirupsen/logrus"
 )
 
@@ -59,6 +62,8 @@ var whitelist = []WhitelistEntry{
 	},
 }
 
+var excluded []string
+
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
 func GetFSFromImage(root string, img v1.Image) ([]string, error) {
@@ -70,7 +75,10 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	extractedFiles := []string{}
+
+	// Store a map of files to their mtime. We need to set mtimes in a second pass because creating files
+	// can change the mtime of a directory.
+	extractedFiles := map[string]time.Time{}
 
 	for i, l := range layers {
 		logrus.Debugf("Extracting layer %d", i)
@@ -101,10 +109,17 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 			if err := extractFile(root, hdr, tr); err != nil {
 				return nil, err
 			}
-			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
+			extractedFiles[filepath.Join(root, filepath.Clean(hdr.Name))] = hdr.ModTime
 		}
 	}
-	return extractedFiles, nil
+
+	fileNames := []string{}
+	for f, t := range extractedFiles {
+		fileNames = append(fileNames, f)
+		os.Chtimes(f, time.Time{}, t)
+	}
+
+	return fileNames, nil
 }
 
 // DeleteFilesystem deletes the extracted image file system
@@ -245,8 +260,8 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return errors.Wrapf(err, "error removing %s to make way for new link", hdr.Name)
 			}
 		}
-
-		if err := os.Link(filepath.Clean(filepath.Join("/", hdr.Linkname)), path); err != nil {
+		link := filepath.Clean(filepath.Join(dest, hdr.Linkname))
+		if err := os.Link(link, path); err != nil {
 			return err
 		}
 
@@ -267,7 +282,17 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func IsInWhitelist(path string) bool {
+	for _, wl := range whitelist {
+		if !wl.PrefixMatchOnly && path == wl.Path {
+			return true
+		}
+	}
+	return false
 }
 
 func CheckWhitelist(path string) (bool, error) {
@@ -368,7 +393,8 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 }
 
 // ParentDirectories returns a list of paths to all parent directories
-// Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
+// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
+// This purposefully excludes the /.
 func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
@@ -453,7 +479,7 @@ func DownloadFileToDest(rawurl, dest string) error {
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest string) ([]string, error) {
+func CopyDir(src, dest, buildcontext string) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err
@@ -464,6 +490,10 @@ func CopyDir(src, dest string) ([]string, error) {
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return nil, err
+		}
+		if excludeFile(fullPath, buildcontext) {
+			logrus.Debugf("%s found in .dockerignore, ignoring", src)
+			continue
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
@@ -480,12 +510,12 @@ func CopyDir(src, dest string) ([]string, error) {
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := CopySymlink(fullPath, destPath); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if err := CopyFile(fullPath, destPath); err != nil {
+			if _, err := CopyFile(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		}
@@ -495,33 +525,78 @@ func CopyDir(src, dest string) ([]string, error) {
 }
 
 // CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest string) error {
+func CopySymlink(src, dest, buildcontext string) (bool, error) {
+	if excludeFile(src, buildcontext) {
+		logrus.Debugf("%s found in .dockerignore, ignoring", src)
+		return true, nil
+	}
 	link, err := os.Readlink(src)
 	if err != nil {
-		return err
+		return false, err
 	}
-	linkDst := filepath.Join(dest, link)
-	return os.Symlink(linkDst, dest)
+	if FilepathExists(dest) {
+		if err := os.RemoveAll(dest); err != nil {
+			return false, err
+		}
+	}
+	return false, os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest string) error {
+func CopyFile(src, dest, buildcontext string) (bool, error) {
+	if excludeFile(src, buildcontext) {
+		logrus.Debugf("%s found in .dockerignore, ignoring", src)
+		return true, nil
+	}
 	fi, err := os.Stat(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	logrus.Debugf("Copying file %s to %s", src, dest)
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer srcFile.Close()
 	uid := fi.Sys().(*syscall.Stat_t).Uid
 	gid := fi.Sys().(*syscall.Stat_t).Gid
-	return CreateFile(dest, srcFile, fi.Mode(), uid, gid)
+	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
-// HasFilepathPrefix checks if the given file path begins with prefix
+// GetExcludedFiles gets a list of files to exclude from the .dockerignore
+func GetExcludedFiles(buildcontext string) error {
+	path := filepath.Join(buildcontext, ".dockerignore")
+	if !FilepathExists(path) {
+		return nil
+	}
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrap(err, "parsing .dockerignore")
+	}
+	reader := bytes.NewBuffer(contents)
+	excluded, err = dockerignore.ReadAll(reader)
+	return err
+}
+
+// excludeFile returns true if the .dockerignore specified this file should be ignored
+func excludeFile(path, buildcontext string) bool {
+	if HasFilepathPrefix(path, buildcontext, false) {
+		var err error
+		path, err = filepath.Rel(buildcontext, path)
+		if err != nil {
+			logrus.Errorf("unable to get relative path, including %s in build: %v", path, err)
+			return false
+		}
+	}
+	match, err := fileutils.Matches(path, excluded)
+	if err != nil {
+		logrus.Errorf("error matching, including %s in build: %v", path, err)
+		return false
+	}
+	return match
+}
+
+// HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)

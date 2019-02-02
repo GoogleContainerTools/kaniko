@@ -591,6 +591,12 @@
   pruneopts = "NUT"
   revision = "81db2a75821ed34e682567d48be488a1c3121088"
   version = "0.5"
+  digest = "1:75b5172f534d05a5abff749f1cf002351f834a2a5592812210aca5e139f9ddad"
+  name = "github.com/karrick/godirwalk"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "cceff240ca8af695e41738831646717e80d2f846"
+  version = "v1.7.7"
 
 [[projects]]
   digest = "1:d0164259ed17929689df11205194d80288e8ae25351778f7a3421a24774c36f8"
@@ -1337,7 +1343,9 @@
     "github.com/aws/aws-sdk-go/service/s3",
     "github.com/aws/aws-sdk-go/service/s3/s3manager",
     "github.com/docker/docker/builder/dockerfile",
+    "github.com/docker/docker/builder/dockerignore",
     "github.com/docker/docker/pkg/archive",
+    "github.com/docker/docker/pkg/fileutils",
     "github.com/docker/docker/pkg/signal",
     "github.com/genuinetools/amicontained/container",
     "github.com/google/go-cmp/cmp",
@@ -1352,15 +1360,18 @@
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
     "github.com/google/go-github/github",
+    "github.com/karrick/godirwalk",
     "github.com/moby/buildkit/frontend/dockerfile/instructions",
     "github.com/moby/buildkit/frontend/dockerfile/parser",
     "github.com/moby/buildkit/frontend/dockerfile/shell",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
+    "github.com/spf13/pflag",
     "golang.org/x/net/context",
     "golang.org/x/oauth2",
     "gopkg.in/src-d/go-git.v4",
+    "golang.org/x/sync/errgroup",
     "k8s.io/client-go/discovery",
   ]
   solver-name = "gps-cdcl"

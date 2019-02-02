@@ -367,7 +367,7 @@ func filesAreHardlinks(first, second string) checker {
 		if err != nil {
 			t.Fatalf("error getting file %s", first)
 		}
-		fi2, err := os.Stat(filepath.Join(second))
+		fi2, err := os.Stat(filepath.Join(root, second))
 		if err != nil {
 			t.Fatalf("error getting file %s", second)
 		}
@@ -499,11 +499,11 @@ func TestExtractFile(t *testing.T) {
 			tmpdir: "/tmp/hardlink",
 			hdrs: []*tar.Header{
 				fileHeader("/bin/gzip", "gzip-binary", 0751),
-				hardlinkHeader("/bin/uncompress", "/tmp/hardlink/bin/gzip"),
+				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
 			},
 			checkers: []checker{
 				fileExists("/bin/gzip"),
-				filesAreHardlinks("/bin/uncompress", "/tmp/hardlink/bin/gzip"),
+				filesAreHardlinks("/bin/uncompress", "/bin/gzip"),
 			},
 		},
 	}
@@ -532,6 +532,66 @@ func TestExtractFile(t *testing.T) {
 			}
 			for _, checker := range tc.checkers {
 				checker(r, t)
+			}
+		})
+	}
+}
+
+func TestCopySymlink(t *testing.T) {
+	type tc struct {
+		name       string
+		linkTarget string
+		dest       string
+		beforeLink func(r string) error
+	}
+
+	tcs := []tc{{
+		name:       "absolute symlink",
+		linkTarget: "/abs/dest",
+	}, {
+		name:       "relative symlink",
+		linkTarget: "rel",
+	}, {
+		name:       "symlink copy overwrites existing file",
+		linkTarget: "/abs/dest",
+		dest:       "overwrite_me",
+		beforeLink: func(r string) error {
+			return ioutil.WriteFile(filepath.Join(r, "overwrite_me"), nil, 0644)
+		},
+	}}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+			r, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(r)
+
+			if tc.beforeLink != nil {
+				if err := tc.beforeLink(r); err != nil {
+					t.Fatal(err)
+				}
+			}
+			link := filepath.Join(r, "link")
+			dest := filepath.Join(r, "copy")
+			if tc.dest != "" {
+				dest = filepath.Join(r, tc.dest)
+			}
+			if err := os.Symlink(tc.linkTarget, link); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := CopySymlink(link, dest, ""); err != nil {
+				t.Fatal(err)
+			}
+			got, err := os.Readlink(dest)
+			if err != nil {
+				t.Fatalf("error reading link %s: %s", link, err)
+			}
+			if got != tc.linkTarget {
+				t.Errorf("link target does not match: %s != %s", got, tc.linkTarget)
 			}
 		})
 	}

@@ -22,7 +22,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 )
 
@@ -49,16 +48,19 @@ func CreateIntegrationTarball() (string, error) {
 
 // UploadFileToBucket will upload the at filePath to gcsBucket. It will return the path
 // of the file in gcsBucket.
-func UploadFileToBucket(gcsBucket string, filePath string) (string, error) {
-	log.Printf("Uploading file at %s to GCS bucket at %s\n", filePath, gcsBucket)
+func UploadFileToBucket(gcsBucket string, filePath string, gcsPath string) (string, error) {
+	dst := fmt.Sprintf("%s/%s", gcsBucket, gcsPath)
+	log.Printf("Uploading file at %s to GCS bucket at %s\n", filePath, dst)
 
-	cmd := exec.Command("gsutil", "cp", filePath, gcsBucket)
-	_, err := RunCommandWithoutTest(cmd)
+	cmd := exec.Command("gsutil", "cp", filePath, dst)
+	out, err := RunCommandWithoutTest(cmd)
 	if err != nil {
+		log.Printf("Error uploading file %s to GCS at %s: %s", filePath, dst, err)
+		log.Println(string(out))
 		return "", fmt.Errorf("Failed to copy tarball to GCS bucket %s: %s", gcsBucket, err)
 	}
 
-	return filepath.Join(gcsBucket, filePath), err
+	return dst, nil
 }
 
 // DeleteFromBucket will remove the content at path. path should be the full path

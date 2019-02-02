@@ -20,13 +20,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/creds"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -52,6 +53,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		logrus.Info("Skipping push to container registry due to --no-push flag")
 		return nil
 	}
+	t := timing.Start("Total Push Time")
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
@@ -71,27 +73,23 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 	// continue pushing unless an error occurs
 	for _, destRef := range destRefs {
-		if opts.Insecure {
-			newReg, err := name.NewInsecureRegistry(destRef.Repository.Registry.Name(), name.WeakValidation)
+		registryName := destRef.Repository.Registry.Name()
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
 			destRef.Repository.Registry = newReg
 		}
 
-		k8sc, err := k8schain.NewNoClient()
-		if err != nil {
-			return errors.Wrap(err, "getting k8schain client")
-		}
-		kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-		pushAuth, err := kc.Resolve(destRef.Context().Registry)
+		pushAuth, err := creds.GetKeychain().Resolve(destRef.Context().Registry)
 		if err != nil {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
 
 		// Create a transport to set our user-agent.
 		tr := http.DefaultTransport
-		if opts.SkipTLSVerify {
+		if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 			tr.(*http.Transport).TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}
@@ -102,6 +100,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
+	timing.DefaultRun.Stop(t)
 	return nil
 }
 
@@ -118,6 +117,11 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	}
 	logrus.Infof("Pushing layer %s to cache now", cache)
 	empty := empty.Image
+	empty, err = mutate.CreatedAt(empty, v1.Time{Time: time.Now()})
+	if err != nil {
+		return errors.Wrap(err, "setting empty image created time")
+	}
+
 	empty, err = mutate.Append(empty,
 		mutate.Addendum{
 			Layer: layer,
@@ -132,5 +136,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	}
 	cacheOpts := *opts
 	cacheOpts.Destinations = []string{cache}
+	cacheOpts.InsecureRegistries = opts.InsecureRegistries
+	cacheOpts.SkipTLSVerifyRegistries = opts.SkipTLSVerifyRegistries
 	return DoPush(empty, &cacheOpts)
 }

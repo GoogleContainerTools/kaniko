@@ -19,6 +19,8 @@ package executor
 import (
 	"testing"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -72,5 +74,109 @@ func stage(t *testing.T, d string) config.KanikoStage {
 	}
 	return config.KanikoStage{
 		Stage: stages[0],
+	}
+}
+
+type MockCommand struct {
+	name string
+}
+
+func (m *MockCommand) Name() string {
+	return m.name
+}
+
+func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
+	commands := []instructions.Command{
+		&MockCommand{name: "command1"},
+		&MockCommand{name: "command2"},
+		&MockCommand{name: "command3"},
+	}
+
+	stage := instructions.Stage{
+		Commands: commands,
+	}
+
+	type fields struct {
+		stage config.KanikoStage
+		opts  *config.KanikoOptions
+	}
+	type args struct {
+		index int
+		files []string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name: "final stage not last command",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: true,
+					Stage: stage,
+				},
+			},
+			args: args{
+				index: 1,
+			},
+			want: true,
+		},
+		{
+			name: "not final stage last command",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: false,
+					Stage: stage,
+				},
+			},
+			args: args{
+				index: len(commands) - 1,
+			},
+			want: true,
+		},
+		{
+			name: "not final stage not last command",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: false,
+					Stage: stage,
+				},
+			},
+			args: args{
+				index: 0,
+			},
+			want: true,
+		},
+		{
+			name: "caching enabled intermediate container",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: false,
+					Stage: stage,
+				},
+				opts: &config.KanikoOptions{Cache: true},
+			},
+			args: args{
+				index: 0,
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.fields.opts == nil {
+				tt.fields.opts = &config.KanikoOptions{}
+			}
+			s := &stageBuilder{
+				stage: tt.fields.stage,
+				opts:  tt.fields.opts,
+			}
+			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files); got != tt.want {
+				t.Errorf("stageBuilder.shouldTakeSnapshot() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

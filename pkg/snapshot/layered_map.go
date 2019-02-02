@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
@@ -124,6 +125,8 @@ func (l *LayeredMap) Add(s string) error {
 // was added.
 func (l *LayeredMap) MaybeAdd(s string) (bool, error) {
 	oldV, ok := l.Get(s)
+	t := timing.Start("Hashing files")
+	defer timing.DefaultRun.Stop(t)
 	newV, err := l.hasher(s)
 	if err != nil {
 		return false, err

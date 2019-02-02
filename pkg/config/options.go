@@ -16,27 +16,34 @@ limitations under the License.
 
 package config
 
+import (
+	"time"
+)
+
 // KanikoOptions are options that are set by command line arguments
 type KanikoOptions struct {
-	DockerfilePath    string
-	SrcContext        string
-	SnapshotMode      string
-	Bucket            string
-	TarPath           string
-	Target            string
-	CacheRepo         string
-	CacheDir          string
-	Destinations      multiArg
-	BuildArgs         multiArg
-	Insecure          bool
-	SkipTLSVerify     bool
-	InsecurePull      bool
-	SkipTLSVerifyPull bool
-	SingleSnapshot    bool
-	Reproducible      bool
-	NoPush            bool
-	Cache             bool
-	Cleanup           bool
+	DockerfilePath          string
+	SrcContext              string
+	SnapshotMode            string
+	Bucket                  string
+	TarPath                 string
+	Target                  string
+	CacheRepo               string
+	CacheDir                string
+	Destinations            multiArg
+	BuildArgs               multiArg
+	Insecure                bool
+	SkipTLSVerify           bool
+	InsecurePull            bool
+	SkipTLSVerifyPull       bool
+	SingleSnapshot          bool
+	Reproducible            bool
+	NoPush                  bool
+	Cache                   bool
+	Cleanup                 bool
+	CacheTTL                time.Duration
+	InsecureRegistries      multiArg
+	SkipTLSVerifyRegistries multiArg
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.

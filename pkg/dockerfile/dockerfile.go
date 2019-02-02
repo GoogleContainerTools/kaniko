@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
+	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/pkg/errors"
@@ -34,10 +34,23 @@ import (
 
 // Stages parses a Dockerfile and returns an array of KanikoStage
 func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
-	d, err := ioutil.ReadFile(opts.DockerfilePath)
+	var err error
+	var d []uint8
+	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
+	if match {
+		response, e := http.Get(opts.DockerfilePath)
+		if e != nil {
+			return nil, e
+		}
+		d, err = ioutil.ReadAll(response.Body)
+	} else {
+		d, err = ioutil.ReadFile(opts.DockerfilePath)
+	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
+
 	stages, metaArgs, err := Parse(d)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing dockerfile")
@@ -126,6 +139,7 @@ func resolveStages(stages []instructions.Stage) {
 					if val, ok := nameToIndex[c.From]; ok {
 						c.From = val
 					}
+
 				}
 			}
 		}
@@ -171,21 +185,4 @@ func saveStage(index int, stages []instructions.Stage) bool {
 		}
 	}
 	return false
-}
-
-// DockerignoreExists returns true if .dockerignore exists in the source context
-func DockerignoreExists(opts *config.KanikoOptions) bool {
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	return util.FilepathExists(path)
-}
-
-// ParseDockerignore returns a list of all paths in .dockerignore
-func ParseDockerignore(opts *config.KanikoOptions) ([]string, error) {
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing .dockerignore")
-	}
-	reader := bytes.NewBuffer(contents)
-	return dockerignore.ReadAll(reader)
 }

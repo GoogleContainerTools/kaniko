@@ -14,4 +14,5 @@ FROM ${REGISTRY}/${REPO}/debian9
 COPY --from=stage1 /hello /tmp
 
 # /tmp/hey should not get created without the ARG statement
-RUN touch /tmp/${WORD2}
+# Use -d 0 to force a time change because of stat resolution
+RUN touch -d 0 /tmp/${WORD2}

@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Test to make sure the cache works properly
-# If the image is built twice, /date should be the same in both images
-# if the cache is implemented correctly
-
-FROM alpine as base_stage
-
-RUN mkdir foo && echo base_stage > foo/base
-
-FROM base_stage as cached_stage
-
-RUN echo cached_stage > foo/cache
-
-FROM cached_stage as bug_stage
-
-RUN echo bug_stage > foo/bug
-RUN date > /date
+#!/bin/bash
+set -ex
+script_name=$0
+script_full_path=$(dirname "$0")
+export BENCHMARK=true
+export IMAGE_REPO="gcr.io/kaniko-test/benchmarks"
+./${script_full_path}/integration-test.sh

@@ -25,13 +25,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -123,7 +127,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile)
+	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
 	if err != nil {
 		fmt.Println("Failed to upload build context", err)
 		os.Exit(1)
@@ -138,66 +142,75 @@ func TestMain(m *testing.M) {
 	RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
 	defer DeleteFromBucket(fileInBucket)
 
-	fmt.Println("Building kaniko image")
-	cmd := exec.Command("docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "..")
-	if _, err = RunCommandWithoutTest(cmd); err != nil {
-		fmt.Printf("Building kaniko failed: %s", err)
-		os.Exit(1)
+	setupCommands := []struct {
+		name    string
+		command []string
+	}{
+		{
+			name:    "Building kaniko image",
+			command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
+		},
+		{
+			name:    "Building cache warmer image",
+			command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
+		},
+		{
+			name:    "Building onbuild base image",
+			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", "."},
+		},
+		{
+			name:    "Pushing onbuild base image",
+			command: []string{"docker", "push", config.onbuildBaseImage},
+		},
+		{
+			name:    "Building hardlink base image",
+			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_hardlink_base", "."},
+		},
+		{
+			name:    "Pushing hardlink base image",
+			command: []string{"docker", "push", config.hardlinkBaseImage},
+		},
 	}
 
-	fmt.Println("Building cache warmer image")
-	cmd = exec.Command("docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", "..")
-	if _, err = RunCommandWithoutTest(cmd); err != nil {
-		fmt.Printf("Building kaniko's cache warmer failed: %s", err)
-		os.Exit(1)
+	for _, setupCmd := range setupCommands {
+		fmt.Println(setupCmd.name)
+		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
+		if _, err := RunCommandWithoutTest(cmd); err != nil {
+			fmt.Printf("%s failed: %s", setupCmd.name, err)
+			os.Exit(1)
+		}
 	}
 
-	fmt.Println("Building onbuild base image")
-	buildOnbuildBase := exec.Command("docker", "build", "-t", config.onbuildBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", ".")
-	if err := buildOnbuildBase.Run(); err != nil {
-		fmt.Printf("error building onbuild base: %v", err)
-		os.Exit(1)
-	}
-
-	pushOnbuildBase := exec.Command("docker", "push", config.onbuildBaseImage)
-	if err := pushOnbuildBase.Run(); err != nil {
-		fmt.Printf("error pushing onbuild base %s: %v", config.onbuildBaseImage, err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Building hardlink base image")
-	buildHardlinkBase := exec.Command("docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_hardlink_base", ".")
-	if err := buildHardlinkBase.Run(); err != nil {
-		fmt.Printf("error building hardlink base: %v", err)
-		os.Exit(1)
-	}
-	pushHardlinkBase := exec.Command("docker", "push", config.hardlinkBaseImage)
-	if err := pushHardlinkBase.Run(); err != nil {
-		fmt.Printf("error pushing hardlink base %s: %v", config.hardlinkBaseImage, err)
-		os.Exit(1)
-	}
 	dockerfiles, err := FindDockerFiles(dockerfilesPath)
 	if err != nil {
 		fmt.Printf("Coudn't create map of dockerfiles: %s", err)
 		os.Exit(1)
 	}
 	imageBuilder = NewDockerFileBuilder(dockerfiles)
+
+	g := errgroup.Group{}
+	for dockerfile := range imageBuilder.FilesBuilt {
+		df := dockerfile
+		g.Go(func() error {
+			return imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, df)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		fmt.Printf("Error building images: %s", err)
+		os.Exit(1)
+	}
 	os.Exit(m.Run())
 }
 func TestRun(t *testing.T) {
-	for dockerfile, built := range imageBuilder.FilesBuilt {
+	for dockerfile := range imageBuilder.FilesBuilt {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
+			dockerfile := dockerfile
+			t.Parallel()
 			if _, ok := imageBuilder.DockerfilesToIgnore[dockerfile]; ok {
 				t.SkipNow()
 			}
 			if _, ok := imageBuilder.TestCacheDockerfiles[dockerfile]; ok {
 				t.SkipNow()
-			}
-			if !built {
-				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile)
-				if err != nil {
-					t.Fatalf("Failed to build kaniko and docker images for %s: %s", dockerfile, err)
-				}
 			}
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
@@ -215,6 +228,11 @@ func TestRun(t *testing.T) {
 
 		})
 	}
+
+	err := logBenchmarks("benchmark")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
+	}
 }
 
 func TestLayers(t *testing.T) {
@@ -222,16 +240,12 @@ func TestLayers(t *testing.T) {
 		"Dockerfile_test_add":     11,
 		"Dockerfile_test_scratch": 3,
 	}
-	for dockerfile, built := range imageBuilder.FilesBuilt {
+	for dockerfile := range imageBuilder.FilesBuilt {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
+			dockerfile := dockerfile
+			t.Parallel()
 			if _, ok := imageBuilder.DockerfilesToIgnore[dockerfile]; ok {
 				t.SkipNow()
-			}
-			if !built {
-				err := imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile)
-				if err != nil {
-					t.Fatalf("Failed to build kaniko and docker images for %s: %s", dockerfile, err)
-				}
 			}
 			// Pull the kaniko image
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
@@ -241,6 +255,11 @@ func TestLayers(t *testing.T) {
 			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
 		})
 	}
+
+	err := logBenchmarks("benchmark_layers")
+	if err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
+	}
 }
 
 // Build each image with kaniko twice, and then make sure they're exactly the same
@@ -248,6 +267,8 @@ func TestCache(t *testing.T) {
 	populateVolumeCache()
 	for dockerfile := range imageBuilder.TestCacheDockerfiles {
 		t.Run("test_cache_"+dockerfile, func(t *testing.T) {
+			dockerfile := dockerfile
+			t.Parallel()
 			cache := filepath.Join(config.imageRepo, "cache", fmt.Sprintf("%v", time.Now().UnixNano()))
 			// Build the initial image which will cache layers
 			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 0); err != nil {
@@ -273,31 +294,10 @@ func TestCache(t *testing.T) {
 			checkContainerDiffOutput(t, diff, expected)
 		})
 	}
-}
 
-func TestDockerignore(t *testing.T) {
-	t.Run(fmt.Sprintf("test_%s", ignoreDockerfile), func(t *testing.T) {
-		if err := setupIgnoreTestDir(); err != nil {
-			t.Fatalf("error setting up ignore test dir: %v", err)
-		}
-		if err := generateDockerignoreImages(config.imageRepo); err != nil {
-			t.Fatalf("error generating dockerignore test images: %v", err)
-		}
-
-		dockerImage := GetDockerImage(config.imageRepo, ignoreDockerfile)
-		kanikoImage := GetKanikoImage(config.imageRepo, ignoreDockerfile)
-
-		// container-diff
-		daemonDockerImage := daemonPrefix + dockerImage
-		containerdiffCmd := exec.Command("container-diff", "diff",
-			daemonDockerImage, kanikoImage,
-			"-q", "--type=file", "--type=metadata", "--json")
-		diff := RunCommand(containerdiffCmd, t)
-		t.Logf("diff = %s", string(diff))
-
-		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
-		checkContainerDiffOutput(t, diff, expected)
-	})
+	if err := logBenchmarks("benchmark_cache"); err != nil {
+		t.Logf("Failed to create benchmark file: %v", err)
+	}
 }
 
 type fileDiff struct {
@@ -399,4 +399,16 @@ func getImageDetails(image string) (*imageDetails, error) {
 		numLayers: len(layers),
 		digest:    digest.Hex,
 	}, nil
+}
+
+func logBenchmarks(benchmark string) error {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
+		f, err := os.Create(benchmark)
+		if err != nil {
+			return err
+		}
+		f.WriteString(timing.Summary())
+		defer f.Close()
+	}
+	return nil
 }
