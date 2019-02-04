@@ -165,10 +165,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	)
 
 	timer := timing.Start(dockerfile + "_docker")
-	_, err := RunCommandWithoutTest(dockerCmd)
+	out, err := RunCommandWithoutTest(dockerCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
-		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)
+		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 
 	contextFlag := "-c"
@@ -219,10 +219,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	)
 
 	timer = timing.Start(dockerfile + "_kaniko")
-	_, err = RunCommandWithoutTest(kanikoCmd)
+	out, err = RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
-		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s", dockerImage, kanikoCmd.Args, err)
+		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 
 	d.FilesBuilt[dockerfile] = true
