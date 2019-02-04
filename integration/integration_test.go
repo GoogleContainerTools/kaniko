@@ -175,8 +175,9 @@ func TestMain(m *testing.M) {
 	for _, setupCmd := range setupCommands {
 		fmt.Println(setupCmd.name)
 		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
-		if _, err := RunCommandWithoutTest(cmd); err != nil {
+		if out, err := RunCommandWithoutTest(cmd); err != nil {
 			fmt.Printf("%s failed: %s", setupCmd.name, err)
+			fmt.Println(string(out))
 			os.Exit(1)
 		}
 	}
