@@ -37,21 +37,21 @@ func WarmCache(opts *config.WarmerOptions) error {
 	for _, image := range images {
 		cacheRef, err := name.NewTag(image, name.WeakValidation)
 		if err != nil {
-			errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
+			return errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
 		img, err := remote.Image(cacheRef)
 		if err != nil {
-			errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
+			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}
 
 		digest, err := img.Digest()
 		if err != nil {
-			errors.Wrap(err, fmt.Sprintf("Failed to retrieve digest: %s", image))
+			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve digest: %s", image))
 		}
 		cachePath := path.Join(cacheDir, digest.String())
 		err = tarball.WriteToFile(cachePath, cacheRef, img)
 		if err != nil {
-			errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
+			return errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
 		} else {
 			logrus.Debugf("Wrote %s to cache", image)
 		}
