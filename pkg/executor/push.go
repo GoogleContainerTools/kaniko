@@ -49,10 +49,6 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
-	if opts.NoPush {
-		logrus.Info("Skipping push to container registry due to --no-push flag")
-		return nil
-	}
 	t := timing.Start("Total Push Time")
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
@@ -69,6 +65,11 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			tagToImage[destRef] = image
 		}
 		return tarball.MultiWriteToFile(opts.TarPath, tagToImage)
+	}
+
+	if opts.NoPush {
+		logrus.Info("Skipping push to container registry due to --no-push flag")
+		return nil
 	}
 
 	// continue pushing unless an error occurs
@@ -135,6 +136,8 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 		return errors.Wrap(err, "appending layer onto empty image")
 	}
 	cacheOpts := *opts
+	cacheOpts.TarPath = ""   // tarPath doesn't make sense for Docker layers
+	cacheOpts.NoPush = false // we want to push cached layers
 	cacheOpts.Destinations = []string{cache}
 	cacheOpts.InsecureRegistries = opts.InsecureRegistries
 	cacheOpts.SkipTLSVerifyRegistries = opts.SkipTLSVerifyRegistries
