@@ -218,7 +218,7 @@ func TestRun(t *testing.T) {
 
 			// container-diff
 			daemonDockerImage := daemonPrefix + dockerImage
-			containerdiffCmd := exec.Command("container-diff", "diff",
+			containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
 				daemonDockerImage, kanikoImage,
 				"-q", "--type=file", "--type=metadata", "--json")
 			diff := RunCommand(containerdiffCmd, t)

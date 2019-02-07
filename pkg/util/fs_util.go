@@ -42,7 +42,7 @@ type WhitelistEntry struct {
 	PrefixMatchOnly bool
 }
 
-var whitelist = []WhitelistEntry{
+var initialWhitelist = []WhitelistEntry{
 	{
 		Path:            "/kaniko",
 		PrefixMatchOnly: false,
@@ -61,6 +61,8 @@ var whitelist = []WhitelistEntry{
 		PrefixMatchOnly: false,
 	},
 }
+
+var whitelist = initialWhitelist
 
 var excluded []string
 
@@ -328,6 +330,7 @@ func checkWhitelistRoot(root string) bool {
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func DetectFilesystemWhitelist(path string) error {
+	whitelist = initialWhitelist
 	f, err := os.Open(path)
 	if err != nil {
 		return err
