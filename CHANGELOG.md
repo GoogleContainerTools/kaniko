@@ -1,3 +1,10 @@
+# v0.9.0 Release - 2/8/2019
+
+## Bug Fixes
+* Bug fix with volumes declared in base images during multi-stage builds
+* Bug fix during snapshotting multi-stage builds.
+* Bug fix for caching with tar output.
+
 # v0.8.0 Release - 1/29/2019
 
 ## New Features
