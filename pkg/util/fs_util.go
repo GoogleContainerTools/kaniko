@@ -64,6 +64,8 @@ var initialWhitelist = []WhitelistEntry{
 
 var whitelist = initialWhitelist
 
+var volumes = []string{}
+
 var excluded []string
 
 // GetFSFromImage extracts the layers of img to root
@@ -308,6 +310,7 @@ func CheckWhitelist(path string) (bool, error) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -331,6 +334,7 @@ func checkWhitelistRoot(root string) bool {
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func DetectFilesystemWhitelist(path string) error {
 	whitelist = initialWhitelist
+	volumes = []string{}
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -443,16 +447,14 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	return dest.Chown(int(uid), int(gid))
 }
 
-// AddVolumePathToWhitelist adds the given path to the whitelist with
-// PrefixMatchOnly set to true. Snapshotting will ignore paths prefixed
-// with the volume, but the volume itself will not be ignored.
-func AddVolumePathToWhitelist(path string) error {
+// AddVolumePath adds the given path to the volume whitelist.
+func AddVolumePathToWhitelist(path string) {
 	logrus.Infof("adding volume %s to whitelist", path)
 	whitelist = append(whitelist, WhitelistEntry{
 		Path:            path,
 		PrefixMatchOnly: true,
 	})
-	return nil
+	volumes = append(volumes, path)
 }
 
 // DownloadFileToDest downloads the file at rawurl to the given dest for the ADD command
@@ -619,4 +621,8 @@ func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 		return false
 	}
 	return true
+}
+
+func Volumes() []string {
+	return volumes
 }

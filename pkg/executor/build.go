@@ -285,11 +285,8 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	if files == nil || s.opts.SingleSnapshot {
 		snapshot, err = s.snapshotter.TakeSnapshotFS()
 	} else {
-		// Volumes are very weird. They get created in their command, but snapshotted in the next one.
-		// Add them to the list of files to snapshot.
-		for v := range s.cf.Config.Volumes {
-			files = append(files, v)
-		}
+		// Volumes are very weird. They get snapshotted in the next command.
+		files = append(files, util.Volumes()...)
 		snapshot, err = s.snapshotter.TakeSnapshot(files)
 	}
 	timing.DefaultRun.Stop(t)
