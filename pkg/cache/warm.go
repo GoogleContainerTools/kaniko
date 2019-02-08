@@ -52,10 +52,8 @@ func WarmCache(opts *config.WarmerOptions) error {
 		err = tarball.WriteToFile(cachePath, cacheRef, img)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
-		} else {
-			logrus.Debugf("Wrote %s to cache", image)
 		}
-
+		logrus.Debugf("Wrote %s to cache", image)
 	}
 	return nil
 }
