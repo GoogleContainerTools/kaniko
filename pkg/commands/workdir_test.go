@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"os"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -30,40 +31,65 @@ import (
 // This is needed to make sure WorkingDir handles paths correctly
 // For example, if WORKDIR specifies a non-absolute path, it should be appended to the current WORKDIR
 var workdirTests = []struct {
-	path         string
-	expectedPath string
+	path          string
+	expectedPath  string
+	snapshotFiles []string
 }{
 	{
-		path:         "/a",
-		expectedPath: "/a",
+		path:          "/a",
+		expectedPath:  "/a",
+		snapshotFiles: []string{"/a"},
 	},
 	{
-		path:         "b",
-		expectedPath: "/a/b",
+		path:          "b",
+		expectedPath:  "/a/b",
+		snapshotFiles: []string{"/a/b"},
 	},
 	{
-		path:         "c",
-		expectedPath: "/a/b/c",
+		path:          "c",
+		expectedPath:  "/a/b/c",
+		snapshotFiles: []string{"/a/b/c"},
 	},
 	{
-		path:         "/d",
-		expectedPath: "/d",
+		path:          "/d",
+		expectedPath:  "/d",
+		snapshotFiles: []string{"/d"},
 	},
 	{
-		path:         "$path",
-		expectedPath: "/d/usr",
+		path:          "$path",
+		expectedPath:  "/d/usr",
+		snapshotFiles: []string{"/d/usr"},
 	},
 	{
-		path:         "$home",
-		expectedPath: "/root",
+		path:          "$home",
+		expectedPath:  "/root",
+		snapshotFiles: []string{},
 	},
 	{
-		path:         "$path/$home",
-		expectedPath: "/root/usr/root",
+		path:          "/foo/$path/$home",
+		expectedPath:  "/foo/usr/root",
+		snapshotFiles: []string{"/foo/usr/root"},
+	},
+	{
+		path:          "/tmp",
+		expectedPath:  "/tmp",
+		snapshotFiles: []string{},
 	},
 }
 
+// For testing
+func mockDir(p string, fi os.FileMode) error {
+	return nil
+}
 func TestWorkdirCommand(t *testing.T) {
+
+	// Mock out mkdir for testing.
+	oldMkdir := mkdir
+	mkdir = mockDir
+
+	defer func() {
+		mkdir = oldMkdir
+	}()
 
 	cfg := &v1.Config{
 		WorkingDir: "/",
@@ -78,10 +104,11 @@ func TestWorkdirCommand(t *testing.T) {
 			cmd: &instructions.WorkdirCommand{
 				Path: test.path,
 			},
-			snapshotFiles: []string{},
+			snapshotFiles: nil,
 		}
 		buildArgs := dockerfile.NewBuildArgs([]string{})
 		cmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, nil, test.expectedPath, cfg.WorkingDir)
+		testutil.CheckErrorAndDeepEqual(t, false, nil, test.snapshotFiles, cmd.snapshotFiles)
 	}
 }
