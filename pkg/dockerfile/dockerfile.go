@@ -175,14 +175,6 @@ func saveStage(index int, stages []instructions.Stage) bool {
 				return true
 			}
 		}
-		for _, cmd := range stage.Commands {
-			switch c := cmd.(type) {
-			case *instructions.CopyCommand:
-				if c.From == strconv.Itoa(index) {
-					return true
-				}
-			}
-		}
 	}
 	return false
 }

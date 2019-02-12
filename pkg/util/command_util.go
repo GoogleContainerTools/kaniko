@@ -53,6 +53,19 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 	return resolvedValues, nil
 }
 
+// ResolveEnvAndWildcards resolves both environment variables and wildcards (globs)
+func ResolveEnvAndWildcards(sd []string, buildcontext string, envs []string) ([]string, string, error) {
+	// First, resolve any environment replacement
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
+	if err != nil {
+		return nil, "", err
+	}
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err := ResolveSources(resolvedEnvs, buildcontext)
+	return srcs, dest, err
+}
+
 // ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
 // It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
 // Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir

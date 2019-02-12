@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/otiai10/copy"
+
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -60,10 +62,11 @@ type stageBuilder struct {
 	opts            *config.KanikoOptions
 	cmds            []commands.DockerCommand
 	args            *dockerfile.BuildArgs
+	filesToSave     []string
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, filesToSave []string) (*stageBuilder, error) {
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
@@ -96,6 +99,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 		snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
 		opts:            opts,
+		filesToSave:     filesToSave,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -353,6 +357,31 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 
 }
 
+func crossStageDependencyMap(stages []config.KanikoStage) map[int][]string {
+	filesForStage := map[int][]string{}
+	for _, stage := range stages {
+
+		// Build the copy --from dependency graph
+		for _, command := range stage.Commands {
+
+			cp, ok := command.(*instructions.CopyCommand)
+			if !ok {
+				continue
+			}
+			if cp.From != "" {
+				// Make sure this is a previous stage.
+				ps, err := strconv.Atoi(cp.From)
+				if err != nil {
+					continue
+				}
+				filesForStage[ps] = cp.SourcesAndDest
+			}
+		}
+	}
+	logrus.Debugf("Built cross-stage dependency map: %v", filesForStage)
+	return filesForStage
+}
+
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
@@ -370,7 +399,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 
 	for index, stage := range stages {
-		sb, err := newStageBuilder(opts, stage)
+		sb, err := newStageBuilder(opts, stage, filesForStage[index])
 		if err != nil {
 			return nil, err
 		}
@@ -405,10 +434,24 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			if err := saveStageAsTarball(strconv.Itoa(index), sourceImage); err != nil {
 				return nil, err
 			}
-			if err := extractImageToDependecyDir(strconv.Itoa(index), sourceImage); err != nil {
+		}
+
+		if len(sb.filesToSave) > 0 {
+			srcs, _, err := util.ResolveEnvAndWildcards(sb.filesToSave, constants.RootDir, sb.cf.Config.Env)
+			if err != nil {
 				return nil, err
 			}
+			dependencyDir := filepath.Join(constants.KanikoDir, strconv.Itoa(index))
+			os.MkdirAll(dependencyDir, 0644)
+			for _, src := range srcs {
+				dst := filepath.Join(dependencyDir, src)
+				logrus.Debugf("Copying dependency %s to %s", src, dst)
+				if err := copy.Copy(src, dst); err != nil {
+					return nil, err
+				}
+			}
 		}
+
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
 			return nil, err
