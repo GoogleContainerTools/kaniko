@@ -78,6 +78,22 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	return fp, nil
 }
 
+func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
+	// First, resolve any environment replacement
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
+	if err != nil {
+		return nil, "", err
+	}
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
+	if err != nil {
+		return nil, "", err
+	}
+	err = IsSrcsValid(sd, srcs, buildcontext)
+	return srcs, dest, err
+}
+
 // ContainsWildcards returns true if any entry in paths contains wildcards
 func ContainsWildcards(paths []string) bool {
 	for _, path := range paths {
@@ -90,23 +106,22 @@ func ContainsWildcards(paths []string) bool {
 
 // ResolveSources resolves the given sources if the sources contains wildcards
 // It returns a list of resolved sources
-func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) ([]string, error) {
-	srcs := srcsAndDest[:len(srcsAndDest)-1]
+func ResolveSources(srcs []string, root string) ([]string, error) {
 	// If sources contain wildcards, we first need to resolve them to actual paths
-	if ContainsWildcards(srcs) {
-		logrus.Debugf("Resolving srcs %v...", srcs)
-		files, err := RelativeFiles("", root)
-		if err != nil {
-			return nil, err
-		}
-		srcs, err = matchSources(srcs, files)
-		if err != nil {
-			return nil, err
-		}
-		logrus.Debugf("Resolved sources to %v", srcs)
+	if !ContainsWildcards(srcs) {
+		return srcs, nil
 	}
-	// Check to make sure the sources are valid
-	return srcs, IsSrcsValid(srcsAndDest, srcs, root)
+	logrus.Infof("Resolving srcs %v...", srcs)
+	files, err := RelativeFiles("", root)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := matchSources(srcs, files)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("Resolved sources to %v", resolved)
+	return resolved, nil
 }
 
 // matchSources returns a list of sources that match wildcards
