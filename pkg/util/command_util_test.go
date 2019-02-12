@@ -408,7 +408,6 @@ var testResolveSources = []struct {
 			"context/foo",
 			"context/b*",
 			testURL,
-			"dest/",
 		},
 		expectedList: []string{
 			"context/foo",
