@@ -58,6 +58,8 @@ type stageBuilder struct {
 	snapshotter     *snapshot.Snapshotter
 	baseImageDigest string
 	opts            *config.KanikoOptions
+	cmds            []commands.DockerCommand
+	args            *dockerfile.BuildArgs
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -87,14 +89,29 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 	if err != nil {
 		return nil, err
 	}
-	return &stageBuilder{
+	s := &stageBuilder{
 		stage:           stage,
 		image:           sourceImage,
 		cf:              imageConfig,
 		snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
 		opts:            opts,
-	}, nil
+	}
+
+	for _, cmd := range s.stage.Commands {
+		command, err := commands.GetCommand(cmd, opts.SrcContext)
+		if err != nil {
+			return nil, err
+		}
+		if command == nil {
+			continue
+		}
+		s.cmds = append(s.cmds, command)
+	}
+
+	s.args = dockerfile.NewBuildArgs(s.opts.BuildArgs)
+	s.args.AddMetaArgs(s.stage.MetaArgs)
+	return s, nil
 }
 
 func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
@@ -109,7 +126,7 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 	return imageConfig, nil
 }
 
-func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds []commands.DockerCommand, args *dockerfile.BuildArgs) error {
+func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) error {
 	if !s.opts.Cache {
 		return nil
 	}
@@ -122,13 +139,13 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds
 	// We walk through all the commands, running any commands that only operate on metadata.
 	// We throw the metadata away after, but we need it to properly track command dependencies
 	// for things like COPY ${FOO} or RUN commands that use environment variables.
-	for i, command := range cmds {
+	for i, command := range s.cmds {
 		if command == nil {
 			continue
 		}
 		compositeKey.AddKey(command.String())
 		// If the command uses files from the context, add them.
-		files, err := command.FilesUsedFromContext(&cfg, args)
+		files, err := command.FilesUsedFromContext(&cfg, s.args)
 		if err != nil {
 			return err
 		}
@@ -153,13 +170,13 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config, cmds
 
 			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
 				logrus.Infof("Using caching version of cmd: %s", command.String())
-				cmds[i] = cacheCmd
+				s.cmds[i] = cacheCmd
 			}
 		}
 
 		// Mutate the config for any commands that require it.
 		if command.MetadataOnly() {
-			if err := command.ExecuteCommand(&cfg, args); err != nil {
+			if err := command.ExecuteCommand(&cfg, s.args); err != nil {
 				return err
 			}
 		}
@@ -176,29 +193,14 @@ func (s *stageBuilder) build() error {
 	compositeKey := NewCompositeCache(dgst)
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
-	cmds := []commands.DockerCommand{}
-	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, s.opts.SrcContext)
-		if err != nil {
-			return err
-		}
-		if command == nil {
-			continue
-		}
-		cmds = append(cmds, command)
-	}
-
-	args := dockerfile.NewBuildArgs(s.opts.BuildArgs)
-	args.AddMetaArgs(s.stage.MetaArgs)
-
 	// Apply optimizations to the instructions.
-	if err := s.optimize(*compositeKey, s.cf.Config, cmds, args); err != nil {
+	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
 		return err
 	}
 
 	// Unpack file system to root if we need to.
 	shouldUnpack := false
-	for _, cmd := range cmds {
+	for _, cmd := range s.cmds {
 		if cmd.RequiresUnpackedFS() {
 			logrus.Infof("Unpacking rootfs as cmd %s requires it.", cmd.String())
 			shouldUnpack = true
@@ -223,7 +225,7 @@ func (s *stageBuilder) build() error {
 	timing.DefaultRun.Stop(t)
 
 	cacheGroup := errgroup.Group{}
-	for index, command := range cmds {
+	for index, command := range s.cmds {
 		if command == nil {
 			continue
 		}
@@ -232,7 +234,7 @@ func (s *stageBuilder) build() error {
 		compositeKey.AddKey(command.String())
 		t := timing.Start("Command: " + command.String())
 		// If the command uses files from the context, add them.
-		files, err := command.FilesUsedFromContext(&s.cf.Config, args)
+		files, err := command.FilesUsedFromContext(&s.cf.Config, s.args)
 		if err != nil {
 			return err
 		}
@@ -243,7 +245,7 @@ func (s *stageBuilder) build() error {
 		}
 		logrus.Info(command.String())
 
-		if err := command.ExecuteCommand(&s.cf.Config, args); err != nil {
+		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 			return err
 		}
 		files = command.FilesToSnapshot()
@@ -364,10 +366,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err := fetchExtraStages(stages, opts); err != nil {
 		return nil, err
 	}
+
 	for index, stage := range stages {
 		sb, err := newStageBuilder(opts, stage)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("getting stage builder for stage %d", index))
+			return nil, err
 		}
 		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
