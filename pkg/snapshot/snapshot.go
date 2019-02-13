@@ -183,11 +183,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	timer = timing.Start("Writing tar file")
 	// Now create the tar.
 	for path := range memFs {
-		whitelisted, err := util.CheckWhitelist(path)
-		if err != nil {
-			return "", err
-		}
-		if whitelisted {
+		if util.CheckWhitelist(path) {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}

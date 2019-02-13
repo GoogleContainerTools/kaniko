@@ -130,12 +130,15 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
-		whitelisted, err := CheckWhitelist(path)
-		if err != nil {
-			return err
-		}
-		if whitelisted || ChildDirInWhitelist(path, constants.RootDir) {
+		if CheckWhitelist(path) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
 			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
+			return nil
+		}
+		if childDirInWhitelist(path) {
+			logrus.Debugf("Not deleting %s, as it contains a whitelisted path", path)
 			return nil
 		}
 		if path == constants.RootDir {
@@ -146,16 +149,9 @@ func DeleteFilesystem() error {
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
-func ChildDirInWhitelist(path, directory string) bool {
-	for _, d := range constants.KanikoBuildFiles {
-		dirPath := filepath.Join(directory, d)
-		if HasFilepathPrefix(dirPath, path, false) {
-			return true
-		}
-	}
+func childDirInWhitelist(path string) bool {
 	for _, d := range whitelist {
-		dirPath := filepath.Join(directory, d.Path)
-		if HasFilepathPrefix(dirPath, path, d.PrefixMatchOnly) {
+		if HasFilepathPrefix(d.Path, path, d.PrefixMatchOnly) {
 			return true
 		}
 	}
@@ -190,11 +186,12 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	uid := hdr.Uid
 	gid := hdr.Gid
 
-	whitelisted, err := CheckWhitelist(path)
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		return err
 	}
-	if whitelisted && !checkWhitelistRoot(dest) {
+
+	if CheckWhitelist(abs) && !checkWhitelistRoot(dest) {
 		logrus.Debugf("Not adding %s because it is whitelisted", path)
 		return nil
 	}
@@ -245,11 +242,11 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 
 	case tar.TypeLink:
 		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
-		whitelisted, err := CheckWhitelist(hdr.Linkname)
+		abs, err := filepath.Abs(hdr.Linkname)
 		if err != nil {
 			return err
 		}
-		if whitelisted {
+		if CheckWhitelist(abs) {
 			logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
@@ -299,19 +296,14 @@ func IsInWhitelist(path string) bool {
 	return false
 }
 
-func CheckWhitelist(path string) (bool, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		logrus.Infof("unable to get absolute path for %s", path)
-		return false, err
-	}
+func CheckWhitelist(path string) bool {
 	for _, wl := range whitelist {
-		if HasFilepathPrefix(abs, wl.Path, wl.PrefixMatchOnly) {
-			return true, nil
+		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
+			return true
 		}
 	}
 
-	return false, nil
+	return false
 }
 
 func checkWhitelistRoot(root string) bool {
@@ -379,11 +371,7 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		whitelisted, err := CheckWhitelist(path)
-		if err != nil {
-			return err
-		}
-		if whitelisted && !HasFilepathPrefix(path, root, false) {
+		if CheckWhitelist(path) && !HasFilepathPrefix(path, root, false) {
 			return nil
 		}
 		if err != nil {
