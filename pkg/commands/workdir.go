@@ -34,6 +34,9 @@ type WorkdirCommand struct {
 	snapshotFiles []string
 }
 
+// For testing
+var mkdir = os.MkdirAll
+
 func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: workdir")
 	workdirPath := w.cmd.Path
@@ -50,10 +53,11 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 	logrus.Infof("Changed working directory to %s", config.WorkingDir)
 
 	// Only create and snapshot the dir if it didn't exist already
+	w.snapshotFiles = []string{}
 	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
 		logrus.Infof("Creating directory %s", config.WorkingDir)
-		w.snapshotFiles = []string{config.WorkingDir}
-		return os.MkdirAll(config.WorkingDir, 0755)
+		w.snapshotFiles = append(w.snapshotFiles, config.WorkingDir)
+		return mkdir(config.WorkingDir, 0755)
 	}
 	return nil
 }
