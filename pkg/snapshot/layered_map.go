@@ -30,7 +30,6 @@ import (
 type LayeredMap struct {
 	layers    []map[string]string
 	whiteouts []map[string]string
-	added     []map[string]string
 	hasher    func(string) (string, error)
 	// cacheHasher doesn't include mtime in it's hash so that filesystem cache keys are stable
 	cacheHasher func(string) (string, error)
@@ -48,14 +47,13 @@ func NewLayeredMap(h func(string) (string, error), c func(string) (string, error
 func (l *LayeredMap) Snapshot() {
 	l.whiteouts = append(l.whiteouts, map[string]string{})
 	l.layers = append(l.layers, map[string]string{})
-	l.added = append(l.added, map[string]string{})
 }
 
 // Key returns a hash for added files
 func (l *LayeredMap) Key() (string, error) {
 	c := bytes.NewBuffer([]byte{})
 	enc := json.NewEncoder(c)
-	enc.Encode(l.added)
+	enc.Encode(l.layers)
 	return util.SHA256(c)
 }
 
@@ -108,12 +106,6 @@ func (l *LayeredMap) Add(s string) error {
 		return fmt.Errorf("Error creating hash for %s: %v", s, err)
 	}
 	l.layers[len(l.layers)-1][s] = newV
-	// Use cache hash function and add to added
-	cacheV, err := l.cacheHasher(s)
-	if err != nil {
-		return fmt.Errorf("Error creating cache hash for %s: %v", s, err)
-	}
-	l.added[len(l.added)-1][s] = cacheV
 	return nil
 }
 
