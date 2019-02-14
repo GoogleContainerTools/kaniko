@@ -60,14 +60,12 @@ func (l *LayeredMap) Key() (string, error) {
 }
 
 // GetFlattenedPathsForWhiteOut returns all paths in the current FS
-func (l *LayeredMap) GetFlattenedPathsForWhiteOut() map[string]struct{} {
+func (l *LayeredMap) getFlattenedPathsForWhiteOut() map[string]struct{} {
 	paths := map[string]struct{}{}
 	for _, l := range l.layers {
 		for p := range l {
 			if strings.HasPrefix(filepath.Base(p), ".wh.") {
 				delete(paths, p)
-			} else {
-				paths[p] = struct{}{}
 			}
 			paths[p] = struct{}{}
 		}
