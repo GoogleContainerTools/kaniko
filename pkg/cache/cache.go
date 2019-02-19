@@ -124,7 +124,7 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "geting file info")
+		return nil, errors.Wrap(err, "getting file info")
 	}
 
 	// A stale cache is a bad cache
