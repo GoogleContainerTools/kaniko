@@ -162,7 +162,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		Callback: func(path string, ent *godirwalk.Dirent) error {
 			if util.IsInWhitelist(path) {
 				if util.IsDestDir(path) {
-					logrus.Infof("Skipping paths under %s, as it is a whitelisted directory", path)
+					logrus.Debugf("Skipping paths under %s, as it is a whitelisted directory", path)
 					return filepath.SkipDir
 				}
 				return nil
