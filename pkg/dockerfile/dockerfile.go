@@ -80,6 +80,15 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 		}
 	}
 
+	if len(opts.Label) != 0 {
+		kstage := &kanikoStages[len(kanikoStages) - 1]
+		for _, label := range opts.Label {
+			parts := strings.SplitN(label, "=", 2)
+			command := instructions.NewLabelCommand(parts[0], parts[1], true)
+			kstage.Stage.Commands = append(kstage.Stage.Commands, command)
+		}
+	}
+
 	return kanikoStages, nil
 }
 

@@ -62,6 +62,7 @@ var argsMap = map[string][]string{
 // Arguments to build Dockerfiles with when building with docker
 var additionalDockerFlagsMap = map[string][]string{
 	"Dockerfile_test_target": {"--target=second"},
+	"Dockerfile_test_label_flag": {"--label=foo2=bar2"},
 }
 
 // Arguments to build Dockerfiles with when building with kaniko

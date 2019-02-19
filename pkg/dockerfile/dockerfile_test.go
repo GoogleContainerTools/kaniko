@@ -70,6 +70,7 @@ func Test_targetStage(t *testing.T) {
 	tests := []struct {
 		name        string
 		target      string
+		labels      []string
 		targetIndex int
 		shouldErr   bool
 	}{
