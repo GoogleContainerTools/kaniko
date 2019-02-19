@@ -213,6 +213,8 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 		timing.DefaultRun.Stop(t)
+	} else {
+		logrus.Info("Skipping unpacking as no commands require it.")
 	}
 	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return err

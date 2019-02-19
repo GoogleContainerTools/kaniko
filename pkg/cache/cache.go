@@ -145,10 +145,27 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 type cachedImage struct {
 	digest string
 	v1.Image
+	mfst *v1.Manifest
 }
 
 func (c *cachedImage) Digest() (v1.Hash, error) {
 	return v1.NewHash(c.digest)
+}
+
+func (c *cachedImage) Manifest() (*v1.Manifest, error) {
+	if c.mfst == nil {
+		return c.Image.Manifest()
+	}
+	return c.mfst, nil
+}
+
+func mfstFromPath(p string) (*v1.Manifest, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return v1.ParseManifest(f)
 }
 
 func cachedImageFromPath(p string) (v1.Image, error) {
@@ -157,8 +174,24 @@ func cachedImageFromPath(p string) (v1.Image, error) {
 		return nil, errors.Wrap(err, "getting image from path")
 	}
 
+	// Manifests may be present next to the tar, named with a ".json" suffix
+	mfstPath := p + ".json"
+
+	var mfst *v1.Manifest
+	if _, err := os.Stat(mfstPath); err != nil {
+		logrus.Debugf("Manifest does not exist at file: %s", mfstPath)
+	} else {
+		mfst, err = mfstFromPath(mfstPath)
+		if err != nil {
+			logrus.Debugf("Error parsing manifest from file: %s", mfstPath)
+		} else {
+			logrus.Infof("Found manifest at %s", mfstPath)
+		}
+	}
+
 	return &cachedImage{
 		digest: filepath.Base(p),
 		Image:  imgTar,
+		mfst:   mfst,
 	}, nil
 }
