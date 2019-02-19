@@ -41,6 +41,14 @@ func SetupFiles(path string, files map[string]string) error {
 	return nil
 }
 
+func CheckDeepEqual(t *testing.T, expected, actual interface{}) {
+	t.Helper()
+	if diff := cmp.Diff(actual, expected); diff != "" {
+		t.Errorf("%T differ (-got, +want): %s", expected, diff)
+		return
+	}
+}
+
 func CheckErrorAndDeepEqual(t *testing.T, shouldErr bool, err error, expected, actual interface{}) {
 	t.Helper()
 	if err := checkErr(shouldErr, err); err != nil {
