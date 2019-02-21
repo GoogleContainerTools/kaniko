@@ -444,7 +444,7 @@ Similar tools include:
 - [img](https://github.com/genuinetools/img)
 - [orca-build](https://github.com/cyphar/orca-build)
 - [umoci](https://github.com/openSUSE/umoci)
-- [buildah](https://github.com/projectatomic/buildah)
+- [buildah](https://github.com/containers/buildah)
 - [FTL](https://github.com/GoogleCloudPlatform/runtimes-common/tree/master/ftl)
 - [Bazel rules_docker](https://github.com/bazelbuild/rules_docker)
 
@@ -467,8 +467,12 @@ filesystem is sufficiently complicated). However it has no `Dockerfile`-like
 build tooling (it's a slightly lower-level tool that can be used to build such
 builders -- such as `orca-build`).
 
-`buildah` requires the same privileges as a Docker daemon does to run, while
-`kaniko` runs without any special privileges or permissions.
+`Buildah` can run as a non root user and does not require privileges. Buildah
+specializes in building OCI images. Buildah's commands replicate all of the
+commands that are found in a Dockerfile. Its goal is also to provide a lower
+level coreutils interface to build images, allowing people to build containers
+without requiring a Dockerfile. The intent with Buildah is to allow other
+scripting languages to build container images, without requiring a daemon.
 
 `FTL` and `Bazel` aim to achieve the fastest possible creation of Docker images
 for a subset of images.  These can be thought of as a special-case "fast path"
