@@ -117,9 +117,13 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 | Local Directory  | dir://[path to a directory in the kaniko container]  |
 | GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     |
 | S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
+| Git Repository   | git://[repository url]     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
+
+### Using Private Git Repository
+You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
 ### Running kaniko
 
