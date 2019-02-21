@@ -18,6 +18,7 @@ package cache
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -52,6 +53,15 @@ func WarmCache(opts *config.WarmerOptions) error {
 		err = tarball.WriteToFile(cachePath, cacheRef, img)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
+		}
+
+		mfst, err := img.RawManifest()
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve manifest for %s", image))
+		}
+		mfstPath := cachePath + ".json"
+		if err := ioutil.WriteFile(mfstPath, mfst, 0666); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Failed to save manifest for %s", image))
 		}
 		logrus.Debugf("Wrote %s to cache", image)
 	}
