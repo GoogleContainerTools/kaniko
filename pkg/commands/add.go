@@ -61,7 +61,10 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	for _, src := range srcs {
 		fullPath := filepath.Join(a.buildcontext, src)
 		if util.IsSrcRemoteFileURL(src) {
-			urlDest := util.URLDestinationFilepath(src, dest, config.WorkingDir)
+			urlDest, err := util.URLDestinationFilepath(src, dest, config.WorkingDir, replacementEnvs)
+			if err != nil {
+				return err
+			}
 			logrus.Infof("Adding remote URL %s to %s", src, urlDest)
 			if err := util.DownloadFileToDest(src, urlDest); err != nil {
 				return err
