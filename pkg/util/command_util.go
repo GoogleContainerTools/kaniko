@@ -37,11 +37,13 @@ import (
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
+		var resolved string
+		var err error
 		if IsSrcRemoteFileURL(value) {
-			resolvedValues = append(resolvedValues, value)
-			continue
+			resolved, err = ResolveEnvironmentReplacement(value, envs, false)
+		} else {
+			resolved, err = ResolveEnvironmentReplacement(value, envs, isFilepath)
 		}
-		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -165,20 +167,24 @@ func DestinationFilepath(src, dest, cwd string) (string, error) {
 }
 
 // URLDestinationFilepath gives the destination a file from a remote URL should be saved to
-func URLDestinationFilepath(rawurl, dest, cwd string) string {
+func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, error) {
 	if !IsDestDir(dest) {
 		if !filepath.IsAbs(dest) {
-			return filepath.Join(cwd, dest)
+			return filepath.Join(cwd, dest), nil
 		}
-		return dest
+		return dest, nil
 	}
 	urlBase := filepath.Base(rawurl)
+	urlBase, err := ResolveEnvironmentReplacement(urlBase, envs, true)
+	if err != nil {
+		return "", err
+	}
 	destPath := filepath.Join(dest, urlBase)
 
 	if !filepath.IsAbs(dest) {
 		destPath = filepath.Join(cwd, destPath)
 	}
-	return destPath
+	return destPath, nil
 }
 
 func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string) error {
