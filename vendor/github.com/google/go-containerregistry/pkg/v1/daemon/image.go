@@ -20,11 +20,10 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
-
 	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
 // image accesses an image from a docker daemon
@@ -42,6 +41,7 @@ type imageOpener struct {
 	buffered bool
 }
 
+// ImageOption is a functional option for Image.
 type ImageOption func(*imageOpener) error
 
 func (i *imageOpener) Open() (v1.Image, error) {
@@ -66,7 +66,7 @@ func (i *imageOpener) Open() (v1.Image, error) {
 	return img, nil
 }
 
-// API interface for testing.
+// ImageSaver is an interface for testing.
 type ImageSaver interface {
 	ImageSave(context.Context, []string) (io.ReadCloser, error)
 }

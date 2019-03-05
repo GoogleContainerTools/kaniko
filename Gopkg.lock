@@ -430,7 +430,8 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:f1b23f53418c1b035a5965ac2600a28b16c08643683d5213fb581ecf4e79a02a"
+  branch = "master"
+  digest = "1:826522d15618f01d90ba1188bc3d02fb574645d8eb4dbf94a3350c780deac2ff"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
@@ -444,12 +445,13 @@
     "pkg/v1/random",
     "pkg/v1/remote",
     "pkg/v1/remote/transport",
+    "pkg/v1/stream",
     "pkg/v1/tarball",
     "pkg/v1/types",
     "pkg/v1/v1util",
   ]
   pruneopts = "NUT"
-  revision = "88d8d18eb1bde1fcef23c745205c738074290515"
+  revision = "16d6587b5a87052c861b30443f31c588a319e8d4"
 
 [[projects]]
   digest = "1:f4f203acd8b11b8747bdcd91696a01dbc95ccb9e2ca2db6abf81c3a4f5e950ce"
@@ -1102,7 +1104,7 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:b960fc62d636ccdc3265dd1e190b7f5e7bf5f8d29bf4f02af7f1352768c58f3f"
+  digest = "1:2f523dd16b56091fab1f329f772c3540742920e270bf0f9b8451106b7f005a66"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1154,8 +1156,8 @@
     "util/integer",
   ]
   pruneopts = "NUT"
-  revision = "7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65"
-  version = "kubernetes-1.11.0"
+  revision = "2cefa64ff137e128daeddbd1775cd775708a05bf"
+  version = "kubernetes-1.11.3"
 
 [[projects]]
   digest = "1:e345c95cf277bb7f650306556904df69e0904395c56959a56002d0140747eda0"

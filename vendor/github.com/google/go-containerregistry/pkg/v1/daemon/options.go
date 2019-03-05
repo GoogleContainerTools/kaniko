@@ -14,12 +14,14 @@
 
 package daemon
 
+// WithBufferedOpener buffers the image.
 func WithBufferedOpener() ImageOption {
 	return func(i *imageOpener) error {
 		return i.setBuffered(true)
 	}
 }
 
+// WithUnbufferedOpener streams the image to avoid buffering.
 func WithUnbufferedOpener() ImageOption {
 	return func(i *imageOpener) error {
 		return i.setBuffered(false)
