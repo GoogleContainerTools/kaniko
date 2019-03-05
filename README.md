@@ -362,7 +362,7 @@ You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
 
-Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --cleanup
@@ -391,7 +391,11 @@ This flag takes a single snapshot of the filesystem at the end of the build, so 
 
 #### --skip-tls-verify
 
-Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when pushing to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --snapshotMode
 
