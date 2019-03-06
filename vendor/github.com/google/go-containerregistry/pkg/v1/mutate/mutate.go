@@ -237,14 +237,6 @@ func (i *image) Layers() ([]v1.Layer, error) {
 	return ls, nil
 }
 
-// BlobSet returns an unordered collection of all the blobs in the image.
-func (i *image) BlobSet() (map[v1.Hash]struct{}, error) {
-	if err := i.compute(); err != nil {
-		return nil, err
-	}
-	return partial.BlobSet(i)
-}
-
 // ConfigName returns the hash of the image's config file.
 func (i *image) ConfigName() (v1.Hash, error) {
 	if err := i.compute(); err != nil {

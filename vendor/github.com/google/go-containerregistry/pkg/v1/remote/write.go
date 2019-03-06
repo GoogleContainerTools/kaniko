@@ -57,9 +57,25 @@ func Write(ref name.Reference, img v1.Image, auth authn.Authenticator, t http.Ro
 	}
 
 	// Upload individual layers in goroutines and collect any errors.
+	// If we can dedupe by the layer digest, try to do so. If the layer is
+	// a stream.Layer, we can't dedupe and might re-upload.
 	var g errgroup.Group
+	uploaded := map[v1.Hash]bool{}
 	for _, l := range ls {
 		l := l
+		if _, ok := l.(*stream.Layer); !ok {
+			h, err := l.Digest()
+			if err != nil {
+				return err
+			}
+			// If we can determine the layer's digest ahead of
+			// time, use it to dedupe uploads.
+			if uploaded[h] {
+				continue // Already uploading.
+			}
+			uploaded[h] = true
+		}
+
 		g.Go(func() error {
 			return w.uploadOne(l)
 		})

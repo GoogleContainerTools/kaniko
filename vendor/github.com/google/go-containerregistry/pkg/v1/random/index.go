@@ -29,6 +29,8 @@ type randomIndex struct {
 	manifest *v1.IndexManifest
 }
 
+// Index returns a pseudo-randomly generated ImageIndex with count images, each
+// having the given number of layers of size byteSize.
 func Index(byteSize, layers, count int64) (v1.ImageIndex, error) {
 	manifest := v1.IndexManifest{
 		SchemaVersion: 2,
