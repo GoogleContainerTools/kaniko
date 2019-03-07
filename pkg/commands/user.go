@@ -31,10 +31,6 @@ type UserCommand struct {
 	cmd *instructions.UserCommand
 }
 
-func (r *UserCommand) RequiresUnpackedFS() bool {
-	return true
-}
-
 func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: USER")
 	u := r.cmd.User
@@ -50,11 +46,6 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		if err != nil {
 			return err
 		}
-	}
-
-	_, _, err = util.GetUserFromUsername(userStr, groupStr)
-	if err != nil {
-		return err
 	}
 
 	if groupStr != "" {

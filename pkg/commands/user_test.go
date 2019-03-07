@@ -28,57 +28,42 @@ import (
 var userTests = []struct {
 	user        string
 	expectedUID string
-	shouldError bool
 }{
 	{
 		user:        "root",
 		expectedUID: "root",
-		shouldError: false,
 	},
 	{
 		user:        "0",
 		expectedUID: "0",
-		shouldError: false,
 	},
 	{
 		user:        "fakeUser",
-		expectedUID: "",
-		shouldError: true,
+		expectedUID: "fakeUser",
 	},
 	{
 		user:        "root:root",
 		expectedUID: "root:root",
-		shouldError: false,
 	},
 	{
 		user:        "0:root",
 		expectedUID: "0:root",
-		shouldError: false,
 	},
 	{
 		user:        "root:0",
 		expectedUID: "root:0",
-		shouldError: false,
 	},
 	{
 		user:        "0:0",
 		expectedUID: "0:0",
-		shouldError: false,
-	},
-	{
-		user:        "root:fakeGroup",
-		expectedUID: "",
-		shouldError: true,
 	},
 	{
 		user:        "$envuser",
 		expectedUID: "root",
-		shouldError: false,
 	},
 	{
 		user:        "root:$envgroup",
 		expectedUID: "root:root",
-		shouldError: false,
 	},
 }
 
@@ -97,6 +82,6 @@ func TestUpdateUser(t *testing.T) {
 		}
 		buildArgs := dockerfile.NewBuildArgs([]string{})
 		err := cmd.ExecuteCommand(cfg, buildArgs)
-		testutil.CheckErrorAndDeepEqual(t, test.shouldError, err, test.expectedUID, cfg.User)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedUID, cfg.User)
 	}
 }
