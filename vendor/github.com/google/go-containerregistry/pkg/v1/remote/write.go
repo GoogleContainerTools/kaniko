@@ -200,10 +200,9 @@ func (w *writer) checkExistingManifest(h v1.Hash, mt types.MediaType) (bool, err
 func (w *writer) initiateUpload(from, mount string) (location string, mounted bool, err error) {
 	u := w.url(fmt.Sprintf("/v2/%s/blobs/uploads/", w.ref.Context().RepositoryStr()))
 	uv := url.Values{}
-	if mount != "" {
+	if mount != "" && from != "" {
+		// Quay will fail if we specify a "mount" without a "from".
 		uv["mount"] = []string{mount}
-	}
-	if from != "" {
 		uv["from"] = []string{from}
 	}
 	u.RawQuery = uv.Encode()
