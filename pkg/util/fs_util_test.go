@@ -503,6 +503,30 @@ func TestExtractFile(t *testing.T) {
 				filesAreHardlinks("/bin/uncompress", "/bin/gzip"),
 			},
 		},
+		{
+			name:     "file with setuid bit",
+			contents: []byte("helloworld"),
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644)},
+			checkers: []checker{
+				fileExists("/bar"),
+				fileMatches("/bar", []byte("helloworld")),
+				permissionsMatch("/bar", 0644|os.ModeSetuid),
+			},
+		},
+		{
+			name:     "dir with sticky bit",
+			contents: []byte("helloworld"),
+			hdrs: []*tar.Header{
+				dirHeader("./foo", 01755),
+				fileHeader("./foo/bar", "helloworld", 0644),
+			},
+			checkers: []checker{
+				fileExists("/foo/bar"),
+				fileMatches("/foo/bar", []byte("helloworld")),
+				permissionsMatch("/foo/bar", 0644),
+				permissionsMatch("/foo", 0755|os.ModeDir|os.ModeSticky),
+			},
+		},
 	}
 
 	for _, tc := range tcs {
