@@ -21,6 +21,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -60,6 +62,12 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
+	for _, dir := range getParentDirectories(fooPath) {
+		snapshotFiles[dir] = ""
+	}
+	for _, dir := range getParentDirectories(batPath) {
+		snapshotFiles[dir] = ""
+	}
 	numFiles := 0
 	for {
 		hdr, err := tr.Next()
@@ -75,7 +83,7 @@ func TestSnapshotFSFileChange(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != 2 {
+	if numFiles != len(snapshotFiles) {
 		t.Fatalf("Incorrect number of files were added, expected: 2, actual: %v", numFiles)
 	}
 }
@@ -105,6 +113,9 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPath: "baz2",
 	}
+	for _, dir := range getParentDirectories(batPath) {
+		snapshotFiles[dir] = ""
+	}
 	numFiles := 0
 	for {
 		hdr, err := tr.Next()
@@ -120,7 +131,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != 1 {
+	if numFiles != len(snapshotFiles) {
 		t.Fatalf("Incorrect number of files were added, expected: 1, got: %v", numFiles)
 	}
 }
@@ -147,7 +158,10 @@ func TestSnapshotFiles(t *testing.T) {
 	}
 	defer os.Remove(tarPath)
 
-	expectedFiles := []string{"/", "/tmp", filepath.Join(testDir, "foo")}
+	expectedFiles := []string{
+		filepath.Join(testDir, "foo"),
+	}
+	expectedFiles = append(expectedFiles, getParentDirectories(filepath.Join(testDir, "foo"))...)
 
 	f, err := os.Open(tarPath)
 	if err != nil {
@@ -166,6 +180,8 @@ func TestSnapshotFiles(t *testing.T) {
 		}
 		actualFiles = append(actualFiles, hdr.Name)
 	}
+	sort.Strings(expectedFiles)
+	sort.Strings(actualFiles)
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
 }
 
@@ -229,4 +245,18 @@ func setUpTestDir() (string, *Snapshotter, func(), error) {
 	}
 
 	return testDir, snapshotter, cleanup, nil
+}
+
+func getParentDirectories(file string) []string {
+	d := ""
+	tokens := strings.Split(file, "/")
+	dirs := []string{"/"}
+	for _, dir := range tokens[:len(tokens)-1] {
+		if dir == "" {
+			continue
+		}
+		d = d + "/" + dir
+		dirs = append(dirs, d)
+	}
+	return dirs
 }
