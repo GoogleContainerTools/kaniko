@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -62,10 +61,10 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
-	for _, dir := range getParentDirectories(fooPath) {
+	for _, dir := range util.ParentDirectories(fooPath) {
 		snapshotFiles[dir] = ""
 	}
-	for _, dir := range getParentDirectories(batPath) {
+	for _, dir := range util.ParentDirectories(batPath) {
 		snapshotFiles[dir] = ""
 	}
 	numFiles := 0
@@ -113,7 +112,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPath: "baz2",
 	}
-	for _, dir := range getParentDirectories(batPath) {
+	for _, dir := range util.ParentDirectories(batPath) {
 		snapshotFiles[dir] = ""
 	}
 	numFiles := 0
@@ -161,7 +160,7 @@ func TestSnapshotFiles(t *testing.T) {
 	expectedFiles := []string{
 		filepath.Join(testDir, "foo"),
 	}
-	expectedFiles = append(expectedFiles, getParentDirectories(filepath.Join(testDir, "foo"))...)
+	expectedFiles = append(expectedFiles, util.ParentDirectories(filepath.Join(testDir, "foo"))...)
 
 	f, err := os.Open(tarPath)
 	if err != nil {
@@ -245,18 +244,4 @@ func setUpTestDir() (string, *Snapshotter, func(), error) {
 	}
 
 	return testDir, snapshotter, cleanup, nil
-}
-
-func getParentDirectories(file string) []string {
-	d := ""
-	tokens := strings.Split(file, "/")
-	dirs := []string{"/"}
-	for _, dir := range tokens[:len(tokens)-1] {
-		if dir == "" {
-			continue
-		}
-		d = d + "/" + dir
-		dirs = append(dirs, d)
-	}
-	return dirs
 }
