@@ -24,12 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/timing"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
@@ -78,6 +77,9 @@ var RootCmd = &cobra.Command{
 				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
+		}
+		if err := executor.CheckPushPermissions(opts); err != nil {
+			exit(errors.Wrap(err, "error checking push permissions"))
 		}
 		if err := os.Chdir("/"); err != nil {
 			exit(errors.Wrap(err, "error changing to root dir"))
