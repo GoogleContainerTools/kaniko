@@ -383,8 +383,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 				return nil, err
 			}
 		}
-		initializeConfig(image)
-		cfg, err := image.ConfigFile()
+		cfg, err := initializeConfig(image)
 		if err != nil {
 			return nil, err
 		}
@@ -396,7 +395,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 					if err != nil {
 						continue
 					}
-					resolved, err := util.ResolveEnvironmentReplacementList(cmd.SourcesAndDest, cfg.Config.Env, true)
+					resolved, err := util.ResolveEnvironmentReplacementList(cmd.SourcesAndDest, ba.ReplacementEnvs(cfg.Config.Env), true)
 					if err != nil {
 						return nil, err
 					}
@@ -411,6 +410,12 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 				if err != nil {
 					return nil, err
 				}
+			case *instructions.ArgCommand:
+				k, v, err := commands.ParseArg(cmd.Key, cmd.Value, cfg.Config.Env, ba)
+				if err != nil {
+					return nil, err
+				}
+				ba.AddArg(k, v)
 			}
 		}
 		images = append(images, image)
