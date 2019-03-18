@@ -64,7 +64,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			continue
 		}
 		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), http.DefaultTransport); err != nil {
-			return errors.Wrap(err, "checking push permission")
+			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
 	}
