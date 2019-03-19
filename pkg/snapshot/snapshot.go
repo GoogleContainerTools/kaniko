@@ -73,44 +73,15 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	}
 	logrus.Info("Taking snapshot of files...")
 	logrus.Debugf("Taking snapshot of files %v", files)
-	snapshottedFiles := make(map[string]bool)
 
-	// First add to the tar any parent directories that haven't been added
-	parentDirs := map[string]struct{}{}
-	for _, file := range files {
-		for _, p := range util.ParentDirectories(file) {
-			parentDirs[p] = struct{}{}
-		}
-	}
-	filesToAdd := []string{}
-	for file := range parentDirs {
-		file = filepath.Clean(file)
-		snapshottedFiles[file] = true
+	// Also add parent directories to keep the permission of them correctly.
+	filesToAdd := filesWithParentDirs(files)
 
-		// The parent directory might already be in a previous layer.
-		fileAdded, err := s.l.MaybeAdd(file)
-		if err != nil {
-			return "", fmt.Errorf("Unable to add parent dir %s to layered map: %s", file, err)
-		}
-
-		if fileAdded {
-			filesToAdd = append(filesToAdd, file)
-		}
-	}
-
-	// Next add the files themselves to the tar
-	for _, file := range files {
-		// We might have already added the file above as a parent directory of another file.
-		file = filepath.Clean(file)
-		if _, ok := snapshottedFiles[file]; ok {
-			continue
-		}
-		snapshottedFiles[file] = true
-
+	// Add files to the layered map
+	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
 			return "", fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
 		}
-		filesToAdd = append(filesToAdd, file)
 	}
 
 	t := util.NewTar(f)
@@ -201,16 +172,27 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}
-		// Only add to the tar if we add it to the layeredmap.
-		maybeAdd, err := s.l.MaybeAdd(path)
+		// Only add changed files.
+		fileChanged, err := s.l.CheckFileChange(path)
 		if err != nil {
 			return nil, nil, err
 		}
-		if maybeAdd {
-			logrus.Debugf("Adding %s to layer, because it was changed.", path)
+		if fileChanged {
+			logrus.Infof("Adding %s to layer, because it was changed.", path)
 			filesToAdd = append(filesToAdd, path)
 		}
 	}
+
+	// Also add parent directories to keep the permission of them correctly.
+	filesToAdd = filesWithParentDirs(filesToAdd)
+
+	// Add files to the layered map
+	for _, file := range filesToAdd {
+		if err := s.l.Add(file); err != nil {
+			return nil, nil, fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
+		}
+	}
+
 	return filesToAdd, filesToWhiteOut, nil
 }
 
@@ -229,4 +211,25 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 		}
 	}
 	return nil
+}
+
+func filesWithParentDirs(files []string) []string {
+	filesSet := map[string]bool{}
+
+	for _, file := range files {
+		file = filepath.Clean(file)
+		filesSet[file] = true
+
+		for _, dir := range util.ParentDirectories(file) {
+			dir = filepath.Clean(dir)
+			filesSet[dir] = true
+		}
+	}
+
+	newFiles := []string{}
+	for file := range filesSet {
+		newFiles = append(newFiles, file)
+	}
+
+	return newFiles
 }
