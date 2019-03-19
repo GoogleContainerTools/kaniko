@@ -47,6 +47,30 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	return w.t.RoundTrip(r)
 }
 
+// CheckPushPermissionos checks that the configured credentials can be used to
+// push to every specified destination.
+func CheckPushPermissions(opts *config.KanikoOptions) error {
+	if opts.NoPush {
+		return nil
+	}
+
+	checked := map[string]bool{}
+	for _, destination := range opts.Destinations {
+		destRef, err := name.NewTag(destination, name.WeakValidation)
+		if err != nil {
+			return errors.Wrap(err, "getting tag for destination")
+		}
+		if checked[destRef.Context().RepositoryStr()] {
+			continue
+		}
+		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), http.DefaultTransport); err != nil {
+			return errors.Wrapf(err, "checking push permission for %q", destRef)
+		}
+		checked[destRef.Context().RepositoryStr()] = true
+	}
+	return nil
+}
+
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
