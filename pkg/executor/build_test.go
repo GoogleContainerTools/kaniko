@@ -208,6 +208,23 @@ RUN bar
 			want: map[int][]string{},
 		},
 		{
+			name: "args",
+			args: args{
+				dockerfile: `
+ARG myFile=foo
+FROM debian as stage1
+RUN foo
+FROM stage1
+ARG myFile
+COPY --from=stage1 /tmp/$myFile.txt .
+RUN bar
+`,
+			},
+			want: map[int][]string{
+				0: {"/tmp/foo.txt"},
+			},
+		},
+		{
 			name: "simple deps",
 			args: args{
 				dockerfile: `
@@ -300,7 +317,12 @@ COPY --from=stage2 /bar /bat
 				DockerfilePath: f.Name(),
 			}
 
-			if got, _ := CalculateDependencies(opts); !reflect.DeepEqual(got, tt.want) {
+			got, err := CalculateDependencies(opts)
+			if err != nil {
+				t.Errorf("got error: %s,", err)
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
 				diff := cmp.Diff(got, tt.want)
 				t.Errorf("CalculateDependencies() = %v, want %v, diff %v", got, tt.want, diff)
 			}
