@@ -178,7 +178,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, err
 		}
 		if fileChanged {
-			logrus.Infof("Adding %s to layer, because it was changed.", path)
+			logrus.Debugf("Adding %s to layer, because it was changed.", path)
 			filesToAdd = append(filesToAdd, path)
 		}
 	}
