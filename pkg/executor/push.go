@@ -63,7 +63,15 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if checked[destRef.Context().RepositoryStr()] {
 			continue
 		}
-		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), http.DefaultTransport); err != nil {
+
+		// Create a transport to set our user-agent.
+		tr := http.DefaultTransport
+		if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(destRef.Repository.Registry.Name()) {
+			tr.(*http.Transport).TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		}
+		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
