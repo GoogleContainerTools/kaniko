@@ -1,3 +1,14 @@
+# v0.10.0 Release - 3/28/2019
+
+## Bug Fixes
+* Check push permissions before building images
+* Fix parent directory permissions
+* Fix file mode bug
+* Optimize file caching between stages
+* Fix user unpacking
+* Fix env variables in ADD commands
+* Speed up WORKDIR commands
+
 # v0.9.0 Release - 2/8/2019
 
 ## Bug Fixes
