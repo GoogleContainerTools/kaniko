@@ -19,7 +19,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
@@ -111,11 +111,6 @@ type uncompressedImageExtender struct {
 
 // Assert that our extender type completes the v1.Image interface
 var _ v1.Image = (*uncompressedImageExtender)(nil)
-
-// BlobSet implements v1.Image
-func (i *uncompressedImageExtender) BlobSet() (map[v1.Hash]struct{}, error) {
-	return BlobSet(i)
-}
 
 // Digest implements v1.Image
 func (i *uncompressedImageExtender) Digest() (v1.Hash, error) {
@@ -220,13 +215,6 @@ func (i *uncompressedImageExtender) LayerByDiffID(diffID v1.Hash) (v1.Layer, err
 
 // LayerByDigest implements v1.Image
 func (i *uncompressedImageExtender) LayerByDigest(h v1.Hash) (v1.Layer, error) {
-	// Support returning the ConfigFile when asked for its hash.
-	if cfgName, err := i.ConfigName(); err != nil {
-		return nil, err
-	} else if cfgName == h {
-		return ConfigLayer(i)
-	}
-
 	diffID, err := BlobToDiffID(i, h)
 	if err != nil {
 		return nil, err

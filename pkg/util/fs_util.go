@@ -216,27 +216,16 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err != nil {
 			return err
 		}
-		// manually set permissions on file, since the default umask (022) will interfere
-		if err = os.Chmod(path, mode); err != nil {
-			return err
-		}
 		if _, err = io.Copy(currFile, tr); err != nil {
 			return err
 		}
-		if err = currFile.Chown(uid, gid); err != nil {
+		if err = setFilePermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Debugf("creating dir %s", path)
-		if err := os.MkdirAll(path, mode); err != nil {
-			return err
-		}
-		// In some cases, MkdirAll doesn't change the permissions, so run Chmod
-		if err := os.Chmod(path, mode); err != nil {
-			return err
-		}
-		if err := os.Chown(path, uid, gid); err != nil {
+		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
 
@@ -429,10 +418,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	if _, err := io.Copy(dest, reader); err != nil {
 		return err
 	}
-	if err := dest.Chmod(perm); err != nil {
-		return err
-	}
-	return dest.Chown(int(uid), int(gid))
+	return setFilePermissions(path, perm, int(uid), int(gid))
 }
 
 // AddVolumePath adds the given path to the volume whitelist.
@@ -492,13 +478,11 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		if fi.IsDir() {
 			logrus.Debugf("Creating directory %s", destPath)
 
+			mode := fi.Mode()
 			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
 			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
 
-			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
-				return nil, err
-			}
-			if err := os.Chown(destPath, uid, gid); err != nil {
+			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
@@ -613,4 +597,25 @@ func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 
 func Volumes() []string {
 	return volumes
+}
+
+func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int) error {
+	if err := os.MkdirAll(path, mode); err != nil {
+		return err
+	}
+	if err := os.Chown(path, uid, gid); err != nil {
+		return err
+	}
+	// In some cases, MkdirAll doesn't change the permissions, so run Chmod
+	// Must chmod after chown because chown resets the file mode.
+	return os.Chmod(path, mode)
+}
+
+func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
+	if err := os.Chown(path, uid, gid); err != nil {
+		return err
+	}
+	// manually set permissions on file, since the default umask (022) will interfere
+	// Must chmod after chown because chown resets the file mode.
+	return os.Chmod(path, mode)
 }

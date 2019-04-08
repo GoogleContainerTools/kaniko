@@ -37,11 +37,13 @@ import (
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
+		var resolved string
+		var err error
 		if IsSrcRemoteFileURL(value) {
-			resolvedValues = append(resolvedValues, value)
-			continue
+			resolved, err = ResolveEnvironmentReplacement(value, envs, false)
+		} else {
+			resolved, err = ResolveEnvironmentReplacement(value, envs, isFilepath)
 		}
-		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -76,6 +78,22 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	return fp, nil
 }
 
+func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
+	// First, resolve any environment replacement
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
+	if err != nil {
+		return nil, "", err
+	}
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
+	if err != nil {
+		return nil, "", err
+	}
+	err = IsSrcsValid(sd, srcs, buildcontext)
+	return srcs, dest, err
+}
+
 // ContainsWildcards returns true if any entry in paths contains wildcards
 func ContainsWildcards(paths []string) bool {
 	for _, path := range paths {
@@ -88,23 +106,22 @@ func ContainsWildcards(paths []string) bool {
 
 // ResolveSources resolves the given sources if the sources contains wildcards
 // It returns a list of resolved sources
-func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) ([]string, error) {
-	srcs := srcsAndDest[:len(srcsAndDest)-1]
+func ResolveSources(srcs []string, root string) ([]string, error) {
 	// If sources contain wildcards, we first need to resolve them to actual paths
-	if ContainsWildcards(srcs) {
-		logrus.Debugf("Resolving srcs %v...", srcs)
-		files, err := RelativeFiles("", root)
-		if err != nil {
-			return nil, err
-		}
-		srcs, err = matchSources(srcs, files)
-		if err != nil {
-			return nil, err
-		}
-		logrus.Debugf("Resolved sources to %v", srcs)
+	if !ContainsWildcards(srcs) {
+		return srcs, nil
 	}
-	// Check to make sure the sources are valid
-	return srcs, IsSrcsValid(srcsAndDest, srcs, root)
+	logrus.Infof("Resolving srcs %v...", srcs)
+	files, err := RelativeFiles("", root)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := matchSources(srcs, files)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("Resolved sources to %v", resolved)
+	return resolved, nil
 }
 
 // matchSources returns a list of sources that match wildcards
@@ -165,20 +182,24 @@ func DestinationFilepath(src, dest, cwd string) (string, error) {
 }
 
 // URLDestinationFilepath gives the destination a file from a remote URL should be saved to
-func URLDestinationFilepath(rawurl, dest, cwd string) string {
+func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, error) {
 	if !IsDestDir(dest) {
 		if !filepath.IsAbs(dest) {
-			return filepath.Join(cwd, dest)
+			return filepath.Join(cwd, dest), nil
 		}
-		return dest
+		return dest, nil
 	}
 	urlBase := filepath.Base(rawurl)
+	urlBase, err := ResolveEnvironmentReplacement(urlBase, envs, true)
+	if err != nil {
+		return "", err
+	}
 	destPath := filepath.Join(dest, urlBase)
 
 	if !filepath.IsAbs(dest) {
 		destPath = filepath.Join(cwd, destPath)
 	}
-	return destPath
+	return destPath, nil
 }
 
 func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string) error {

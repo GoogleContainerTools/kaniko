@@ -47,7 +47,7 @@ type AddCommand struct {
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, dest, err := resolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
+	srcs, dest, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,10 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	for _, src := range srcs {
 		fullPath := filepath.Join(a.buildcontext, src)
 		if util.IsSrcRemoteFileURL(src) {
-			urlDest := util.URLDestinationFilepath(src, dest, config.WorkingDir)
+			urlDest, err := util.URLDestinationFilepath(src, dest, config.WorkingDir, replacementEnvs)
+			if err != nil {
+				return err
+			}
 			logrus.Infof("Adding remote URL %s to %s", src, urlDest)
 			if err := util.DownloadFileToDest(src, urlDest); err != nil {
 				return err
@@ -111,7 +114,7 @@ func (a *AddCommand) String() string {
 func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, _, err := resolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
+	srcs, _, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
 	if err != nil {
 		return nil, err
 	}

@@ -366,7 +366,7 @@ You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
 
-Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --cleanup
@@ -395,7 +395,11 @@ This flag takes a single snapshot of the filesystem at the end of the build, so 
 
 #### --skip-tls-verify
 
-Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when pushing to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --snapshotMode
 
@@ -471,12 +475,15 @@ filesystem is sufficiently complicated). However it has no `Dockerfile`-like
 build tooling (it's a slightly lower-level tool that can be used to build such
 builders -- such as `orca-build`).
 
-`Buildah` can run as a non root user and does not require privileges. Buildah
-specializes in building OCI images. Buildah's commands replicate all of the
-commands that are found in a Dockerfile. Its goal is also to provide a lower
-level coreutils interface to build images, allowing people to build containers
-without requiring a Dockerfile. The intent with Buildah is to allow other
-scripting languages to build container images, without requiring a daemon.
+`Buildah` specializes in building OCI images.  Buildah's commands replicate all
+of the commands that are found in a Dockerfile.  This allows building images
+with and without Dockerfiles while not requiring any root privileges.
+Buildah’s ultimate goal is to provide a lower-level coreutils interface to
+build images.  The flexibility of building images without Dockerfiles allows
+for the integration of other scripting languages into the build process.
+Buildah follows a simple fork-exec model and does not run as a daemon
+but it is based on a comprehensive API in golang, which can be vendored
+into other tools.
 
 `FTL` and `Bazel` aim to achieve the fastest possible creation of Docker images
 for a subset of images.  These can be thought of as a special-case "fast path"

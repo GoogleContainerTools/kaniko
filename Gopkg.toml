@@ -33,11 +33,11 @@ required = [
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.3"
 
 [[constraint]]
   name = "github.com/google/go-containerregistry"
-  revision = "88d8d18eb1bde1fcef23c745205c738074290515"
+  revision = "8621d738a07bc74b2adeafd175a3c738423577a0"
 
 [[override]]
   name = "k8s.io/apimachinery"
