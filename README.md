@@ -445,6 +445,7 @@ You may be able to achieve the same default seccomp profile that Docker uses in 
 
 Similar tools include:
 
+- [BuildKit](https://github.com/moby/buildkit)
 - [img](https://github.com/genuinetools/img)
 - [orca-build](https://github.com/cyphar/orca-build)
 - [umoci](https://github.com/openSUSE/umoci)
@@ -454,10 +455,10 @@ Similar tools include:
 
 All of these tools build container images with different approaches.
 
-`img` can perform as a non root user from within a container, but requires that
-the `img` container has `RawProc` access to create nested containers.  `kaniko`
-does not actually create nested containers, so it does not require `RawProc`
-access.
+BuildKit (and `img`) can perform as a non root user from within a container, but requires
+seccomp and AppArmor to be disabled to create nested containers.  `kaniko`
+does not actually create nested containers, so it does not require seccomp and AppArmor
+to be disabled.
 
 `orca-build` depends on `runc` to build images from Dockerfiles, which can not
 run inside a container (for similar reasons to `img` above). `kaniko` doesn't
