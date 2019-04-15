@@ -50,6 +50,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
     - [--target](#--target)
     - [--tarPath](#--tarpath)
+    - [--verbosity](#--verbosity)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -410,6 +411,10 @@ Set this flag to indicate which build stage is the target build stage.
 #### --tarPath
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+
+#### --verbosity
+
+Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
 
 ### Debug Image
 
