@@ -57,6 +57,12 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	checked := map[string]bool{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
+                if opts.Insecure {
+			destRef.Registry,err = name.NewInsecureRegistry(destRef.RegistryStr(),name.WeakValidation)
+			if err != nil {
+				return errors.Wrap(err, "getting new insecure registry")
+			}
+		}
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
