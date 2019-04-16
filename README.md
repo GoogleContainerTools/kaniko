@@ -358,7 +358,7 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 
 #### --insecure-registry
 
-Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
