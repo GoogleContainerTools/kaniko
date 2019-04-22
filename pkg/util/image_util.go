@@ -123,7 +123,10 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		}
 	}
 
-	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
+	// on which v1.Platform is this currently running?
+	platform := currentPlatform()
+
+	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform))
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {

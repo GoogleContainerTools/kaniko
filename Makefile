@@ -18,10 +18,11 @@ VERSION_MINOR ?= 13
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
+VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 SHELL := /bin/bash
 GOOS ?= $(shell go env GOOS)
-GOARCH = amd64
+GOARCH ?= $(shell go env GOARCH)
 ORG := github.com/GoogleContainerTools
 PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
@@ -38,7 +39,7 @@ GO_LDFLAGS += '
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
-BUILD_ARG ?= 
+BUILD_ARG ?=
 
 out/executor: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(EXECUTOR_PACKAGE)
@@ -56,7 +57,7 @@ integration-test:
 
 .PHONY: images
 images:
-	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
-	docker build ${BUILD_ARG} -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 

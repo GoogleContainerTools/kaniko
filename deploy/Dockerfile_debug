@@ -16,6 +16,7 @@
 
 # Stage 0: Build the executor binary and get credential helpers
 FROM golang:1.12
+ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.5.0/docker-credential-gcr_linux_amd64-1.5.0.tar.gz /usr/local/bin/
@@ -25,7 +26,7 @@ RUN docker-credential-gcr configure-docker
 RUN go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
 RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64 
 COPY . .
-RUN make && make out/warmer
+RUN make GOARCH=${GOARCH} && make out/warmer
 
 # Stage 1: Get the busybox shell
 FROM gcr.io/cloud-builders/bazel:latest

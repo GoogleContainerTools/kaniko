@@ -15,9 +15,10 @@
 # Builds the static Go image to execute in a Kubernetes job
 
 FROM golang:1.12
+ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 COPY . .
-RUN make out/warmer
+RUN make GOARCH=${GOARCH} out/warmer
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
