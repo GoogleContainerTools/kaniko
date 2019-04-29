@@ -15,7 +15,7 @@
 # Builds the static Go image to execute in a Kubernetes job
 
 # Stage 0: Build the executor binary and get credential helpers
-FROM golang:1.10
+FROM golang:1.12
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.5.0/docker-credential-gcr_linux_amd64-1.5.0.tar.gz /usr/local/bin/
