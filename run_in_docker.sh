@@ -15,17 +15,21 @@
 #!/bin/bash
 set -e
 
-if [ $# -lt 3 ];
-    then echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag> <cache>"
+if [ $# -lt 2 ];
+    then echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> [<image tag> <cache>]"
 fi
 
 dockerfile=$1
 context=$2
-destination=$3
 
 cache="false"
 if [[ ! -z "$4" ]]; then
     cache=$4
+fi
+
+destinationOrNoPush="--no-push"
+if [[ ! -z "$3" ]]; then
+  destinationOrNoPush="--destination $3"
 fi
 
 if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
@@ -37,6 +41,6 @@ docker run \
     -v $HOME/.config/gcloud:/root/.config/gcloud \
     -v ${context}:/workspace \
     gcr.io/kaniko-project/executor:latest \
-    --dockerfile ${dockerfile} --destination ${destination} --context dir:///workspace/ \
-    --cache=${cache}
-
+    --dockerfile ${dockerfile} --context dir:///workspace/ \
+    --cache=${cache} \
+    ${destinationOrNoPush}
