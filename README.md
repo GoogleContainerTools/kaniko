@@ -40,6 +40,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-dir](#--cache-dir)
     - [--cache-repo](#--cache-repo)
     - [--cleanup](#--cleanup)
+    - [--digestfile](#--digestfile)
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
@@ -355,6 +356,18 @@ If this flag is not provided, a cache repo will be inferred from the `--destinat
 If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored in `gcr.io/kaniko-project/test/cache`.
 
 _This flag must be used in conjunction with the `--cache=true` flag._
+
+
+#### --digestfile
+
+Set this flag to specify a file in the container. This file will
+receive the digest of a built image. This can be used to
+automatically track the exact image built by Kaniko.
+
+For example, setting the flag to `--digestfile=/dev/termination-log`
+will write the digest to that file, which is picked up by
+Kubernetes automatically as the `{{.state.terminated.message}}`
+of the container.
 
 #### --insecure-registry
 

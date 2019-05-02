@@ -19,6 +19,7 @@ package executor
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -74,6 +75,19 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
+
+	if image != nil && opts.DigestFile != "" {
+		digest, err := image.Digest()
+		if err != nil {
+			return errors.Wrap(err, "error fetching digest")
+		}
+		digestByteArray := []byte(digest.String())
+		err = ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
+		if err != nil {
+			return errors.Wrap(err, "writing digest to file failed")
+		}
+	}
+
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
