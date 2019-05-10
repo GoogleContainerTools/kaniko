@@ -20,14 +20,11 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"io"
 	"os"
 	"strconv"
 	"syscall"
 
-	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -129,30 +126,4 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
-}
-
-type ReproducibleManifest struct {
-	Layers []v1.Descriptor
-	Config v1.Config
-}
-
-func ReproducibleDigest(img partial.WithManifestAndConfigFile) (string, error) {
-	mfst, err := img.Manifest()
-	if err != nil {
-		return "", err
-	}
-	cfg, err := img.ConfigFile()
-	if err != nil {
-		return "", err
-	}
-	rm := ReproducibleManifest{
-		Layers: mfst.Layers,
-		Config: cfg.Config,
-	}
-
-	b, err := json.Marshal(rm)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }
