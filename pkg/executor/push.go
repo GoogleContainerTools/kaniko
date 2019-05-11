@@ -76,7 +76,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
 
-	if image != nil && opts.DigestFile != "" {
+	if opts.DigestFile != "" {
 		digest, err := image.Digest()
 		if err != nil {
 			return errors.Wrap(err, "error fetching digest")
