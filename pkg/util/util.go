@@ -29,6 +29,9 @@ import (
 	highwayhash "github.com/minio/HighwayHash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	
+	"github.com/google/go-containerregistry/pkg/v1/partial"
+	"github.com/google/go-containerregistry/pkg/v1"
 )
 
 // ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
