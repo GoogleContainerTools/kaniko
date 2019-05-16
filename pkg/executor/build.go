@@ -547,7 +547,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			if err := saveStageAsTarball(c.From, sourceImage); err != nil {
 				return err
 			}
-			if err := extractImageToDependecyDir(c.From, sourceImage); err != nil {
+			if err := extractImageToDependencyDir(c.From, sourceImage); err != nil {
 				return err
 			}
 		}
@@ -558,7 +558,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 	}
 	return nil
 }
-func extractImageToDependecyDir(name string, image v1.Image) error {
+func extractImageToDependencyDir(name string, image v1.Image) error {
 	t := timing.Start("Extracting Image to Dependency Dir")
 	defer timing.DefaultRun.Stop(t)
 	dependencyDir := filepath.Join(constants.KanikoDir, name)
