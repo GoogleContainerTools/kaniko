@@ -30,7 +30,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -101,6 +101,12 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	}
 
 	if opts.TarPath != "" {
+		destRef, err := name.NewTag("temp/tag", name.WeakValidation)
+		if err != nil {
+			return err
+		}
+		destRefs = append(destRefs, destRef)
+
 		tagToImage := map[name.Tag]v1.Image{}
 		for _, destRef := range destRefs {
 			tagToImage[destRef] = image
