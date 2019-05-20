@@ -737,6 +737,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:15057fc7395024283a7d2639b8afc61c5b6df3fe260ce06ff5834c8464f16b5c"
+  name = "github.com/otiai10/copy"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "7e9a647135a142c2669943d4a4d29be015ce9392"
+
+[[projects]]
+  branch = "master"
   digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
   name = "github.com/petar/GoLLRB"
   packages = ["llrb"]

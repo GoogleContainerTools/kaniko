@@ -190,12 +190,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
-	dgst, err := util.ReproducibleDigest(s.image)
-	if err != nil {
-		return err
-	}
-	compositeKey := NewCompositeCache(dgst)
-	compositeKey.AddKey(s.opts.BuildArgs...)
+	compositeKey := NewCompositeCache(s.baseImageDigest)
 
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {

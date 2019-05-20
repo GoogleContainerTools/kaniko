@@ -40,6 +40,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-dir](#--cache-dir)
     - [--cache-repo](#--cache-repo)
     - [--cleanup](#--cleanup)
+    - [--digest-file](#--digest-file)
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
@@ -50,6 +51,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
     - [--target](#--target)
     - [--tarPath](#--tarpath)
+    - [--verbosity](#--verbosity)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -359,9 +361,21 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+
+#### --digest-file
+
+Set this flag to specify a file in the container. This file will
+receive the digest of a built image. This can be used to
+automatically track the exact image built by Kaniko.
+
+For example, setting the flag to `--digest-file=/dev/termination-log`
+will write the digest to that file, which is picked up by
+Kubernetes automatically as the `{{.state.terminated.message}}`
+of the container.
+
 #### --insecure-registry
 
-Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
@@ -415,6 +429,10 @@ Set this flag to indicate which build stage is the target build stage.
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
 
+#### --verbosity
+
+Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
+
 ### Debug Image
 
 The kaniko executor image is based off of scratch and doesn't contain a shell.
@@ -449,6 +467,7 @@ You may be able to achieve the same default seccomp profile that Docker uses in 
 
 Similar tools include:
 
+- [BuildKit](https://github.com/moby/buildkit)
 - [img](https://github.com/genuinetools/img)
 - [orca-build](https://github.com/cyphar/orca-build)
 - [umoci](https://github.com/openSUSE/umoci)
@@ -458,10 +477,10 @@ Similar tools include:
 
 All of these tools build container images with different approaches.
 
-`img` can perform as a non root user from within a container, but requires that
-the `img` container has `RawProc` access to create nested containers.  `kaniko`
-does not actually create nested containers, so it does not require `RawProc`
-access.
+BuildKit (and `img`) can perform as a non root user from within a container, but requires
+seccomp and AppArmor to be disabled to create nested containers.  `kaniko`
+does not actually create nested containers, so it does not require seccomp and AppArmor
+to be disabled.
 
 `orca-build` depends on `runc` to build images from Dockerfiles, which can not
 run inside a container (for similar reasons to `img` above). `kaniko` doesn't

@@ -1,11 +1,11 @@
-# v0.9.0 Release - 2/8/2019
+# v0.9.0 Release - 2019-02-08
 
 ## Bug Fixes
 * Bug fix with volumes declared in base images during multi-stage builds
 * Bug fix during snapshotting multi-stage builds.
 * Bug fix for caching with tar output.
 
-# v0.8.0 Release - 1/29/2019
+# v0.8.0 Release - 2019-01-29
 
 ## New Features
 * Even faster snapshotting with godirwalk
@@ -20,7 +20,7 @@
 * Fix bug with USER command and unpacking base images.
 * Added COPY --from=previous stage name/number validation
 
-# v0.7.0 Release - 12/10/2018
+# v0.7.0 Release - 2018-12-10
 
 ## New Features
 * Add support for COPY --from an unrelated image
@@ -34,7 +34,7 @@
 * Fix bug with call loop
 * Fix caching for multi-step builds
 
-# v0.6.0 Release - 11/06/2018
+# v0.6.0 Release - 2018-11-06
 
 ## New Features
 * parse arg commands at the top of dockerfiles [#404](https://github.com/GoogleContainerTools/kaniko/pull/404)
@@ -59,7 +59,7 @@
 * fix releasing the cache warmer [#418](https://github.com/GoogleContainerTools/kaniko/pull/418)
 
 
-# v0.5.0 Release - 10/16/2018
+# v0.5.0 Release - 2018-10-16
 
 ## New Features
 * Persistent volume caching for base images [#383](https://github.com/GoogleContainerTools/kaniko/pull/383)
@@ -78,7 +78,7 @@
 * Don't cut everything after an equals sign [#381](https://github.com/GoogleContainerTools/kaniko/pull/381)
 
 
-# v0.4.0 Release - 10/01/2018
+# v0.4.0 Release - 2018-10-01
 
 ## New Features
 * Add a benchmark package to store and monitor timings. [#367](https://github.com/GoogleContainerTools/kaniko/pull/367)
@@ -137,7 +137,7 @@
 * Fix handling of the volume directive [#334](https://github.com/GoogleContainerTools/kaniko/pull/334)
 
 
-# v0.3.0 Release - 7/31/2018
+# v0.3.0 Release - 2018-07-31
 New Features
 * Local integration testing [#256](https://github.com/GoogleContainerTools/kaniko/pull/256)
 * Add --target flag for multistage builds [#255](https://github.com/GoogleContainerTools/kaniko/pull/255)
@@ -149,7 +149,7 @@ Bug Fixes
 * Multi-stage errors when referencing earlier stages [#233](https://github.com/GoogleContainerTools/kaniko/issues/233)
 
 
-# v0.2.0 Release - 7/09/2018
+# v0.2.0 Release - 2018-07-09
 
 New Features
 * Support for adding different source contexts, including Amazon S3 [#195](https://github.com/GoogleContainerTools/kaniko/issues/195)
@@ -158,7 +158,7 @@ New Features
 * Update go-containerregistry so kaniko works better with Harbor and Gitlab[#227](https://github.com/GoogleContainerTools/kaniko/pull/227)
 * Push image to multiple destinations [#184](https://github.com/GoogleContainerTools/kaniko/pull/184)
 
-# v0.1.0 Release - 5/17/2018
+# v0.1.0 Release - 2018-05-17
 
 New Features
 * The majority of Dockerfile commands are feature complete [#1](https://github.com/GoogleContainerTools/kaniko/issues/1)
