@@ -48,7 +48,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	return w.t.RoundTrip(r)
 }
 
-// CheckPushPermissionos checks that the configured credentials can be used to
+// CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	if opts.NoPush {
