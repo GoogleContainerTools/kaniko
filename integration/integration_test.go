@@ -30,10 +30,9 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -234,6 +233,49 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Logf("Failed to create benchmark file: %v", err)
 	}
+}
+
+func TestGitBuildcontext(t *testing.T) {
+	repo := "github.com/GoogleContainerTools/kaniko"
+	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
+
+	// Build with docker
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
+	dockerCmd := exec.Command("docker",
+		append([]string{"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			repo})...)
+	out, err := RunCommandWithoutTest(dockerCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	}
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
+	kanikoCmd := exec.Command("docker",
+		append([]string{"run",
+			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+			ExecutorImage,
+			"-f", dockerfile,
+			"-d", kanikoImage,
+			"-c", fmt.Sprintf("git://%s", repo)})...)
+
+	out, err = RunCommandWithoutTest(kanikoCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+	}
+
+	// container-diff
+	daemonDockerImage := daemonPrefix + dockerImage
+	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
+		daemonDockerImage, kanikoImage,
+		"-q", "--type=file", "--type=metadata", "--json")
+	diff := RunCommand(containerdiffCmd, t)
+	t.Logf("diff = %s", string(diff))
+
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	checkContainerDiffOutput(t, diff, expected)
 }
 
 func TestLayers(t *testing.T) {

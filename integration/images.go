@@ -178,7 +178,6 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		if d == dockerfile {
 			contextFlag = "-b"
 			contextPath = gcsBucket
-			break
 		}
 	}
 
