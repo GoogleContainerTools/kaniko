@@ -237,7 +237,7 @@ func TestRun(t *testing.T) {
 
 func TestGitBuildcontext(t *testing.T) {
 	repo := "github.com/GoogleContainerTools/kaniko"
-	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
+	dockerfile := "integration/dockerfiles/Dockerfile_git_buildcontext"
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
