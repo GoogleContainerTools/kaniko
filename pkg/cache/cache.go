@@ -60,7 +60,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 
 	registryName := cacheRef.Repository.Registry.Name()
 	if rc.Opts.InsecureRegistries.Contains(registryName) {
-		newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 		if err != nil {
 			return nil, err
 		}
