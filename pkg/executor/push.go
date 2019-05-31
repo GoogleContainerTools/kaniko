@@ -97,14 +97,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
-		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
-			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
-			if err != nil {
-				return errors.Wrap(err, "getting new insecure registry")
-			}
-			destRef.Repository.Registry = newReg
-		}
-		
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
