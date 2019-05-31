@@ -1,6 +1,5 @@
 /*
 Copyright 2018 Google LLC
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -58,11 +57,12 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	checked := map[string]bool{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
-		if opts.Insecure {
-			destRef.Registry, err = name.NewInsecureRegistry(destRef.RegistryStr(), name.WeakValidation)
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
+			destRef.Repository.Registry = newReg
 		}
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
@@ -97,6 +97,13 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+			if err != nil {
+				return errors.Wrap(err, "getting new insecure registry")
+			}
+			destRef.Repository.Registry = newReg
+		}
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
