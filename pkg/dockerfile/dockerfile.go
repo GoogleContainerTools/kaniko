@@ -62,14 +62,29 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 		return nil, err
 	}
 	resolveStages(stages)
-	var kanikoStages []config.KanikoStage
-	for index, stage := range stages {
-		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, opts.BuildArgs, false)
+
+	ba := NewBuildArgs(opts.BuildArgs)
+	if err := ba.processMetaArgs(metaArgs); err != nil {
+		return nil, err
+	}
+	var buildArgs []string
+	for k, v := range ba.GetAllMeta() {
+		buildArgs = append(buildArgs, k+"="+v)
+	}
+
+	originalBaseNames := make([]string, len(stages))
+	for i, stage := range stages {
+		originalBaseNames[i] = stage.BaseName
+		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolving base name")
 		}
-		stage.Name = resolvedBaseName
-		logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
+		stages[i].BaseName = resolvedBaseName
+	}
+
+	var kanikoStages []config.KanikoStage
+	for index, stage := range stages {
+		logrus.Infof("Resolved base name %s to %s", originalBaseNames[index], stage.BaseName)
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
 			BaseImageIndex:         baseImageIndex(index, stages),

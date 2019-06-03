@@ -18,7 +18,6 @@ package util
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -49,16 +48,9 @@ var (
 func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Retrieving Source Image")
 	defer timing.DefaultRun.Stop(t)
-	buildArgs := opts.BuildArgs
-	var metaArgsString []string
-	for _, arg := range stage.MetaArgs {
-		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
-	}
-	buildArgs = append(buildArgs, metaArgsString...)
-	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
-	if err != nil {
-		return nil, err
-	}
+
+	currentBaseName := stage.BaseName
+
 	// First, check if the base image is a scratch image
 	if currentBaseName == constants.NoBaseImage {
 		logrus.Info("No base image, nothing to extract")

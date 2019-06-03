@@ -370,7 +370,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 		var err error
 		if s.BaseImageStoredLocally {
 			image = images[s.BaseImageIndex]
-		} else if s.Name == constants.NoBaseImage {
+		} else if s.BaseName == constants.NoBaseImage {
 			image = empty.Image
 		} else {
 			image, err = util.RetrieveSourceImage(s, opts)
@@ -516,8 +516,6 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 	t := timing.Start("Fetching Extra Stages")
 	defer timing.DefaultRun.Stop(t)
 
-	var names = []string{}
-
 	for stageIndex, s := range stages {
 		for _, cmd := range s.Commands {
 			c, ok := cmd.(*instructions.CopyCommand)
@@ -532,12 +530,6 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			if fromIndex, err := strconv.Atoi(c.From); err == nil && stageIndex > fromIndex && fromIndex >= 0 {
 				continue
 			}
-			// Check if the name is the alias of a previous stage
-			for _, name := range names {
-				if name == c.From {
-					continue
-				}
-			}
 			// This must be an image name, fetch it.
 			logrus.Debugf("Found extra base image stage %s", c.From)
 			sourceImage, err := util.RetrieveRemoteImage(c.From, opts)
@@ -550,10 +542,6 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			if err := extractImageToDependencyDir(c.From, sourceImage); err != nil {
 				return err
 			}
-		}
-		// Store the name of the current stage in the list with names, if applicable.
-		if s.Name != "" {
-			names = append(names, s.Name)
 		}
 	}
 	return nil

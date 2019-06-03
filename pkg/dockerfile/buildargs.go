@@ -21,6 +21,8 @@ import (
 
 	d "github.com/docker/docker/builder/dockerfile"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
+	"github.com/moby/buildkit/frontend/dockerfile/shell"
 )
 
 type BuildArgs struct {
@@ -61,4 +63,23 @@ func (b *BuildArgs) AddMetaArgs(metaArgs []instructions.ArgCommand) {
 		v := arg.Value
 		b.AddMetaArg(arg.Key, v)
 	}
+}
+
+func (b *BuildArgs) processMetaArgs(metaArgs []instructions.ArgCommand) error {
+	shlex := shell.NewLex(parser.DefaultEscapeToken)
+	for _, meta := range metaArgs {
+		var envs []string
+		for k, v := range b.GetAllAllowed() {
+			envs = append(envs, k+"="+v)
+		}
+		err := meta.Expand(func(word string) (string, error) {
+			return shlex.ProcessWord(word, envs)
+		})
+		if err != nil {
+			return err
+		}
+		b.AddArg(meta.Key, meta.Value)
+		b.AddMetaArg(meta.Key, meta.Value)
+	}
+	return nil
 }
