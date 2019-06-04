@@ -48,7 +48,8 @@ func ConfigureLogging(logLevel string) error {
 func Hasher() func(string) (string, error) {
 	pool := sync.Pool{
 		New: func() interface{} {
-			return make([]byte, highwayhash.Size*10*1024)
+			b := make([]byte, highwayhash.Size*10*1024)
+			return &b
 		},
 	}
 	key := make([]byte, highwayhash.Size)
@@ -71,9 +72,9 @@ func Hasher() func(string) (string, error) {
 				return "", err
 			}
 			defer f.Close()
-			buf := pool.Get().([]byte)
+			buf := pool.Get().(*[]byte)
 			defer pool.Put(buf)
-			if _, err := io.CopyBuffer(h, f, buf); err != nil {
+			if _, err := io.CopyBuffer(h, f, *buf); err != nil {
 				return "", err
 			}
 		}
