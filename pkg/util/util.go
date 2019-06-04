@@ -48,7 +48,7 @@ func ConfigureLogging(logLevel string) error {
 func Hasher() func(string) (string, error) {
 	pool := sync.Pool{
 		New: func() interface{} {
-			return make([]byte, highwayhash.Size * 10 * 1024)
+			return make([]byte, highwayhash.Size*10*1024)
 		},
 	}
 	key := make([]byte, highwayhash.Size)

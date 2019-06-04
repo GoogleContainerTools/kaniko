@@ -19,11 +19,13 @@ package util
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -337,6 +339,84 @@ func TestHasFilepathPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix, tt.args.prefixMatchOnly); got != tt.want {
 				t.Errorf("HasFilepathPrefix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkHasFilepathPrefix(b *testing.B) {
+	tests := []struct {
+		path            string
+		prefix          string
+		prefixMatchOnly bool
+	}{
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+	}
+	for _, ts := range tests {
+		name := fmt.Sprint("PathDepth=", strings.Count(ts.path, "/"), ",PrefixDepth=", strings.Count(ts.prefix, "/"))
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				HasFilepathPrefix(ts.path, ts.prefix, ts.prefixMatchOnly)
 			}
 		})
 	}
