@@ -361,6 +361,10 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 	if err != nil {
 		return nil, err
 	}
+	return calculateDependencies(stages, opts)
+}
+
+func calculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions) (map[int][]string, error) {
 	images := []v1.Image{}
 	depGraph := map[int][]string{}
 	for _, s := range stages {
@@ -434,7 +438,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
-	crossStageDependencies, err := CalculateDependencies(opts)
+	crossStageDependencies, err := calculateDependencies(stages, opts)
 	if err != nil {
 		return nil, err
 	}
