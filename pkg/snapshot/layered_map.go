@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -62,9 +60,6 @@ func (l *LayeredMap) getFlattenedPathsForWhiteOut() map[string]struct{} {
 	paths := map[string]struct{}{}
 	for _, l := range l.layers {
 		for p := range l {
-			if strings.HasPrefix(filepath.Base(p), ".wh.") {
-				delete(paths, p)
-			}
 			paths[p] = struct{}{}
 		}
 	}
