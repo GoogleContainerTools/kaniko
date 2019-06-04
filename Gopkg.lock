@@ -621,6 +621,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:56eaee71300a91f7a2f096b5d1d1d5389ebe8e69c068ec7d84c20459f599ddde"
+  name = "github.com/minio/HighwayHash"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "02ca4b43caa3297fbb615700d8800acc7933be98"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:a4df73029d2c42fabcb6b41e327d2f87e685284ec03edf76921c267d9cfc9c23"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -983,9 +991,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:eeb413d109f4b2813de0b5b23645d7a503db926cae8f10dfdcf248d15499314f"
+  digest = "1:2d5f7cd5c2bc42a4d5b18f711d482f14689a30212bbe0e398e151b3e2147cb86"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
     "windows/registry",
@@ -1376,6 +1385,7 @@
     "github.com/google/go-containerregistry/pkg/v1/tarball",
     "github.com/google/go-github/github",
     "github.com/karrick/godirwalk",
+    "github.com/minio/HighwayHash",
     "github.com/moby/buildkit/frontend/dockerfile/instructions",
     "github.com/moby/buildkit/frontend/dockerfile/parser",
     "github.com/moby/buildkit/frontend/dockerfile/shell",
