@@ -576,10 +576,10 @@ func excludeFile(path, buildcontext string) bool {
 
 // HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
-	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)
-	pathArray := strings.Split(path, "/")
 	prefixArray := strings.Split(prefix, "/")
+	path = filepath.Clean(path)
+	pathArray := strings.SplitN(path, "/", len(prefixArray)+1)
 
 	if len(pathArray) < len(prefixArray) {
 		return false
