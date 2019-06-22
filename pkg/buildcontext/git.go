@@ -17,10 +17,13 @@ limitations under the License.
 package buildcontext
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // Git unifies calls to download and unpack the build context.
@@ -31,9 +34,18 @@ type Git struct {
 // UnpackTarFromBuildContext will provide the directory where Git Repository is Cloned
 func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	directory := constants.BuildContextDir
+	parts := strings.Split(g.context, "#")
+	url := "https://" + parts[0]
+	branch := "master"
+	if len(parts) > 1 {
+		branch = parts[1]
+	}
+	fmt.Println("will clone branch", branch)
 	_, err := git.PlainClone(directory, false, &git.CloneOptions{
-		URL:      "https://" + g.context,
-		Progress: os.Stdout,
+		URL:           url,
+		Progress:      os.Stdout,
+		ReferenceName: plumbing.ReferenceName(branch),
+		SingleBranch:  true,
 	})
 	return directory, err
 }
