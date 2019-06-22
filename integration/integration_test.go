@@ -279,7 +279,7 @@ func TestGitBuildcontext(t *testing.T) {
 }
 
 func TestGitBuildContextWithBranch(t *testing.T) {
-	repo := "github.com/GoogleContainerTools/kaniko#v0.10.0"
+	repo := "github.com/GoogleContainerTools/kaniko#refs/tags/v0.10.0"
 	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
 
 	// Build with docker
