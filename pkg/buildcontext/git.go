@@ -34,16 +34,13 @@ type Git struct {
 func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	directory := constants.BuildContextDir
 	parts := strings.Split(g.context, "#")
-	url := "https://" + parts[0]
-	branch := "master"
-	if len(parts) > 1 {
-		branch = parts[1]
+	options := git.CloneOptions{
+		URL:      "https://" + parts[0],
+		Progress: os.Stdout,
 	}
-	_, err := git.PlainClone(directory, false, &git.CloneOptions{
-		URL:           url,
-		Progress:      os.Stdout,
-		ReferenceName: plumbing.ReferenceName(branch),
-		SingleBranch:  true,
-	})
+	if len(parts) > 1 {
+		options.ReferenceName = plumbing.ReferenceName(parts[1])
+	}
+	_, err := git.PlainClone(directory, false, &options)
 	return directory, err
 }
