@@ -17,7 +17,6 @@ limitations under the License.
 package buildcontext
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -40,7 +39,6 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	if len(parts) > 1 {
 		branch = parts[1]
 	}
-	fmt.Println("will clone branch", branch)
 	_, err := git.PlainClone(directory, false, &git.CloneOptions{
 		URL:           url,
 		Progress:      os.Stdout,
