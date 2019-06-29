@@ -23,8 +23,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -148,7 +148,7 @@ func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTr
 	tr := http.DefaultTransport
 	toAdd := false
 	cfg := &tls.Config{}
-	
+
 	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		cfg.InsecureSkipVerify = true
 		toAdd = true
@@ -176,12 +176,12 @@ func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTr
 func parseLine(s string) (m map[string]string) {
 	csvReader := csv.NewReader(strings.NewReader(s))
 	m = make(map[string]string)
-	
+
 	fields, err := csvReader.Read()
 	if err != nil {
 		fmt.Println(err)
 	}
-	
+
 	for _, field := range fields {
 		parts := strings.SplitN(field, "=", 2)
 		key := strings.ToLower(parts[0])
