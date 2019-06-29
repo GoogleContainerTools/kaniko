@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -30,7 +31,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -143,10 +144,22 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTripper {
 	// Create a transport to set our user-agent.
 	tr := http.DefaultTransport
+	toAdd := false
+	cfg := &tls.Config{}
 	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
-		tr.(*http.Transport).TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
+		cfg.InsecureSkipVerify = true
+		toAdd = true
+	}
+	if opts.RegistryTLSCert != "" && opts.RegistryTLSKey != "" {
+		cert, err := tls.LoadX509KeyPair("testdata/example-cert.pem", "testdata/example-key.pem")
+		if err != nil {
+			log.Fatal(err)
 		}
+		cfg.Certificates = []tls.Certificate{cert}
+		toAdd = true
+	}
+	if toAdd {
+		tr.(*http.Transport).TLSClientConfig = cfg
 	}
 	return tr
 }

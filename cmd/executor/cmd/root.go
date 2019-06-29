@@ -134,6 +134,8 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
+	RootCmd.PersistentFlags().StringVarP(&opts.RegistryTLSCert, "registry-tls-cert", "", "", "A TLS certificate for a registry.")
+	RootCmd.PersistentFlags().StringVarP(&opts.RegistryTLSKey, "registry-tls-key", "", "", "A TLS key for a registry.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
