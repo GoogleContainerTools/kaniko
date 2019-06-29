@@ -151,7 +151,7 @@ func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTr
 		toAdd = true
 	}
 	if opts.RegistryTLSCert != "" && opts.RegistryTLSKey != "" {
-		cert, err := tls.LoadX509KeyPair("testdata/example-cert.pem", "testdata/example-key.pem")
+		cert, err := tls.LoadX509KeyPair(opts.RegistryTLSCert, opts.RegistryTLSKey)
 		if err != nil {
 			log.Fatal(err)
 		}
