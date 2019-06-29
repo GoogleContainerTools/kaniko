@@ -45,8 +45,7 @@ type KanikoOptions struct {
 	CacheTTL                time.Duration
 	InsecureRegistries      multiArg
 	SkipTLSVerifyRegistries multiArg
-	RegistryTLSCert         string
-	RegistryTLSKey          string
+	RegistryTLS         multiArg
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
