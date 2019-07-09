@@ -188,7 +188,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
-		// It's possible a file is in the tar before it's directory.
+		// It's possible a file is in the tar before its directory.
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
 			if err := os.MkdirAll(dir, 0755); err != nil {
@@ -288,12 +288,7 @@ func checkWhitelistRoot(root string) bool {
 	if root == constants.RootDir {
 		return false
 	}
-	for _, wl := range whitelist {
-		if HasFilepathPrefix(root, wl.Path, wl.PrefixMatchOnly) {
-			return true
-		}
-	}
-	return false
+	return CheckWhitelist(root)
 }
 
 // Get whitelist from roots of mounted files
