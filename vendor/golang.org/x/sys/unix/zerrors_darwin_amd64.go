@@ -1627,6 +1627,7 @@ const (
 	SIGWINCH  = syscall.Signal(0x1c)
 	SIGXCPU   = syscall.Signal(0x18)
 	SIGXFSZ   = syscall.Signal(0x19)
+	SIGSTKFLT = syscall.Signal(0x16)
 )
 
 // Error table
