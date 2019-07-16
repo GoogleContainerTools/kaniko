@@ -22,10 +22,7 @@ import (
 )
 
 type BaseCommand struct {
-}
-
-func (b *BaseCommand) CacheCommand(v1.Image) DockerCommand {
-	return nil
+	cache v1.Image
 }
 
 func (b *BaseCommand) FilesToSnapshot() []string {
@@ -45,7 +42,11 @@ func (b *BaseCommand) RequiresUnpackedFS() bool {
 }
 
 func (b *BaseCommand) CacheImage() v1.Image {
-	return nil
+	return b.cache
+}
+
+func (b *BaseCommand) SetCacheImage(cache v1.Image) {
+	b.cache = cache
 }
 
 func (b *BaseCommand) ShouldCacheOutput() bool {

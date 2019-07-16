@@ -96,6 +96,8 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 // TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates
 // a tarball of the changed files.
 func (s *Snapshotter) TakeSnapshotFS() (string, error) {
+	logrus.Info("Taking snapshot of full filesystem...")
+
 	f, err := ioutil.TempFile(snapshotPathPrefix, "")
 	if err != nil {
 		return "", err
@@ -117,8 +119,6 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 }
 
 func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
-	logrus.Info("Taking snapshot of full filesystem...")
-
 	// Some of the operations that follow (e.g. hashing) depend on the file system being synced,
 	// for example the hashing function that determines if files are equal uses the mtime of the files,
 	// which can lag if sync is not called. Unfortunately there can still be lag if too much data needs

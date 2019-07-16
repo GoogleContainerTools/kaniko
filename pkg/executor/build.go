@@ -172,10 +172,8 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 				break
 			}
 
-			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
-				logrus.Infof("Using caching version of cmd: %s", command.String())
-				s.cmds[i] = cacheCmd
-			}
+			logrus.Infof("Found cached layer for cmd: %s", command.String())
+			s.cmds[i].SetCacheImage(img)
 		}
 
 		// Mutate the config for any commands that require it.
@@ -201,13 +199,14 @@ func (s *stageBuilder) build() error {
 	// Unpack file system to root if we need to.
 	shouldUnpack := false
 	for _, cmd := range s.cmds {
-		if cmd.RequiresUnpackedFS() {
+		if cmd.CacheImage() == nil && cmd.RequiresUnpackedFS() {
 			logrus.Infof("Unpacking rootfs as cmd %s requires it.", cmd.String())
 			shouldUnpack = true
 			break
 		}
 	}
 	if len(s.crossStageDeps[s.stage.Index]) > 0 {
+		logrus.Info("Unpacking rootfs as other stages might require files from it.")
 		shouldUnpack = true
 	}
 
@@ -220,16 +219,6 @@ func (s *stageBuilder) build() error {
 	} else {
 		logrus.Info("Skipping unpacking as no commands require it.")
 	}
-	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
-		return err
-	}
-
-	// Take initial snapshot
-	t := timing.Start("Initial FS snapshot")
-	if err := s.snapshotter.Init(); err != nil {
-		return err
-	}
-	timing.DefaultRun.Stop(t)
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
@@ -252,17 +241,33 @@ func (s *stageBuilder) build() error {
 		}
 		logrus.Info(command.String())
 
-		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
-			return err
+		cacheImg := command.CacheImage()
+		if cacheImg == nil {
+			if command.RequiresUnpackedFS() && !command.MetadataOnly() {
+				// Prepare initial state for the FS diff
+				t := timing.Start("Pre-command execution FS snapshot")
+				s.snapshotter.Init()
+				timing.DefaultRun.Stop(t)
+			}
+			if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
+				return err
+			}
+		} else {
+			if shouldUnpack {
+				logrus.Info("Found cached layer, unpacking the filesystem")
+				if _, err := util.GetFSFromImage(constants.RootDir, cacheImg); err != nil {
+					return err
+				}
+			} else {
+				logrus.Info("Found cached layer, unpacking is not required")
+			}
 		}
 		timing.DefaultRun.Stop(t)
 
-		cacheImg := command.CacheImage()
 		if cacheImg != nil {
 			layers, err := cacheImg.Layers()
 			if err != nil {
-				logrus.Debugf("Failed to retrieve layer from cache image: %s", err)
-				continue
+				return err
 			}
 			s.addLayerToImage(command.String(), layers[0])
 			continue
@@ -278,13 +283,13 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 
-		ck, err := compositeKey.Hash()
-		if err != nil {
-			return err
-		}
-
 		// Push layer to cache (in parallel) now along with new config file
 		if s.opts.Cache && command.ShouldCacheOutput() {
+			ck, err := compositeKey.Hash()
+			if err != nil {
+				return err
+			}
+
 			cacheGroup.Go(func() error {
 				return pushLayerToCache(s.opts, ck, tarPath, command.String())
 			})
@@ -320,11 +325,6 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 	// We only snapshot the very end with single snapshot mode on.
 	if s.opts.SingleSnapshot {
 		return isLastCommand
-	}
-
-	// Always take snapshots if we're using the cache.
-	if s.opts.Cache {
-		return true
 	}
 
 	// nil means snapshot everything.
@@ -468,6 +468,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
+
+	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
+		return nil, err
+	}
 
 	for index, stage := range stages {
 		sb, err := newStageBuilder(opts, stage, crossStageDependencies)
