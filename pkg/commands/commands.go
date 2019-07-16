@@ -40,6 +40,9 @@ type DockerCommand interface {
 	// Return a cache-aware implementation of this command, if it exists.
 	CacheCommand(v1.Image) DockerCommand
 
+	// Return an image with cached layer for this command, if it exists
+	CacheImage() v1.Image
+
 	// Return true if this command depends on the build context.
 	FilesUsedFromContext(*v1.Config, *dockerfile.BuildArgs) ([]string, error)
 
