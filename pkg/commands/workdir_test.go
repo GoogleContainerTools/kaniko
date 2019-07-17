@@ -63,7 +63,7 @@ var workdirTests = []struct {
 	{
 		path:          "$home",
 		expectedPath:  "/root",
-		snapshotFiles: []string{},
+		snapshotFiles: nil,
 	},
 	{
 		path:          "/foo/$path/$home",
@@ -73,7 +73,7 @@ var workdirTests = []struct {
 	{
 		path:          "/tmp",
 		expectedPath:  "/tmp",
-		snapshotFiles: []string{},
+		snapshotFiles: nil,
 	},
 }
 

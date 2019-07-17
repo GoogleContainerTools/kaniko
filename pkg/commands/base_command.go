@@ -41,6 +41,10 @@ func (b *BaseCommand) RequiresUnpackedFS() bool {
 	return false
 }
 
+func (b *BaseCommand) CacheCommand() DockerCommand {
+	return nil
+}
+
 func (b *BaseCommand) CacheImage() v1.Image {
 	return b.cache
 }

@@ -174,6 +174,11 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 
 			logrus.Infof("Found cached layer for cmd: %s", command.String())
 			s.cmds[i].SetCacheImage(img)
+
+			if cacheCmd := command.CacheCommand(); cacheCmd != nil {
+				logrus.Infof("Using caching version of cmd: %s", command.String())
+				s.cmds[i] = cacheCmd
+			}
 		}
 
 		// Mutate the config for any commands that require it.
@@ -342,8 +347,15 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 }
 
 func (s *stageBuilder) addLayerToImage(createdBy string, layer v1.Layer) error {
+	size, err := layer.Size()
+	if err != nil {
+		return err
+	}
+	if size <= emptyTarSize {
+		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
+		return nil
+	}
 	logrus.Infof("Adding cached layer for command %s to the image", createdBy)
-	var err error
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
 			Layer: layer,

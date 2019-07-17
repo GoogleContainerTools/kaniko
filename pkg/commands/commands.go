@@ -46,6 +46,12 @@ type DockerCommand interface {
 
 	ShouldCacheOutput() bool
 
+	// Return an implementation of the command to be executed if the cached layer
+	// exists. This command will be executed after the layer cache is unpacked,
+	// so it only needs to contain additional (for example, metadata changes)
+	// operatons.
+	CacheCommand() DockerCommand
+
 	// Returns a cache image for the layer created by this command, if set
 	CacheImage() v1.Image
 
