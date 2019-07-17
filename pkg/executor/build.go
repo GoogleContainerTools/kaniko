@@ -163,7 +163,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 		if err != nil {
 			return err
 		}
-		if command.ShouldCacheOutput() {
+		if s.opts.Cache && command.ShouldCacheOutput() {
 			img, err := layerCache.RetrieveLayer(ck)
 			if err != nil {
 				logrus.Debugf("Failed to retrieve layer: %s", err)
