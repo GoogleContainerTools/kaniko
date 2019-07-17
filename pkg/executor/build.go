@@ -252,9 +252,12 @@ func (s *stageBuilder) build() error {
 			if command.RequiresUnpackedFS() && !command.MetadataOnly() {
 				// Prepare initial state for the FS diff
 				t := timing.Start("Pre-command execution FS snapshot")
+				logrus.Debug("Scanning pre-snapshot filesystem state")
 				s.snapshotter.Init()
 				timing.DefaultRun.Stop(t)
 			}
+
+			logrus.Info("Executing command")
 			if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 				return err
 			}
