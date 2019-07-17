@@ -188,6 +188,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
+	logrus.Infof("Base image digest is %s", s.baseImageDigest)
 	compositeKey := NewCompositeCache(s.baseImageDigest)
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
