@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 var (
@@ -79,6 +80,13 @@ func (l *Layer) Size() (int64, error) {
 		return 0, ErrNotComputed
 	}
 	return l.size, nil
+}
+
+// MediaType implements v1.Layer
+func (l *Layer) MediaType() (types.MediaType, error) {
+	// We return DockerLayer for now as uncompressed layers
+	// are unimplemented
+	return types.DockerLayer, nil
 }
 
 // Uncompressed implements v1.Layer.

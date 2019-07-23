@@ -117,7 +117,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	for _, destRef := range destRefs {
 		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
-			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
@@ -132,7 +132,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		tr := makeTransport(opts, registryName)
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
+		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}

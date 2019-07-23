@@ -78,10 +78,11 @@ func Config(base v1.Image, cfg v1.Config) (v1.Image, error) {
 
 	cf.Config = cfg
 
-	return configFile(base, cf)
+	return ConfigFile(base, cf)
 }
 
-func configFile(base v1.Image, cfg *v1.ConfigFile) (v1.Image, error) {
+// ConfigFile mutates the provided v1.Image to have the provided v1.ConfigFile
+func ConfigFile(base v1.Image, cfg *v1.ConfigFile) (v1.Image, error) {
 	m, err := base.Manifest()
 	if err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func CreatedAt(base v1.Image, created v1.Time) (v1.Image, error) {
 	cfg := cf.DeepCopy()
 	cfg.Created = created
 
-	return configFile(base, cfg)
+	return ConfigFile(base, cfg)
 }
 
 type image struct {
@@ -476,7 +477,7 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 		h.Created = v1.Time{Time: t}
 	}
 
-	return configFile(newImage, cfg)
+	return ConfigFile(newImage, cfg)
 }
 
 func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
@@ -555,5 +556,5 @@ func Canonical(img v1.Image) (v1.Image, error) {
 	cfg.ContainerConfig.Hostname = ""
 	cfg.DockerVersion = ""
 
-	return configFile(img, cfg)
+	return ConfigFile(img, cfg)
 }
