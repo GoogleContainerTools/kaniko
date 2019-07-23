@@ -17,7 +17,9 @@ limitations under the License.
 package executor
 
 import (
+	"archive/tar"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -202,7 +204,7 @@ func (s *stageBuilder) build() error {
 		return err
 	}
 
-	// Unpack file system to root if we need to.
+	// Check if any uncached command at this stage requires root fs
 	shouldUnpack := false
 	for _, cmd := range s.cmds {
 		if cmd.CacheImage() == nil && cmd.RequiresUnpackedFS() {
@@ -224,6 +226,16 @@ func (s *stageBuilder) build() error {
 		timing.DefaultRun.Stop(t)
 	} else {
 		logrus.Info("Skipping unpacking as no commands require it.")
+	}
+
+	if s.opts.SingleSnapshot {
+		// Take initial snapshot
+		t := timing.Start("Initial FS snapshot")
+		logrus.Debug("Scanning initial filesystem state")
+		if err := s.snapshotter.Init(); err != nil {
+			return err
+		}
+		timing.DefaultRun.Stop(t)
 	}
 
 	cacheGroup := errgroup.Group{}
@@ -256,11 +268,6 @@ func (s *stageBuilder) build() error {
 				s.snapshotter.Init()
 				timing.DefaultRun.Stop(t)
 			}
-
-			logrus.Info("Executing command")
-			if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
-				return err
-			}
 		} else {
 			if shouldUnpack {
 				logrus.Info("Found cached layer, unpacking the filesystem")
@@ -272,6 +279,13 @@ func (s *stageBuilder) build() error {
 			}
 		}
 		timing.DefaultRun.Stop(t)
+
+		if cacheImg == nil || !command.ShouldCacheOutput() {
+			logrus.Info("Executing command")
+			if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
+				return err
+			}
+		}
 
 		if cacheImg != nil {
 			layers, err := cacheImg.Layers()
@@ -350,14 +364,20 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 }
 
 func (s *stageBuilder) addLayerToImage(createdBy string, layer v1.Layer) error {
-	size, err := layer.Size()
+	uncompressed, err := layer.Uncompressed()
 	if err != nil {
 		return err
 	}
-	if size <= emptyTarSize {
+
+	tr := tar.NewReader(uncompressed)
+	_, err = tr.Next()
+	if err == io.EOF {
 		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 		return nil
+	} else if err != nil {
+		return err
 	}
+
 	logrus.Infof("Adding cached layer for command %s to the image", createdBy)
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
