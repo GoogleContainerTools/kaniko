@@ -208,12 +208,12 @@ func resolveSourceContext() error {
 	}
 	if opts.Bucket != "" {
 		if !strings.Contains(opts.Bucket, "://") {
+			// if no prefix use Google Cloud Storage as default for backwards compatibility
 			opts.SrcContext = constants.GCSBuildContextPrefix + opts.Bucket
 		} else {
 			opts.SrcContext = opts.Bucket
 		}
 	}
-	// if no prefix use Google Cloud Storage as default for backwards compatibility
 	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
 	if err != nil {
 		return err
