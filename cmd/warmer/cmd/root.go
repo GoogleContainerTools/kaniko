@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -61,6 +62,8 @@ var RootCmd = &cobra.Command{
 func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().VarP(&opts.Images, "image", "i", "Image to cache. Set it repeatedly for multiple images.")
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "c", "/cache", "Directory of the cache.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Force, "force", "f", false, "Force cache overwriting.")
+	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
