@@ -239,6 +239,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	cacheGroup := errgroup.Group{}
+	snapshotInitialized := false
 	for index, command := range s.cmds {
 		if command == nil {
 			continue
@@ -261,12 +262,13 @@ func (s *stageBuilder) build() error {
 
 		cacheImg := command.CacheImage()
 		if cacheImg == nil {
-			if command.RequiresUnpackedFS() && !command.MetadataOnly() {
+			if !snapshotInitialized && command.RequiresUnpackedFS() && !command.MetadataOnly() {
 				// Prepare initial state for the FS diff
 				t := timing.Start("Pre-command execution FS snapshot")
 				logrus.Debug("Scanning pre-snapshot filesystem state")
 				s.snapshotter.Init()
 				timing.DefaultRun.Stop(t)
+				snapshotInitialized = true
 			}
 		} else {
 			if shouldUnpack {
