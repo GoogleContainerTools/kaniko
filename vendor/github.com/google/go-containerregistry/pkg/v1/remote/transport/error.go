@@ -48,8 +48,8 @@ func (e *Error) Error() string {
 	}
 }
 
-// ShouldRetry returns whether the request that preceded the error should be retried.
-func (e *Error) ShouldRetry() bool {
+// Temporary returns whether the request that preceded the error is temporary.
+func (e *Error) Temporary() bool {
 	if len(e.Errors) == 0 {
 		return false
 	}

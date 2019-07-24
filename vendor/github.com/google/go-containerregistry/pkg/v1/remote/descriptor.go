@@ -225,12 +225,16 @@ func (f *fetcher) fetchManifest(ref name.Reference, acceptable []types.MediaType
 	}
 
 	mediaType := types.MediaType(resp.Header.Get("Content-Type"))
+	contentDigest, err := v1.NewHash(resp.Header.Get("Docker-Content-Digest"))
+	if err == nil && mediaType == types.DockerManifestSchema1Signed {
+		// If we can parse the digest from the header, and it's a signed schema 1
+		// manifest, let's use that for the digest to appease older registries.
+		digest = contentDigest
+	}
 
 	// Validate the digest matches what we asked for, if pulling by digest.
 	if dgst, ok := ref.(name.Digest); ok {
-		if mediaType == types.DockerManifestSchema1Signed {
-			// Digests for this are stupid to calculate, ignore it.
-		} else if digest.String() != dgst.DigestStr() {
+		if digest.String() != dgst.DigestStr() {
 			return nil, nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), f.Ref)
 		}
 	} else {
