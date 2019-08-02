@@ -149,5 +149,5 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 		cacheKey = d.String()
 	}
 
-	return cache.LocalSource(opts, cacheKey)
+	return cache.LocalSource(&opts.CacheOptions, cacheKey)
 }

@@ -50,6 +50,14 @@ func WarmCache(opts *config.WarmerOptions) error {
 			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve digest: %s", image))
 		}
 		cachePath := path.Join(cacheDir, digest.String())
+
+		if !opts.Force {
+			_, err := LocalSource(&opts.CacheOptions, digest.String())
+			if err == nil {
+				continue
+			}
+		}
+
 		err = tarball.WriteToFile(cachePath, cacheRef, img)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
