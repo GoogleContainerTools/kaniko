@@ -29,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// WarmCache populates the cache
 func WarmCache(opts *config.WarmerOptions) error {
 	cacheDir := opts.CacheDir
 	images := opts.Images
@@ -41,7 +42,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 			return errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
 		img, err := remote.Image(cacheRef)
-		if err != nil {
+		if err != nil || img == nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}
 

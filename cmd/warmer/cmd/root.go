@@ -52,6 +52,12 @@ var RootCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		if _, err := os.Stat(opts.CacheDir); os.IsNotExist(err) {
+			err = os.MkdirAll(opts.CacheDir, 0755)
+			if err != nil {
+				exit(errors.Wrap(err, "Failed to create cache directory"))
+			}
+		}
 		if err := cache.WarmCache(opts); err != nil {
 			exit(errors.Wrap(err, "Failed warming cache"))
 		}
