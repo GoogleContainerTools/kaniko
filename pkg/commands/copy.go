@@ -45,7 +45,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, dest, err := resolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
 		return err
 	}
@@ -70,38 +70,34 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				// we need to add '/' to the end to indicate the destination is a directory
 				dest = filepath.Join(cwd, dest) + "/"
 			}
-			copiedFiles, err := util.CopyDir(fullPath, dest)
+			copiedFiles, err := util.CopyDir(fullPath, dest, c.buildcontext)
 			if err != nil {
 				return err
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if fi.Mode()&os.ModeSymlink != 0 {
 			// If file is a symlink, we want to create the same relative symlink
-			if err := util.CopySymlink(fullPath, destPath); err != nil {
+			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
+			if err != nil {
 				return err
+			}
+			if exclude {
+				continue
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			if err := util.CopyFile(fullPath, destPath); err != nil {
+			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext)
+			if err != nil {
 				return err
+			}
+			if exclude {
+				continue
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		}
 	}
 	return nil
-}
-
-func resolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
-	// First, resolve any environment replacement
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(sd, envs, true)
-	if err != nil {
-		return nil, "", err
-	}
-	dest := resolvedEnvs[len(resolvedEnvs)-1]
-	// Resolve wildcards and get a list of resolved sources
-	srcs, err := util.ResolveSources(resolvedEnvs, buildcontext)
-	return srcs, dest, err
 }
 
 // FilesToSnapshot should return an empty array if still nil; no files were changed
@@ -121,7 +117,7 @@ func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerf
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	srcs, _, err := resolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	srcs, _, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
 		return nil, err
 	}

@@ -22,7 +22,6 @@ RUN make out/warmer
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY files/config.json /kaniko/.docker/
 ENV HOME /root
 ENV USER /root
 ENV PATH /usr/local/bin:/kaniko

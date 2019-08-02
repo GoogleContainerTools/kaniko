@@ -23,13 +23,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
 type LayeredMap struct {
 	layers    []map[string]string
 	whiteouts []map[string]string
-	added     []map[string]string
 	hasher    func(string) (string, error)
 	// cacheHasher doesn't include mtime in it's hash so that filesystem cache keys are stable
 	cacheHasher func(string) (string, error)
@@ -47,26 +47,23 @@ func NewLayeredMap(h func(string) (string, error), c func(string) (string, error
 func (l *LayeredMap) Snapshot() {
 	l.whiteouts = append(l.whiteouts, map[string]string{})
 	l.layers = append(l.layers, map[string]string{})
-	l.added = append(l.added, map[string]string{})
 }
 
 // Key returns a hash for added files
 func (l *LayeredMap) Key() (string, error) {
 	c := bytes.NewBuffer([]byte{})
 	enc := json.NewEncoder(c)
-	enc.Encode(l.added)
+	enc.Encode(l.layers)
 	return util.SHA256(c)
 }
 
 // GetFlattenedPathsForWhiteOut returns all paths in the current FS
-func (l *LayeredMap) GetFlattenedPathsForWhiteOut() map[string]struct{} {
+func (l *LayeredMap) getFlattenedPathsForWhiteOut() map[string]struct{} {
 	paths := map[string]struct{}{}
 	for _, l := range l.layers {
 		for p := range l {
 			if strings.HasPrefix(filepath.Base(p), ".wh.") {
 				delete(paths, p)
-			} else {
-				paths[p] = struct{}{}
 			}
 			paths[p] = struct{}{}
 		}
@@ -106,24 +103,19 @@ func (l *LayeredMap) Add(s string) error {
 	// Use hash function and add to layers
 	newV, err := l.hasher(s)
 	if err != nil {
-		return fmt.Errorf("Error creating hash for %s: %v", s, err)
+		return fmt.Errorf("error creating hash for %s: %v", s, err)
 	}
 	l.layers[len(l.layers)-1][s] = newV
-	// Use cache hash function and add to added
-	cacheV, err := l.cacheHasher(s)
-	if err != nil {
-		return fmt.Errorf("Error creating cache hash for %s: %v", s, err)
-	}
-	l.added[len(l.added)-1][s] = cacheV
 	return nil
 }
 
-// MaybeAdd will add the specified file s to the layered map if
-// the layered map's hashing function determines it has changed. If
-// it has not changed, it will not be added. Returns true if the file
-// was added.
-func (l *LayeredMap) MaybeAdd(s string) (bool, error) {
+// CheckFileChange checks whether a given file changed
+// from the current layered map by its hashing function.
+// Returns true if the file is changed.
+func (l *LayeredMap) CheckFileChange(s string) (bool, error) {
 	oldV, ok := l.Get(s)
+	t := timing.Start("Hashing files")
+	defer timing.DefaultRun.Stop(t)
 	newV, err := l.hasher(s)
 	if err != nil {
 		return false, err
@@ -131,6 +123,5 @@ func (l *LayeredMap) MaybeAdd(s string) (bool, error) {
 	if ok && newV == oldV {
 		return false, nil
 	}
-	l.layers[len(l.layers)-1][s] = newV
 	return true, nil
 }

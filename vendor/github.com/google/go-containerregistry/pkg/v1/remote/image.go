@@ -15,17 +15,14 @@
 package remote
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"sync"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -34,77 +31,41 @@ import (
 
 // remoteImage accesses an image from a remote registry
 type remoteImage struct {
-	ref          name.Reference
-	client       *http.Client
+	fetcher
 	manifestLock sync.Mutex // Protects manifest
 	manifest     []byte
 	configLock   sync.Mutex // Protects config
 	config       []byte
+	mediaType    types.MediaType
 }
-
-type ImageOption func(*imageOpener) error
 
 var _ partial.CompressedImageCore = (*remoteImage)(nil)
 
-type imageOpener struct {
-	auth      authn.Authenticator
-	transport http.RoundTripper
-	ref       name.Reference
-	client    *http.Client
-}
+// Image provides access to a remote image reference.
+func Image(ref name.Reference, options ...Option) (v1.Image, error) {
+	acceptable := []types.MediaType{
+		types.DockerManifestSchema2,
+		types.OCIManifestSchema1,
+		// We resolve these to images later.
+		types.DockerManifestList,
+		types.OCIImageIndex,
+	}
 
-func (i *imageOpener) Open() (v1.Image, error) {
-	tr, err := transport.New(i.ref.Context().Registry, i.auth, i.transport, []string{i.ref.Scope(transport.PullScope)})
+	desc, err := get(ref, acceptable, options...)
 	if err != nil {
 		return nil, err
 	}
-	ri := &remoteImage{
-		ref:    i.ref,
-		client: &http.Client{Transport: tr},
-	}
-	imgCore, err := partial.CompressedToImage(ri)
-	if err != nil {
-		return imgCore, err
-	}
-	// Wrap the v1.Layers returned by this v1.Image in a hint for downstream
-	// remote.Write calls to facilitate cross-repo "mounting".
-	return &mountableImage{
-		Image:     imgCore,
-		Reference: i.ref,
-	}, nil
-}
 
-// Image provides access to a remote image reference, applying functional options
-// to the underlying imageOpener before resolving the reference into a v1.Image.
-func Image(ref name.Reference, options ...ImageOption) (v1.Image, error) {
-	img := &imageOpener{
-		auth:      authn.Anonymous,
-		transport: http.DefaultTransport,
-		ref:       ref,
-	}
-
-	for _, option := range options {
-		if err := option(img); err != nil {
-			return nil, err
-		}
-	}
-	return img.Open()
-}
-
-func (r *remoteImage) url(resource, identifier string) url.URL {
-	return url.URL{
-		Scheme: r.ref.Context().Registry.Scheme(),
-		Host:   r.ref.Context().RegistryStr(),
-		Path:   fmt.Sprintf("/v2/%s/%s/%s", r.ref.Context().RepositoryStr(), resource, identifier),
-	}
+	return desc.Image()
 }
 
 func (r *remoteImage) MediaType() (types.MediaType, error) {
-	// TODO(jonjohnsonjr): Determine this based on response.
+	if string(r.mediaType) != "" {
+		return r.mediaType, nil
+	}
 	return types.DockerManifestSchema2, nil
 }
 
-// TODO(jonjohnsonjr): Handle manifest lists.
 func (r *remoteImage) RawManifest() ([]byte, error) {
 	r.manifestLock.Lock()
 	defer r.manifestLock.Unlock()
@@ -112,49 +73,19 @@ func (r *remoteImage) RawManifest() ([]byte, error) {
 		return r.manifest, nil
 	}
 
-	u := r.url("manifests", r.ref.Identifier())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
+	// NOTE(jonjohnsonjr): We should never get here because the public entrypoints
+	// do type-checking via remote.Descriptor. I've left this here for tests that
+	// directly instantiate a remoteImage.
+	acceptable := []types.MediaType{
+		types.DockerManifestSchema2,
+		types.OCIManifestSchema1,
 	}
-	// TODO(jonjohnsonjr): Accept OCI manifest, manifest list, and image index.
-	req.Header.Set("Accept", string(types.DockerManifestSchema2))
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if err := CheckError(resp, http.StatusOK); err != nil {
-		return nil, err
-	}
-
-	manifest, err := ioutil.ReadAll(resp.Body)
+	manifest, desc, err := r.fetchManifest(r.Ref, acceptable)
 	if err != nil {
 		return nil, err
 	}
 
-	digest, _, err := v1.SHA256(bytes.NewReader(manifest))
-	if err != nil {
-		return nil, err
-	}
-
-	// Validate the digest matches what we asked for, if pulling by digest.
-	if dgst, ok := r.ref.(name.Digest); ok {
-		if digest.String() != dgst.DigestStr() {
-			return nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), r.ref)
-		}
-	} else {
-		// Do nothing for tags; I give up.
-		//
-		// We'd like to validate that the "Docker-Content-Digest" header matches what is returned by the registry,
-		// but so many registries implement this incorrectly that it's not worth checking.
-		//
-		// For reference:
-		// https://github.com/docker/distribution/issues/2395
-		// https://github.com/GoogleContainerTools/kaniko/issues/298
-	}
-
+	r.mediaType = desc.MediaType
 	r.manifest = manifest
 	return r.manifest, nil
 }
@@ -202,12 +133,12 @@ func (rl *remoteLayer) Digest() (v1.Hash, error) {
 // Compressed implements partial.CompressedLayer
 func (rl *remoteLayer) Compressed() (io.ReadCloser, error) {
 	u := rl.ri.url("blobs", rl.digest.String())
-	resp, err := rl.ri.client.Get(u.String())
+	resp, err := rl.ri.Client.Get(u.String())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := CheckError(resp, http.StatusOK); err != nil {
+	if err := transport.CheckError(resp, http.StatusOK); err != nil {
 		resp.Body.Close()
 		return nil, err
 	}
@@ -218,6 +149,22 @@ func (rl *remoteLayer) Compressed() (io.ReadCloser, error) {
 // Manifest implements partial.WithManifest so that we can use partial.BlobSize below.
 func (rl *remoteLayer) Manifest() (*v1.Manifest, error) {
 	return partial.Manifest(rl.ri)
+}
+
+// MediaType implements v1.Layer
+func (rl *remoteLayer) MediaType() (types.MediaType, error) {
+	m, err := rl.Manifest()
+	if err != nil {
+		return "", err
+	}
+
+	for _, layer := range m.Layers {
+		if layer.Digest == rl.digest {
+			return layer.MediaType, nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to find layer with digest: %v", rl.digest)
 }
 
 // Size implements partial.CompressedLayer

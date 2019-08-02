@@ -30,27 +30,35 @@ type ArgCommand struct {
 
 // ExecuteCommand only needs to add this ARG key/value as seen
 func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	resolvedKey, err := util.ResolveEnvironmentReplacement(r.cmd.Key, replacementEnvs, false)
+	key, val, err := ParseArg(r.cmd.Key, r.cmd.Value, config.Env, buildArgs)
 	if err != nil {
 		return err
 	}
+
+	buildArgs.AddArg(key, val)
+	return nil
+}
+
+func ParseArg(key string, val *string, env []string, ba *dockerfile.BuildArgs) (string, *string, error) {
+	replacementEnvs := ba.ReplacementEnvs(env)
+	resolvedKey, err := util.ResolveEnvironmentReplacement(key, replacementEnvs, false)
+	if err != nil {
+		return "", nil, err
+	}
 	var resolvedValue *string
-	if r.cmd.Value != nil {
-		value, err := util.ResolveEnvironmentReplacement(*r.cmd.Value, replacementEnvs, false)
+	if val != nil {
+		value, err := util.ResolveEnvironmentReplacement(*val, replacementEnvs, false)
 		if err != nil {
-			return err
+			return "", nil, err
 		}
 		resolvedValue = &value
 	} else {
-		meta := buildArgs.GetAllMeta()
+		meta := ba.GetAllMeta()
 		if value, ok := meta[resolvedKey]; ok {
 			resolvedValue = &value
 		}
 	}
-
-	buildArgs.AddArg(resolvedKey, resolvedValue)
-	return nil
+	return resolvedKey, resolvedValue, nil
 }
 
 // String returns some information about the command for the image config history

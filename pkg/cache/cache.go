@@ -17,12 +17,16 @@ limitations under the License.
 package cache
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
+	"os"
 	"path"
+	"path/filepath"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
+	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -31,14 +35,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// LayerCache is the layer cache
 type LayerCache interface {
 	RetrieveLayer(string) (v1.Image, error)
 }
 
+// RegistryCache is the registry cache
 type RegistryCache struct {
 	Opts *config.KanikoOptions
 }
 
+// RetrieveLayer retrieves a layer from the cache given the cache key ck.
 func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	cache, err := Destination(rc.Opts, ck)
 	if err != nil {
@@ -50,15 +57,40 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("getting reference for %s", cache))
 	}
-	k8sc, err := k8schain.NewNoClient()
+
+	registryName := cacheRef.Repository.Registry.Name()
+	if rc.Opts.InsecureRegistries.Contains(registryName) {
+		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+		if err != nil {
+			return nil, err
+		}
+		cacheRef.Repository.Registry = newReg
+	}
+
+	tr := http.DefaultTransport.(*http.Transport)
+	if rc.Opts.SkipTLSVerifyRegistries.Contains(registryName) {
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
+	img, err := remote.Image(cacheRef, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
 	if err != nil {
 		return nil, err
 	}
-	kc := authn.NewMultiKeychain(authn.DefaultKeychain, k8sc)
-	img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(kc))
+
+	cf, err := img.ConfigFile()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, fmt.Sprintf("retrieving config file for %s", cache))
 	}
+
+	expiry := cf.Created.Add(rc.Opts.CacheTTL)
+	// Layer is stale, rebuild it.
+	if expiry.Before(time.Now()) {
+		logrus.Infof("Cache entry expired: %s", cache)
+		return nil, errors.New(fmt.Sprintf("Cache entry expired: %s", cache))
+	}
+
 	// Force the manifest to be populated
 	if _, err := img.RawManifest(); err != nil {
 		return nil, err
@@ -81,6 +113,7 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
 
+// LocalSource retieves a source image from a local cache given cacheKey
 func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {
@@ -89,11 +122,76 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 
 	path := path.Join(cache, cacheKey)
 
-	imgTar, err := tarball.ImageFromPath(path, nil)
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting file info")
+	}
+
+	// A stale cache is a bad cache
+	expiry := fi.ModTime().Add(opts.CacheTTL)
+	if expiry.Before(time.Now()) {
+		logrus.Debugf("Cached image is too old: %v", fi.ModTime())
+		return nil, nil
+	}
+
+	logrus.Infof("Found %s in local cache", cacheKey)
+	return cachedImageFromPath(path)
+}
+
+// cachedImage represents a v1.Tarball that is cached locally in a CAS.
+// Computing the digest for a v1.Tarball is very expensive. If the tarball
+// is named with the digest we can store this and return it directly rather
+// than recompute it.
+type cachedImage struct {
+	digest string
+	v1.Image
+	mfst *v1.Manifest
+}
+
+func (c *cachedImage) Digest() (v1.Hash, error) {
+	return v1.NewHash(c.digest)
+}
+
+func (c *cachedImage) Manifest() (*v1.Manifest, error) {
+	if c.mfst == nil {
+		return c.Image.Manifest()
+	}
+	return c.mfst, nil
+}
+
+func mfstFromPath(p string) (*v1.Manifest, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return v1.ParseManifest(f)
+}
+
+func cachedImageFromPath(p string) (v1.Image, error) {
+	imgTar, err := tarball.ImageFromPath(p, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting image from path")
 	}
 
-	logrus.Infof("Found %s in local cache", cacheKey)
-	return imgTar, nil
+	// Manifests may be present next to the tar, named with a ".json" suffix
+	mfstPath := p + ".json"
+
+	var mfst *v1.Manifest
+	if _, err := os.Stat(mfstPath); err != nil {
+		logrus.Debugf("Manifest does not exist at file: %s", mfstPath)
+	} else {
+		mfst, err = mfstFromPath(mfstPath)
+		if err != nil {
+			logrus.Debugf("Error parsing manifest from file: %s", mfstPath)
+		} else {
+			logrus.Infof("Found manifest at %s", mfstPath)
+		}
+	}
+
+	return &cachedImage{
+		digest: filepath.Base(p),
+		Image:  imgTar,
+		mfst:   mfst,
+	}, nil
 }

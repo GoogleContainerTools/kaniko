@@ -20,13 +20,15 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
+	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/pkg/errors"
@@ -34,10 +36,23 @@ import (
 
 // Stages parses a Dockerfile and returns an array of KanikoStage
 func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
-	d, err := ioutil.ReadFile(opts.DockerfilePath)
+	var err error
+	var d []uint8
+	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
+	if match {
+		response, e := http.Get(opts.DockerfilePath)
+		if e != nil {
+			return nil, e
+		}
+		d, err = ioutil.ReadAll(response.Body)
+	} else {
+		d, err = ioutil.ReadFile(opts.DockerfilePath)
+	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
+
 	stages, metaArgs, err := Parse(d)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing dockerfile")
@@ -54,6 +69,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			return nil, errors.Wrap(err, "resolving base name")
 		}
 		stage.Name = resolvedBaseName
+		logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
 			BaseImageIndex:         baseImageIndex(index, stages),
@@ -61,6 +77,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			SaveStage:              saveStage(index, stages),
 			Final:                  index == targetStage,
 			MetaArgs:               metaArgs,
+			Index:                  index,
 		})
 		if index == targetStage {
 			break
@@ -94,7 +111,7 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return stages, metaArgs, err
+	return stages, metaArgs, nil
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
@@ -126,6 +143,7 @@ func resolveStages(stages []instructions.Stage) {
 					if val, ok := nameToIndex[c.From]; ok {
 						c.From = val
 					}
+
 				}
 			}
 		}
@@ -161,31 +179,6 @@ func saveStage(index int, stages []instructions.Stage) bool {
 				return true
 			}
 		}
-		for _, cmd := range stage.Commands {
-			switch c := cmd.(type) {
-			case *instructions.CopyCommand:
-				if c.From == strconv.Itoa(index) {
-					return true
-				}
-			}
-		}
 	}
 	return false
-}
-
-// DockerignoreExists returns true if .dockerignore exists in the source context
-func DockerignoreExists(opts *config.KanikoOptions) bool {
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	return util.FilepathExists(path)
-}
-
-// ParseDockerignore returns a list of all paths in .dockerignore
-func ParseDockerignore(opts *config.KanikoOptions) ([]string, error) {
-	path := filepath.Join(opts.SrcContext, ".dockerignore")
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing .dockerignore")
-	}
-	reader := bytes.NewBuffer(contents)
-	return dockerignore.ReadAll(reader)
 }

@@ -48,11 +48,6 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 	}
 
-	_, _, err = util.GetUserFromUsername(userStr, groupStr)
-	if err != nil {
-		return err
-	}
-
 	if groupStr != "" {
 		userStr = userStr + ":" + groupStr
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"reflect"
 	"sort"
 	"testing"
 
@@ -27,14 +28,12 @@ var testURL = "https://github.com/GoogleContainerTools/runtimes-common/blob/mast
 
 var testEnvReplacement = []struct {
 	path         string
-	command      string
 	envs         []string
 	isFilepath   bool
 	expectedPath string
 }{
 	{
-		path:    "/simple/path",
-		command: "WORKDIR /simple/path",
+		path: "/simple/path",
 		envs: []string{
 			"simple=/path/",
 		},
@@ -42,8 +41,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/simple/path",
 	},
 	{
-		path:    "/simple/path/",
-		command: "WORKDIR /simple/path/",
+		path: "/simple/path/",
 		envs: []string{
 			"simple=/path/",
 		},
@@ -51,8 +49,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/simple/path/",
 	},
 	{
-		path:    "${a}/b",
-		command: "WORKDIR ${a}/b",
+		path: "${a}/b",
 		envs: []string{
 			"a=/path/",
 			"b=/path2/",
@@ -61,8 +58,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/path/b",
 	},
 	{
-		path:    "/$a/b",
-		command: "COPY ${a}/b /c/",
+		path: "/$a/b",
 		envs: []string{
 			"a=/path/",
 			"b=/path2/",
@@ -71,8 +67,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/path/b",
 	},
 	{
-		path:    "/$a/b/",
-		command: "COPY /${a}/b /c/",
+		path: "/$a/b/",
 		envs: []string{
 			"a=/path/",
 			"b=/path2/",
@@ -81,8 +76,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/path/b/",
 	},
 	{
-		path:    "\\$foo",
-		command: "COPY \\$foo /quux",
+		path: "\\$foo",
 		envs: []string{
 			"foo=/path/",
 		},
@@ -90,8 +84,14 @@ var testEnvReplacement = []struct {
 		expectedPath: "$foo",
 	},
 	{
-		path:    "8080/$protocol",
-		command: "EXPOSE 8080/$protocol",
+		path: "8080/$protocol",
+		envs: []string{
+			"protocol=udp",
+		},
+		expectedPath: "8080/udp",
+	},
+	{
+		path: "8080/$protocol",
 		envs: []string{
 			"protocol=udp",
 		},
@@ -183,6 +183,7 @@ var urlDestFilepathTests = []struct {
 	cwd          string
 	dest         string
 	expectedDest string
+	envs         []string
 }{
 	{
 		url:          "https://something/something",
@@ -202,12 +203,19 @@ var urlDestFilepathTests = []struct {
 		dest:         "/dest/",
 		expectedDest: "/dest/something",
 	},
+	{
+		url:          "https://something/$foo.tar.gz",
+		cwd:          "/test",
+		dest:         "/foo/",
+		expectedDest: "/foo/bar.tar.gz",
+		envs:         []string{"foo=bar"},
+	},
 }
 
 func Test_UrlDestFilepath(t *testing.T) {
 	for _, test := range urlDestFilepathTests {
-		actualDest := URLDestinationFilepath(test.url, test.dest, test.cwd)
-		testutil.CheckErrorAndDeepEqual(t, false, nil, test.expectedDest, actualDest)
+		actualDest, err := URLDestinationFilepath(test.url, test.dest, test.cwd, test.envs)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedDest, actualDest)
 	}
 }
 
@@ -249,11 +257,13 @@ func Test_MatchSources(t *testing.T) {
 }
 
 var isSrcValidTests = []struct {
+	name            string
 	srcsAndDest     []string
 	resolvedSources []string
 	shouldErr       bool
 }{
 	{
+		name: "dest isn't directory",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/bar",
@@ -266,6 +276,7 @@ var isSrcValidTests = []struct {
 		shouldErr: true,
 	},
 	{
+		name: "dest is directory",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/bar",
@@ -278,6 +289,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy file to file",
 		srcsAndDest: []string{
 			"context/bar/bam",
 			"dest",
@@ -288,16 +300,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
-		srcsAndDest: []string{
-			"context/foo",
-			"dest",
-		},
-		resolvedSources: []string{
-			"context/foo",
-		},
-		shouldErr: false,
-	},
-	{
+		name: "copy files with wildcards to dir",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/b*",
@@ -310,6 +313,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy multilple files with wildcards to file",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/b*",
@@ -322,6 +326,7 @@ var isSrcValidTests = []struct {
 		shouldErr: true,
 	},
 	{
+		name: "copy two files to file, one of which doesn't exist",
 		srcsAndDest: []string{
 			"context/foo",
 			"context/doesntexist*",
@@ -333,6 +338,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy dir to dest not specified as dir",
 		srcsAndDest: []string{
 			"context/",
 			"dest",
@@ -343,6 +349,7 @@ var isSrcValidTests = []struct {
 		shouldErr: false,
 	},
 	{
+		name: "copy url to file",
 		srcsAndDest: []string{
 			testURL,
 			"dest",
@@ -352,12 +359,43 @@ var isSrcValidTests = []struct {
 		},
 		shouldErr: false,
 	},
+	{
+		name: "copy two srcs, one excluded, to file",
+		srcsAndDest: []string{
+			"ignore/foo",
+			"ignore/bar",
+			"dest",
+		},
+		resolvedSources: []string{
+			"ignore/foo",
+			"ignore/bar",
+		},
+		shouldErr: false,
+	},
+	{
+		name: "copy two srcs, both excluded, to file",
+		srcsAndDest: []string{
+			"ignore/baz",
+			"ignore/bar",
+			"dest",
+		},
+		resolvedSources: []string{
+			"ignore/baz",
+			"ignore/bar",
+		},
+		shouldErr: true,
+	},
 }
 
 func Test_IsSrcsValid(t *testing.T) {
 	for _, test := range isSrcValidTests {
-		err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
-		testutil.CheckError(t, test.shouldErr, err)
+		t.Run(test.name, func(t *testing.T) {
+			if err := GetExcludedFiles(buildContextPath); err != nil {
+				t.Fatalf("error getting excluded files: %v", err)
+			}
+			err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
+			testutil.CheckError(t, test.shouldErr, err)
+		})
 	}
 }
 
@@ -370,7 +408,6 @@ var testResolveSources = []struct {
 			"context/foo",
 			"context/b*",
 			testURL,
-			"dest/",
 		},
 		expectedList: []string{
 			"context/foo",
@@ -417,4 +454,58 @@ func Test_RemoteUrls(t *testing.T) {
 		})
 	}
 
+}
+
+func TestResolveEnvironmentReplacementList(t *testing.T) {
+	type args struct {
+		values     []string
+		envs       []string
+		isFilepath bool
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "url",
+			args: args{
+				values: []string{
+					"https://google.com/$foo", "$bar",
+				},
+				envs: []string{
+					"foo=baz",
+					"bar=bat",
+				},
+			},
+			want: []string{"https://google.com/baz", "bat"},
+		},
+		{
+			name: "mixed",
+			args: args{
+				values: []string{
+					"$foo", "$bar$baz", "baz",
+				},
+				envs: []string{
+					"foo=FOO",
+					"bar=BAR",
+					"baz=BAZ",
+				},
+			},
+			want: []string{"FOO", "BARBAZ", "baz"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ResolveEnvironmentReplacementList(tt.args.values, tt.args.envs, tt.args.isFilepath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ResolveEnvironmentReplacementList() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ResolveEnvironmentReplacementList() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

@@ -37,11 +37,13 @@ import (
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
+		var resolved string
+		var err error
 		if IsSrcRemoteFileURL(value) {
-			resolvedValues = append(resolvedValues, value)
-			continue
+			resolved, err = ResolveEnvironmentReplacement(value, envs, false)
+		} else {
+			resolved, err = ResolveEnvironmentReplacement(value, envs, isFilepath)
 		}
-		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -53,7 +55,7 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 
 // ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
 // It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
-// Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
+// Ex: value = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
 // The dockerfile/shell package handles processing env values
 // It handles escape characters and supports expansion from the config.Env array
 // Shlex handles some of the following use cases (these and more are tested in integration tests)
@@ -76,6 +78,22 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	return fp, nil
 }
 
+func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
+	// First, resolve any environment replacement
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
+	if err != nil {
+		return nil, "", err
+	}
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
+	if err != nil {
+		return nil, "", err
+	}
+	err = IsSrcsValid(sd, srcs, buildcontext)
+	return srcs, dest, err
+}
+
 // ContainsWildcards returns true if any entry in paths contains wildcards
 func ContainsWildcards(paths []string) bool {
 	for _, path := range paths {
@@ -88,23 +106,22 @@ func ContainsWildcards(paths []string) bool {
 
 // ResolveSources resolves the given sources if the sources contains wildcards
 // It returns a list of resolved sources
-func ResolveSources(srcsAndDest instructions.SourcesAndDest, root string) ([]string, error) {
-	srcs := srcsAndDest[:len(srcsAndDest)-1]
+func ResolveSources(srcs []string, root string) ([]string, error) {
 	// If sources contain wildcards, we first need to resolve them to actual paths
-	if ContainsWildcards(srcs) {
-		logrus.Debugf("Resolving srcs %v...", srcs)
-		files, err := RelativeFiles("", root)
-		if err != nil {
-			return nil, err
-		}
-		srcs, err = matchSources(srcs, files)
-		if err != nil {
-			return nil, err
-		}
-		logrus.Debugf("Resolved sources to %v", srcs)
+	if !ContainsWildcards(srcs) {
+		return srcs, nil
 	}
-	// Check to make sure the sources are valid
-	return srcs, IsSrcsValid(srcsAndDest, srcs, root)
+	logrus.Infof("Resolving srcs %v...", srcs)
+	files, err := RelativeFiles("", root)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := matchSources(srcs, files)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("Resolved sources to %v", resolved)
+	return resolved, nil
 }
 
 // matchSources returns a list of sources that match wildcards
@@ -165,20 +182,24 @@ func DestinationFilepath(src, dest, cwd string) (string, error) {
 }
 
 // URLDestinationFilepath gives the destination a file from a remote URL should be saved to
-func URLDestinationFilepath(rawurl, dest, cwd string) string {
+func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, error) {
 	if !IsDestDir(dest) {
 		if !filepath.IsAbs(dest) {
-			return filepath.Join(cwd, dest)
+			return filepath.Join(cwd, dest), nil
 		}
-		return dest
+		return dest, nil
 	}
 	urlBase := filepath.Base(rawurl)
+	urlBase, err := ResolveEnvironmentReplacement(urlBase, envs, true)
+	if err != nil {
+		return "", err
+	}
 	destPath := filepath.Join(dest, urlBase)
 
 	if !filepath.IsAbs(dest) {
 		destPath = filepath.Join(cwd, destPath)
 	}
-	return destPath
+	return destPath, nil
 }
 
 func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string) error {
@@ -186,7 +207,14 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	dest := srcsAndDest[len(srcsAndDest)-1]
 
 	if !ContainsWildcards(srcs) {
-		if len(srcs) > 1 && !IsDestDir(dest) {
+		totalSrcs := 0
+		for _, src := range srcs {
+			if excludeFile(src, root) {
+				continue
+			}
+			totalSrcs++
+		}
+		if totalSrcs > 1 && !IsDestDir(dest) {
 			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 		}
 	}
@@ -216,7 +244,12 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		if err != nil {
 			return err
 		}
-		totalFiles += len(files)
+		for _, file := range files {
+			if excludeFile(file, root) {
+				continue
+			}
+			totalFiles++
+		}
 	}
 	if totalFiles == 0 {
 		return errors.New("copy failed: no source files specified")
@@ -292,13 +325,12 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	// Lookup by username
 	userObj, err := user.Lookup(userStr)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); ok {
-			// Lookup by id
-			userObj, err = user.LookupId(userStr)
-			if err != nil {
-				return "", "", err
-			}
-		} else {
+		if _, ok := err.(user.UnknownUserError); !ok {
+			return "", "", err
+		}
+		// Lookup by id
+		userObj, err = user.LookupId(userStr)
+		if err != nil {
 			return "", "", err
 		}
 	}
@@ -308,12 +340,11 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	if groupStr != "" {
 		group, err = user.LookupGroup(groupStr)
 		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); ok {
-				group, err = user.LookupGroupId(groupStr)
-				if err != nil {
-					return "", "", err
-				}
-			} else {
+			if _, ok := err.(user.UnknownGroupError); !ok {
+				return "", "", err
+			}
+			group, err = user.LookupGroupId(groupStr)
+			if err != nil {
 				return "", "", err
 			}
 		}
