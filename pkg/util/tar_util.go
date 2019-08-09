@@ -112,7 +112,8 @@ func (t *Tar) Whiteout(p string) error {
 	name := ".wh." + filepath.Base(p)
 
 	th := &tar.Header{
-		Name: filepath.Join(dir, name),
+		// Docker uses no leading / in the tarball
+		Name: strings.TrimLeft(filepath.Join(dir, name), "/"),
 		Size: 0,
 	}
 	if err := t.w.WriteHeader(th); err != nil {
