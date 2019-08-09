@@ -1,3 +1,75 @@
+# v0.10.0 Release - 2019-06-19
+
+## Bug Fixes
+* Fix kaniko caching [#639](https://github.com/GoogleContainerTools/kaniko/pull/639)
+* chore: fix typo [#665](https://github.com/GoogleContainerTools/kaniko/pull/665)
+* Fix file mode bug [#618](https://github.com/GoogleContainerTools/kaniko/pull/618)
+* Fix arg handling for multi-stage images in COPY instructions. [#621](https://github.com/GoogleContainerTools/kaniko/pull/621)
+* Fix parent directory permissions [#619](https://github.com/GoogleContainerTools/kaniko/pull/619)
+* Environment variables should be replaced in URLs in ADD commands. [#580](https://github.com/GoogleContainerTools/kaniko/pull/580)
+* Update the cache warmer to also save manifests. [#576](https://github.com/GoogleContainerTools/kaniko/pull/576)
+* Fix typo in error message [#569](https://github.com/GoogleContainerTools/kaniko/pull/569)
+
+## New Features
+* Add SkipVerify support to CheckPushPermissions. [#663](https://github.com/GoogleContainerTools/kaniko/pull/663)
+* Creating  github Build Context [#672](https://github.com/GoogleContainerTools/kaniko/pull/672)
+* Add `--digest-file` flag to output built digest to file. [#655](https://github.com/GoogleContainerTools/kaniko/pull/655)
+* README.md: update BuildKit/img comparison [#642](https://github.com/GoogleContainerTools/kaniko/pull/642)
+* Add documentation for --verbosity flag [#634](https://github.com/GoogleContainerTools/kaniko/pull/634)
+* Optimize file copying and stage saving between stages. [#605](https://github.com/GoogleContainerTools/kaniko/pull/605)
+* Add an integration test for USER unpacking. [#600](https://github.com/GoogleContainerTools/kaniko/pull/600)
+* Added missing documentation for --skip-tls-verify-pull arg [#593](https://github.com/GoogleContainerTools/kaniko/pull/593)
+* README.me: update Buildah description [#586](https://github.com/GoogleContainerTools/kaniko/pull/586)
+* Add missing tests for bucket util [#565](https://github.com/GoogleContainerTools/kaniko/pull/565)
+* Look for manifests in the local cache next to the full images. [#570](https://github.com/GoogleContainerTools/kaniko/pull/570)
+* Make the run_in_docker script support caching. [#564](https://github.com/GoogleContainerTools/kaniko/pull/564)
+* Refactor snapshotting [#561](https://github.com/GoogleContainerTools/kaniko/pull/561)
+* Stop storing a separate cache hash. [#560](https://github.com/GoogleContainerTools/kaniko/pull/560)
+* Speed up workdir by always returning an empty filelist (rather than a… [#557](https://github.com/GoogleContainerTools/kaniko/pull/557)
+* Refactor whitelist handling. [#559](https://github.com/GoogleContainerTools/kaniko/pull/559)
+* Refactor the build loop to fetch stagebuilders earlier. [#558](https://github.com/GoogleContainerTools/kaniko/pull/558)
+
+## Additonal PRs
+* Improve changelog dates [#657](https://github.com/GoogleContainerTools/kaniko/pull/657)
+* Change verbose output from info to debug [#640](https://github.com/GoogleContainerTools/kaniko/pull/640)
+* Check push permissions before building images [#622](https://github.com/GoogleContainerTools/kaniko/pull/622)
+* Bump go-containerregistry to 8c1640add99804503b4126abc718931a4d93c31a [#609](https://github.com/GoogleContainerTools/kaniko/pull/609)
+* Update go-containerregistry [#599](https://github.com/GoogleContainerTools/kaniko/pull/599)
+* Log "Skipping paths under..." to debug [#571](https://github.com/GoogleContainerTools/kaniko/pull/571)
+
+Huge thank you for this release towards our contributors: 
+- Achilleas Pipinellis
+- Adrian Duong
+- Akihiro Suda
+- Andreas Bergmeier
+- Andrew Rynhard
+- Anthony Weston
+- Anurag Goel
+- Balint Pato
+- Christie Wilson
+- Daisuke Taniwaki
+- Dan Cecile
+- Dirk Gustke
+- dlorenc
+- Fredrik Lönnegren
+- Gijs
+- Jake Shadle
+- James Rawlings
+- Jason Hall
+- Johan Hernandez
+- Johannes 'fish' Ziemke
+- Kartik Verma
+- linuxshokunin
+- MMeent
+- Myers Carpenter
+- Nándor István Krácser
+- Nao YONASHIRO
+- Priya Wadhwa
+- Sharif Elgamal
+- Shuhei Kitagawa
+- Valentin Rothberg
+- Vincent Demeester
+
 # v0.9.0 Release - 2019-02-08
 
 ## Bug Fixes

@@ -71,7 +71,10 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if checked[destRef.Context().RepositoryStr()] {
 			continue
 		}
-		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), http.DefaultTransport); err != nil {
+
+		registryName := destRef.Repository.Registry.Name()
+		tr := makeTransport(opts, registryName)
+		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
@@ -121,7 +124,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	for _, destRef := range destRefs {
 		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
-			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
@@ -133,21 +136,26 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
 
-		// Create a transport to set our user-agent.
-		tr := http.DefaultTransport
-		if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
-			tr.(*http.Transport).TLSClientConfig = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-		}
+		tr := makeTransport(opts, registryName)
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
+		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
 	timing.DefaultRun.Stop(t)
 	return nil
+}
+
+func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTripper {
+	// Create a transport to set our user-agent.
+	tr := http.DefaultTransport
+	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
+		tr.(*http.Transport).TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+	return tr
 }
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache

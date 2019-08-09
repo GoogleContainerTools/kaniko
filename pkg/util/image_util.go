@@ -102,7 +102,7 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 
 	registryName := ref.Context().RegistryStr()
 	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
-		newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 		if err != nil {
 			return nil, err
 		}
@@ -149,5 +149,5 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 		cacheKey = d.String()
 	}
 
-	return cache.LocalSource(opts, cacheKey)
+	return cache.LocalSource(&opts.CacheOptions, cacheKey)
 }
