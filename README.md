@@ -43,6 +43,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--digest-file](#--digest-file)
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
+    - [--layout-path](#--layout-path)
     - [--no-push](#--no-push)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
@@ -373,6 +374,16 @@ For example, setting the flag to `--digest-file=/dev/termination-log`
 will write the digest to that file, which is picked up by
 Kubernetes automatically as the `{{.state.terminated.message}}`
 of the container.
+
+#### --layout-path
+
+Set this flag to specify a directory in the container where the OCI image
+layout of a built image will be placed. This can be used to automatically
+track the exact image built by Kaniko.
+
+For example, to surface the image digest built in a
+[Tekton task](https://github.com/tektoncd/pipeline/blob/v0.6.0/docs/resources.md#surfacing-the-image-digest-built-in-a-task),
+this flag should be set to match the image resource `outputImageDir`.
 
 #### --insecure-registry
 
