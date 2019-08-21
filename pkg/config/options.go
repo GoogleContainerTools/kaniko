@@ -37,7 +37,7 @@ type KanikoOptions struct {
 	Target                  string
 	CacheRepo               string
 	DigestFile              string
-	LayoutPath              string
+	OCILayoutPath           string
 	Destinations            multiArg
 	BuildArgs               multiArg
 	Insecure                bool

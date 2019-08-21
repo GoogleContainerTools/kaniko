@@ -102,8 +102,8 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 	}
 
-	if opts.LayoutPath != "" {
-		path, err := layout.Write(opts.LayoutPath, empty.Index)
+	if opts.OCILayoutPath != "" {
+		path, err := layout.Write(opts.OCILayoutPath, empty.Index)
 		if err != nil {
 			return errors.Wrap(err, "writing empty layout")
 		}
