@@ -46,12 +46,12 @@ type withUserAgent struct {
 }
 
 const (
-	UPSTREAM_CLIENT_UA_KEY = "UPSTREAM_CLIENT_TYPE"
+	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
 )
 
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
-	if upstream := os.Getenv(UPSTREAM_CLIENT_UA_KEY); upstream != "" {
+	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
 		ua = append(ua, upstream)
 	}
 	r.Header.Set("User-Agent", strings.Join(ua, ","))
