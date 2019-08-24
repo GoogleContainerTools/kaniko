@@ -74,7 +74,7 @@ func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	return &http.Response{Body: ioutil.NopCloser(bytes.NewBufferString(ua))}, nil
 }
 
-func Test_OCILayoutPath(t *testing.T) {
+func TestOCILayoutPath(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatalf("could not create temp dir: %s", err)
@@ -91,6 +91,11 @@ func Test_OCILayoutPath(t *testing.T) {
 		t.Fatalf("could not get image digest: %s", err)
 	}
 
+	want, err := image.Manifest()
+	if err != nil {
+		t.Fatalf("could not get image manifest: %s", err)
+	}
+
 	opts := config.KanikoOptions{
 		NoPush:        true,
 		OCILayoutPath: tmpDir,
@@ -100,12 +105,17 @@ func Test_OCILayoutPath(t *testing.T) {
 		t.Fatalf("could not push image: %s", err)
 	}
 
-	index, err := layout.ImageIndexFromPath(tmpDir)
+	layoutIndex, err := layout.ImageIndexFromPath(tmpDir)
 	if err != nil {
 		t.Fatalf("could not get index from layout: %s", err)
 	}
-	testutil.CheckError(t, false, validate.Index(index))
+	testutil.CheckError(t, false, validate.Index(layoutIndex))
 
-	got, err := index.Image(digest)
-	testutil.CheckErrorAndDeepEqual(t, false, err, image, got)
+	layoutImage, err := layoutIndex.Image(digest)
+	if err != nil {
+		t.Fatalf("could not get image from layout: %s", err)
+	}
+
+	got, err := layoutImage.Manifest()
+	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 }
