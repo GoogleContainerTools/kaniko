@@ -71,8 +71,12 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			}
 			a.snapshotFiles = append(a.snapshotFiles, urlDest)
 		} else if util.IsFileLocalTarArchive(fullPath) {
-			logrus.Infof("Unpacking local tar archive %s to %s", src, dest)
-			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, dest)
+			tarDest, err := util.DestinationFilepath("", dest, config.WorkingDir)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Unpacking local tar archive %s to %s", src, tarDest)
+			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, tarDest)
 			if err != nil {
 				return err
 			}

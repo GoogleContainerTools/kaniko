@@ -88,7 +88,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	// Layer is stale, rebuild it.
 	if expiry.Before(time.Now()) {
 		logrus.Infof("Cache entry expired: %s", cache)
-		return nil, errors.New(fmt.Sprintf("Cache entry expired: %s", cache))
+		return nil, fmt.Errorf("Cache entry expired: %s", cache)
 	}
 
 	// Force the manifest to be populated
@@ -114,7 +114,7 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 }
 
 // LocalSource retieves a source image from a local cache given cacheKey
-func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
+func LocalSource(opts *config.CacheOptions, cacheKey string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {
 		return nil, nil

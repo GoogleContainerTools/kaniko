@@ -87,6 +87,45 @@ func TestSnapshotFSFileChange(t *testing.T) {
 	}
 }
 
+func TestSnapshotFSIsReproducible(t *testing.T) {
+	testDir, snapshotter, cleanup, err := setUpTestDir()
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Make some changes to the filesystem
+	newFiles := map[string]string{
+		"foo":     "newbaz1",
+		"bar/bat": "baz",
+	}
+	if err := testutil.SetupFiles(testDir, newFiles); err != nil {
+		t.Fatalf("Error setting up fs: %s", err)
+	}
+	// Take another snapshot
+	tarPath, err := snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Check contents of the snapshot, make sure contents are sorted by name
+	tr := tar.NewReader(f)
+	var filesInTar []string
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		filesInTar = append(filesInTar, hdr.Name)
+	}
+	if !sort.StringsAreSorted(filesInTar) {
+		t.Fatalf("Expected the file in the tar archive were sorted, actual list was not sorted: %v", filesInTar)
+	}
+}
+
 func TestSnapshotFSChangePermissions(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTestDir()
 	defer cleanup()

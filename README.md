@@ -93,6 +93,7 @@ Right now, kaniko supports these storage solutions:
 - GCS Bucket
 - S3 Bucket
 - Local Directory
+- Git Repository
 
 _Note: the local directory option refers to a directory within the kaniko container.
 If you wish to use this option, you will need to mount in your build context into the container as a directory._
@@ -114,12 +115,12 @@ gsutil cp context.tar.gz gs://<bucket name>
 
 When running kaniko, use the `--context` flag with the appropriate prefix to specify the location of your build context:
 
-|  Source | Prefix  |
-|---------|---------|
-| Local Directory  | dir://[path to a directory in the kaniko container]  |
-| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     |
-| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
-| Git Repository   | git://[repository url]     |
+|  Source | Prefix  | Example |
+|---------|---------|---------|
+| Local Directory  | dir://[path to a directory in the kaniko container] | `dir:///workspace` |
+| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]                | `gs://kaniko-bucket/path/to/context.tar.gz` |
+| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]                | `s3://kaniko-bucket/path/to/context.tar.gz` |
+| Git Repository   | git://[repository url][#reference]                  | `git://github.com/acme/myproject.git#refs/heads/mybranch` |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.

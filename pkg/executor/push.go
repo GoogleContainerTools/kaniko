@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
@@ -43,8 +45,16 @@ type withUserAgent struct {
 	t http.RoundTripper
 }
 
+const (
+	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
+)
+
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Set("User-Agent", fmt.Sprintf("kaniko/%s", version.Version()))
+	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
+	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
+		ua = append(ua, upstream)
+	}
+	r.Header.Set("User-Agent", strings.Join(ua, ","))
 	return w.t.RoundTrip(r)
 }
 

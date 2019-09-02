@@ -1,3 +1,40 @@
+# v0.11.0 Release - 2019-08-23
+
+## Bug Fixes
+* fix unpacking archives via ADD [#717](https://github.com/GoogleContainerTools/kaniko/pull/717)
+* Reverted not including build args in cache key [#739](https://github.com/GoogleContainerTools/kaniko/pull/739)
+* Create cache directory if it doesn't already exist [#452](https://github.com/GoogleContainerTools/kaniko/pull/452)
+
+## New Features
+* add multiple user agents to kaniko if upstream_client_type value  is set [#750](https://github.com/GoogleContainerTools/kaniko/pull/750)
+* Make container layers captured using FS snapshots reproducible [#714](https://github.com/GoogleContainerTools/kaniko/pull/714)
+* Include warmer in debug image [#497](https://github.com/GoogleContainerTools/kaniko/pull/497)
+* Bailout when there is not enough input arguments [#735](https://github.com/GoogleContainerTools/kaniko/pull/735)
+* Add checking image presence in cache prior to downloading it [#723](https://github.com/GoogleContainerTools/kaniko/pull/723)
+
+## Additonal PRs
+* Document how to build from git reference [#730](https://github.com/GoogleContainerTools/kaniko/pull/730)
+* Misc. small changes/refactoring [#712](https://github.com/GoogleContainerTools/kaniko/pull/712)
+* Update go-containerregistry [#680](https://github.com/GoogleContainerTools/kaniko/pull/680)
+* Update version of go-containerregistry [#724](https://github.com/GoogleContainerTools/kaniko/pull/724)
+* feat: support specifying branch for cloning [#703](https://github.com/GoogleContainerTools/kaniko/pull/703)
+
+Huge thank you for this release towards our contributors: 
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Deniz Zoeteman
+- Luke Wood
+- Matthew Dawson
+- priyawadhwa
+- sharifelgamal
+- Sharif Elgamal
+- Taylor Barrella
+- Tejal Desai
+- v.rul
+- Warren Seymour
+- Xueshan Feng
+- Роман Небалуе
+
 # v0.10.0 Release - 2019-06-19
 
 ## Bug Fixes
