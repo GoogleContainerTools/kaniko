@@ -123,8 +123,9 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	imageConfig.Config.Env = constants.ScratchEnvVars
+	if imageConfig.Config.Env == nil {
+		imageConfig.Config.Env = constants.ScratchEnvVars
+	}
 	return imageConfig, nil
 }
 
