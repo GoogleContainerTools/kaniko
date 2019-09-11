@@ -58,8 +58,8 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	checked := map[string]bool{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
-		if opts.Insecure {
-			newReg, err := name.NewRegistry(destRef.Repository.Registry.Name(), name.WeakValidation, name.Insecure)
+		if opts.Insecure || opts.InsecureRegistries.Contains(destination) {
+			newReg, err := name.NewRegistry(destination, name.WeakValidation, name.Insecure)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
