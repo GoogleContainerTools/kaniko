@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"syscall"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
@@ -185,6 +186,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	// Also add parent directories to keep their permissions correctly.
 	filesToAdd = filesWithParentDirs(filesToAdd)
+
+	sort.Strings(filesToAdd)
 
 	// Add files to the layered map
 	for _, file := range filesToAdd {

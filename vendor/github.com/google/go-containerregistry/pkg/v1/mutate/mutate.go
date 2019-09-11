@@ -165,16 +165,18 @@ func (i *image) compute() error {
 	manifest := m.DeepCopy()
 	manifestLayers := manifest.Layers
 	for _, add := range i.adds {
-		d := v1.Descriptor{
-			MediaType: types.DockerLayer,
-		}
-
+		d := v1.Descriptor{}
 		var err error
+
 		if d.Size, err = add.Layer.Size(); err != nil {
 			return err
 		}
 
 		if d.Digest, err = add.Layer.Digest(); err != nil {
+			return err
+		}
+
+		if d.MediaType, err = add.Layer.MediaType(); err != nil {
 			return err
 		}
 

@@ -44,6 +44,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
+    - [--oci-layout-path](#--oci-layout-path)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
     - [--snapshotMode](#--snapshotmode)
@@ -93,6 +94,7 @@ Right now, kaniko supports these storage solutions:
 - GCS Bucket
 - S3 Bucket
 - Local Directory
+- Git Repository
 
 _Note: the local directory option refers to a directory within the kaniko container.
 If you wish to use this option, you will need to mount in your build context into the container as a directory._
@@ -114,12 +116,12 @@ gsutil cp context.tar.gz gs://<bucket name>
 
 When running kaniko, use the `--context` flag with the appropriate prefix to specify the location of your build context:
 
-|  Source | Prefix  |
-|---------|---------|
-| Local Directory  | dir://[path to a directory in the kaniko container]  |
-| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     |
-| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
-| Git Repository   | git://[repository url]     |
+|  Source | Prefix  | Example |
+|---------|---------|---------|
+| Local Directory  | dir://[path to a directory in the kaniko container] | `dir:///workspace` |
+| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]                | `gs://kaniko-bucket/path/to/context.tar.gz` |
+| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]                | `s3://kaniko-bucket/path/to/context.tar.gz` |
+| Git Repository   | git://[repository url][#reference]                  | `git://github.com/acme/myproject.git#refs/heads/mybranch` |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
@@ -372,6 +374,19 @@ For example, setting the flag to `--digest-file=/dev/termination-log`
 will write the digest to that file, which is picked up by
 Kubernetes automatically as the `{{.state.terminated.message}}`
 of the container.
+
+#### --oci-layout-path
+
+Set this flag to specify a directory in the container where the OCI image
+layout of a built image will be placed. This can be used to automatically
+track the exact image built by Kaniko.
+
+For example, to surface the image digest built in a
+[Tekton task](https://github.com/tektoncd/pipeline/blob/v0.6.0/docs/resources.md#surfacing-the-image-digest-built-in-a-task),
+this flag should be set to match the image resource `outputImageDir`.
+
+_Note: Depending on the built image, the media type of the image manifest might be either
+`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json``._
 
 #### --insecure-registry
 

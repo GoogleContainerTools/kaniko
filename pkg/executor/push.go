@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
@@ -32,6 +34,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -43,8 +46,16 @@ type withUserAgent struct {
 	t http.RoundTripper
 }
 
+const (
+	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
+)
+
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Set("User-Agent", fmt.Sprintf("kaniko/%s", version.Version()))
+	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
+	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
+		ua = append(ua, upstream)
+	}
+	r.Header.Set("User-Agent", strings.Join(ua, ","))
 	return w.t.RoundTrip(r)
 }
 
@@ -95,6 +106,16 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		err = ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
 		if err != nil {
 			return errors.Wrap(err, "writing digest to file failed")
+		}
+	}
+
+	if opts.OCILayoutPath != "" {
+		path, err := layout.Write(opts.OCILayoutPath, empty.Index)
+		if err != nil {
+			return errors.Wrap(err, "writing empty layout")
+		}
+		if err := path.AppendImage(image); err != nil {
+			return errors.Wrap(err, "appending image")
 		}
 	}
 
