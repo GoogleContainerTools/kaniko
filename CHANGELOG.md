@@ -2,11 +2,12 @@
 
 ## New Features
 * Added `--oci-layout-path` flag to save image in OCI layout. [#744](https://github.com/GoogleContainerTools/kaniko/pull/744)
+* Add support for S3 custom endpoint [#698](https://github.com/GoogleContainerTools/kaniko/pull/698)
+
 
 ## Bug Fixes
 * Setting PATH [#760](https://github.com/GoogleContainerTools/kaniko/pull/760)
 * Remove leading slash in layer tarball paths (Closes: #726) [#729](https://github.com/GoogleContainerTools/kaniko/pull/729)
-* Add support for S3 custom endpoint [#698](https://github.com/GoogleContainerTools/kaniko/pull/698)
 
 ## Updates and Refactors
 * Remove cruft [#635](https://github.com/GoogleContainerTools/kaniko/pull/635)
