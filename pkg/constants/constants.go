@@ -16,36 +16,44 @@ limitations under the License.
 
 package constants
 
-const (
-	// DefaultLogLevel is the default log level
-	DefaultLogLevel = "info"
+import (
+	"os"
+	"path/filepath"
+)
 
+var (
 	// RootDir is the path to the root directory
-	RootDir = "/"
-
-	// WorkspaceDir is the path to the workspace directory
-	WorkspaceDir = "/workspace"
+	RootDir = filepath.Join(os.Getenv(KanikoRootEnv), "/")
 
 	//KanikoDir is the path to the Kaniko directory
-	KanikoDir = "/kaniko"
+	KanikoDir = filepath.Join(os.Getenv(KanikoRootEnv), "/kaniko")
+
+	// DockerfilePath is the path the Dockerfile is copied to
+	DockerfilePath = filepath.Join(os.Getenv(KanikoRootEnv), "/kaniko/Dockerfile")
+
+	// BuildContextDir is the directory a build context will be unpacked into,
+	// for example, a tarball from a GCS bucket will be unpacked here
+	BuildContextDir = filepath.Join(os.Getenv(KanikoRootEnv), "/kaniko/buildcontext")
+
+	// KanikoIntermediateStagesDir is where we will store intermediate stages
+	// as tarballs in case they are needed later on
+	KanikoIntermediateStagesDir = filepath.Join(os.Getenv(KanikoRootEnv), "/kaniko/stages")
+
+)
+const (
+	// KanikoRootEnv constant defines the root workspace
+	// Can be used in testing
+	KanikoRootEnv = "KANIKO_ROOT_ENV"
+
+	// DefaultLogLevel is the default log level
+	DefaultLogLevel = "info"
 
 	WhitelistPath = "/proc/self/mountinfo"
 
 	Author = "kaniko"
 
-	// DockerfilePath is the path the Dockerfile is copied to
-	DockerfilePath = "/kaniko/Dockerfile"
-
 	// ContextTar is the default name of the tar uploaded to GCS buckets
 	ContextTar = "context.tar.gz"
-
-	// BuildContextDir is the directory a build context will be unpacked into,
-	// for example, a tarball from a GCS bucket will be unpacked here
-	BuildContextDir = "/kaniko/buildcontext/"
-
-	// KanikoIntermediateStagesDir is where we will store intermediate stages
-	// as tarballs in case they are needed later on
-	KanikoIntermediateStagesDir = "/kaniko/stages"
 
 	// Various snapshot modes:
 	SnapshotModeTime = "time"

@@ -81,7 +81,7 @@ var RootCmd = &cobra.Command{
 		if err := executor.CheckPushPermissions(opts); err != nil {
 			exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
 		}
-		if err := os.Chdir("/"); err != nil {
+		if err := os.Chdir(filepath.Join(os.Getenv("KANIKO_ROOT_ENV"), "/")); err != nil {
 			exit(errors.Wrap(err, "error changing to root dir"))
 		}
 		image, err := executor.DoBuild(opts)
