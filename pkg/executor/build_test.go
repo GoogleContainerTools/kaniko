@@ -408,7 +408,6 @@ func Test_filesToSave(t *testing.T) {
 	}
 }
 
-
 func TestInitializeConfig(t *testing.T) {
 	tests := []struct {
 		description string
@@ -460,6 +459,6 @@ func TestInitializeConfig(t *testing.T) {
 			t.Fail()
 		}
 		actual, err := initializeConfig(img)
-    testutil.CheckDeepEqual(t, tt.expected, actual.Config)
+		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
 	}
 }
