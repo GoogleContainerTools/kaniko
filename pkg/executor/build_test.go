@@ -458,7 +458,7 @@ func TestInitializeConfig(t *testing.T) {
 			t.Errorf("error seen when running test %s", err)
 			t.Fail()
 		}
-		actual, err := initializeConfig(img)
+		actual, _ := initializeConfig(img)
 		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
 	}
 }
