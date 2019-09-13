@@ -4,7 +4,6 @@
 * Added `--oci-layout-path` flag to save image in OCI layout. [#744](https://github.com/GoogleContainerTools/kaniko/pull/744)
 * Add support for S3 custom endpoint [#698](https://github.com/GoogleContainerTools/kaniko/pull/698)
 
-
 ## Bug Fixes
 * Setting PATH [#760](https://github.com/GoogleContainerTools/kaniko/pull/760)
 * Remove leading slash in layer tarball paths (Closes: #726) [#729](https://github.com/GoogleContainerTools/kaniko/pull/729)
@@ -12,7 +11,6 @@
 ## Updates and Refactors
 * Remove cruft [#635](https://github.com/GoogleContainerTools/kaniko/pull/635)
 * Add desc for `--skip-tls-verify-pull` to README [#493](https://github.com/GoogleContainerTools/kaniko/pull/493)
-
 
 Huge thank you for this release towards our contributors: 
 - Carlos Alexandro Becker
