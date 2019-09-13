@@ -123,7 +123,7 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	if imageConfig.Config.Env == nil || img == empty.Image {
+	if imageConfig.Config.Env == nil {
 		imageConfig.Config.Env = constants.ScratchEnvVars
 	}
 	return imageConfig, nil
@@ -177,7 +177,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			}
 		}
 
-		// Mutate the config for any commands that require it.
+		// Mutate the cfg for any commands that require it.
 		if command.MetadataOnly() {
 			if err := command.ExecuteCommand(&cfg, s.args); err != nil {
 				return err
@@ -269,7 +269,7 @@ func (s *stageBuilder) build() error {
 		if err != nil {
 			return err
 		}
-		// Push layer to cache (in parallel) now along with new config file
+		// Push layer to cache (in parallel) now along with new cfg file
 		if s.opts.Cache && command.ShouldCacheOutput() {
 			cacheGroup.Go(func() error {
 				return pushLayerToCache(s.opts, ck, tarPath, command.String())
@@ -335,7 +335,7 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 		return err
 	}
 	if fi.Size() <= emptyTarSize {
-		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
+		logrus.Info("No files were changed, appending empty layer to cfg. No layer added to image.")
 		return nil
 	}
 

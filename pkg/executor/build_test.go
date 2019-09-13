@@ -411,32 +411,36 @@ func Test_filesToSave(t *testing.T) {
 
 func TestInitializeConfig(t *testing.T) {
 	tests := []struct {
-		description  string
-		config v1.Config
-		expected v1.Config
-		shouldErr bool
+		description string
+		cfg         v1.ConfigFile
+		expected    v1.Config
 	}{
 		{
-			description: "env is empty in the image",
-			config: v1.Config{
-				Image: "test",
+			description: "env is not set in the image",
+			cfg: v1.ConfigFile{
+				Config: v1.Config{
+					Image: "test",
+				},
 			},
 			expected: v1.Config{
+				Image: "test",
 				Env: []string{
 					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 				},
 			},
 		},
 		{
-			description: "env is not empty in the image",
-			config: v1.Config{
-				Env: []string{
-					"PATH=/usr/local/something",
+			description: "env is set in the image",
+			cfg: v1.ConfigFile{
+				Config: v1.Config{
+					Env: []string{
+						"PATH=/usr/local/something",
+					},
 				},
 			},
 			expected: v1.Config{
 				Env: []string{
-					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+					"PATH=/usr/local/something",
 				},
 			},
 		},
@@ -450,9 +454,12 @@ func TestInitializeConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		img := empty.Image
-		mutate.Config(img, tt.config)
-		actual, err :=initializeConfig(img)
-    testutil.CheckErrorAndDeepEqual(t,tt.shouldErr, err, tt.expected, actual.Config)
+		img, err := mutate.ConfigFile(empty.Image, &tt.cfg)
+		if err != nil {
+			t.Errorf("error seen when running test %s", err)
+			t.Fail()
+		}
+		actual, err := initializeConfig(img)
+    testutil.CheckDeepEqual(t, tt.expected, actual.Config)
 	}
 }
