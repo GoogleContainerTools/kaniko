@@ -29,6 +29,8 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
@@ -403,5 +405,54 @@ func Test_filesToSave(t *testing.T) {
 				t.Errorf("filesToSave() = %v, want %v", got, want)
 			}
 		})
+	}
+}
+
+
+func TestInitializeConfig(t *testing.T) {
+	tests := []struct {
+		description  string
+		config v1.Config
+		expected v1.Config
+		shouldErr bool
+	}{
+		{
+			description: "env is empty in the image",
+			config: v1.Config{
+				Image: "test",
+			},
+			expected: v1.Config{
+				Env: []string{
+					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+				},
+			},
+		},
+		{
+			description: "env is not empty in the image",
+			config: v1.Config{
+				Env: []string{
+					"PATH=/usr/local/something",
+				},
+			},
+			expected: v1.Config{
+				Env: []string{
+					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+				},
+			},
+		},
+		{
+			description: "image is empty",
+			expected: v1.Config{
+				Env: []string{
+					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		img := empty.Image
+		mutate.Config(img, tt.config)
+		actual, err :=initializeConfig(img)
+    testutil.CheckErrorAndDeepEqual(t,tt.shouldErr, err, tt.expected, actual.Config)
 	}
 }
