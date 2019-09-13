@@ -38,11 +38,11 @@ var (
 	// KanikoIntermediateStagesDir is where we will store intermediate stages
 	// as tarballs in case they are needed later on
 	KanikoIntermediateStagesDir = filepath.Join(os.Getenv(KanikoRootEnv), "/kaniko/stages")
-
 )
+
 const (
-	// KanikoRootEnv constant defines the root workspace
-	// Can be used in testing
+	// KanikoRootEnv constant defines the dir for kaniko worksapce executor
+	// can be set to local directory when running executor locally with --force flag.
 	KanikoRootEnv = "KANIKO_ROOT_ENV"
 
 	// DefaultLogLevel is the default log level
@@ -78,6 +78,10 @@ const (
 
 	// Name of the .dockerignore file
 	Dockerignore = ".dockerignore"
+
+	// S3 Custom endpoint ENV name
+	S3EndpointEnv    = "S3_ENDPOINT"
+	S3ForcePathStyle = "S3_FORCE_PATH_STYLE"
 )
 
 // ScratchEnvVars are the default environment variables needed for a scratch image.
