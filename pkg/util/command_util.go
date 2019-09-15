@@ -66,7 +66,7 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	shlex := shell.NewLex(parser.DefaultEscapeToken)
 	fp, err := shlex.ProcessWord(value, envs)
 	// Check after replacement if value is a remote URL
-	if !isFilepath || IsSrcRemoteFileURL(fp) {	
+	if !isFilepath || IsSrcRemoteFileURL(fp) {
 		return fp, err
 	}
 	if err != nil {
