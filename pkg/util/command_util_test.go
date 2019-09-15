@@ -105,6 +105,14 @@ var testEnvReplacement = []struct {
 		isFilepath:   true,
 		expectedPath: "http://example.com",
 	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   false,
+		expectedPath: "http://example.com",
+	},
 }
 
 func Test_EnvReplacement(t *testing.T) {
@@ -489,7 +497,7 @@ func TestResolveEnvironmentReplacementList(t *testing.T) {
 				},
 			},
 			want: []string{"https://google.com/baz", "bat", "https://google.com"},
-		},		
+		},
 		{
 			name: "mixed",
 			args: args{
