@@ -16,41 +16,103 @@ limitations under the License.
 package commands
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 var copyTests = []struct {
-	SourcesAndDest      []string
-	expectedDest        []string
+	name           string
+	SourcesAndDest []string
+	expectedDest   []string
 }{
 	{
-		SourcesAndDest:   []string{"/usr/bin/bash", "/tmp"},
-		expectedDest:     []string{"/tmp/bash"},
+		name:           "copy foo into tempCopyExecuteTest/",
+		SourcesAndDest: []string{"foo", "tempCopyExecuteTest/"},
+		expectedDest:   []string{"foo"},
 	},
 	{
-		SourcesAndDest:   []string{"/usr/bin/bash", "/tmp/"},
-		expectedDest:     []string{"/tmp/bash"},
+		name:           "copy foo into tempCopyExecuteTest",
+		SourcesAndDest: []string{"foo", "tempCopyExecuteTest"},
+		expectedDest:   []string{"tempCopyExecuteTest"},
 	},
 }
 
 func TestCopyExecuteCmd(t *testing.T) {
-
 	cfg := &v1.Config{
-		Cmd: nil,
+		Cmd:        nil,
+		Env:        []string{},
+		WorkingDir: "../../integration/context/",
 	}
 
 	for _, test := range copyTests {
-		cmd := CopyCommand{
-			cmd: &instructions.CopyCommand{
-				SourcesAndDest: instructions.SourcesAndDest{
-					SourcesAndDest:      test.SourcesAndDest,
-			},
-		}
-		err := cmd.ExecuteCommand(cfg, nil)
-		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedDest, cfg.WorkingDir)
+		t.Run(test.name, func(t *testing.T) {
+			dirList := []string{}
+
+			logrus.Infof("Running test: %v", test.name)
+
+			cmd := CopyCommand{
+				cmd: &instructions.CopyCommand{
+					SourcesAndDest: test.SourcesAndDest,
+				},
+				buildcontext: "../../integration/context/",
+			}
+
+			buildArgs := copySetUpBuildArgs()
+			dest := cfg.WorkingDir + test.SourcesAndDest[len(test.SourcesAndDest)-1]
+
+			os.RemoveAll(dest)
+
+			err := cmd.ExecuteCommand(cfg, buildArgs)
+
+			fi, ferr := os.Open(dest)
+			if ferr != nil {
+				t.Error()
+			}
+			defer fi.Close()
+			fstat, ferr := fi.Stat()
+			if ferr != nil {
+				t.Error()
+			}
+			if fstat.IsDir() {
+				files, ferr := ioutil.ReadDir(dest)
+				if ferr != nil {
+					t.Error()
+				}
+				for _, file := range files {
+					logrus.Infof("file: %v", file.Name())
+					dirList = append(dirList, file.Name())
+				}
+			} else {
+				dirList = append(dirList, filepath.Base(dest))
+			}
+			//dir, err := os.Getwd()
+			//			logrus.Infof("CWD: %v", dir)
+			//			logrus.Infof("test.SourcesAndDest: %v", test.SourcesAndDest)
+			logrus.Infof("dest: %v", dest)
+			logrus.Infof("test.expectedDest: %v", test.expectedDest)
+			logrus.Infof("dirList: %v", dirList)
+
+			testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedDest, dirList)
+			os.RemoveAll(dest)
+		})
 	}
+}
+
+func copySetUpBuildArgs() *dockerfile.BuildArgs {
+	buildArgs := dockerfile.NewBuildArgs([]string{
+		"buildArg1=foo",
+		"buildArg2=foo2",
+	})
+	buildArgs.AddArg("buildArg1", nil)
+	d := "default"
+	buildArgs.AddArg("buildArg2", &d)
+	return buildArgs
 }

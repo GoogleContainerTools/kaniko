@@ -32,7 +32,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -188,9 +188,12 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
-		// It's possible a file is in the tar before its directory.
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
+		// It's possible a file is in the tar before its directory,
+		// or a file was copied over a directory prior to now
+		fi, err := os.Stat(dir)
+		if os.IsNotExist(err) || !fi.IsDir() {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+			os.RemoveAll(dir)
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return err
 			}
