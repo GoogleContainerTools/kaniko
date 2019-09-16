@@ -77,6 +77,13 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		}
 
 		registryName := destRef.Repository.Registry.Name()
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+			if err != nil {
+				return errors.Wrap(err, "getting new insecure registry")
+			}
+			destRef.Repository.Registry = newReg
+		}
 		tr := makeTransport(opts, registryName)
 		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
