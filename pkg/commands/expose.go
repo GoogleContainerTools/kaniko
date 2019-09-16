@@ -54,7 +54,7 @@ func (r *ExposeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 		}
 		protocol := strings.Split(p, "/")[1]
 		if !validProtocol(protocol) {
-			return fmt.Errorf("Invalid protocol: %s", protocol)
+			return fmt.Errorf("invalid protocol: %s", protocol)
 		}
 		logrus.Infof("Adding exposed port: %s", p)
 		existingPorts[p] = struct{}{}

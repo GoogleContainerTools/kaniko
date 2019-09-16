@@ -188,7 +188,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
-		// It's possible a file is in the tar before it's directory.
+		// It's possible a file is in the tar before its directory.
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
 			if err := os.MkdirAll(dir, 0755); err != nil {
@@ -288,12 +288,7 @@ func checkWhitelistRoot(root string) bool {
 	if root == constants.RootDir {
 		return false
 	}
-	for _, wl := range whitelist {
-		if HasFilepathPrefix(root, wl.Path, wl.PrefixMatchOnly) {
-			return true
-		}
-	}
-	return false
+	return CheckWhitelist(root)
 }
 
 // Get whitelist from roots of mounted files
@@ -371,6 +366,24 @@ func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
 	dirPath := constants.RootDir
+	paths := []string{constants.RootDir}
+	for index, dir := range dirs {
+		if dir == "" || index == (len(dirs)-1) {
+			continue
+		}
+		dirPath = filepath.Join(dirPath, dir)
+		paths = append(paths, dirPath)
+	}
+	return paths
+}
+
+// ParentDirectoriesWithoutLeadingSlash returns a list of paths to all parent directories
+// all subdirectories do not contain a leading /
+// Ex. /some/temp/dir -> [/, some, some/temp, some/temp/dir]
+func ParentDirectoriesWithoutLeadingSlash(path string) []string {
+	path = filepath.Clean(path)
+	dirs := strings.Split(path, "/")
+	dirPath := ""
 	paths := []string{constants.RootDir}
 	for index, dir := range dirs {
 		if dir == "" || index == (len(dirs)-1) {

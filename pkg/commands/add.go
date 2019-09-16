@@ -43,7 +43,7 @@ type AddCommand struct {
 // 		- If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
 // 		- If dest doesn't end with a slash, the filepath is inferred to be <dest>/<filename>
 // 	2. If <src> is a local tar archive:
-// 		-If <src> is a local tar archive, it is unpacked at the dest, as 'tar -x' would
+// 		- it is unpacked at the dest, as 'tar -x' would
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
@@ -71,8 +71,12 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			}
 			a.snapshotFiles = append(a.snapshotFiles, urlDest)
 		} else if util.IsFileLocalTarArchive(fullPath) {
-			logrus.Infof("Unpacking local tar archive %s to %s", src, dest)
-			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, dest)
+			tarDest, err := util.DestinationFilepath("", dest, config.WorkingDir)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Unpacking local tar archive %s to %s", src, tarDest)
+			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, tarDest)
 			if err != nil {
 				return err
 			}

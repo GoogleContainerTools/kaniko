@@ -15,8 +15,9 @@
 #!/bin/bash
 set -e
 
-if [ $# -lt 3 ];
-    then echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag> <cache>"
+if [ $# -lt 3 ]; then 
+    echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag> <cache>"
+    exit 1
 fi
 
 dockerfile=$1

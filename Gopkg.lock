@@ -445,15 +445,18 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:d40a26f0daf07f3b5c916356a3e10fabbf97d5166f77e57aa3983013ab57004c"
+  digest = "1:5924704ec96f00247784c512cc57f45a595030376a7ff2ff993bf356793a2cb0"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
     "pkg/authn/k8schain",
+    "pkg/internal/retry",
+    "pkg/logs",
     "pkg/name",
     "pkg/v1",
     "pkg/v1/daemon",
     "pkg/v1/empty",
+    "pkg/v1/layout",
     "pkg/v1/mutate",
     "pkg/v1/partial",
     "pkg/v1/random",
@@ -465,7 +468,7 @@
     "pkg/v1/v1util",
   ]
   pruneopts = "NUT"
-  revision = "8621d738a07bc74b2adeafd175a3c738423577a0"
+  revision = "31e00cede111067bae48bfc2cbfc522b0b36207f"
 
 [[projects]]
   digest = "1:f4f203acd8b11b8747bdcd91696a01dbc95ccb9e2ca2db6abf81c3a4f5e950ce"
@@ -720,28 +723,20 @@
   version = "v1.0.2"
 
 [[projects]]
+  branch = "master"
+  digest = "1:15057fc7395024283a7d2639b8afc61c5b6df3fe260ce06ff5834c8464f16b5c"
+  name = "github.com/otiai10/copy"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "7e9a647135a142c2669943d4a4d29be015ce9392"
+
+[[projects]]
   digest = "1:cf254277d898b713195cc6b4a3fac8bf738b9f1121625df27843b52b267eec6c"
   name = "github.com/pelletier/go-buffruneio"
   packages = ["."]
   pruneopts = "NUT"
   revision = "c37440a7cf42ac63b919c752ca73a85067e05992"
   version = "v0.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:15057fc7395024283a7d2639b8afc61c5b6df3fe260ce06ff5834c8464f16b5c"
-  name = "github.com/otiai10/copy"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "7e9a647135a142c2669943d4a4d29be015ce9392"
-
-[[projects]]
-  branch = "master"
-  digest = "1:15057fc7395024283a7d2639b8afc61c5b6df3fe260ce06ff5834c8464f16b5c"
-  name = "github.com/otiai10/copy"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "7e9a647135a142c2669943d4a4d29be015ce9392"
 
 [[projects]]
   branch = "master"
@@ -1374,6 +1369,7 @@
     "github.com/google/go-containerregistry/pkg/v1",
     "github.com/google/go-containerregistry/pkg/v1/daemon",
     "github.com/google/go-containerregistry/pkg/v1/empty",
+    "github.com/google/go-containerregistry/pkg/v1/layout",
     "github.com/google/go-containerregistry/pkg/v1/mutate",
     "github.com/google/go-containerregistry/pkg/v1/partial",
     "github.com/google/go-containerregistry/pkg/v1/remote",
@@ -1392,6 +1388,7 @@
     "golang.org/x/oauth2",
     "golang.org/x/sync/errgroup",
     "gopkg.in/src-d/go-git.v4",
+    "gopkg.in/src-d/go-git.v4/plumbing",
     "k8s.io/client-go/discovery",
   ]
   solver-name = "gps-cdcl"
