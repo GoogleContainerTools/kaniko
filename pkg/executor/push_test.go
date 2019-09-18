@@ -23,7 +23,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/validate"
 )
 
 func TestHeaderAdded(t *testing.T) {
@@ -68,4 +72,50 @@ type mockRoundTripper struct {
 func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := r.UserAgent()
 	return &http.Response{Body: ioutil.NopCloser(bytes.NewBufferString(ua))}, nil
+}
+
+func TestOCILayoutPath(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("could not create temp dir: %s", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	image, err := random.Image(1024, 4)
+	if err != nil {
+		t.Fatalf("could not create image: %s", err)
+	}
+
+	digest, err := image.Digest()
+	if err != nil {
+		t.Fatalf("could not get image digest: %s", err)
+	}
+
+	want, err := image.Manifest()
+	if err != nil {
+		t.Fatalf("could not get image manifest: %s", err)
+	}
+
+	opts := config.KanikoOptions{
+		NoPush:        true,
+		OCILayoutPath: tmpDir,
+	}
+
+	if err := DoPush(image, &opts); err != nil {
+		t.Fatalf("could not push image: %s", err)
+	}
+
+	layoutIndex, err := layout.ImageIndexFromPath(tmpDir)
+	if err != nil {
+		t.Fatalf("could not get index from layout: %s", err)
+	}
+	testutil.CheckError(t, false, validate.Index(layoutIndex))
+
+	layoutImage, err := layoutIndex.Image(digest)
+	if err != nil {
+		t.Fatalf("could not get image from layout: %s", err)
+	}
+
+	got, err := layoutImage.Manifest()
+	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 }

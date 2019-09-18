@@ -44,6 +44,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
+    - [--oci-layout-path](#--oci-layout-path)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
     - [--snapshotMode](#--snapshotmode)
@@ -374,6 +375,19 @@ will write the digest to that file, which is picked up by
 Kubernetes automatically as the `{{.state.terminated.message}}`
 of the container.
 
+#### --oci-layout-path
+
+Set this flag to specify a directory in the container where the OCI image
+layout of a built image will be placed. This can be used to automatically
+track the exact image built by Kaniko.
+
+For example, to surface the image digest built in a
+[Tekton task](https://github.com/tektoncd/pipeline/blob/v0.6.0/docs/resources.md#surfacing-the-image-digest-built-in-a-task),
+this flag should be set to match the image resource `outputImageDir`.
+
+_Note: Depending on the built image, the media type of the image manifest might be either
+`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json``._
+
 #### --insecure-registry
 
 Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
@@ -411,6 +425,10 @@ This flag takes a single snapshot of the filesystem at the end of the build, so 
 #### --skip-tls-verify
 
 Set this flag to skip TLS certificate validation when pushing to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --skip-tls-verify-pull
 
