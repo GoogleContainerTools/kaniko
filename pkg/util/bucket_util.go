@@ -24,7 +24,7 @@ import (
 
 func GetBucketAndItem(context string) (string, string) {
 	split := strings.SplitN(context, "/", 2)
-	if len(split) == 2 {
+	if len(split) == 2 && split[1] != "" {
 		return split[0], split[1]
 	}
 	return split[0], constants.ContextTar

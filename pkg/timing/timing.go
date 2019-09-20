@@ -18,6 +18,7 @@ package timing
 
 import (
 	"bytes"
+	"encoding/json"
 	"sync"
 	"text/template"
 	"time"
@@ -38,11 +39,11 @@ type TimedRun struct {
 // Stop stops the specified timer and increments the time spent in that category.
 func (tr *TimedRun) Stop(t *Timer) {
 	stop := currentTimeFunc()
+	tr.cl.Lock()
+	defer tr.cl.Unlock()
 	if _, ok := tr.categories[t.category]; !ok {
 		tr.categories[t.category] = 0
 	}
-	tr.cl.Lock()
-	defer tr.cl.Unlock()
 	tr.categories[t.category] += stop.Sub(t.startTime)
 }
 
@@ -77,6 +78,10 @@ func Summary() string {
 	return DefaultRun.Summary()
 }
 
+func JSON() (string, error) {
+	return DefaultRun.JSON()
+}
+
 // Summary outputs a summary of the specified TimedRun.
 func (tr *TimedRun) Summary() string {
 	b := bytes.Buffer{}
@@ -85,4 +90,12 @@ func (tr *TimedRun) Summary() string {
 	defer tr.cl.Unlock()
 	DefaultFormat.Execute(&b, tr.categories)
 	return b.String()
+}
+
+func (tr *TimedRun) JSON() (string, error) {
+	b, err := json.Marshal(tr.categories)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

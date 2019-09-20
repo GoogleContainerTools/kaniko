@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/docker/docker/pkg/archive"
@@ -74,7 +75,14 @@ func (t *Tar) AddFileToTar(p string) error {
 	if err != nil {
 		return err
 	}
-	hdr.Name = p
+
+	if p != "/" {
+		// Docker uses no leading / in the tarball
+		hdr.Name = strings.TrimLeft(p, "/")
+	} else {
+		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
+		hdr.Name = p
+	}
 
 	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {
@@ -104,7 +112,8 @@ func (t *Tar) Whiteout(p string) error {
 	name := ".wh." + filepath.Base(p)
 
 	th := &tar.Header{
-		Name: filepath.Join(dir, name),
+		// Docker uses no leading / in the tarball
+		Name: strings.TrimLeft(filepath.Join(dir, name), "/"),
 		Size: 0,
 	}
 	if err := t.w.WriteHeader(th); err != nil {

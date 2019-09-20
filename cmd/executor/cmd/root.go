@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
 	"github.com/pkg/errors"
@@ -76,6 +78,9 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
+		if err := executor.CheckPushPermissions(opts); err != nil {
+			exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
+		}
 		if err := os.Chdir("/"); err != nil {
 			exit(errors.Wrap(err, "error changing to root dir"))
 		}
@@ -85,6 +90,21 @@ var RootCmd = &cobra.Command{
 		}
 		if err := executor.DoPush(image, opts); err != nil {
 			exit(errors.Wrap(err, "error pushing image"))
+		}
+
+		benchmarkFile := os.Getenv("BENCHMARK_FILE")
+		// false is a keyword for integration tests to turn off benchmarking
+		if benchmarkFile != "" && benchmarkFile != "false" {
+			f, err := os.Create(benchmarkFile)
+			if err != nil {
+				logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
+			}
+			defer f.Close()
+			s, err := timing.JSON()
+			if err != nil {
+				logrus.Warnf("Unable to write benchmark file: %s", err)
+			}
+			f.WriteString(s)
 		}
 	},
 }
@@ -108,9 +128,13 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().BoolVarP(&opts.NoPush, "no-push", "", false, "Do not push the image to the registry")
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheRepo, "cache-repo", "", "", "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided")
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "", "/cache", "Specify a local directory to use as a cache.")
+	RootCmd.PersistentFlags().StringVarP(&opts.DigestFile, "digest-file", "", "", "Specify a file to save the digest of the built image to.")
+	RootCmd.PersistentFlags().StringVarP(&opts.OCILayoutPath, "oci-layout-path", "", "", "Path to save the OCI image layout of the built image.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
+	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
+	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -141,6 +165,9 @@ func cacheFlagsValid() error {
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
 func resolveDockerfilePath() error {
+	if match, _ := regexp.MatchString("^https?://", opts.DockerfilePath); match {
+		return nil
+	}
 	if util.FilepathExists(opts.DockerfilePath) {
 		abs, err := filepath.Abs(opts.DockerfilePath)
 		if err != nil {
@@ -182,12 +209,12 @@ func resolveSourceContext() error {
 	}
 	if opts.Bucket != "" {
 		if !strings.Contains(opts.Bucket, "://") {
+			// if no prefix use Google Cloud Storage as default for backwards compatibility
 			opts.SrcContext = constants.GCSBuildContextPrefix + opts.Bucket
 		} else {
 			opts.SrcContext = opts.Bucket
 		}
 	}
-	// if no prefix use Google Cloud Storage as default for backwards compatibility
 	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
 	if err != nil {
 		return err

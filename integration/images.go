@@ -18,6 +18,7 @@ package integration
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -25,6 +26,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 )
@@ -132,6 +134,7 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 	d.TestCacheDockerfiles = map[string]struct{}{
 		"Dockerfile_test_cache":         {},
 		"Dockerfile_test_cache_install": {},
+		"Dockerfile_test_cache_perm":    {},
 	}
 	return &d
 }
@@ -163,10 +166,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	)
 
 	timer := timing.Start(dockerfile + "_docker")
-	_, err := RunCommandWithoutTest(dockerCmd)
+	out, err := RunCommandWithoutTest(dockerCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
-		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s", dockerImage, dockerCmd.Args, err)
+		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 
 	contextFlag := "-c"
@@ -175,7 +178,6 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 		if d == dockerfile {
 			contextFlag = "-b"
 			contextPath = gcsBucket
-			break
 		}
 	}
 
@@ -188,9 +190,16 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	}
 
 	benchmarkEnv := "BENCHMARK_FILE=false"
+	benchmarkDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
 	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
-		os.Mkdir("benchmarks", 0755)
-		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
+		benchmarkEnv = "BENCHMARK_FILE=/kaniko/benchmarks/" + dockerfile
+		benchmarkFile := path.Join(benchmarkDir, dockerfile)
+		fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
+		dst := path.Join("benchmarks", fileName)
+		defer UploadFileToBucket(gcsBucket, benchmarkFile, dst)
 	}
 
 	// build kaniko image
@@ -199,6 +208,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	kanikoCmd := exec.Command("docker",
 		append([]string{"run",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+			"-v", benchmarkDir + ":/kaniko/benchmarks",
 			"-v", cwd + ":/workspace",
 			"-e", benchmarkEnv,
 			ExecutorImage,
@@ -209,10 +219,10 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	)
 
 	timer = timing.Start(dockerfile + "_kaniko")
-	_, err = RunCommandWithoutTest(kanikoCmd)
+	out, err = RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
-		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s", dockerImage, kanikoCmd.Args, err)
+		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 
 	d.FilesBuilt[dockerfile] = true

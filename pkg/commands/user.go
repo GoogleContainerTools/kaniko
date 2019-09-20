@@ -37,12 +37,12 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return err
 	}
-
-	// Validate the user/group
+  
 	_, _, err = util.GetUserFromUsername(userStr, groupStr)
 	if err != nil {
 		return err
 	}
+
 
 	if groupStr != "" {
 		userStr = userStr + ":" + groupStr

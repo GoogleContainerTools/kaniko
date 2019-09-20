@@ -20,12 +20,12 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
 // uncompressedLayer implements partial.UncompressedLayer from raw bytes.
@@ -42,7 +42,15 @@ func (ul *uncompressedLayer) DiffID() (v1.Hash, error) {
 
 // Uncompressed implements partial.UncompressedLayer
 func (ul *uncompressedLayer) Uncompressed() (io.ReadCloser, error) {
-	return v1util.NopReadCloser(bytes.NewBuffer(ul.content)), nil
+	return ioutil.NopCloser(bytes.NewBuffer(ul.content)), nil
+}
+
+// MediaType returns the media type of the layer
+func (ul *uncompressedLayer) MediaType() (types.MediaType, error) {
+	// Technically the media type should be 'application/tar' but given that our
+	// v1.Layer doesn't force consumers to care about whether the layer is compressed
+	// we should be fine returning the DockerLayer media type
+	return types.DockerLayer, nil
 }
 
 var _ partial.UncompressedLayer = (*uncompressedLayer)(nil)
@@ -54,12 +62,16 @@ func Image(byteSize, layers int64) (v1.Image, error) {
 		var b bytes.Buffer
 		tw := tar.NewWriter(&b)
 		if err := tw.WriteHeader(&tar.Header{
-			Name: fmt.Sprintf("random_file_%d.txt", i),
-			Size: byteSize,
+			Name:     fmt.Sprintf("random_file_%d.txt", i),
+			Size:     byteSize,
+			Typeflag: tar.TypeRegA,
 		}); err != nil {
 			return nil, err
 		}
 		if _, err := io.CopyN(tw, rand.Reader, byteSize); err != nil {
+			return nil, err
+		}
+		if err := tw.Close(); err != nil {
 			return nil, err
 		}
 		bts := b.Bytes()
@@ -74,6 +86,9 @@ func Image(byteSize, layers int64) (v1.Image, error) {
 	}
 
 	cfg := &v1.ConfigFile{}
+
+	// Some clients check this.
+	cfg.RootFS.Type = "layers"
 
 	// It is ok that iteration order is random in Go, because this is the random image anyways.
 	for k := range layerz {

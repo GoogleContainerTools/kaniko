@@ -61,8 +61,8 @@ func Test_CacheKey(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lm1 := LayeredMap{added: []map[string]string{test.map1}}
-			lm2 := LayeredMap{added: []map[string]string{test.map2}}
+			lm1 := LayeredMap{layers: []map[string]string{test.map1}}
+			lm2 := LayeredMap{layers: []map[string]string{test.map2}}
 			k1, err := lm1.Key()
 			if err != nil {
 				t.Fatalf("error getting key for map 1: %v", err)

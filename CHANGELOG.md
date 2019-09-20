@@ -1,4 +1,169 @@
-# v0.7.0 Release - 12/10/2018
+# v0.12.0 Release - 2019-09/13
+
+## New Features
+* Added `--oci-layout-path` flag to save image in OCI layout. [#744](https://github.com/GoogleContainerTools/kaniko/pull/744)
+* Add support for S3 custom endpoint [#698](https://github.com/GoogleContainerTools/kaniko/pull/698)
+
+## Bug Fixes
+* Setting PATH [#760](https://github.com/GoogleContainerTools/kaniko/pull/760)
+* Remove leading slash in layer tarball paths (Closes: #726) [#729](https://github.com/GoogleContainerTools/kaniko/pull/729)
+
+## Updates and Refactors
+* Remove cruft [#635](https://github.com/GoogleContainerTools/kaniko/pull/635)
+* Add desc for `--skip-tls-verify-pull` to README [#493](https://github.com/GoogleContainerTools/kaniko/pull/493)
+
+Huge thank you for this release towards our contributors: 
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- chhsia0
+- Deniz Zoeteman
+- Luke Wood
+- Matthew Dawson
+- Niels Denissen
+- Priya Wadhwa
+- Sharif Elgamal
+- Takeaki Matsumoto
+- Taylor Barrella
+- Tejal Desai
+- v.rul
+- Warren Seymour
+- xanonid
+- Xueshan Feng
+- Роман Небалуев
+
+
+# v0.11.0 Release - 2019-08-23
+
+## Bug Fixes
+* fix unpacking archives via ADD [#717](https://github.com/GoogleContainerTools/kaniko/pull/717)
+* Reverted not including build args in cache key [#739](https://github.com/GoogleContainerTools/kaniko/pull/739)
+* Create cache directory if it doesn't already exist [#452](https://github.com/GoogleContainerTools/kaniko/pull/452)
+
+## New Features
+* add multiple user agents to kaniko if upstream_client_type value  is set [#750](https://github.com/GoogleContainerTools/kaniko/pull/750)
+* Make container layers captured using FS snapshots reproducible [#714](https://github.com/GoogleContainerTools/kaniko/pull/714)
+* Include warmer in debug image [#497](https://github.com/GoogleContainerTools/kaniko/pull/497)
+* Bailout when there is not enough input arguments [#735](https://github.com/GoogleContainerTools/kaniko/pull/735)
+* Add checking image presence in cache prior to downloading it [#723](https://github.com/GoogleContainerTools/kaniko/pull/723)
+
+## Additonal PRs
+* Document how to build from git reference [#730](https://github.com/GoogleContainerTools/kaniko/pull/730)
+* Misc. small changes/refactoring [#712](https://github.com/GoogleContainerTools/kaniko/pull/712)
+* Update go-containerregistry [#680](https://github.com/GoogleContainerTools/kaniko/pull/680)
+* Update version of go-containerregistry [#724](https://github.com/GoogleContainerTools/kaniko/pull/724)
+* feat: support specifying branch for cloning [#703](https://github.com/GoogleContainerTools/kaniko/pull/703)
+
+Huge thank you for this release towards our contributors: 
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Deniz Zoeteman
+- Luke Wood
+- Matthew Dawson
+- priyawadhwa
+- sharifelgamal
+- Sharif Elgamal
+- Taylor Barrella
+- Tejal Desai
+- v.rul
+- Warren Seymour
+- Xueshan Feng
+- Роман Небалуе
+
+# v0.10.0 Release - 2019-06-19
+
+## Bug Fixes
+* Fix kaniko caching [#639](https://github.com/GoogleContainerTools/kaniko/pull/639)
+* chore: fix typo [#665](https://github.com/GoogleContainerTools/kaniko/pull/665)
+* Fix file mode bug [#618](https://github.com/GoogleContainerTools/kaniko/pull/618)
+* Fix arg handling for multi-stage images in COPY instructions. [#621](https://github.com/GoogleContainerTools/kaniko/pull/621)
+* Fix parent directory permissions [#619](https://github.com/GoogleContainerTools/kaniko/pull/619)
+* Environment variables should be replaced in URLs in ADD commands. [#580](https://github.com/GoogleContainerTools/kaniko/pull/580)
+* Update the cache warmer to also save manifests. [#576](https://github.com/GoogleContainerTools/kaniko/pull/576)
+* Fix typo in error message [#569](https://github.com/GoogleContainerTools/kaniko/pull/569)
+
+## New Features
+* Add SkipVerify support to CheckPushPermissions. [#663](https://github.com/GoogleContainerTools/kaniko/pull/663)
+* Creating  github Build Context [#672](https://github.com/GoogleContainerTools/kaniko/pull/672)
+* Add `--digest-file` flag to output built digest to file. [#655](https://github.com/GoogleContainerTools/kaniko/pull/655)
+* README.md: update BuildKit/img comparison [#642](https://github.com/GoogleContainerTools/kaniko/pull/642)
+* Add documentation for --verbosity flag [#634](https://github.com/GoogleContainerTools/kaniko/pull/634)
+* Optimize file copying and stage saving between stages. [#605](https://github.com/GoogleContainerTools/kaniko/pull/605)
+* Add an integration test for USER unpacking. [#600](https://github.com/GoogleContainerTools/kaniko/pull/600)
+* Added missing documentation for --skip-tls-verify-pull arg [#593](https://github.com/GoogleContainerTools/kaniko/pull/593)
+* README.me: update Buildah description [#586](https://github.com/GoogleContainerTools/kaniko/pull/586)
+* Add missing tests for bucket util [#565](https://github.com/GoogleContainerTools/kaniko/pull/565)
+* Look for manifests in the local cache next to the full images. [#570](https://github.com/GoogleContainerTools/kaniko/pull/570)
+* Make the run_in_docker script support caching. [#564](https://github.com/GoogleContainerTools/kaniko/pull/564)
+* Refactor snapshotting [#561](https://github.com/GoogleContainerTools/kaniko/pull/561)
+* Stop storing a separate cache hash. [#560](https://github.com/GoogleContainerTools/kaniko/pull/560)
+* Speed up workdir by always returning an empty filelist (rather than a… [#557](https://github.com/GoogleContainerTools/kaniko/pull/557)
+* Refactor whitelist handling. [#559](https://github.com/GoogleContainerTools/kaniko/pull/559)
+* Refactor the build loop to fetch stagebuilders earlier. [#558](https://github.com/GoogleContainerTools/kaniko/pull/558)
+
+## Additonal PRs
+* Improve changelog dates [#657](https://github.com/GoogleContainerTools/kaniko/pull/657)
+* Change verbose output from info to debug [#640](https://github.com/GoogleContainerTools/kaniko/pull/640)
+* Check push permissions before building images [#622](https://github.com/GoogleContainerTools/kaniko/pull/622)
+* Bump go-containerregistry to 8c1640add99804503b4126abc718931a4d93c31a [#609](https://github.com/GoogleContainerTools/kaniko/pull/609)
+* Update go-containerregistry [#599](https://github.com/GoogleContainerTools/kaniko/pull/599)
+* Log "Skipping paths under..." to debug [#571](https://github.com/GoogleContainerTools/kaniko/pull/571)
+
+Huge thank you for this release towards our contributors: 
+- Achilleas Pipinellis
+- Adrian Duong
+- Akihiro Suda
+- Andreas Bergmeier
+- Andrew Rynhard
+- Anthony Weston
+- Anurag Goel
+- Balint Pato
+- Christie Wilson
+- Daisuke Taniwaki
+- Dan Cecile
+- Dirk Gustke
+- dlorenc
+- Fredrik Lönnegren
+- Gijs
+- Jake Shadle
+- James Rawlings
+- Jason Hall
+- Johan Hernandez
+- Johannes 'fish' Ziemke
+- Kartik Verma
+- linuxshokunin
+- MMeent
+- Myers Carpenter
+- Nándor István Krácser
+- Nao YONASHIRO
+- Priya Wadhwa
+- Sharif Elgamal
+- Shuhei Kitagawa
+- Valentin Rothberg
+- Vincent Demeester
+
+# v0.9.0 Release - 2019-02-08
+
+## Bug Fixes
+* Bug fix with volumes declared in base images during multi-stage builds
+* Bug fix during snapshotting multi-stage builds.
+* Bug fix for caching with tar output.
+
+# v0.8.0 Release - 2019-01-29
+
+## New Features
+* Even faster snapshotting with godirwalk
+* Added TTL for caching
+
+## Updates
+* Change cache key calculation to be more reproducible.
+* Make the Digest calculation faster for locally-cached images.
+* Simplify snapshotting.
+
+## Bug Fixes
+* Fix bug with USER command and unpacking base images.
+* Added COPY --from=previous stage name/number validation
+
+# v0.7.0 Release - 2018-12-10
 
 ## New Features
 * Add support for COPY --from an unrelated image
@@ -12,7 +177,7 @@
 * Fix bug with call loop
 * Fix caching for multi-step builds
 
-# v0.6.0 Release - 11/06/2018
+# v0.6.0 Release - 2018-11-06
 
 ## New Features
 * parse arg commands at the top of dockerfiles [#404](https://github.com/GoogleContainerTools/kaniko/pull/404)
@@ -37,7 +202,7 @@
 * fix releasing the cache warmer [#418](https://github.com/GoogleContainerTools/kaniko/pull/418)
 
 
-# v0.5.0 Release - 10/16/2018
+# v0.5.0 Release - 2018-10-16
 
 ## New Features
 * Persistent volume caching for base images [#383](https://github.com/GoogleContainerTools/kaniko/pull/383)
@@ -56,7 +221,7 @@
 * Don't cut everything after an equals sign [#381](https://github.com/GoogleContainerTools/kaniko/pull/381)
 
 
-# v0.4.0 Release - 10/01/2018
+# v0.4.0 Release - 2018-10-01
 
 ## New Features
 * Add a benchmark package to store and monitor timings. [#367](https://github.com/GoogleContainerTools/kaniko/pull/367)
@@ -115,7 +280,7 @@
 * Fix handling of the volume directive [#334](https://github.com/GoogleContainerTools/kaniko/pull/334)
 
 
-# v0.3.0 Release - 7/31/2018
+# v0.3.0 Release - 2018-07-31
 New Features
 * Local integration testing [#256](https://github.com/GoogleContainerTools/kaniko/pull/256)
 * Add --target flag for multistage builds [#255](https://github.com/GoogleContainerTools/kaniko/pull/255)
@@ -127,7 +292,7 @@ Bug Fixes
 * Multi-stage errors when referencing earlier stages [#233](https://github.com/GoogleContainerTools/kaniko/issues/233)
 
 
-# v0.2.0 Release - 7/09/2018
+# v0.2.0 Release - 2018-07-09
 
 New Features
 * Support for adding different source contexts, including Amazon S3 [#195](https://github.com/GoogleContainerTools/kaniko/issues/195)
@@ -136,7 +301,7 @@ New Features
 * Update go-containerregistry so kaniko works better with Harbor and Gitlab[#227](https://github.com/GoogleContainerTools/kaniko/pull/227)
 * Push image to multiple destinations [#184](https://github.com/GoogleContainerTools/kaniko/pull/184)
 
-# v0.1.0 Release - 5/17/2018
+# v0.1.0 Release - 2018-05-17
 
 New Features
 * The majority of Dockerfile commands are feature complete [#1](https://github.com/GoogleContainerTools/kaniko/issues/1)

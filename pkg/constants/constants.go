@@ -57,6 +57,7 @@ const (
 	GCSBuildContextPrefix      = "gs://"
 	S3BuildContextPrefix       = "s3://"
 	LocalDirBuildContextPrefix = "dir://"
+	GitBuildContextPrefix      = "git://"
 
 	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME
@@ -69,14 +70,11 @@ const (
 
 	// Name of the .dockerignore file
 	Dockerignore = ".dockerignore"
-)
 
-// KanikoBuildFiles is the list of files required to build kaniko
-var KanikoBuildFiles = []string{"/kaniko/executor",
-	"/kaniko/ssl/certs/ca-certificates.crt",
-	"/kaniko/docker-credential-gcr",
-	"/kaniko/docker-credential-ecr-login",
-	"/kaniko/.docker/config.json"}
+	// S3 Custom endpoint ENV name
+	S3EndpointEnv    = "S3_ENDPOINT"
+	S3ForcePathStyle = "S3_FORCE_PATH_STYLE"
+)
 
 // ScratchEnvVars are the default environment variables needed for a scratch image.
 var ScratchEnvVars = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}

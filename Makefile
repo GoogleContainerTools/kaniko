@@ -14,12 +14,13 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 7
+VERSION_MINOR ?= 11
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
+SHELL := /bin/bash
 GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
 ORG := github.com/GoogleContainerTools

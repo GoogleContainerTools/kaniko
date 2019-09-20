@@ -177,6 +177,38 @@ func Test_ParentDirectories(t *testing.T) {
 	}
 }
 
+func Test_ParentDirectoriesWithoutLeadingSlash(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected []string
+	}{
+		{
+			name: "regular path",
+			path: "/path/to/dir",
+			expected: []string{
+				"/",
+				"path",
+				"path/to",
+			},
+		},
+		{
+			name: "current directory",
+			path: ".",
+			expected: []string{
+				"/",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ParentDirectoriesWithoutLeadingSlash(tt.path)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
+		})
+	}
+}
+
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
@@ -227,10 +259,7 @@ func Test_CheckWhitelist(t *testing.T) {
 				whitelist = original
 			}()
 			whitelist = tt.args.whitelist
-			got, err := CheckWhitelist(tt.args.path)
-			if err != nil {
-				t.Fatalf("error checking whitelist: %v", err)
-			}
+			got := CheckWhitelist(tt.args.path)
 			if got != tt.want {
 				t.Errorf("CheckWhitelist() = %v, want %v", got, tt.want)
 			}
@@ -506,6 +535,30 @@ func TestExtractFile(t *testing.T) {
 				filesAreHardlinks("/bin/uncompress", "/bin/gzip"),
 			},
 		},
+		{
+			name:     "file with setuid bit",
+			contents: []byte("helloworld"),
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644)},
+			checkers: []checker{
+				fileExists("/bar"),
+				fileMatches("/bar", []byte("helloworld")),
+				permissionsMatch("/bar", 0644|os.ModeSetuid),
+			},
+		},
+		{
+			name:     "dir with sticky bit",
+			contents: []byte("helloworld"),
+			hdrs: []*tar.Header{
+				dirHeader("./foo", 01755),
+				fileHeader("./foo/bar", "helloworld", 0644),
+			},
+			checkers: []checker{
+				fileExists("/foo/bar"),
+				fileMatches("/foo/bar", []byte("helloworld")),
+				permissionsMatch("/foo/bar", 0644),
+				permissionsMatch("/foo", 0755|os.ModeDir|os.ModeSticky),
+			},
+		},
 	}
 
 	for _, tc := range tcs {
@@ -592,6 +645,51 @@ func TestCopySymlink(t *testing.T) {
 			}
 			if got != tc.linkTarget {
 				t.Errorf("link target does not match: %s != %s", got, tc.linkTarget)
+			}
+		})
+	}
+}
+
+func Test_childDirInWhitelist(t *testing.T) {
+	type args struct {
+		path      string
+		whitelist []WhitelistEntry
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "not in whitelist",
+			args: args{
+				path: "/foo",
+			},
+			want: false,
+		},
+		{
+			name: "child in whitelist",
+			args: args{
+				path: "/foo",
+				whitelist: []WhitelistEntry{
+					{
+						Path: "/foo/bar",
+					},
+				},
+			},
+			want: true,
+		},
+	}
+	oldWhitelist := whitelist
+	defer func() {
+		whitelist = oldWhitelist
+	}()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			whitelist = tt.args.whitelist
+			if got := childDirInWhitelist(tt.args.path); got != tt.want {
+				t.Errorf("childDirInWhitelist() = %v, want %v", got, tt.want)
 			}
 		})
 	}

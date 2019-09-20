@@ -15,14 +15,19 @@
 #!/bin/bash
 set -e
 
-if [ $# -ne 3 ];
-    then echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag>"
+if [ $# -lt 3 ]; then 
+    echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag> <cache>"
     exit 1
 fi
 
 dockerfile=$1
 context=$2
 destination=$3
+
+cache="false"
+if [[ ! -z "$4" ]]; then
+    cache=$4
+fi
 
 if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
     echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
@@ -33,4 +38,6 @@ docker run \
     -v $HOME/.config/gcloud:/root/.config/gcloud \
     -v ${context}:/workspace \
     gcr.io/kaniko-project/executor:latest \
-    --dockerfile ${dockerfile} --destination ${destination} --context dir:///workspace/
+    --dockerfile ${dockerfile} --destination ${destination} --context dir:///workspace/ \
+    --cache=${cache}
+

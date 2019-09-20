@@ -53,7 +53,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, dest, err := resolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
 		return err
 	}
@@ -136,18 +136,6 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	return nil
 }
 
-func resolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
-	// First, resolve any environment replacement
-	resolvedEnvs, err := util.ResolveEnvironmentReplacementList(sd, envs, true)
-	if err != nil {
-		return nil, "", err
-	}
-	dest := resolvedEnvs[len(resolvedEnvs)-1]
-	// Resolve wildcards and get a list of resolved sources
-	srcs, err := util.ResolveSources(resolvedEnvs, buildcontext)
-	return srcs, dest, err
-}
-
 // FilesToSnapshot should return an empty array if still nil; no files were changed
 func (c *CopyCommand) FilesToSnapshot() []string {
 	return c.snapshotFiles
@@ -165,7 +153,7 @@ func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerf
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	srcs, _, err := resolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	srcs, _, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
 		return nil, err
 	}
