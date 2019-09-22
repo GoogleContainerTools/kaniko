@@ -28,12 +28,18 @@ func Test_resolveStages(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
-	
+
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
-	
-	FROM scratch
+
+	FROM scratch as Third
 	COPY --from=second /hi2 /hi3
+
+	FROM scratch AS FORTH
+	COPY --from=Third /hi3 hi4
+
+	FROM scracth
+	COPY --from=FORTH /hi4 hi5
 	`
 	stages, _, err := Parse([]byte(dockerfile))
 	if err != nil {
@@ -56,10 +62,10 @@ func Test_targetStage(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
-	
+
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
-	
+
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
