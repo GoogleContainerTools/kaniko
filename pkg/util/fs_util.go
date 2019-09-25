@@ -121,6 +121,10 @@ func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
 		if CheckWhitelist(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s whitelisted, but not exists", path)
+				return nil
+			}
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -136,6 +140,14 @@ func DeleteFilesystem() error {
 		}
 		return os.RemoveAll(path)
 	})
+}
+
+// isExists returns true if path exists
+func isExist(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	}
+	return false
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
