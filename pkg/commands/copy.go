@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -70,7 +71,6 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				// we need to add '/' to the end to indicate the destination is a directory
 				dest = filepath.Join(cwd, dest) + "/"
 			}
-			logrus.Debugf("Calling CopyDir fullPath:%s dest:%s", fullPath, dest)
 			copiedFiles, err := util.CopyDir(fullPath, dest, c.buildcontext)
 			if err != nil {
 				return err
@@ -88,7 +88,6 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			logrus.Debugf("Calling CopyFile fullPath:%s destPath:%s", fullPath, destPath)
 			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext)
 			if err != nil {
 				return err
@@ -139,4 +138,43 @@ func (c *CopyCommand) MetadataOnly() bool {
 
 func (c *CopyCommand) RequiresUnpackedFS() bool {
 	return true
+}
+
+func (r *CopyCommand) ShouldCacheOutput() bool {
+	return true
+}
+
+// CacheCommand returns true since this command should be cached
+func (r *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
+
+	return &CachingCopyCommand{
+		img: img,
+		cmd: r.cmd,
+	}
+}
+
+type CachingCopyCommand struct {
+	BaseCommand
+	img            v1.Image
+	extractedFiles []string
+	cmd            *instructions.CopyCommand
+}
+
+func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Infof("Found cached layer, extracting to filesystem")
+	var err error
+	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
+	if err != nil {
+		return errors.Wrap(err, "extracting fs from image")
+	}
+	return nil
+}
+
+func (cr *CachingCopyCommand) FilesToSnapshot() []string {
+	return cr.extractedFiles
+}
+
+func (cr *CachingCopyCommand) String() string {
+	return cr.cmd.String()
 }
