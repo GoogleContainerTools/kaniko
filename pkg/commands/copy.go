@@ -70,6 +70,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				// we need to add '/' to the end to indicate the destination is a directory
 				dest = filepath.Join(cwd, dest) + "/"
 			}
+			logrus.Debugf("Calling CopyDir fullPath:%s dest:%s", fullPath, dest)
 			copiedFiles, err := util.CopyDir(fullPath, dest, c.buildcontext)
 			if err != nil {
 				return err
@@ -87,6 +88,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
+			logrus.Debugf("Calling CopyFile fullPath:%s destPath:%s", fullPath, destPath)
 			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext)
 			if err != nil {
 				return err
@@ -133,4 +135,8 @@ func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerf
 
 func (c *CopyCommand) MetadataOnly() bool {
 	return false
+}
+
+func (c *CopyCommand) RequiresUnpackedFS() bool {
+	return true
 }

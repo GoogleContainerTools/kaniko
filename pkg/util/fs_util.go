@@ -192,8 +192,8 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		// or a file was copied over a directory prior to now
 		fi, err := os.Stat(dir)
 		if os.IsNotExist(err) || !fi.IsDir() {
-			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
-			os.RemoveAll(dir)
+			logrus.Infof("base %s for file %s does not exist. Creating.", base, path)
+			//os.RemoveAll(dir)
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return err
 			}
