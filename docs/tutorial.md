@@ -6,7 +6,7 @@ This tutorial is for beginners who want to start using kaniko and aims to establ
 
 1. [Prerequisities](#Prerequisities)
 2. [Prepare config files for kaniko](#Prepare-config-files-for-kaniko)
-3. [Prepare the mounted directory in minikube](#Prepare-the-mounted-directory-in-minikube)
+3. [Prepare the local mounted directory](#Prepare-the-local-mounted-directory)
 4. [Create a Secret that holds your authorization token](#Create-a-Secret-that-holds-your-authorization-token)
 5. [Create resources in kubernetes](#Create-resources-in-kubernetes)
 6. [Pull the image and test](#Pull-the-image-and-test)
@@ -18,7 +18,7 @@ This tutorial is for beginners who want to start using kaniko and aims to establ
 
 ## Prepare config files for kaniko
 
-After installing minikube, we should prepare several config files to create resources in kubernetes, which are:
+Prepare several config files to create resources in kubernetes, which are:
 
 - [pod.yaml](../examples/pod.yaml) is for starting a kaniko container to build the example image.
 - [volume.yaml](../examples/volume.yaml) is for creating a persistent volume used as kaniko build context.
