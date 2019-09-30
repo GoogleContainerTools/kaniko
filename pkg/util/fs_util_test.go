@@ -528,6 +528,84 @@ func dirHeader(name string, mode int64) *tar.Header {
 	}
 }
 
+func createUncompressedTar(fileContents map[string]string, tarFileName, testDir string) error {
+	if err := testutil.SetupFiles(testDir, fileContents); err != nil {
+		return err
+	}
+	tarFile, err := os.Create(filepath.Join(testDir, tarFileName))
+	if err != nil {
+		return err
+	}
+	t := NewTar(tarFile)
+	defer t.Close()
+	for file := range fileContents {
+		filePath := filepath.Join(testDir, file)
+		if err := t.AddFileToTar(filePath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func Test_unTar(t *testing.T) {
+	tcs := []struct {
+		name             string
+		setupTarContents map[string]string
+		tarFileName      string
+		destination      string
+		expectedFileList []string
+		errorExpected    bool
+	}{
+		{
+			name: "multfile tar",
+			setupTarContents: map[string]string{
+				"foo/file1": "hello World",
+				"bar/file1": "hello World",
+				"bar/file2": "hello World",
+				"file1":     "hello World",
+			},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			expectedFileList: []string{"foo/file1", "bar/file1", "bar/file2", "file1"},
+			errorExpected:    false,
+		},
+		{
+			name:             "empty tar",
+			setupTarContents: map[string]string{},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			expectedFileList: nil,
+			errorExpected:    false,
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			testDir, err := ioutil.TempDir("", "")
+			defer os.RemoveAll(testDir)
+			if err := createUncompressedTar(tc.setupTarContents, tc.tarFileName, testDir); err != nil {
+				t.Fatal(err)
+			}
+			file, err := os.Open(filepath.Join(testDir, tc.tarFileName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			fileList, err := unTar(file, tc.destination)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// update expectedFileList to take into factor temp directory
+			for i, file := range tc.expectedFileList {
+				tc.expectedFileList[i] = filepath.Join(testDir, file)
+			}
+			// sort both slices to ensure objects are in the same order for deep equals
+			sort.Strings(tc.expectedFileList)
+			sort.Strings(fileList)
+			testutil.CheckErrorAndDeepEqual(t, tc.errorExpected, err, tc.expectedFileList, fileList)
+
+		})
+	}
+}
+
 func TestExtractFile(t *testing.T) {
 	type tc struct {
 		name     string
