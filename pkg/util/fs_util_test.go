@@ -581,6 +581,9 @@ func Test_unTar(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			testDir, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
 			defer os.RemoveAll(testDir)
 			if err := createUncompressedTar(tc.setupTarContents, tc.tarFileName, testDir); err != nil {
 				t.Fatal(err)
