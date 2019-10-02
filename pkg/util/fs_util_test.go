@@ -177,6 +177,38 @@ func Test_ParentDirectories(t *testing.T) {
 	}
 }
 
+func Test_ParentDirectoriesWithoutLeadingSlash(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected []string
+	}{
+		{
+			name: "regular path",
+			path: "/path/to/dir",
+			expected: []string{
+				"/",
+				"path",
+				"path/to",
+			},
+		},
+		{
+			name: "current directory",
+			path: ".",
+			expected: []string{
+				"/",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ParentDirectoriesWithoutLeadingSlash(tt.path)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
+		})
+	}
+}
+
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string

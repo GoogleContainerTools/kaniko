@@ -34,6 +34,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -58,7 +59,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	return w.t.RoundTrip(r)
 }
 
-// CheckPushPermissionos checks that the configured credentials can be used to
+// CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	if opts.NoPush {
@@ -76,6 +77,13 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		}
 
 		registryName := destRef.Repository.Registry.Name()
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+			if err != nil {
+				return errors.Wrap(err, "getting new insecure registry")
+			}
+			destRef.Repository.Registry = newReg
+		}
 		tr := makeTransport(opts, registryName)
 		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
@@ -98,6 +106,16 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		err = ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
 		if err != nil {
 			return errors.Wrap(err, "writing digest to file failed")
+		}
+	}
+
+	if opts.OCILayoutPath != "" {
+		path, err := layout.Write(opts.OCILayoutPath, empty.Index)
+		if err != nil {
+			return errors.Wrap(err, "writing empty layout")
+		}
+		if err := path.AppendImage(image); err != nil {
+			return errors.Wrap(err, "appending image")
 		}
 	}
 

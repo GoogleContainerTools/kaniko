@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -31,6 +32,7 @@ import (
 
 func TestSnapshotFSFileChange(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -55,16 +57,16 @@ func TestSnapshotFSFileChange(t *testing.T) {
 	}
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
 	tr := tar.NewReader(f)
-	fooPath := filepath.Join(testDir, "foo")
-	batPath := filepath.Join(testDir, "bar/bat")
+	fooPath := filepath.Join(testDirWithoutLeadingSlash, "foo")
+	batPath := filepath.Join(testDirWithoutLeadingSlash, "bar/bat")
 	snapshotFiles := map[string]string{
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
-	for _, dir := range util.ParentDirectories(fooPath) {
+	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(fooPath) {
 		snapshotFiles[dir] = ""
 	}
-	for _, dir := range util.ParentDirectories(batPath) {
+	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
 		snapshotFiles[dir] = ""
 	}
 	numFiles := 0
@@ -128,12 +130,14 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 
 func TestSnapshotFSChangePermissions(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Change permissions on a file
 	batPath := filepath.Join(testDir, "bar/bat")
+	batPathWithoutLeadingSlash := filepath.Join(testDirWithoutLeadingSlash, "bar/bat")
 	if err := os.Chmod(batPath, 0600); err != nil {
 		t.Fatalf("Error changing permissions on %s: %v", batPath, err)
 	}
@@ -149,9 +153,9 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
 	tr := tar.NewReader(f)
 	snapshotFiles := map[string]string{
-		batPath: "baz2",
+		batPathWithoutLeadingSlash: "baz2",
 	}
-	for _, dir := range util.ParentDirectories(batPath) {
+	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
 		snapshotFiles[dir] = ""
 	}
 	numFiles := 0
@@ -160,6 +164,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
+		t.Logf("Info %s in tar", hdr.Name)
 		numFiles++
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
@@ -176,6 +181,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 
 func TestSnapshotFiles(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -197,9 +203,9 @@ func TestSnapshotFiles(t *testing.T) {
 	defer os.Remove(tarPath)
 
 	expectedFiles := []string{
-		filepath.Join(testDir, "foo"),
+		filepath.Join(testDirWithoutLeadingSlash, "foo"),
 	}
-	expectedFiles = append(expectedFiles, util.ParentDirectories(filepath.Join(testDir, "foo"))...)
+	expectedFiles = append(expectedFiles, util.ParentDirectoriesWithoutLeadingSlash(filepath.Join(testDir, "foo"))...)
 
 	f, err := os.Open(tarPath)
 	if err != nil {
