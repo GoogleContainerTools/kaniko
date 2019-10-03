@@ -54,23 +54,23 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-	    if cmd.Use == "executor" {
-            if err := util.ConfigureLogging(logLevel); err != nil {
-                return err
-            }
-            if !opts.NoPush && len(opts.Destinations) == 0 {
-                return errors.New("You must provide --destination, or use --no-push")
-            }
-            if err := cacheFlagsValid(); err != nil {
-                return errors.Wrap(err, "cache flags invalid")
-            }
-            if err := resolveSourceContext(); err != nil {
-                return errors.Wrap(err, "error resolving source context")
-            }
-            if err := resolveDockerfilePath(); err != nil {
-                return errors.Wrap(err, "error resolving dockerfile path")
-            }
-        }
+		if cmd.Use == "executor" {
+			if err := util.ConfigureLogging(logLevel); err != nil {
+				return err
+			}
+			if !opts.NoPush && len(opts.Destinations) == 0 {
+				return errors.New("You must provide --destination, or use --no-push")
+			}
+			if err := cacheFlagsValid(); err != nil {
+				return errors.Wrap(err, "cache flags invalid")
+			}
+			if err := resolveSourceContext(); err != nil {
+				return errors.Wrap(err, "error resolving source context")
+			}
+			if err := resolveDockerfilePath(); err != nil {
+				return errors.Wrap(err, "error resolving dockerfile path")
+			}
+		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
