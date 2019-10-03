@@ -694,3 +694,49 @@ func Test_childDirInWhitelist(t *testing.T) {
 		})
 	}
 }
+
+func Test_correctDockerignoreFileIsUsed(t *testing.T) {
+	type args struct {
+		dockerfilepath string
+		buildcontext   string
+		excluded       string
+		notExcluded    string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "relative dockerfile used",
+			args: args{
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore_relative",
+				buildcontext:   "../../integration/",
+				excluded:       "ignore_relative/bar",
+				notExcluded:    "ignore_relative/foo",
+			},
+		},
+		{
+			name: "context dockerfile is used",
+			args: args{
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore",
+				buildcontext:   "../../integration/",
+				excluded:       "ignore/bar",
+				notExcluded:    "ignore/foo",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			excluded = nil
+			if err := GetExcludedFiles(tt.args.dockerfilepath, tt.args.buildcontext); err != nil {
+				t.Fatal(err)
+			}
+			if excl := excludeFile(tt.args.excluded, tt.args.buildcontext); !excl {
+				t.Errorf("'%v' not excluded as expected", tt.args.excluded)
+			}
+			if excl := excludeFile(tt.args.notExcluded, tt.args.buildcontext); excl {
+				t.Errorf("'%v' excluded against expectation", tt.args.notExcluded)
+			}
+		})
+	}
+}
