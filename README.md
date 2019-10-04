@@ -21,6 +21,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 - [How does kaniko work?](#how-does-kaniko-work)
 - [Known Issues](#known-issues)
 - [Demo](#demo)
+- [Tutorial](#tutorial)
 - [Using kaniko](#using-kaniko)
   - [kaniko Build Contexts](#kaniko-build-contexts)
   - [Running kaniko](#running-kaniko)
@@ -76,6 +77,10 @@ kaniko does not support building Windows containers.
 ## Demo
 
 ![Demo](/docs/demo.gif)
+
+## Tutorial
+
+For a detailed example of kaniko with local storage, please refer to a [getting started tutorial](./docs/tutorial.md).
 
 ## Using kaniko
 
