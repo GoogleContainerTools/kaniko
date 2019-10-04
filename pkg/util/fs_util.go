@@ -359,9 +359,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		if CheckWhitelist(path) && !HasFilepathPrefix(path, root, false) {
 			return nil
 		}
-		if err != nil {
-			return err
-		}
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
