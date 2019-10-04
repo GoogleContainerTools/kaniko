@@ -386,6 +386,30 @@ func TestCache(t *testing.T) {
 	}
 }
 
+func TestRelativePaths(t *testing.T) {
+
+	dockerfile := "Dockerfile_test_copy"
+
+	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
+		t.Parallel()
+		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile)
+
+		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
+		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
+
+		// container-diff
+		daemonDockerImage := daemonPrefix + dockerImage
+		containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
+			daemonDockerImage, kanikoImage,
+			"-q", "--type=file", "--type=metadata", "--json")
+		diff := RunCommand(containerdiffCmd, t)
+		t.Logf("diff = %s", string(diff))
+
+		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+		checkContainerDiffOutput(t, diff, expected)
+	})
+}
+
 type fileDiff struct {
 	Name string
 	Size int
