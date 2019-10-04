@@ -699,8 +699,8 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 	type args struct {
 		dockerfilepath string
 		buildcontext   string
-		excluded       string
-		notExcluded    string
+		excluded       []string
+		included       []string
 	}
 	tests := []struct {
 		name string
@@ -711,8 +711,8 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 			args: args{
 				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore_relative",
 				buildcontext:   "../../integration/",
-				excluded:       "ignore_relative/bar",
-				notExcluded:    "ignore_relative/foo",
+				excluded:       []string{"ignore_relative/bar"},
+				included:       []string{"ignore_relative/foo", "ignore/bar"},
 			},
 		},
 		{
@@ -720,23 +720,28 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 			args: args{
 				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore",
 				buildcontext:   "../../integration/",
-				excluded:       "ignore/bar",
-				notExcluded:    "ignore/foo",
+				excluded:       []string{"ignore/bar"},
+				included:       []string{"ignore/foo", "ignore_relative/bar"},
 			},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			excluded = nil
-			if err := GetExcludedFiles(tt.args.dockerfilepath, tt.args.buildcontext); err != nil {
-				t.Fatal(err)
-			}
-			if excl := excludeFile(tt.args.excluded, tt.args.buildcontext); !excl {
-				t.Errorf("'%v' not excluded as expected", tt.args.excluded)
-			}
-			if excl := excludeFile(tt.args.notExcluded, tt.args.buildcontext); excl {
-				t.Errorf("'%v' excluded against expectation", tt.args.notExcluded)
-			}
-		})
+		if err := GetExcludedFiles(tt.args.dockerfilepath, tt.args.buildcontext); err != nil {
+			t.Fatal(err)
+		}
+		for _, excl := range tt.args.excluded {
+			t.Run(tt.name+" to exclude "+excl, func(t *testing.T) {
+				if !excludeFile(excl, tt.args.buildcontext) {
+					t.Errorf("'%v' not excluded", excl)
+				}
+			})
+		}
+		for _, incl := range tt.args.included {
+			t.Run(tt.name+" to include "+incl, func(t *testing.T) {
+				if excludeFile(incl, tt.args.buildcontext) {
+					t.Errorf("'%v' not included", incl)
+				}
+			})
+		}
 	}
 }
