@@ -13,7 +13,7 @@ required = [
 
 [[override]]
   name = "github.com/opencontainers/runc"
-  revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
+  revision = "1f11dc5dba5213400482cd974db20ee1408d2c7f"
 
 [[override]]
   name = "github.com/ishidawataru/sctp"
