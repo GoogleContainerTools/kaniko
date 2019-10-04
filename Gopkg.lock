@@ -830,6 +830,17 @@
   version = "v1.0.6"
 
 [[projects]]
+  digest = "1:90cf76d709ce9b057e7d75bd245bf7c1242d21ba4f908fb22c7a2a96d1dcc0ca"
+  name = "github.com/spf13/afero"
+  packages = [
+    ".",
+    "mem",
+  ]
+  pruneopts = "NUT"
+  revision = "f4711e4db9e9a1d3887343acb72b2bbfc2f686f5"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:343d44e06621142ab09ae0c76c1799104cdfddd3ffb445d78b1adf8dc3ffaf3d"
   name = "github.com/spf13/cobra"
   packages = ["."]
@@ -1381,6 +1392,7 @@
     "github.com/google/go-containerregistry/pkg/v1/layout",
     "github.com/google/go-containerregistry/pkg/v1/mutate",
     "github.com/google/go-containerregistry/pkg/v1/partial",
+    "github.com/google/go-containerregistry/pkg/v1/random",
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
     "github.com/google/go-github/github",
@@ -1392,6 +1404,7 @@
     "github.com/otiai10/copy",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
+    "github.com/spf13/afero",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "golang.org/x/net/context",
