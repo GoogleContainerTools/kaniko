@@ -554,11 +554,15 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
-func GetExcludedFiles(buildcontext string) error {
-	path := filepath.Join(buildcontext, ".dockerignore")
+func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
+	path := dockerfilepath + ".dockerignore"
+	if !FilepathExists(path) {
+		path = filepath.Join(buildcontext, ".dockerignore")
+	}
 	if !FilepathExists(path) {
 		return nil
 	}
+	logrus.Infof("Using dockerignore file: %v", path)
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return errors.Wrap(err, "parsing .dockerignore")
