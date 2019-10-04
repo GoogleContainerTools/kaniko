@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"reflect"
 	"sort"
 	"testing"
 
@@ -27,14 +28,12 @@ var testURL = "https://github.com/GoogleContainerTools/runtimes-common/blob/mast
 
 var testEnvReplacement = []struct {
 	path         string
-	command      string
 	envs         []string
 	isFilepath   bool
 	expectedPath string
 }{
 	{
-		path:    "/simple/path",
-		command: "WORKDIR /simple/path",
+		path: "/simple/path",
 		envs: []string{
 			"simple=/path/",
 		},
@@ -42,8 +41,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/simple/path",
 	},
 	{
-		path:    "/simple/path/",
-		command: "WORKDIR /simple/path/",
+		path: "/simple/path/",
 		envs: []string{
 			"simple=/path/",
 		},
@@ -51,8 +49,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/simple/path/",
 	},
 	{
-		path:    "${a}/b",
-		command: "WORKDIR ${a}/b",
+		path: "${a}/b",
 		envs: []string{
 			"a=/path/",
 			"b=/path2/",
@@ -61,8 +58,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/path/b",
 	},
 	{
-		path:    "/$a/b",
-		command: "COPY ${a}/b /c/",
+		path: "/$a/b",
 		envs: []string{
 			"a=/path/",
 			"b=/path2/",
@@ -71,8 +67,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/path/b",
 	},
 	{
-		path:    "/$a/b/",
-		command: "COPY /${a}/b /c/",
+		path: "/$a/b/",
 		envs: []string{
 			"a=/path/",
 			"b=/path2/",
@@ -81,8 +76,7 @@ var testEnvReplacement = []struct {
 		expectedPath: "/path/b/",
 	},
 	{
-		path:    "\\$foo",
-		command: "COPY \\$foo /quux",
+		path: "\\$foo",
 		envs: []string{
 			"foo=/path/",
 		},
@@ -90,12 +84,34 @@ var testEnvReplacement = []struct {
 		expectedPath: "$foo",
 	},
 	{
-		path:    "8080/$protocol",
-		command: "EXPOSE 8080/$protocol",
+		path: "8080/$protocol",
 		envs: []string{
 			"protocol=udp",
 		},
 		expectedPath: "8080/udp",
+	},
+	{
+		path: "8080/$protocol",
+		envs: []string{
+			"protocol=udp",
+		},
+		expectedPath: "8080/udp",
+	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   true,
+		expectedPath: "http://example.com",
+	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   false,
+		expectedPath: "http://example.com",
 	},
 }
 
@@ -183,6 +199,7 @@ var urlDestFilepathTests = []struct {
 	cwd          string
 	dest         string
 	expectedDest string
+	envs         []string
 }{
 	{
 		url:          "https://something/something",
@@ -202,12 +219,19 @@ var urlDestFilepathTests = []struct {
 		dest:         "/dest/",
 		expectedDest: "/dest/something",
 	},
+	{
+		url:          "https://something/$foo.tar.gz",
+		cwd:          "/test",
+		dest:         "/foo/",
+		expectedDest: "/foo/bar.tar.gz",
+		envs:         []string{"foo=bar"},
+	},
 }
 
 func Test_UrlDestFilepath(t *testing.T) {
 	for _, test := range urlDestFilepathTests {
-		actualDest := URLDestinationFilepath(test.url, test.dest, test.cwd)
-		testutil.CheckErrorAndDeepEqual(t, false, nil, test.expectedDest, actualDest)
+		actualDest, err := URLDestinationFilepath(test.url, test.dest, test.cwd, test.envs)
+		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedDest, actualDest)
 	}
 }
 
@@ -382,7 +406,7 @@ var isSrcValidTests = []struct {
 func Test_IsSrcsValid(t *testing.T) {
 	for _, test := range isSrcValidTests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := GetExcludedFiles(buildContextPath); err != nil {
+			if err := GetExcludedFiles("", buildContextPath); err != nil {
 				t.Fatalf("error getting excluded files: %v", err)
 			}
 			err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
@@ -400,7 +424,6 @@ var testResolveSources = []struct {
 			"context/foo",
 			"context/b*",
 			testURL,
-			"dest/",
 		},
 		expectedList: []string{
 			"context/foo",
@@ -447,4 +470,59 @@ func Test_RemoteUrls(t *testing.T) {
 		})
 	}
 
+}
+
+func TestResolveEnvironmentReplacementList(t *testing.T) {
+	type args struct {
+		values     []string
+		envs       []string
+		isFilepath bool
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "url",
+			args: args{
+				values: []string{
+					"https://google.com/$foo", "$bar", "$url",
+				},
+				envs: []string{
+					"foo=baz",
+					"bar=bat",
+					"url=https://google.com",
+				},
+			},
+			want: []string{"https://google.com/baz", "bat", "https://google.com"},
+		},
+		{
+			name: "mixed",
+			args: args{
+				values: []string{
+					"$foo", "$bar$baz", "baz",
+				},
+				envs: []string{
+					"foo=FOO",
+					"bar=BAR",
+					"baz=BAZ",
+				},
+			},
+			want: []string{"FOO", "BARBAZ", "baz"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ResolveEnvironmentReplacementList(tt.args.values, tt.args.envs, tt.args.isFilepath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ResolveEnvironmentReplacementList() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ResolveEnvironmentReplacementList() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

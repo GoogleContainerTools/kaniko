@@ -103,17 +103,16 @@ func (l *LayeredMap) Add(s string) error {
 	// Use hash function and add to layers
 	newV, err := l.hasher(s)
 	if err != nil {
-		return fmt.Errorf("Error creating hash for %s: %v", s, err)
+		return fmt.Errorf("error creating hash for %s: %v", s, err)
 	}
 	l.layers[len(l.layers)-1][s] = newV
 	return nil
 }
 
-// MaybeAdd will add the specified file s to the layered map if
-// the layered map's hashing function determines it has changed. If
-// it has not changed, it will not be added. Returns true if the file
-// was added.
-func (l *LayeredMap) MaybeAdd(s string) (bool, error) {
+// CheckFileChange checks whether a given file changed
+// from the current layered map by its hashing function.
+// Returns true if the file is changed.
+func (l *LayeredMap) CheckFileChange(s string) (bool, error) {
 	oldV, ok := l.Get(s)
 	t := timing.Start("Hashing files")
 	defer timing.DefaultRun.Stop(t)
@@ -124,6 +123,5 @@ func (l *LayeredMap) MaybeAdd(s string) (bool, error) {
 	if ok && newV == oldV {
 		return false, nil
 	}
-	l.layers[len(l.layers)-1][s] = newV
 	return true, nil
 }

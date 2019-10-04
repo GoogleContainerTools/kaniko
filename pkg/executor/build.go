@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/otiai10/copy"
+
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -60,10 +62,11 @@ type stageBuilder struct {
 	opts            *config.KanikoOptions
 	cmds            []commands.DockerCommand
 	args            *dockerfile.BuildArgs
+	crossStageDeps  map[int][]string
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*stageBuilder, error) {
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string) (*stageBuilder, error) {
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
@@ -96,6 +99,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage) (*sta
 		snapshotter:     snapshotter,
 		baseImageDigest: digest.String(),
 		opts:            opts,
+		crossStageDeps:  crossStageDeps,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -120,7 +124,7 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 		return nil, err
 	}
 
-	if img == empty.Image {
+	if imageConfig.Config.Env == nil {
 		imageConfig.Config.Env = constants.ScratchEnvVars
 	}
 	return imageConfig, nil
@@ -186,11 +190,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
-	dgst, err := util.ReproducibleDigest(s.image)
-	if err != nil {
-		return err
-	}
-	compositeKey := NewCompositeCache(dgst)
+	compositeKey := NewCompositeCache(s.baseImageDigest)
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
@@ -207,6 +207,10 @@ func (s *stageBuilder) build() error {
 			break
 		}
 	}
+	if len(s.crossStageDeps[s.stage.Index]) > 0 {
+		shouldUnpack = true
+	}
+
 	if shouldUnpack {
 		t := timing.Start("FS Unpacking")
 		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
@@ -353,6 +357,68 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 
 }
 
+func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error) {
+	stages, err := dockerfile.Stages(opts)
+	if err != nil {
+		return nil, err
+	}
+	images := []v1.Image{}
+	depGraph := map[int][]string{}
+	for _, s := range stages {
+		ba := dockerfile.NewBuildArgs(opts.BuildArgs)
+		ba.AddMetaArgs(s.MetaArgs)
+		var image v1.Image
+		var err error
+		if s.BaseImageStoredLocally {
+			image = images[s.BaseImageIndex]
+		} else if s.Name == constants.NoBaseImage {
+			image = empty.Image
+		} else {
+			image, err = util.RetrieveSourceImage(s, opts)
+			if err != nil {
+				return nil, err
+			}
+		}
+		cfg, err := initializeConfig(image)
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range s.Commands {
+			switch cmd := c.(type) {
+			case *instructions.CopyCommand:
+				if cmd.From != "" {
+					i, err := strconv.Atoi(cmd.From)
+					if err != nil {
+						continue
+					}
+					resolved, err := util.ResolveEnvironmentReplacementList(cmd.SourcesAndDest, ba.ReplacementEnvs(cfg.Config.Env), true)
+					if err != nil {
+						return nil, err
+					}
+
+					depGraph[i] = append(depGraph[i], resolved[0:len(resolved)-1]...)
+				}
+			case *instructions.EnvCommand:
+				if err := util.UpdateConfigEnv(cmd.Env, &cfg.Config, ba.ReplacementEnvs(cfg.Config.Env)); err != nil {
+					return nil, err
+				}
+				image, err = mutate.Config(image, cfg.Config)
+				if err != nil {
+					return nil, err
+				}
+			case *instructions.ArgCommand:
+				k, v, err := commands.ParseArg(cmd.Key, cmd.Value, cfg.Config.Env, ba)
+				if err != nil {
+					return nil, err
+				}
+				ba.AddArg(k, v)
+			}
+		}
+		images = append(images, image)
+	}
+	return depGraph, nil
+}
+
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
@@ -361,7 +427,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := util.GetExcludedFiles(opts.SrcContext); err != nil {
+	if err := util.GetExcludedFiles(opts.DockerfilePath, opts.SrcContext); err != nil {
 		return nil, err
 	}
 	// Some stages may refer to other random images, not previous stages
@@ -369,8 +435,14 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
+	crossStageDependencies, err := CalculateDependencies(opts)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
+
 	for index, stage := range stages {
-		sb, err := newStageBuilder(opts, stage)
+		sb, err := newStageBuilder(opts, stage, crossStageDependencies)
 		if err != nil {
 			return nil, err
 		}
@@ -405,10 +477,21 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			if err := saveStageAsTarball(strconv.Itoa(index), sourceImage); err != nil {
 				return nil, err
 			}
-			if err := extractImageToDependecyDir(strconv.Itoa(index), sourceImage); err != nil {
-				return nil, err
-			}
 		}
+
+		filesToSave, err := filesToSave(crossStageDependencies[index])
+		if err != nil {
+			return nil, err
+		}
+		dstDir := filepath.Join(constants.KanikoDir, strconv.Itoa(index))
+		if err := os.MkdirAll(dstDir, 0644); err != nil {
+			return nil, err
+		}
+		for _, p := range filesToSave {
+			logrus.Infof("Saving file %s for later use.", p)
+			copy.Copy(p, filepath.Join(dstDir, p))
+		}
+
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
 			return nil, err
@@ -416,6 +499,18 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 
 	return nil, err
+}
+
+func filesToSave(deps []string) ([]string, error) {
+	allFiles := []string{}
+	for _, src := range deps {
+		srcs, err := filepath.Glob(src)
+		if err != nil {
+			return nil, err
+		}
+		allFiles = append(allFiles, srcs...)
+	}
+	return allFiles, nil
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
@@ -453,7 +548,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			if err := saveStageAsTarball(c.From, sourceImage); err != nil {
 				return err
 			}
-			if err := extractImageToDependecyDir(c.From, sourceImage); err != nil {
+			if err := extractImageToDependencyDir(c.From, sourceImage); err != nil {
 				return err
 			}
 		}
@@ -464,7 +559,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 	}
 	return nil
 }
-func extractImageToDependecyDir(name string, image v1.Image) error {
+func extractImageToDependencyDir(name string, image v1.Image) error {
 	t := timing.Start("Extracting Image to Dependency Dir")
 	defer timing.DefaultRun.Stop(t)
 	dependencyDir := filepath.Join(constants.KanikoDir, name)

@@ -21,6 +21,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 - [How does kaniko work?](#how-does-kaniko-work)
 - [Known Issues](#known-issues)
 - [Demo](#demo)
+- [Tutorial](#tutorial)
 - [Using kaniko](#using-kaniko)
   - [kaniko Build Contexts](#kaniko-build-contexts)
   - [Running kaniko](#running-kaniko)
@@ -40,9 +41,11 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-dir](#--cache-dir)
     - [--cache-repo](#--cache-repo)
     - [--cleanup](#--cleanup)
+    - [--digest-file](#--digest-file)
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
+    - [--oci-layout-path](#--oci-layout-path)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
     - [--snapshotMode](#--snapshotmode)
@@ -50,6 +53,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
     - [--target](#--target)
     - [--tarPath](#--tarpath)
+    - [--verbosity](#--verbosity)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -74,6 +78,10 @@ kaniko does not support building Windows containers.
 
 ![Demo](/docs/demo.gif)
 
+## Tutorial
+
+For a detailed example of kaniko with local storage, please refer to a [getting started tutorial](./docs/tutorial.md).
+
 ## Using kaniko
 
 To use kaniko to build and push an image for you, you will need:
@@ -91,6 +99,7 @@ Right now, kaniko supports these storage solutions:
 - GCS Bucket
 - S3 Bucket
 - Local Directory
+- Git Repository
 
 _Note: the local directory option refers to a directory within the kaniko container.
 If you wish to use this option, you will need to mount in your build context into the container as a directory._
@@ -112,14 +121,18 @@ gsutil cp context.tar.gz gs://<bucket name>
 
 When running kaniko, use the `--context` flag with the appropriate prefix to specify the location of your build context:
 
-|  Source | Prefix  |
-|---------|---------|
-| Local Directory  | dir://[path to a directory in the kaniko container]  |
-| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]     |
-| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]     |
+|  Source | Prefix  | Example |
+|---------|---------|---------|
+| Local Directory  | dir://[path to a directory in the kaniko container] | `dir:///workspace` |
+| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]                | `gs://kaniko-bucket/path/to/context.tar.gz` |
+| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]                | `s3://kaniko-bucket/path/to/context.tar.gz` |
+| Git Repository   | git://[repository url][#reference]                  | `git://github.com/acme/myproject.git#refs/heads/mybranch` |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
+
+### Using Private Git Repository
+You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
 ### Running kaniko
 
@@ -355,14 +368,39 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+
+#### --digest-file
+
+Set this flag to specify a file in the container. This file will
+receive the digest of a built image. This can be used to
+automatically track the exact image built by Kaniko.
+
+For example, setting the flag to `--digest-file=/dev/termination-log`
+will write the digest to that file, which is picked up by
+Kubernetes automatically as the `{{.state.terminated.message}}`
+of the container.
+
+#### --oci-layout-path
+
+Set this flag to specify a directory in the container where the OCI image
+layout of a built image will be placed. This can be used to automatically
+track the exact image built by Kaniko.
+
+For example, to surface the image digest built in a
+[Tekton task](https://github.com/tektoncd/pipeline/blob/v0.6.0/docs/resources.md#surfacing-the-image-digest-built-in-a-task),
+this flag should be set to match the image resource `outputImageDir`.
+
+_Note: Depending on the built image, the media type of the image manifest might be either
+`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json``._
+
 #### --insecure-registry
 
-Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
 
-Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be useed for testing purposes only and should not be used in production!
+Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --cleanup
@@ -391,7 +429,11 @@ This flag takes a single snapshot of the filesystem at the end of the build, so 
 
 #### --skip-tls-verify
 
-Set this flag to skip TLS certificate validation when connecting to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when pushing to a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --skip-tls-verify-pull
+
+Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
 #### --snapshotMode
 
@@ -406,6 +448,10 @@ Set this flag to indicate which build stage is the target build stage.
 #### --tarPath
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+
+#### --verbosity
+
+Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
 
 ### Debug Image
 
@@ -441,6 +487,7 @@ You may be able to achieve the same default seccomp profile that Docker uses in 
 
 Similar tools include:
 
+- [BuildKit](https://github.com/moby/buildkit)
 - [img](https://github.com/genuinetools/img)
 - [orca-build](https://github.com/cyphar/orca-build)
 - [umoci](https://github.com/openSUSE/umoci)
@@ -450,10 +497,10 @@ Similar tools include:
 
 All of these tools build container images with different approaches.
 
-`img` can perform as a non root user from within a container, but requires that
-the `img` container has `RawProc` access to create nested containers.  `kaniko`
-does not actually create nested containers, so it does not require `RawProc`
-access.
+BuildKit (and `img`) can perform as a non root user from within a container, but requires
+seccomp and AppArmor to be disabled to create nested containers.  `kaniko`
+does not actually create nested containers, so it does not require seccomp and AppArmor
+to be disabled.
 
 `orca-build` depends on `runc` to build images from Dockerfiles, which can not
 run inside a container (for similar reasons to `img` above). `kaniko` doesn't
@@ -467,12 +514,15 @@ filesystem is sufficiently complicated). However it has no `Dockerfile`-like
 build tooling (it's a slightly lower-level tool that can be used to build such
 builders -- such as `orca-build`).
 
-`Buildah` can run as a non root user and does not require privileges. Buildah
-specializes in building OCI images. Buildah's commands replicate all of the
-commands that are found in a Dockerfile. Its goal is also to provide a lower
-level coreutils interface to build images, allowing people to build containers
-without requiring a Dockerfile. The intent with Buildah is to allow other
-scripting languages to build container images, without requiring a daemon.
+`Buildah` specializes in building OCI images.  Buildah's commands replicate all
+of the commands that are found in a Dockerfile.  This allows building images
+with and without Dockerfiles while not requiring any root privileges.
+Buildah’s ultimate goal is to provide a lower-level coreutils interface to
+build images.  The flexibility of building images without Dockerfiles allows
+for the integration of other scripting languages into the build process.
+Buildah follows a simple fork-exec model and does not run as a daemon
+but it is based on a comprehensive API in golang, which can be vendored
+into other tools.
 
 `FTL` and `Bazel` aim to achieve the fastest possible creation of Docker images
 for a subset of images.  These can be thought of as a special-case "fast path"

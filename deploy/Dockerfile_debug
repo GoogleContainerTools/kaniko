@@ -15,7 +15,7 @@
 # Builds the static Go image to execute in a Kubernetes job
 
 # Stage 0: Build the executor binary and get credential helpers
-FROM golang:1.10
+FROM golang:1.12
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.5.0/docker-credential-gcr_linux_amd64-1.5.0.tar.gz /usr/local/bin/
@@ -25,7 +25,7 @@ RUN docker-credential-gcr configure-docker
 RUN go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
 RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64 
 COPY . .
-RUN make
+RUN make && make out/warmer
 
 # Stage 1: Get the busybox shell
 FROM gcr.io/cloud-builders/bazel:latest
@@ -35,7 +35,7 @@ RUN bazel build //experimental/busybox:busybox_tar
 RUN tar -C /distroless/bazel-genfiles/experimental/busybox/ -xf /distroless/bazel-genfiles/experimental/busybox/busybox.tar
 
 FROM scratch
-COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=1 /distroless/bazel-genfiles/experimental/busybox/busybox/ /busybox/

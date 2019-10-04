@@ -19,6 +19,7 @@ package buildcontext
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -36,9 +37,21 @@ type S3 struct {
 // UnpackTarFromBuildContext download and untar a file from s3
 func (s *S3) UnpackTarFromBuildContext() (string, error) {
 	bucket, item := util.GetBucketAndItem(s.context)
-	sess, err := session.NewSessionWithOptions(session.Options{
+	option := session.Options{
 		SharedConfigState: session.SharedConfigEnable,
-	})
+	}
+	endpoint := os.Getenv(constants.S3EndpointEnv)
+	forcePath := false
+	if strings.ToLower(os.Getenv(constants.S3ForcePathStyle)) == "true" {
+		forcePath = true
+	}
+	if endpoint != "" {
+		option.Config = aws.Config{
+			Endpoint:         aws.String(endpoint),
+			S3ForcePathStyle: aws.Bool(forcePath),
+		}
+	}
+	sess, err := session.NewSessionWithOptions(option)
 	if err != nil {
 		return bucket, err
 	}

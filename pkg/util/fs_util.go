@@ -79,10 +79,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Store a map of files to their mtime. We need to set mtimes in a second pass because creating files
-	// can change the mtime of a directory.
-	extractedFiles := map[string]time.Time{}
+	extractedFiles := []string{}
 
 	for i, l := range layers {
 		logrus.Debugf("Extracting layer %d", i)
@@ -113,17 +110,10 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 			if err := extractFile(root, hdr, tr); err != nil {
 				return nil, err
 			}
-			extractedFiles[filepath.Join(root, filepath.Clean(hdr.Name))] = hdr.ModTime
+			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
 	}
-
-	fileNames := []string{}
-	for f, t := range extractedFiles {
-		fileNames = append(fileNames, f)
-		os.Chtimes(f, time.Time{}, t)
-	}
-
-	return fileNames, nil
+	return extractedFiles, nil
 }
 
 // DeleteFilesystem deletes the extracted image file system
@@ -131,6 +121,10 @@ func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
 		if CheckWhitelist(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s whitelisted, but not exists", path)
+				return nil
+			}
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -146,6 +140,14 @@ func DeleteFilesystem() error {
 		}
 		return os.RemoveAll(path)
 	})
+}
+
+// isExists returns true if path exists
+func isExist(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	}
+	return false
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
@@ -198,7 +200,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
-		// It's possible a file is in the tar before it's directory.
+		// It's possible a file is in the tar before its directory.
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
 			if err := os.MkdirAll(dir, 0755); err != nil {
@@ -216,27 +218,16 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err != nil {
 			return err
 		}
-		// manually set permissions on file, since the default umask (022) will interfere
-		if err = os.Chmod(path, mode); err != nil {
-			return err
-		}
 		if _, err = io.Copy(currFile, tr); err != nil {
 			return err
 		}
-		if err = currFile.Chown(uid, gid); err != nil {
+		if err = setFilePermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Debugf("creating dir %s", path)
-		if err := os.MkdirAll(path, mode); err != nil {
-			return err
-		}
-		// In some cases, MkdirAll doesn't change the permissions, so run Chmod
-		if err := os.Chmod(path, mode); err != nil {
-			return err
-		}
-		if err := os.Chown(path, uid, gid); err != nil {
+		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
 
@@ -283,7 +274,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -310,12 +300,7 @@ func checkWhitelistRoot(root string) bool {
 	if root == constants.RootDir {
 		return false
 	}
-	for _, wl := range whitelist {
-		if HasFilepathPrefix(root, wl.Path, wl.PrefixMatchOnly) {
-			return true
-		}
-	}
-	return false
+	return CheckWhitelist(root)
 }
 
 // Get whitelist from roots of mounted files
@@ -388,12 +373,29 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 }
 
 // ParentDirectories returns a list of paths to all parent directories
-// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
-// This purposefully excludes the /.
+// Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
 func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
 	dirPath := constants.RootDir
+	paths := []string{constants.RootDir}
+	for index, dir := range dirs {
+		if dir == "" || index == (len(dirs)-1) {
+			continue
+		}
+		dirPath = filepath.Join(dirPath, dir)
+		paths = append(paths, dirPath)
+	}
+	return paths
+}
+
+// ParentDirectoriesWithoutLeadingSlash returns a list of paths to all parent directories
+// all subdirectories do not contain a leading /
+// Ex. /some/temp/dir -> [/, some, some/temp, some/temp/dir]
+func ParentDirectoriesWithoutLeadingSlash(path string) []string {
+	path = filepath.Clean(path)
+	dirs := strings.Split(path, "/")
+	dirPath := ""
 	paths := []string{constants.RootDir}
 	for index, dir := range dirs {
 		if dir == "" || index == (len(dirs)-1) {
@@ -429,10 +431,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	if _, err := io.Copy(dest, reader); err != nil {
 		return err
 	}
-	if err := dest.Chmod(perm); err != nil {
-		return err
-	}
-	return dest.Chown(int(uid), int(gid))
+	return setFilePermissions(path, perm, int(uid), int(gid))
 }
 
 // AddVolumePath adds the given path to the volume whitelist.
@@ -492,13 +491,11 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		if fi.IsDir() {
 			logrus.Debugf("Creating directory %s", destPath)
 
+			mode := fi.Mode()
 			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
 			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
 
-			if err := os.MkdirAll(destPath, fi.Mode()); err != nil {
-				return nil, err
-			}
-			if err := os.Chown(destPath, uid, gid); err != nil {
+			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
 		} else if fi.Mode()&os.ModeSymlink != 0 {
@@ -557,11 +554,15 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
-func GetExcludedFiles(buildcontext string) error {
-	path := filepath.Join(buildcontext, ".dockerignore")
+func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
+	path := dockerfilepath + ".dockerignore"
+	if !FilepathExists(path) {
+		path = filepath.Join(buildcontext, ".dockerignore")
+	}
 	if !FilepathExists(path) {
 		return nil
 	}
+	logrus.Infof("Using dockerignore file: %v", path)
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return errors.Wrap(err, "parsing .dockerignore")
@@ -591,10 +592,10 @@ func excludeFile(path, buildcontext string) bool {
 
 // HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
-	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)
-	pathArray := strings.Split(path, "/")
 	prefixArray := strings.Split(prefix, "/")
+	path = filepath.Clean(path)
+	pathArray := strings.SplitN(path, "/", len(prefixArray)+1)
 
 	if len(pathArray) < len(prefixArray) {
 		return false
@@ -613,4 +614,25 @@ func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 
 func Volumes() []string {
 	return volumes
+}
+
+func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int) error {
+	if err := os.MkdirAll(path, mode); err != nil {
+		return err
+	}
+	if err := os.Chown(path, uid, gid); err != nil {
+		return err
+	}
+	// In some cases, MkdirAll doesn't change the permissions, so run Chmod
+	// Must chmod after chown because chown resets the file mode.
+	return os.Chmod(path, mode)
+}
+
+func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
+	if err := os.Chown(path, uid, gid); err != nil {
+		return err
+	}
+	// manually set permissions on file, since the default umask (022) will interfere
+	// Must chmod after chown because chown resets the file mode.
+	return os.Chmod(path, mode)
 }

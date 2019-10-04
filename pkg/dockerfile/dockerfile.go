@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -67,6 +69,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			return nil, errors.Wrap(err, "resolving base name")
 		}
 		stage.Name = resolvedBaseName
+		logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
 			BaseImageIndex:         baseImageIndex(index, stages),
@@ -74,6 +77,7 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 			SaveStage:              saveStage(index, stages),
 			Final:                  index == targetStage,
 			MetaArgs:               metaArgs,
+			Index:                  index,
 		})
 		if index == targetStage {
 			break
@@ -107,7 +111,7 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return stages, metaArgs, err
+	return stages, metaArgs, nil
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
@@ -173,14 +177,6 @@ func saveStage(index int, stages []instructions.Stage) bool {
 		if stage.BaseName == stages[index].Name {
 			if stage.BaseName != "" {
 				return true
-			}
-		}
-		for _, cmd := range stage.Commands {
-			switch c := cmd.(type) {
-			case *instructions.CopyCommand:
-				if c.From == strconv.Itoa(index) {
-					return true
-				}
 			}
 		}
 	}

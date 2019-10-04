@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package k8schain exposes an implementation of the authn.Keychain interface
+// Package k8schain exposes an implementation of the authn.Keychain interface
 // based on the semantics the Kubelet follows when pulling the images for a
 // Pod in Kubernetes.
 package k8schain

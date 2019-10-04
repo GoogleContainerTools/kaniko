@@ -19,22 +19,21 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/pkg/errors"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/pkg/errors"
 )
 
-// API interface for testing.
+// ImageLoader is an interface for testing.
 type ImageLoader interface {
 	ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)
+	ImageTag(context.Context, string, string) error
 }
 
-// This is a variable so we can override in tests.
+// GetImageLoader is a variable so we can override in tests.
 var GetImageLoader = func() (ImageLoader, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -42,6 +41,16 @@ var GetImageLoader = func() (ImageLoader, error) {
 	}
 	cli.NegotiateAPIVersion(context.Background())
 	return cli, nil
+}
+
+// Tag adds a tag to an already existent image.
+func Tag(src, dest name.Tag) error {
+	cli, err := GetImageLoader()
+	if err != nil {
+		return err
+	}
+
+	return cli.ImageTag(context.Background(), src.String(), dest.String())
 }
 
 // Write saves the image into the daemon as the given tag.

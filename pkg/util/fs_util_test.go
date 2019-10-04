@@ -19,11 +19,13 @@ package util
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -177,6 +179,38 @@ func Test_ParentDirectories(t *testing.T) {
 	}
 }
 
+func Test_ParentDirectoriesWithoutLeadingSlash(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected []string
+	}{
+		{
+			name: "regular path",
+			path: "/path/to/dir",
+			expected: []string{
+				"/",
+				"path",
+				"path/to",
+			},
+		},
+		{
+			name: "current directory",
+			path: ".",
+			expected: []string{
+				"/",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ParentDirectoriesWithoutLeadingSlash(tt.path)
+			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
+		})
+	}
+}
+
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
@@ -305,6 +339,84 @@ func TestHasFilepathPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := HasFilepathPrefix(tt.args.path, tt.args.prefix, tt.args.prefixMatchOnly); got != tt.want {
 				t.Errorf("HasFilepathPrefix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkHasFilepathPrefix(b *testing.B) {
+	tests := []struct {
+		path            string
+		prefix          string
+		prefixMatchOnly bool
+	}{
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+	}
+	for _, ts := range tests {
+		name := fmt.Sprint("PathDepth=", strings.Count(ts.path, "/"), ",PrefixDepth=", strings.Count(ts.prefix, "/"))
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				HasFilepathPrefix(ts.path, ts.prefix, ts.prefixMatchOnly)
 			}
 		})
 	}
@@ -503,6 +615,30 @@ func TestExtractFile(t *testing.T) {
 				filesAreHardlinks("/bin/uncompress", "/bin/gzip"),
 			},
 		},
+		{
+			name:     "file with setuid bit",
+			contents: []byte("helloworld"),
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644)},
+			checkers: []checker{
+				fileExists("/bar"),
+				fileMatches("/bar", []byte("helloworld")),
+				permissionsMatch("/bar", 0644|os.ModeSetuid),
+			},
+		},
+		{
+			name:     "dir with sticky bit",
+			contents: []byte("helloworld"),
+			hdrs: []*tar.Header{
+				dirHeader("./foo", 01755),
+				fileHeader("./foo/bar", "helloworld", 0644),
+			},
+			checkers: []checker{
+				fileExists("/foo/bar"),
+				fileMatches("/foo/bar", []byte("helloworld")),
+				permissionsMatch("/foo/bar", 0644),
+				permissionsMatch("/foo", 0755|os.ModeDir|os.ModeSticky),
+			},
+		},
 	}
 
 	for _, tc := range tcs {
@@ -636,5 +772,56 @@ func Test_childDirInWhitelist(t *testing.T) {
 				t.Errorf("childDirInWhitelist() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_correctDockerignoreFileIsUsed(t *testing.T) {
+	type args struct {
+		dockerfilepath string
+		buildcontext   string
+		excluded       []string
+		included       []string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "relative dockerfile used",
+			args: args{
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_dockerignore_relative",
+				buildcontext:   "../../integration/",
+				excluded:       []string{"ignore_relative/bar"},
+				included:       []string{"ignore_relative/foo", "ignore/bar"},
+			},
+		},
+		{
+			name: "context dockerfile is used",
+			args: args{
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore",
+				buildcontext:   "../../integration/",
+				excluded:       []string{"ignore/bar"},
+				included:       []string{"ignore/foo", "ignore_relative/bar"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		if err := GetExcludedFiles(tt.args.dockerfilepath, tt.args.buildcontext); err != nil {
+			t.Fatal(err)
+		}
+		for _, excl := range tt.args.excluded {
+			t.Run(tt.name+" to exclude "+excl, func(t *testing.T) {
+				if !excludeFile(excl, tt.args.buildcontext) {
+					t.Errorf("'%v' not excluded", excl)
+				}
+			})
+		}
+		for _, incl := range tt.args.included {
+			t.Run(tt.name+" to include "+incl, func(t *testing.T) {
+				if excludeFile(incl, tt.args.buildcontext) {
+					t.Errorf("'%v' not included", incl)
+				}
+			})
+		}
 	}
 }

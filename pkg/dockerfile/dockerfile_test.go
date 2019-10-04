@@ -114,7 +114,7 @@ func Test_SaveStage(t *testing.T) {
 		{
 			name:     "reference stage in later copy command",
 			index:    0,
-			expected: true,
+			expected: false,
 		},
 		{
 			name:     "reference stage in later from command",

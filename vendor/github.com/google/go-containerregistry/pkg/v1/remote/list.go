@@ -20,20 +20,24 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
 
-type Tags struct {
+type tags struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
 }
 
-// TODO(jonjohnsonjr): return []name.Tag?
-func List(repo name.Repository, auth authn.Authenticator, t http.RoundTripper) ([]string, error) {
+// List calls /tags/list for the given repository, returning the list of tags
+// in the "tags" property.
+func List(repo name.Repository, options ...Option) ([]string, error) {
+	o, err := makeOptions(repo.Registry, options...)
+	if err != nil {
+		return nil, err
+	}
 	scopes := []string{repo.Scope(transport.PullScope)}
-	tr, err := transport.New(repo.Registry, auth, t, scopes)
+	tr, err := transport.New(repo.Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +55,14 @@ func List(repo name.Repository, auth authn.Authenticator, t http.RoundTripper) (
 	}
 	defer resp.Body.Close()
 
-	if err := CheckError(resp, http.StatusOK); err != nil {
+	if err := transport.CheckError(resp, http.StatusOK); err != nil {
 		return nil, err
 	}
 
-	tags := Tags{}
-	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
+	parsed := tags{}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
 		return nil, err
 	}
 
-	return tags.Tags, nil
+	return parsed.Tags, nil
 }
