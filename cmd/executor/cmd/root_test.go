@@ -56,7 +56,7 @@ func TestSkipPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			testutil.CheckDeepEqual(t, tt.expected, skipPath(tt.path))
+			testutil.CheckDeepEqual(t, tt.expected, shdSkip(tt.path))
 		})
 	}
 }

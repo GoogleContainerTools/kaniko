@@ -241,7 +241,7 @@ func resolveRelativePaths() error {
 	}
 
 	for _, p := range optsPaths {
-		if path := *p; skipPath(path) {
+		if path := *p; shdSkip(path) {
 			logrus.Debugf("Skip resolving path %s", path)
 			continue
 		}
@@ -269,6 +269,6 @@ func isURL(path string) bool {
 	return false
 }
 
-func skipPath(path string) bool {
+func shdSkip(path string) bool {
 	return path == "" || isURL(path) || filepath.IsAbs(path)
 }
