@@ -709,7 +709,7 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 		{
 			name: "relative dockerfile used",
 			args: args{
-				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore_relative",
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_dockerignore_relative",
 				buildcontext:   "../../integration/",
 				excluded:       []string{"ignore_relative/bar"},
 				included:       []string{"ignore_relative/foo", "ignore/bar"},
