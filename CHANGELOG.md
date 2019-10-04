@@ -1,3 +1,73 @@
+# v0.13.0 Release - 2019-10-04
+
+## New Features
+* Add `kaniko version` command [#796](https://github.com/GoogleContainerTools/kaniko/pull/796)
+* Write data about pushed images for GCB kaniko build step if env var `BUILDER_OUTPUT` is set [#602](https://github.com/GoogleContainerTools/kaniko/pull/602)
+* Support `Dockerfile.dockerignore` relative to `Dockerfile` [#801](https://github.com/GoogleContainerTools/kaniko/pull/801)
+
+## Bug Fixes
+* fix creating abs path for urls [#804](https://github.com/GoogleContainerTools/kaniko/pull/804)
+* Fix #691 - ADD does not understand ENV variables [#768](https://github.com/GoogleContainerTools/kaniko/pull/768)
+* Resolve relative paths to absolute paths in command line arguments [#736](https://github.com/GoogleContainerTools/kaniko/pull/736)
+* insecure flag is now honored with `--cache` flag. [#685](https://github.com/GoogleContainerTools/kaniko/pull/685)
+* Reduce log level for adding file message [#624](https://github.com/GoogleContainerTools/kaniko/pull/624)
+* Fix SIGSEGV on file system deletion while building [#765](https://github.com/GoogleContainerTools/kaniko/pull/765)
+
+## Updates and Refactors
+* add debug level info what is the layer type [#805](https://github.com/GoogleContainerTools/kaniko/pull/805)
+* Update base image to golang:1.12 [#648](https://github.com/GoogleContainerTools/kaniko/pull/648)
+* Add some triage notes to issue template. [#794](https://github.com/GoogleContainerTools/kaniko/pull/794)
+* double help text about skip-verify-tls [#782](https://github.com/GoogleContainerTools/kaniko/pull/782)
+* Add a pull request template [#795](https://github.com/GoogleContainerTools/kaniko/pull/795)
+* Correct CheckPushPermission comment. [#671](https://github.com/GoogleContainerTools/kaniko/pull/671)
+
+## Documentation
+* Use kaniko with docker config.json password [#129](https://github.com/GoogleContainerTools/kaniko/pull/129)
+* Add getting started tutorial [#790](https://github.com/GoogleContainerTools/kaniko/pull/790)
+
+## Performance
+* feat: optimize build [#694](https://github.com/GoogleContainerTools/kaniko/pull/694)
+
+Huge thank you for this release towards our contributors: 
+- alexa
+- Andreas Bergmeier
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- chhsia0
+- debuggy
+- Deniz Zoeteman
+- Don McCasland
+- Fred Cox
+- Herrmann Hinz
+- Hugues Alary
+- Jason Hall
+- Johannes 'fish' Ziemke
+- jonjohnsonjr
+- Luke Wood
+- Matthew Dawson
+- Mingliang Tao
+- Monard Vong
+- Nao YONASHIRO
+- Niels Denissen
+- Prashant
+- priyawadhwa
+- Priya Wadhwa
+- Sascha Askani
+- sharifelgamal
+- Sharif Elgamal
+- Takeaki Matsumoto
+- Taylor Barrella
+- Tejal Desai
+- Thao-Nguyen Do
+- tralexa
+- Victor Noel
+- v.rul
+- Warren Seymour
+- xanonid
+- Xueshan Feng
+- Антон Костенко
+- Роман Небалуев
+
 # v0.12.0 Release - 2019-09/13
 
 ## New Features
