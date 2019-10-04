@@ -19,7 +19,10 @@ package executor
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
@@ -31,6 +34,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -42,12 +46,20 @@ type withUserAgent struct {
 	t http.RoundTripper
 }
 
+const (
+	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
+)
+
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Set("User-Agent", fmt.Sprintf("kaniko/%s", version.Version()))
+	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
+	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
+		ua = append(ua, upstream)
+	}
+	r.Header.Set("User-Agent", strings.Join(ua, ","))
 	return w.t.RoundTrip(r)
 }
 
-// CheckPushPermissionos checks that the configured credentials can be used to
+// CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	if opts.NoPush {
@@ -63,7 +75,17 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if checked[destRef.Context().RepositoryStr()] {
 			continue
 		}
-		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), http.DefaultTransport); err != nil {
+
+		registryName := destRef.Repository.Registry.Name()
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+			if err != nil {
+				return errors.Wrap(err, "getting new insecure registry")
+			}
+			destRef.Repository.Registry = newReg
+		}
+		tr := makeTransport(opts, registryName)
+		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
@@ -74,6 +96,29 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
+
+	if opts.DigestFile != "" {
+		digest, err := image.Digest()
+		if err != nil {
+			return errors.Wrap(err, "error fetching digest")
+		}
+		digestByteArray := []byte(digest.String())
+		err = ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
+		if err != nil {
+			return errors.Wrap(err, "writing digest to file failed")
+		}
+	}
+
+	if opts.OCILayoutPath != "" {
+		path, err := layout.Write(opts.OCILayoutPath, empty.Index)
+		if err != nil {
+			return errors.Wrap(err, "writing empty layout")
+		}
+		if err := path.AppendImage(image); err != nil {
+			return errors.Wrap(err, "appending image")
+		}
+	}
+
 	destRefs := []name.Tag{}
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
@@ -100,7 +145,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	for _, destRef := range destRefs {
 		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
-			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
@@ -112,21 +157,26 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
 
-		// Create a transport to set our user-agent.
-		tr := http.DefaultTransport
-		if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
-			tr.(*http.Transport).TLSClientConfig = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-		}
+		tr := makeTransport(opts, registryName)
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
+		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
 	timing.DefaultRun.Stop(t)
 	return nil
+}
+
+func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTripper {
+	// Create a transport to set our user-agent.
+	tr := http.DefaultTransport
+	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
+		tr.(*http.Transport).TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+	return tr
 }
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache

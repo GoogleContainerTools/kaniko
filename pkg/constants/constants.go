@@ -57,6 +57,7 @@ const (
 	GCSBuildContextPrefix      = "gs://"
 	S3BuildContextPrefix       = "s3://"
 	LocalDirBuildContextPrefix = "dir://"
+	GitBuildContextPrefix      = "git://"
 
 	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME
@@ -69,6 +70,10 @@ const (
 
 	// Name of the .dockerignore file
 	Dockerignore = ".dockerignore"
+
+	// S3 Custom endpoint ENV name
+	S3EndpointEnv    = "S3_ENDPOINT"
+	S3ForcePathStyle = "S3_FORCE_PATH_STYLE"
 )
 
 // ScratchEnvVars are the default environment variables needed for a scratch image.

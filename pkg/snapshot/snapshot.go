@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"syscall"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
@@ -80,7 +81,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
-			return "", fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
+			return "", fmt.Errorf("unable to add file %s to layered map: %s", file, err)
 		}
 	}
 
@@ -183,13 +184,15 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 
-	// Also add parent directories to keep the permission of them correctly.
+	// Also add parent directories to keep their permissions correctly.
 	filesToAdd = filesWithParentDirs(filesToAdd)
+
+	sort.Strings(filesToAdd)
 
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
-			return nil, nil, fmt.Errorf("Unable to add file %s to layered map: %s", file, err)
+			return nil, nil, fmt.Errorf("unable to add file %s to layered map: %s", file, err)
 		}
 	}
 

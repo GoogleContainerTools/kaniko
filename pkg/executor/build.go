@@ -124,7 +124,7 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 		return nil, err
 	}
 
-	if img == empty.Image {
+	if imageConfig.Config.Env == nil {
 		imageConfig.Config.Env = constants.ScratchEnvVars
 	}
 	return imageConfig, nil
@@ -190,11 +190,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
-	dgst, err := util.ReproducibleDigest(s.image)
-	if err != nil {
-		return err
-	}
-	compositeKey := NewCompositeCache(dgst)
+	compositeKey := NewCompositeCache(s.baseImageDigest)
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
@@ -552,7 +548,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 			if err := saveStageAsTarball(c.From, sourceImage); err != nil {
 				return err
 			}
-			if err := extractImageToDependecyDir(c.From, sourceImage); err != nil {
+			if err := extractImageToDependencyDir(c.From, sourceImage); err != nil {
 				return err
 			}
 		}
@@ -563,7 +559,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 	}
 	return nil
 }
-func extractImageToDependecyDir(name string, image v1.Image) error {
+func extractImageToDependencyDir(name string, image v1.Image) error {
 	t := timing.Start("Extracting Image to Dependency Dir")
 	defer timing.DefaultRun.Stop(t)
 	dependencyDir := filepath.Join(constants.KanikoDir, name)

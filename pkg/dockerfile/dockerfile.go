@@ -111,7 +111,7 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return stages, metaArgs, err
+	return stages, metaArgs, nil
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build

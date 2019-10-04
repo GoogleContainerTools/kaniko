@@ -37,13 +37,7 @@ import (
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
-		var resolved string
-		var err error
-		if IsSrcRemoteFileURL(value) {
-			resolved, err = ResolveEnvironmentReplacement(value, envs, false)
-		} else {
-			resolved, err = ResolveEnvironmentReplacement(value, envs, isFilepath)
-		}
+		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -55,7 +49,7 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 
 // ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
 // It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
-// Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
+// Ex: value = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
 // The dockerfile/shell package handles processing env values
 // It handles escape characters and supports expansion from the config.Env array
 // Shlex handles some of the following use cases (these and more are tested in integration tests)
@@ -65,7 +59,8 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool) (string, error) {
 	shlex := shell.NewLex(parser.DefaultEscapeToken)
 	fp, err := shlex.ProcessWord(value, envs)
-	if !isFilepath {
+	// Check after replacement if value is a remote URL
+	if !isFilepath || IsSrcRemoteFileURL(fp) {
 		return fp, err
 	}
 	if err != nil {
@@ -325,13 +320,12 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	// Lookup by username
 	userObj, err := user.Lookup(userStr)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); ok {
-			// Lookup by id
-			userObj, err = user.LookupId(userStr)
-			if err != nil {
-				return "", "", err
-			}
-		} else {
+		if _, ok := err.(user.UnknownUserError); !ok {
+			return "", "", err
+		}
+		// Lookup by id
+		userObj, err = user.LookupId(userStr)
+		if err != nil {
 			return "", "", err
 		}
 	}
@@ -341,12 +335,11 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	if groupStr != "" {
 		group, err = user.LookupGroup(groupStr)
 		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); ok {
-				group, err = user.LookupGroupId(groupStr)
-				if err != nil {
-					return "", "", err
-				}
-			} else {
+			if _, ok := err.(user.UnknownGroupError); !ok {
+				return "", "", err
+			}
+			group, err = user.LookupGroupId(groupStr)
+			if err != nil {
 				return "", "", err
 			}
 		}

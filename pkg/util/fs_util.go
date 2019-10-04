@@ -79,10 +79,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Store a map of files to their mtime. We need to set mtimes in a second pass because creating files
-	// can change the mtime of a directory.
-	extractedFiles := map[string]time.Time{}
+	extractedFiles := []string{}
 
 	for i, l := range layers {
 		logrus.Debugf("Extracting layer %d", i)
@@ -113,17 +110,10 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 			if err := extractFile(root, hdr, tr); err != nil {
 				return nil, err
 			}
-			extractedFiles[filepath.Join(root, filepath.Clean(hdr.Name))] = hdr.ModTime
+			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
 	}
-
-	fileNames := []string{}
-	for f, t := range extractedFiles {
-		fileNames = append(fileNames, f)
-		os.Chtimes(f, time.Time{}, t)
-	}
-
-	return fileNames, nil
+	return extractedFiles, nil
 }
 
 // DeleteFilesystem deletes the extracted image file system
@@ -131,6 +121,10 @@ func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
 		if CheckWhitelist(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s whitelisted, but not exists", path)
+				return nil
+			}
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -146,6 +140,14 @@ func DeleteFilesystem() error {
 		}
 		return os.RemoveAll(path)
 	})
+}
+
+// isExists returns true if path exists
+func isExist(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	}
+	return false
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
@@ -198,7 +200,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Debugf("creating file %s", path)
-		// It's possible a file is in the tar before it's directory.
+		// It's possible a file is in the tar before its directory.
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
 			if err := os.MkdirAll(dir, 0755); err != nil {
@@ -272,7 +274,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -299,12 +300,7 @@ func checkWhitelistRoot(root string) bool {
 	if root == constants.RootDir {
 		return false
 	}
-	for _, wl := range whitelist {
-		if HasFilepathPrefix(root, wl.Path, wl.PrefixMatchOnly) {
-			return true
-		}
-	}
-	return false
+	return CheckWhitelist(root)
 }
 
 // Get whitelist from roots of mounted files
@@ -377,12 +373,29 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 }
 
 // ParentDirectories returns a list of paths to all parent directories
-// Ex. /some/temp/dir -> [/some, /some/temp, /some/temp/dir]
-// This purposefully excludes the /.
+// Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
 func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
 	dirPath := constants.RootDir
+	paths := []string{constants.RootDir}
+	for index, dir := range dirs {
+		if dir == "" || index == (len(dirs)-1) {
+			continue
+		}
+		dirPath = filepath.Join(dirPath, dir)
+		paths = append(paths, dirPath)
+	}
+	return paths
+}
+
+// ParentDirectoriesWithoutLeadingSlash returns a list of paths to all parent directories
+// all subdirectories do not contain a leading /
+// Ex. /some/temp/dir -> [/, some, some/temp, some/temp/dir]
+func ParentDirectoriesWithoutLeadingSlash(path string) []string {
+	path = filepath.Clean(path)
+	dirs := strings.Split(path, "/")
+	dirPath := ""
 	paths := []string{constants.RootDir}
 	for index, dir := range dirs {
 		if dir == "" || index == (len(dirs)-1) {
@@ -575,10 +588,10 @@ func excludeFile(path, buildcontext string) bool {
 
 // HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
-	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)
-	pathArray := strings.Split(path, "/")
 	prefixArray := strings.Split(prefix, "/")
+	path = filepath.Clean(path)
+	pathArray := strings.SplitN(path, "/", len(prefixArray)+1)
 
 	if len(pathArray) < len(prefixArray) {
 		return false

@@ -20,14 +20,13 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"io"
 	"os"
 	"strconv"
+	"sync"
 	"syscall"
 
-	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
+	highwayhash "github.com/minio/HighwayHash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -47,8 +46,15 @@ func ConfigureLogging(logLevel string) error {
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
 func Hasher() func(string) (string, error) {
+	pool := sync.Pool{
+		New: func() interface{} {
+			b := make([]byte, highwayhash.Size*10*1024)
+			return &b
+		},
+	}
+	key := make([]byte, highwayhash.Size)
 	hasher := func(p string) (string, error) {
-		h := md5.New()
+		h, _ := highwayhash.New(key)
 		fi, err := os.Lstat(p)
 		if err != nil {
 			return "", err
@@ -66,7 +72,9 @@ func Hasher() func(string) (string, error) {
 				return "", err
 			}
 			defer f.Close()
-			if _, err := io.Copy(h, f); err != nil {
+			buf := pool.Get().(*[]byte)
+			defer pool.Put(buf)
+			if _, err := io.CopyBuffer(h, f, *buf); err != nil {
 				return "", err
 			}
 		}
@@ -129,30 +137,4 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
-}
-
-type ReproducibleManifest struct {
-	Layers []v1.Descriptor
-	Config v1.Config
-}
-
-func ReproducibleDigest(img partial.WithManifestAndConfigFile) (string, error) {
-	mfst, err := img.Manifest()
-	if err != nil {
-		return "", err
-	}
-	cfg, err := img.ConfigFile()
-	if err != nil {
-		return "", err
-	}
-	rm := ReproducibleManifest{
-		Layers: mfst.Layers,
-		Config: cfg.Config,
-	}
-
-	b, err := json.Marshal(rm)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }
