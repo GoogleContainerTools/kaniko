@@ -282,7 +282,29 @@ See the `examples` directory for how to use with kubernetes clusters and persist
 
 kaniko uses Docker credential helpers to push images to a registry.
 
-kaniko comes with support for GCR and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
+kaniko comes with support for GCR, Docker `config.json` and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
+
+#### Pushing to Docker Hub
+
+Get your docker registry user and password encoded in base64
+
+    echo USER:PASSWORD | base64
+
+Create a `config.json` file with your Docker registry url and the previous generated base64 string
+
+```
+{
+	"auths": {
+		"https://index.docker.io/v1/": {
+			"auth": "xxxxxxxxxxxxxxx"
+		}
+	}
+}
+```
+
+Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
+
+    docker run -ti --rm -v `pwd`:/workspace -v config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
 
 #### Pushing to Amazon ECR
 
