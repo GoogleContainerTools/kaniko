@@ -17,14 +17,20 @@ limitations under the License.
 package executor
 
 import (
-
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/validate"
 	"github.com/spf13/afero"
 )
 
@@ -95,19 +101,7 @@ func TestWriteImageOutputs(t *testing.T) {
 			}
 		})
 	}
-=======
-	"bytes"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"testing"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/google/go-containerregistry/pkg/v1/layout"
-	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/go-containerregistry/pkg/v1/validate"
-)
+}
 
 func TestHeaderAdded(t *testing.T) {
 	tests := []struct {
