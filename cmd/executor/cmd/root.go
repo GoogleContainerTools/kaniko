@@ -168,7 +168,7 @@ func cacheFlagsValid() error {
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
 func resolveDockerfilePath() error {
-	if match, _ := regexp.MatchString("^https?://", opts.DockerfilePath); match {
+	if isUrl(opts.DockerfilePath) {
 		return nil
 	}
 	if util.FilepathExists(opts.DockerfilePath) {
@@ -241,13 +241,8 @@ func resolveRelativePaths() error {
 	}
 
 	for _, p := range optsPaths {
-		// Skip empty path
-		if *p == "" {
-			continue
-		}
-		// Skip path that is already absolute
-		if filepath.IsAbs(*p) {
-			logrus.Debugf("Path %s is absolute, skipping", *p)
+		if path := *p; skipPath(path) {
+			logrus.Debugf("Skip resolving path %s", path)
 			continue
 		}
 
@@ -265,4 +260,15 @@ func resolveRelativePaths() error {
 func exit(err error) {
 	fmt.Println(err)
 	os.Exit(1)
+}
+
+func isUrl(path string) bool {
+	if match, _ := regexp.MatchString("^https?://", path); match {
+		return true
+	}
+	return false
+}
+
+func skipPath(path string) bool {
+	return path == "" || isUrl(path) || filepath.IsAbs(path)
 }
