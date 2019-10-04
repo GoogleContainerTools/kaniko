@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -82,11 +83,17 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	extractedFiles := []string{}
 
 	for i, l := range layers {
-		logrus.Debugf("Extracting layer %d", i)
+		mediaType, err := l.MediaType()
+		if err == nil {
+			logrus.Debugf("Extracting layer %d of media type %s", mediaType)
+		} else {
+			logrus.Debugf("Extracting layer %d", i)
+		}
 		r, err := l.Uncompressed()
 		if err != nil {
 			return nil, err
 		}
+		defer r.Close()
 		tr := tar.NewReader(r)
 		for {
 			hdr, err := tr.Next()
@@ -94,7 +101,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				break
 			}
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, fmt.Sprintf("error reading tar %d", i))
 			}
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
