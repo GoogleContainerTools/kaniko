@@ -23,8 +23,10 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
 	"syscall"
 
+	highwayhash "github.com/minio/HighwayHash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -44,8 +46,15 @@ func ConfigureLogging(logLevel string) error {
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
 func Hasher() func(string) (string, error) {
+	pool := sync.Pool{
+		New: func() interface{} {
+			b := make([]byte, highwayhash.Size*10*1024)
+			return &b
+		},
+	}
+	key := make([]byte, highwayhash.Size)
 	hasher := func(p string) (string, error) {
-		h := md5.New()
+		h, _ := highwayhash.New(key)
 		fi, err := os.Lstat(p)
 		if err != nil {
 			return "", err
@@ -63,7 +72,9 @@ func Hasher() func(string) (string, error) {
 				return "", err
 			}
 			defer f.Close()
-			if _, err := io.Copy(h, f); err != nil {
+			buf := pool.Get().(*[]byte)
+			defer pool.Put(buf)
+			if _, err := io.CopyBuffer(h, f, *buf); err != nil {
 				return "", err
 			}
 		}
