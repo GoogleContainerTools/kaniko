@@ -65,6 +65,30 @@
   version = "v0.4.9"
 
 [[projects]]
+  digest = "1:a8e16b4caf3575365c9aa3380d9418f31dd0b810596faebfe3a15c37fabeee4a"
+  name = "github.com/Microsoft/hcsshim"
+  packages = [
+    ".",
+    "internal/guestrequest",
+    "internal/guid",
+    "internal/hcs",
+    "internal/hcserror",
+    "internal/hns",
+    "internal/interop",
+    "internal/logfields",
+    "internal/longpath",
+    "internal/mergemaps",
+    "internal/safefile",
+    "internal/schema1",
+    "internal/schema2",
+    "internal/timeout",
+    "internal/wclayer",
+  ]
+  pruneopts = "NUT"
+  revision = "f92b8fb9c92e17da496af5a69e3ee13fbe9916e1"
+  version = "v0.8.6"
+
+[[projects]]
   branch = "master"
   digest = "1:7da1a26e347165227c79dfb10b90b3b5dedb6cbae50e88cdb81f5b6259b5b951"
   name = "github.com/Nvveen/Gotty"
@@ -126,21 +150,23 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-<<<<<<< HEAD
   digest = "1:a12d94258c5298ead75e142e8001224bf029f302fed9e96cd39c0eaf90f3954d"
   name = "github.com/boltdb/bolt"
   packages = ["."]
   pruneopts = "NUT"
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
   version = "v1.3.1"
-=======
+
+[[projects]]
+  digest = "1:1d05e187aedaacd654b7a2d92ca368ca8199d6fe4eae8d0a88ddf6bc6a638287"
   name = "github.com/containerd/containerd"
   packages = [
+    "cio",
     "containers",
     "content",
     "contrib/seccomp",
+    "defaults",
     "errdefs",
-    "fs",
     "images",
     "log",
     "mount",
@@ -148,28 +174,6 @@
     "oci",
     "platforms",
     "snapshots",
-    "sys"
-  ]
-  revision = "773c489c9c1b21a6d78b5c538cd395416ec50f88"
-  version = "v1.0.3"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/containerd/continuity"
-  packages = [
-    "pathdriver",
-    "sysx"
-  ]
-  revision = "c6cef34830231743494fe2969284df7b82cc0ad0"
->>>>>>> Check if seccomp is enabled before enabling.
-
-[[projects]]
-  digest = "1:e33e5ee8f3ae693a3c6894d3a45bef0261c6bd153c2bca2fcee11a657b189ffd"
-  name = "github.com/containerd/containerd"
-  packages = [
-    "cio",
-    "defaults",
-    "log",
   ]
   pruneopts = "NUT"
   revision = "468a545b9edcd5932818eb9de8e72413e616e86e"
@@ -420,7 +424,6 @@
   digest = "1:983cb7d70588854e2706e32c61698bbf0eab4956fca89e86c1c10d7213679a0e"
   name = "github.com/gogo/protobuf"
   packages = [
-<<<<<<< HEAD
     "gogoproto",
     "proto",
     "protoc-gen-gogo/descriptor",
@@ -438,14 +441,6 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
-=======
-    "proto",
-    "sortkeys",
-    "types"
-  ]
-  revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
-  version = "v1.0.0"
->>>>>>> Check if seccomp is enabled before enabling.
 
 [[projects]]
   digest = "1:698b57d2e177534bca3e8ee5eee05968dd14dc4fe1d015e3fb6237ff10e8826a"
@@ -484,7 +479,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:5924704ec96f00247784c512cc57f45a595030376a7ff2ff993bf356793a2cb0"
+  digest = "1:c94f3440939c4a6e4ad6db6cd9315c7817ea6c04fe28cfe2aaae2099d2bc3cef"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
@@ -505,6 +500,7 @@
     "pkg/v1/tarball",
     "pkg/v1/types",
     "pkg/v1/v1util",
+    "pkg/v1/validate",
   ]
   pruneopts = "NUT"
   revision = "31e00cede111067bae48bfc2cbfc522b0b36207f"
@@ -727,32 +723,19 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:665148313bcef8bee229ade70b3d345344121db27777e3b1edb78ca5088bb9c4"
+  digest = "1:58f43fd23d8c0649d220344695dda867b2b68da7cdc445ed3d8fdb32e7640b9c"
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
-<<<<<<< HEAD
     "libcontainer/devices",
-    "libcontainer/system",
-    "libcontainer/user",
-  ]
-  pruneopts = "NUT"
-  revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
-=======
     "libcontainer/seccomp",
     "libcontainer/specconv",
     "libcontainer/system",
     "libcontainer/user",
-    "libcontainer/utils"
+    "libcontainer/utils",
   ]
-  revision = "1f11dc5dba5213400482cd974db20ee1408d2c7f"
-
-[[projects]]
-  name = "github.com/opencontainers/runtime-spec"
-  packages = ["specs-go"]
-  revision = "4e3b9264a330d094b0386c3703c5f379119711e8"
-  version = "v1.0.1"
->>>>>>> Check if seccomp is enabled before enabling.
+  pruneopts = "NUT"
+  revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
 
 [[projects]]
   digest = "1:57234a321bf1f8f98a8a9a5122a2404cc60d0800516f4ab7a7b2375e4b2d19ea"
@@ -869,7 +852,14 @@
   revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
-<<<<<<< HEAD
+  digest = "1:7b02ff4e128026aee68ea968024f40e4030df0524d563c5b41d638bd791d1a3e"
+  name = "github.com/seccomp/libseccomp-golang"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "689e3c1541a84461afc49c1c87352a6cedf72e9c"
+  version = "v0.9.1"
+
+[[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -879,14 +869,6 @@
 
 [[projects]]
   digest = "1:b2339e83ce9b5c4f79405f949429a7f68a9a904fed903c672aac1e7ceb7f5f02"
-=======
-  name = "github.com/seccomp/libseccomp-golang"
-  packages = ["."]
-  revision = "e3496e3a417d1dc9ecdceca5af2513271fed37a0"
-  version = "v0.9.0"
-
-[[projects]]
->>>>>>> Check if seccomp is enabled before enabling.
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "NUT"
@@ -1055,16 +1037,7 @@
 
 [[projects]]
   branch = "master"
-<<<<<<< HEAD
   digest = "1:2d5f7cd5c2bc42a4d5b18f711d482f14689a30212bbe0e398e151b3e2147cb86"
-=======
-  name = "golang.org/x/sync"
-  packages = ["errgroup"]
-  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
-
-[[projects]]
-  branch = "master"
->>>>>>> Check if seccomp is enabled before enabling.
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -1432,13 +1405,16 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-<<<<<<< HEAD
   input-imports = [
     "cloud.google.com/go/storage",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/s3",
     "github.com/aws/aws-sdk-go/service/s3/s3manager",
+    "github.com/containerd/containerd/containers",
+    "github.com/containerd/containerd/contrib/seccomp",
+    "github.com/containerd/containerd/namespaces",
+    "github.com/containerd/containerd/oci",
     "github.com/docker/docker/builder/dockerfile",
     "github.com/docker/docker/builder/dockerignore",
     "github.com/docker/docker/pkg/archive",
@@ -1455,14 +1431,19 @@
     "github.com/google/go-containerregistry/pkg/v1/layout",
     "github.com/google/go-containerregistry/pkg/v1/mutate",
     "github.com/google/go-containerregistry/pkg/v1/partial",
+    "github.com/google/go-containerregistry/pkg/v1/random",
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
+    "github.com/google/go-containerregistry/pkg/v1/validate",
     "github.com/google/go-github/github",
     "github.com/karrick/godirwalk",
     "github.com/minio/HighwayHash",
     "github.com/moby/buildkit/frontend/dockerfile/instructions",
     "github.com/moby/buildkit/frontend/dockerfile/parser",
     "github.com/moby/buildkit/frontend/dockerfile/shell",
+    "github.com/opencontainers/runc/libcontainer/configs",
+    "github.com/opencontainers/runc/libcontainer/seccomp",
+    "github.com/opencontainers/runc/libcontainer/specconv",
     "github.com/otiai10/copy",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
@@ -1475,8 +1456,5 @@
     "gopkg.in/src-d/go-git.v4/plumbing",
     "k8s.io/client-go/discovery",
   ]
-=======
-  inputs-digest = "630b12ad0f985351d3909fc63810e903ac0ea41237a9c13e4b0b3fd0017616e7"
->>>>>>> Check if seccomp is enabled before enabling.
   solver-name = "gps-cdcl"
   solver-version = 1

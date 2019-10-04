@@ -1,12 +1,4 @@
-<<<<<<< HEAD
 Copyright (c) 2009 The Go Authors. All rights reserved.
-=======
-<<<<<<< HEAD:vendor/github.com/Microsoft/go-winio/archive/tar/LICENSE
-Copyright (c) 2012 The Go Authors. All rights reserved.
-=======
-Copyright (c) 2009 The Go Authors. All rights reserved.
->>>>>>> WIP: set the docker default seccomp profile in the executor process.:vendor/golang.org/x/sync/LICENSE
->>>>>>> WIP: set the docker default seccomp profile in the executor process.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are

@@ -216,7 +216,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 			config.Namespaces.Add(t, ns.Path)
 		}
-		if config.Namespaces.Contains(configs.NEWNET) && config.Namespaces.PathOf(configs.NEWNET) == "" {
+		if config.Namespaces.Contains(configs.NEWNET) {
 			config.Networks = []*configs.Network{
 				{
 					Type: "loopback",
@@ -233,7 +233,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.MountLabel = spec.Linux.MountLabel
 		config.Sysctl = spec.Linux.Sysctl
 		if spec.Linux.Seccomp != nil {
-			seccomp, err := SetupSeccomp(spec.Linux.Seccomp)
+			seccomp, err := setupSeccomp(spec.Linux.Seccomp)
 			if err != nil {
 				return nil, err
 			}
@@ -269,17 +269,13 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	flags, pgflags, data, ext := parseMountOptions(m.Options)
 	source := m.Source
-	device := m.Type
-	if flags|unix.MS_BIND != 0 {
-		if device == "" {
-			device = "bind"
-		}
+	if m.Type == "bind" {
 		if !filepath.IsAbs(source) {
 			source = filepath.Join(cwd, m.Source)
 		}
 	}
 	return &configs.Mount{
-		Device:           device,
+		Device:           m.Type,
 		Source:           source,
 		Destination:      m.Destination,
 		Data:             data,
@@ -736,7 +732,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 	return flag, pgflag, strings.Join(data, ","), extFlags
 }
 
-func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
+func setupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 	if config == nil {
 		return nil, nil
 	}

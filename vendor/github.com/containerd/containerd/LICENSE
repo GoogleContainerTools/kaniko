@@ -176,11 +176,7 @@
 
    END OF TERMS AND CONDITIONS
 
-<<<<<<< HEAD:vendor/github.com/containerd/containerd/LICENSE
    Copyright The containerd Authors
-=======
-   Copyright 2013-2016 Docker, Inc.
->>>>>>> WIP: set the docker default seccomp profile in the executor process.:vendor/github.com/containerd/containerd/LICENSE.code
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
