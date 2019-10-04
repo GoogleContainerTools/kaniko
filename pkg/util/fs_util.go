@@ -83,12 +83,12 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	extractedFiles := []string{}
 
 	for i, l := range layers {
-		mediaType, err := l.MediaType()
-		if err == nil {
+		if mediaType, err := l.MediaType(); err == nil {
 			logrus.Debugf("Extracting layer %d of media type %s", mediaType)
 		} else {
 			logrus.Debugf("Extracting layer %d", i)
 		}
+
 		r, err := l.Uncompressed()
 		if err != nil {
 			return nil, err
