@@ -97,6 +97,22 @@ var testEnvReplacement = []struct {
 		},
 		expectedPath: "8080/udp",
 	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   true,
+		expectedPath: "http://example.com",
+	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   false,
+		expectedPath: "http://example.com",
+	},
 }
 
 func Test_EnvReplacement(t *testing.T) {
@@ -472,14 +488,15 @@ func TestResolveEnvironmentReplacementList(t *testing.T) {
 			name: "url",
 			args: args{
 				values: []string{
-					"https://google.com/$foo", "$bar",
+					"https://google.com/$foo", "$bar", "$url",
 				},
 				envs: []string{
 					"foo=baz",
 					"bar=bat",
+					"url=https://google.com",
 				},
 			},
-			want: []string{"https://google.com/baz", "bat"},
+			want: []string{"https://google.com/baz", "bat", "https://google.com"},
 		},
 		{
 			name: "mixed",

@@ -323,7 +323,7 @@ func TestGitBuildContextWithBranch(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":     11,
+		"Dockerfile_test_add":     12,
 		"Dockerfile_test_scratch": 3,
 	}
 	for dockerfile := range imageBuilder.FilesBuilt {
