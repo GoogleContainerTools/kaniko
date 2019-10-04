@@ -93,7 +93,7 @@ func TestIsUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			testutil.CheckDeepEqual(t, tt.expected, isUrl(tt.path))
+			testutil.CheckDeepEqual(t, tt.expected, isURL(tt.path))
 		})
 	}
 }

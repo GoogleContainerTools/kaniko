@@ -168,7 +168,7 @@ func cacheFlagsValid() error {
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
 func resolveDockerfilePath() error {
-	if isUrl(opts.DockerfilePath) {
+	if isURL(opts.DockerfilePath) {
 		return nil
 	}
 	if util.FilepathExists(opts.DockerfilePath) {
@@ -262,7 +262,7 @@ func exit(err error) {
 	os.Exit(1)
 }
 
-func isUrl(path string) bool {
+func isURL(path string) bool {
 	if match, _ := regexp.MatchString("^https?://", path); match {
 		return true
 	}
@@ -270,5 +270,5 @@ func isUrl(path string) bool {
 }
 
 func skipPath(path string) bool {
-	return path == "" || isUrl(path) || filepath.IsAbs(path)
+	return path == "" || isURL(path) || filepath.IsAbs(path)
 }
