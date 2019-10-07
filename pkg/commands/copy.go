@@ -140,12 +140,12 @@ func (c *CopyCommand) RequiresUnpackedFS() bool {
 	return true
 }
 
-func (r *CopyCommand) ShouldCacheOutput() bool {
+func (c *CopyCommand) ShouldCacheOutput() bool {
 	return true
 }
 
 // CacheCommand returns true since this command should be cached
-func (r *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
+func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
 
 	return &CachingCopyCommand{
 		img: img,

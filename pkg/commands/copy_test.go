@@ -56,6 +56,9 @@ func setupTestTemp() string {
 	logrus.Infof("Tempdir: %s", tempDir)
 
 	srcPath, err := filepath.Abs("../../integration/context")
+	if err != nil {
+		logrus.Fatalf("error getting abs path %s", srcPath)
+	}
 	cperr := filepath.Walk(srcPath,
 		func(path string, info os.FileInfo, err error) error {
 			if path != srcPath {
@@ -71,16 +74,16 @@ func setupTestTemp() string {
 					os.MkdirAll(tempDir+"/"+tempPath, 0777)
 				} else {
 					out, err := os.Create(tempDir + "/" + tempPath)
-					defer out.Close()
 					if err != nil {
 						return err
 					}
+					defer out.Close()
 
 					in, err := os.Open(path)
-					defer in.Close()
 					if err != nil {
 						return err
 					}
+					defer in.Close()
 
 					_, err = io.Copy(out, in)
 					if err != nil {
@@ -119,7 +122,6 @@ func TestCopyExecuteCmd(t *testing.T) {
 			buildArgs := copySetUpBuildArgs()
 			dest := cfg.WorkingDir + "/" + test.sourcesAndDest[len(test.sourcesAndDest)-1]
 			logrus.Infof("dest dir: %s", dest)
-			//os.RemoveAll(dest)
 
 			err := cmd.ExecuteCommand(cfg, buildArgs)
 			if err != nil {
