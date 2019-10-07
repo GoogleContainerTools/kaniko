@@ -149,7 +149,7 @@ func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
 
 	return &CachingCopyCommand{
 		img: img,
-		cmd: r.cmd,
+		cmd: c.cmd,
 	}
 }
 
