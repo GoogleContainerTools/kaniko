@@ -16,9 +16,11 @@ limitations under the License.
 package commands
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -45,45 +47,97 @@ var copyTests = []struct {
 	},
 }
 
+func setupTestTemp() string {
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		logrus.Fatalf("error creating temp dir %s", err)
+	}
+	//defer os.RemoveAll(tempDir)
+	logrus.Infof("Tempdir: %s", tempDir)
+
+	srcPath, err := filepath.Abs("../../integration/context")
+	cperr := filepath.Walk(srcPath,
+		func(path string, info os.FileInfo, err error) error {
+			if path != srcPath {
+				if err != nil {
+					return err
+				}
+				tempPath := strings.TrimPrefix(path, srcPath)
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return err
+				}
+				if fileInfo.IsDir() {
+					os.MkdirAll(tempDir+"/"+tempPath, 0777)
+				} else {
+					out, err := os.Create(tempDir + "/" + tempPath)
+					defer out.Close()
+					if err != nil {
+						return err
+					}
+
+					in, err := os.Open(path)
+					defer in.Close()
+					if err != nil {
+						return err
+					}
+
+					_, err = io.Copy(out, in)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		})
+	if cperr != nil {
+		logrus.Fatalf("error populating temp dir %s", cperr)
+	}
+
+	return tempDir
+}
 func TestCopyExecuteCmd(t *testing.T) {
+	tempDir := setupTestTemp()
+
 	cfg := &v1.Config{
 		Cmd:        nil,
 		Env:        []string{},
-		WorkingDir: "../../integration/context/",
+		WorkingDir: tempDir,
 	}
 
 	for _, test := range copyTests {
 		t.Run(test.name, func(t *testing.T) {
 			dirList := []string{}
 
-			logrus.Infof("Running test: %v", test.name)
-
 			cmd := CopyCommand{
 				cmd: &instructions.CopyCommand{
 					SourcesAndDest: test.sourcesAndDest,
 				},
-				buildcontext: "../../integration/context/",
+				buildcontext: tempDir,
 			}
 
 			buildArgs := copySetUpBuildArgs()
-			dest := cfg.WorkingDir + test.sourcesAndDest[len(test.sourcesAndDest)-1]
-
-			os.RemoveAll(dest)
+			dest := cfg.WorkingDir + "/" + test.sourcesAndDest[len(test.sourcesAndDest)-1]
+			logrus.Infof("dest dir: %s", dest)
+			//os.RemoveAll(dest)
 
 			err := cmd.ExecuteCommand(cfg, buildArgs)
+			if err != nil {
+				t.Error()
+			}
 
-			fi, ferr := os.Open(dest)
-			if ferr != nil {
+			fi, err := os.Open(dest)
+			if err != nil {
 				t.Error()
 			}
 			defer fi.Close()
-			fstat, ferr := fi.Stat()
-			if ferr != nil {
+			fstat, err := fi.Stat()
+			if err != nil {
 				t.Error()
 			}
 			if fstat.IsDir() {
-				files, ferr := ioutil.ReadDir(dest)
-				if ferr != nil {
+				files, err := ioutil.ReadDir(dest)
+				if err != nil {
 					t.Error()
 				}
 				for _, file := range files {
@@ -93,12 +147,6 @@ func TestCopyExecuteCmd(t *testing.T) {
 			} else {
 				dirList = append(dirList, filepath.Base(dest))
 			}
-			//dir, err := os.Getwd()
-			//			logrus.Infof("CWD: %v", dir)
-			//			logrus.Infof("test.SourcesAndDest: %v", test.SourcesAndDest)
-			logrus.Infof("dest: %v", dest)
-			logrus.Infof("test.expectedDest: %v", test.expectedDest)
-			logrus.Infof("dirList: %v", dirList)
 
 			testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedDest, dirList)
 			os.RemoveAll(dest)
