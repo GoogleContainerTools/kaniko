@@ -193,7 +193,6 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		fi, err := os.Stat(dir)
 		if os.IsNotExist(err) || !fi.IsDir() {
 			logrus.Infof("base %s for file %s does not exist. Creating.", base, path)
-			//os.RemoveAll(dir)
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return err
 			}

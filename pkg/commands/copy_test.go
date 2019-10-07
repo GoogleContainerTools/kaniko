@@ -30,17 +30,17 @@ import (
 
 var copyTests = []struct {
 	name           string
-	SourcesAndDest []string
+	sourcesAndDest []string
 	expectedDest   []string
 }{
 	{
 		name:           "copy foo into tempCopyExecuteTest/",
-		SourcesAndDest: []string{"foo", "tempCopyExecuteTest/"},
+		sourcesAndDest: []string{"foo", "tempCopyExecuteTest/"},
 		expectedDest:   []string{"foo"},
 	},
 	{
 		name:           "copy foo into tempCopyExecuteTest",
-		SourcesAndDest: []string{"foo", "tempCopyExecuteTest"},
+		sourcesAndDest: []string{"foo", "tempCopyExecuteTest"},
 		expectedDest:   []string{"tempCopyExecuteTest"},
 	},
 }
@@ -60,13 +60,13 @@ func TestCopyExecuteCmd(t *testing.T) {
 
 			cmd := CopyCommand{
 				cmd: &instructions.CopyCommand{
-					SourcesAndDest: test.SourcesAndDest,
+					SourcesAndDest: test.sourcesAndDest,
 				},
 				buildcontext: "../../integration/context/",
 			}
 
 			buildArgs := copySetUpBuildArgs()
-			dest := cfg.WorkingDir + test.SourcesAndDest[len(test.SourcesAndDest)-1]
+			dest := cfg.WorkingDir + test.sourcesAndDest[len(test.sourcesAndDest)-1]
 
 			os.RemoveAll(dest)
 
