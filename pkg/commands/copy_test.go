@@ -52,8 +52,7 @@ func setupTestTemp() string {
 	if err != nil {
 		logrus.Fatalf("error creating temp dir %s", err)
 	}
-	//defer os.RemoveAll(tempDir)
-	logrus.Infof("Tempdir: %s", tempDir)
+	logrus.Debugf("Tempdir: %s", tempDir)
 
 	srcPath, err := filepath.Abs("../../integration/context")
 	if err != nil {
@@ -101,6 +100,7 @@ func setupTestTemp() string {
 }
 func TestCopyExecuteCmd(t *testing.T) {
 	tempDir := setupTestTemp()
+	defer os.RemoveAll(tempDir)
 
 	cfg := &v1.Config{
 		Cmd:        nil,
@@ -121,7 +121,6 @@ func TestCopyExecuteCmd(t *testing.T) {
 
 			buildArgs := copySetUpBuildArgs()
 			dest := cfg.WorkingDir + "/" + test.sourcesAndDest[len(test.sourcesAndDest)-1]
-			logrus.Infof("dest dir: %s", dest)
 
 			err := cmd.ExecuteCommand(cfg, buildArgs)
 			if err != nil {
@@ -143,7 +142,7 @@ func TestCopyExecuteCmd(t *testing.T) {
 					t.Error()
 				}
 				for _, file := range files {
-					logrus.Infof("file: %v", file.Name())
+					logrus.Debugf("file: %v", file.Name())
 					dirList = append(dirList, file.Name())
 				}
 			} else {
