@@ -97,6 +97,22 @@ var testEnvReplacement = []struct {
 		},
 		expectedPath: "8080/udp",
 	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   true,
+		expectedPath: "http://example.com",
+	},
+	{
+		path: "$url",
+		envs: []string{
+			"url=http://example.com",
+		},
+		isFilepath:   false,
+		expectedPath: "http://example.com",
+	},
 }
 
 func Test_EnvReplacement(t *testing.T) {
@@ -390,7 +406,7 @@ var isSrcValidTests = []struct {
 func Test_IsSrcsValid(t *testing.T) {
 	for _, test := range isSrcValidTests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := GetExcludedFiles(buildContextPath); err != nil {
+			if err := GetExcludedFiles("", buildContextPath); err != nil {
 				t.Fatalf("error getting excluded files: %v", err)
 			}
 			err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
@@ -472,14 +488,15 @@ func TestResolveEnvironmentReplacementList(t *testing.T) {
 			name: "url",
 			args: args{
 				values: []string{
-					"https://google.com/$foo", "$bar",
+					"https://google.com/$foo", "$bar", "$url",
 				},
 				envs: []string{
 					"foo=baz",
 					"bar=bat",
+					"url=https://google.com",
 				},
 			},
-			want: []string{"https://google.com/baz", "bat"},
+			want: []string{"https://google.com/baz", "bat", "https://google.com"},
 		},
 		{
 			name: "mixed",

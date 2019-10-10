@@ -286,3 +286,33 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 	}
 	return nil
 }
+
+// buildRelativePathsImage builds the images for testing passing relatives paths to Kaniko
+func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile string) error {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	buildContextPath := "./relative-subdirectory"
+	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
+
+	kanikoCmd := exec.Command("docker",
+		append([]string{"run",
+			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
+			"-v", cwd + ":/workspace",
+			ExecutorImage,
+			"-f", dockerfile,
+			"-d", kanikoImage,
+			"--digest-file", "./digest",
+			"-c", buildContextPath,
+		})...,
+	)
+
+	timer := timing.Start(dockerfile + "_kaniko_relative_paths")
+	_, err := RunCommandWithoutTest(kanikoCmd)
+	timing.DefaultRun.Stop(timer)
+	if err != nil {
+		return fmt.Errorf("Failed to build relative path image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
+	}
+
+	return nil
+}

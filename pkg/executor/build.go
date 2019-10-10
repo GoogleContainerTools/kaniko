@@ -427,7 +427,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := util.GetExcludedFiles(opts.SrcContext); err != nil {
+	if err := util.GetExcludedFiles(opts.DockerfilePath, opts.SrcContext); err != nil {
 		return nil, err
 	}
 	// Some stages may refer to other random images, not previous stages

@@ -621,6 +621,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:56eaee71300a91f7a2f096b5d1d1d5389ebe8e69c068ec7d84c20459f599ddde"
+  name = "github.com/minio/HighwayHash"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "02ca4b43caa3297fbb615700d8800acc7933be98"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:a4df73029d2c42fabcb6b41e327d2f87e685284ec03edf76921c267d9cfc9c23"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -822,6 +830,17 @@
   version = "v1.0.6"
 
 [[projects]]
+  digest = "1:90cf76d709ce9b057e7d75bd245bf7c1242d21ba4f908fb22c7a2a96d1dcc0ca"
+  name = "github.com/spf13/afero"
+  packages = [
+    ".",
+    "mem",
+  ]
+  pruneopts = "NUT"
+  revision = "f4711e4db9e9a1d3887343acb72b2bbfc2f686f5"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:343d44e06621142ab09ae0c76c1799104cdfddd3ffb445d78b1adf8dc3ffaf3d"
   name = "github.com/spf13/cobra"
   packages = ["."]
@@ -983,9 +1002,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:eeb413d109f4b2813de0b5b23645d7a503db926cae8f10dfdcf248d15499314f"
+  digest = "1:2d5f7cd5c2bc42a4d5b18f711d482f14689a30212bbe0e398e151b3e2147cb86"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
     "windows/registry",
@@ -1372,16 +1392,19 @@
     "github.com/google/go-containerregistry/pkg/v1/layout",
     "github.com/google/go-containerregistry/pkg/v1/mutate",
     "github.com/google/go-containerregistry/pkg/v1/partial",
+    "github.com/google/go-containerregistry/pkg/v1/random",
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
     "github.com/google/go-github/github",
     "github.com/karrick/godirwalk",
+    "github.com/minio/HighwayHash",
     "github.com/moby/buildkit/frontend/dockerfile/instructions",
     "github.com/moby/buildkit/frontend/dockerfile/parser",
     "github.com/moby/buildkit/frontend/dockerfile/shell",
     "github.com/otiai10/copy",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
+    "github.com/spf13/afero",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "golang.org/x/net/context",

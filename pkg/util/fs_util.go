@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -82,11 +83,17 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	extractedFiles := []string{}
 
 	for i, l := range layers {
-		logrus.Debugf("Extracting layer %d", i)
+		if mediaType, err := l.MediaType(); err == nil {
+			logrus.Debugf("Extracting layer %d of media type %s", mediaType)
+		} else {
+			logrus.Debugf("Extracting layer %d", i)
+		}
+
 		r, err := l.Uncompressed()
 		if err != nil {
 			return nil, err
 		}
+		defer r.Close()
 		tr := tar.NewReader(r)
 		for {
 			hdr, err := tr.Next()
@@ -94,7 +101,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				break
 			}
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, fmt.Sprintf("error reading tar %d", i))
 			}
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
@@ -359,9 +366,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		if CheckWhitelist(path) && !HasFilepathPrefix(path, root, false) {
 			return nil
 		}
-		if err != nil {
-			return err
-		}
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
@@ -554,11 +558,15 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
-func GetExcludedFiles(buildcontext string) error {
-	path := filepath.Join(buildcontext, ".dockerignore")
+func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
+	path := dockerfilepath + ".dockerignore"
+	if !FilepathExists(path) {
+		path = filepath.Join(buildcontext, ".dockerignore")
+	}
 	if !FilepathExists(path) {
 		return nil
 	}
+	logrus.Infof("Using dockerignore file: %v", path)
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return errors.Wrap(err, "parsing .dockerignore")
@@ -588,10 +596,10 @@ func excludeFile(path, buildcontext string) bool {
 
 // HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
-	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)
-	pathArray := strings.Split(path, "/")
 	prefixArray := strings.Split(prefix, "/")
+	path = filepath.Clean(path)
+	pathArray := strings.SplitN(path, "/", len(prefixArray)+1)
 
 	if len(pathArray) < len(prefixArray) {
 		return false

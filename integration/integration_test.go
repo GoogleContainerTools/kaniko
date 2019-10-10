@@ -323,7 +323,7 @@ func TestGitBuildContextWithBranch(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":     11,
+		"Dockerfile_test_add":     12,
 		"Dockerfile_test_scratch": 3,
 	}
 	for dockerfile := range imageBuilder.FilesBuilt {
@@ -384,6 +384,30 @@ func TestCache(t *testing.T) {
 	if err := logBenchmarks("benchmark_cache"); err != nil {
 		t.Logf("Failed to create benchmark file: %v", err)
 	}
+}
+
+func TestRelativePaths(t *testing.T) {
+
+	dockerfile := "Dockerfile_test_copy"
+
+	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
+		t.Parallel()
+		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile)
+
+		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
+		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
+
+		// container-diff
+		daemonDockerImage := daemonPrefix + dockerImage
+		containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
+			daemonDockerImage, kanikoImage,
+			"-q", "--type=file", "--type=metadata", "--json")
+		diff := RunCommand(containerdiffCmd, t)
+		t.Logf("diff = %s", string(diff))
+
+		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+		checkContainerDiffOutput(t, diff, expected)
+	})
 }
 
 type fileDiff struct {

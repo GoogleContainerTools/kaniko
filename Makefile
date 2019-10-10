@@ -14,11 +14,10 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 12
+VERSION_MINOR ?= 13
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 SHELL := /bin/bash
 GOOS ?= $(shell go env GOOS)
@@ -28,6 +27,7 @@ PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
 
 REPOPATH ?= $(ORG)/$(PROJECT)
+VERSION_PACKAGE = $(REPOPATH)/pkg/version
 
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_LDFLAGS := '-extldflags "-static"

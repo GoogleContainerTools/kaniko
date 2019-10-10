@@ -1,0 +1,3 @@
+# A .dockerignore file to make sure dockerignore support works
+ignore_relative/**
+!ignore_relative/foo
