@@ -50,3 +50,7 @@ required = [
 [[constraint]]
   name = "github.com/minio/HighwayHash"
   version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/Azure/azure-storage-blob-go"
+  version = "0.8.0"
