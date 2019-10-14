@@ -46,7 +46,7 @@ import (
 )
 
 type withUserAgent struct {
-	t http.RoundTripper
+	t        http.RoundTripper
 	insecure bool
 	registry string
 }
