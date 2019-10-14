@@ -48,6 +48,7 @@ import (
 type withUserAgent struct {
 	t http.RoundTripper
 	insecure bool
+	registry string
 }
 
 const (
@@ -60,7 +61,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 		ua = append(ua, upstream)
 	}
 	r.Header.Set("User-Agent", strings.Join(ua, ","))
-	if !w.insecure {
+	if !w.insecure && strings.HasSuffix(w.registry, ".local") {
 		r.URL.Scheme = "https"
 	}
 	return w.t.RoundTrip(r)
@@ -92,7 +93,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			destRef.Repository.Registry = newReg
 		}
 		tr := makeTransport(opts, registryName)
-		rt := &withUserAgent{t: tr, insecure: opts.Insecure}
+		rt := &withUserAgent{t: tr, insecure: opts.Insecure, registry: destRef.RegistryStr()}
 		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), rt); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
@@ -166,7 +167,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 
 		tr := makeTransport(opts, registryName)
-		rt := &withUserAgent{t: tr, insecure: opts.Insecure}
+		rt := &withUserAgent{t: tr, insecure: opts.Insecure, registry: destRef.RegistryStr()}
 
 		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
