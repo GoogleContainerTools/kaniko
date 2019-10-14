@@ -63,6 +63,16 @@ func Test_ValidAzureBlobStorageHost(t *testing.T) {
 			context:        "https://myaccount.blob.core.windows.net/",
 			expectedResult: false,
 		},
+		{
+			name:           "URL with folder structure",
+			context:        "https://myaccount.blob.core.windows.net/fairingcontext/path/to/context.tar.gz",
+			expectedResult: true,
+		},
+		{
+			name:           "URL with $root container",
+			context:        "https://myaccount.blob.core.windows.net/$root/context.tar.gz",
+			expectedResult: true,
+		},
 	}
 
 	for _, test := range tests {
