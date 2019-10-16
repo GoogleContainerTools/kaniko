@@ -29,7 +29,7 @@ RUN make && make out/warmer
 
 # Stage 1: Get the busybox shell
 FROM gcr.io/cloud-builders/bazel:latest
-RUN git clone https://github.com/slmagus/distroless.git
+RUN git clone https://github.com/GoogleContainerTools/distroless.git
 WORKDIR /distroless
 RUN bazel build //experimental/busybox:busybox_tar
 RUN tar -C /distroless/bazel-bin/experimental/busybox/ -xf /distroless/bazel-bin/experimental/busybox/busybox.tar
