@@ -96,16 +96,27 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	return nil
 }
 
+func getDigest(image v1.Image) ([]byte, error){
+	digest, err := image.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(digest.String()), nil
+}
+
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
 
 	if opts.DigestFile != "" {
-		digest, err := image.Digest()
+		// digest, err := image.Digest()
+		// if err != nil {
+		// 	return errors.Wrap(err, "error fetching digest")
+		// }
+		digestByteArray, err := getDigest(image)
 		if err != nil {
 			return errors.Wrap(err, "error fetching digest")
 		}
-		digestByteArray := []byte(digest.String())
 		err = ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
 		if err != nil {
 			return errors.Wrap(err, "writing digest to file failed")
@@ -127,6 +138,17 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
+		}
+		if opts.ImageNameDigestFile != "" {
+			digestByteArray, err := getDigest(image)
+			if err != nil {
+				return errors.Wrap(err, "error fetching digest")
+			}
+			imageName := []byte(destination + "@")
+			err = ioutil.WriteFile(opts.ImageNameDigestFile, append(imageName, digestByteArray...), 0644)
+			if err != nil {
+				return errors.Wrap(err, "writing digest to file failed")
+			}
 		}
 		destRefs = append(destRefs, destRef)
 	}
