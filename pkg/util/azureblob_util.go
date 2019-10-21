@@ -22,8 +22,8 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
-//Validate if the host url provided is with correct suffix for AzureCloud, AzureChinaCloud, AzureGermanCloud and AzureUSGovernment
-//RegEX for supported suffix defined in constants.AzureBlobStorageHostRegEx
+// Validate if the host url provided is with correct suffix for AzureCloud, AzureChinaCloud, AzureGermanCloud and AzureUSGovernment
+// RegEX for supported suffix defined in constants.AzureBlobStorageHostRegEx
 func ValidAzureBlobStorageHost(context string) bool {
 	for _, re := range constants.AzureBlobStorageHostRegEx {
 		validBlobURL := regexp.MustCompile(re)

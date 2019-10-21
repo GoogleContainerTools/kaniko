@@ -80,7 +80,7 @@ const (
 // ScratchEnvVars are the default environment variables needed for a scratch image.
 var ScratchEnvVars = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
 
-//AzureBlobStorageHostRegEx is ReqEX for Valid azure blob storage host suffix in url for AzureCloud, AzureChinaCloud, AzureGermanCloud and AzureUSGovernment
+// AzureBlobStorageHostRegEx is ReqEX for Valid azure blob storage host suffix in url for AzureCloud, AzureChinaCloud, AzureGermanCloud and AzureUSGovernment
 var AzureBlobStorageHostRegEx = []string{"https://(.+?).blob.core.windows.net/(.+)",
 	"https://(.+?).blob.core.chinacloudapi.cn/(.+)",
 	"https://(.+?).blob.core.cloudapi.de/(.+)",
