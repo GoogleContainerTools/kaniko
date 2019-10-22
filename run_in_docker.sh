@@ -36,7 +36,11 @@ fi
 
 docker run \
     -v "$HOME"/.config/gcloud:/root/.config/gcloud \
+<<<<<<< Updated upstream
     -v $context:/workspace \
+=======
+    -v "$context":/workspace \
+>>>>>>> Stashed changes
     gcr.io/kaniko-project/executor:latest \
     --dockerfile "${dockerfile}" --destination "${destination}" --context "${context}" \
     --cache="${cache}"
