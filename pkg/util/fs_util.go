@@ -640,3 +640,17 @@ func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
 	// Must chmod after chown because chown resets the file mode.
 	return os.Chmod(path, mode)
 }
+
+// CreateTargetTarfile creates target tar file for downloading the context file. 
+// Make directory if directory does not exist
+func CreateTargetTarfile(tarpath string) (*os.File, error) {
+	baseDir := filepath.Dir(tarpath)
+	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
+		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, tarpath)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(tarpath)
+
+}

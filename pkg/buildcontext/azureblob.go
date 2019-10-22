@@ -54,18 +54,15 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 		return parts.Host, err
 	}
 
-	//Create directory and file for downloading context file
+	// Create directory and target file for downloading the context file
 	directory := constants.BuildContextDir
 	tarPath := filepath.Join(directory, constants.ContextTar)
-	if err := os.MkdirAll(directory, 0750); err != nil {
-		return directory, err
-	}
-	file, err := os.Create(tarPath)
+	file, err := util.CreateTargetTarfile(tarPath)
 	if err != nil {
-		return directory, err
+		return tarPath, err
 	}
 
-	//Downloading contextfile from Azure Blob Storage
+	// Downloading contextfile from Azure Blob Storage
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 	blobURL := azblob.NewBlobURL(*u, p)
 	ctx := context.Background()
