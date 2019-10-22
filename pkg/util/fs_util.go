@@ -641,7 +641,7 @@ func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
 	return os.Chmod(path, mode)
 }
 
-// CreateTargetTarfile creates target tar file for downloading the context file. 
+// CreateTargetTarfile creates target tar file for downloading the context file.
 // Make directory if directory does not exist
 func CreateTargetTarfile(tarpath string) (*os.File, error) {
 	baseDir := filepath.Dir(tarpath)
