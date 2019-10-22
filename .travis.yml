@@ -7,3 +7,4 @@ go_import_path: github.com/GoogleContainerTools/kaniko
 
 script:
   - make test
+  - make images

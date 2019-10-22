@@ -475,6 +475,7 @@ Set this flag to indicate which build stage is the target build stage.
 #### --tarPath
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+You need to set `--destination` as well (for example `--destination=image`).
 
 #### --verbosity
 
