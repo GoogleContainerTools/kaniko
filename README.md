@@ -255,8 +255,8 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
   ```
 
-**NOTE**: When running in Docker, Kaniko expects the absolute path to a 
-local build context, and a Dockerfile path _inside_ the container. 
+_NOTE: `run_in_docker.sh` expects a path to a 
+Dockerfile relative to the absolute path of the build context._
 
 An example run, specifying the Dockerfile in the container directory `/workspace`, the build
 context in the local directory `/home/user/kaniko-project`, and a Google Container Registry

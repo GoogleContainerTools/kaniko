@@ -38,6 +38,6 @@ docker run \
     -v "$HOME"/.config/gcloud:/root/.config/gcloud \
     -v "$context":/workspace \
     gcr.io/kaniko-project/executor:latest \
-    --dockerfile "${dockerfile}" --destination "${destination}" --context "${context}" \
+    --dockerfile "${dockerfile}" --destination "${destination}" --context dir:///workspace/ \
     --cache="${cache}"
 
