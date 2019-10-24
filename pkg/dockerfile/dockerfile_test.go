@@ -17,12 +17,63 @@ limitations under the License.
 package dockerfile
 
 import (
+	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
+
+func TestStagesArgValueWithQuotes(t *testing.T) {
+	dockerfile := `
+	ARG IMAGE="ubuntu:16.04"
+	FROM ${IMAGE}
+	RUN echo hi > /hi
+	
+	FROM scratch AS second
+	COPY --from=0 /hi /hi2
+	
+	FROM scratch
+	COPY --from=second /hi2 /hi3
+	`
+	tmpfile, err := ioutil.TempFile("", "Dockerfile.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	stages, err := Stages(&config.KanikoOptions{DockerfilePath: tmpfile.Name()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(stages) == 0 {
+		t.Fatal("length of stages expected to be greater than zero, but was zero")
+
+	}
+
+	if len(stages[0].MetaArgs) == 0 {
+		t.Fatal("length of stage[0] meta args expected to be greater than zero, but was zero")
+	}
+
+	expectedVal := "ubuntu:16.04"
+
+	arg := stages[0].MetaArgs[0]
+	if arg.ValueString() != expectedVal {
+		t.Fatalf("expected stages[0].MetaArgs[0] val to be %s but was %s", expectedVal, arg.ValueString())
+	}
+}
 
 func Test_resolveStages(t *testing.T) {
 	dockerfile := `

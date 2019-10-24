@@ -111,7 +111,31 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	metaArgs = stripEnclosingDoubleQuotes(metaArgs)
+
 	return stages, metaArgs, nil
+}
+
+// stripEnclosingDoubleQuotes removes double quotes enclosing the value of each instructions.ArgCommand in a slice
+func stripEnclosingDoubleQuotes(metaArgs []instructions.ArgCommand) []instructions.ArgCommand {
+	for i := range metaArgs {
+		arg := metaArgs[i]
+		v := arg.Value
+		if v != nil {
+			val := *v
+			if val[0] == '"' {
+				val = val[1:]
+			}
+
+			if val[len(val)-1] == '"' {
+				val = val[:len(val)-1]
+			}
+			arg.Value = &val
+			metaArgs[i] = arg
+		}
+	}
+	return metaArgs
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
