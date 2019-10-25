@@ -1,0 +1,3 @@
+ARG IMAGE_NAME='busybox:latest'
+
+FROM $IMAGE_NAME

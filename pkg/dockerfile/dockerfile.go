@@ -112,30 +112,41 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 		return nil, nil, err
 	}
 
-	metaArgs = stripEnclosingDoubleQuotes(metaArgs)
+	metaArgs, err = stripEnclosingQuotes(metaArgs)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return stages, metaArgs, nil
 }
 
-// stripEnclosingDoubleQuotes removes double quotes enclosing the value of each instructions.ArgCommand in a slice
-func stripEnclosingDoubleQuotes(metaArgs []instructions.ArgCommand) []instructions.ArgCommand {
+// stripEnclosingQuotes removes quotes enclosing the value of each instructions.ArgCommand in a slice
+// if the quotes are escaped it leaves them
+func stripEnclosingQuotes(metaArgs []instructions.ArgCommand) ([]instructions.ArgCommand, error) {
+	dbl := byte('"')
+	sgl := byte('\'')
+
 	for i := range metaArgs {
 		arg := metaArgs[i]
 		v := arg.Value
 		if v != nil {
 			val := *v
-			if val[0] == '"' {
-				val = val[1:]
+			fmt.Printf("val %s\n", val)
+			if (val[0] == dbl && val[len(val)-1] == dbl) || (val[0] == sgl && val[len(val)-1] == sgl) {
+				val = val[1 : len(val)-1]
+			} else if val[0:2] == `\"` && val[len(val)-2:len(val)] == `\"` {
+				continue
+			} else if val[0:2] == `\'` && val[len(val)-2:len(val)] == `\'` {
+				continue
+			} else if val[0] == dbl || val[0] == sgl || val[len(val)-1] == dbl || val[len(val)-1] == sgl {
+				return nil, errors.New("quotes wrapping arg values must be matched")
 			}
 
-			if val[len(val)-1] == '"' {
-				val = val[:len(val)-1]
-			}
 			arg.Value = &val
 			metaArgs[i] = arg
 		}
 	}
-	return metaArgs
+	return metaArgs, nil
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
