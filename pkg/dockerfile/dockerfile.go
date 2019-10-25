@@ -134,9 +134,9 @@ func stripEnclosingQuotes(metaArgs []instructions.ArgCommand) ([]instructions.Ar
 			fmt.Printf("val %s\n", val)
 			if (val[0] == dbl && val[len(val)-1] == dbl) || (val[0] == sgl && val[len(val)-1] == sgl) {
 				val = val[1 : len(val)-1]
-			} else if val[0:2] == `\"` && val[len(val)-2:len(val)] == `\"` {
+			} else if val[:2] == `\"` && val[len(val)-2:] == `\"` {
 				continue
-			} else if val[0:2] == `\'` && val[len(val)-2:len(val)] == `\'` {
+			} else if val[:2] == `\'` && val[len(val)-2:] == `\'` {
 				continue
 			} else if val[0] == dbl || val[0] == sgl || val[len(val)-1] == dbl || val[len(val)-1] == sgl {
 				return nil, errors.New("quotes wrapping arg values must be matched")
