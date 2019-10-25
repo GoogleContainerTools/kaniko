@@ -18,6 +18,14 @@
   version = "v0.25.0"
 
 [[projects]]
+  digest = "1:602649ff074ccee9273e1d3b25c4069f13a70fa0c232957c7d68a6f02fb7a9ea"
+  name = "github.com/Azure/azure-pipeline-go"
+  packages = ["pipeline"]
+  pruneopts = "NUT"
+  revision = "232aee85e8e3a6223a11c0943f7df2ae0fac00e4"
+  version = "v0.2.2"
+
+[[projects]]
   digest = "1:f56288257633effcb1743f6fa77d12dd3eaeeb5c78b3de6e199eb1b4780f57f5"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
@@ -27,6 +35,14 @@
   pruneopts = "NUT"
   revision = "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a"
   version = "v19.1.0"
+
+[[projects]]
+  digest = "1:0a1307390445735712b3b914b447cc7ad1974795e50470b7e092cfaa6063f6dd"
+  name = "github.com/Azure/azure-storage-blob-go"
+  packages = ["azblob"]
+  pruneopts = "NUT"
+  revision = "fc700035fe4a7020f50d49f420b3c088aed57e03"
+  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
@@ -445,7 +461,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:5924704ec96f00247784c512cc57f45a595030376a7ff2ff993bf356793a2cb0"
+  digest = "1:c94f3440939c4a6e4ad6db6cd9315c7817ea6c04fe28cfe2aaae2099d2bc3cef"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
@@ -466,6 +482,7 @@
     "pkg/v1/tarball",
     "pkg/v1/types",
     "pkg/v1/v1util",
+    "pkg/v1/validate",
   ]
   pruneopts = "NUT"
   revision = "31e00cede111067bae48bfc2cbfc522b0b36207f"
@@ -603,6 +620,14 @@
   pruneopts = "NUT"
   revision = "81db2a75821ed34e682567d48be488a1c3121088"
   version = "0.5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e0e7ecd8a4d1faddfb4b7e8a59684f803aa7f45489e25a64bb25d63691d4fc7a"
+  name = "github.com/mattn/go-ieproxy"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f9202b1cfdeb0c82ddd3dc1e8e9cd94b3c0c1b13"
 
 [[projects]]
   digest = "1:d0164259ed17929689df11205194d80288e8ae25351778f7a3421a24774c36f8"
@@ -957,12 +982,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f3e57ce909415ab28ce6c6db1fa7bf7a9134c8d9cb53663775d766b515a665d8"
+  digest = "1:d3ff7173b1da34e8fc91c30e8695c830bf5d7d7b0851fb8bdfb71fa862e9cf00"
   name = "golang.org/x/net"
   packages = [
     "context",
     "context/ctxhttp",
     "http/httpguts",
+    "http/httpproxy",
     "http2",
     "http2/hpack",
     "idna",
@@ -1372,6 +1398,7 @@
   analyzer-version = 1
   input-imports = [
     "cloud.google.com/go/storage",
+    "github.com/Azure/azure-storage-blob-go/azblob",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/s3",
@@ -1395,6 +1422,7 @@
     "github.com/google/go-containerregistry/pkg/v1/random",
     "github.com/google/go-containerregistry/pkg/v1/remote",
     "github.com/google/go-containerregistry/pkg/v1/tarball",
+    "github.com/google/go-containerregistry/pkg/v1/validate",
     "github.com/google/go-github/github",
     "github.com/karrick/godirwalk",
     "github.com/minio/HighwayHash",
