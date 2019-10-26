@@ -203,6 +203,7 @@ func targetStage(stages []instructions.Stage, target string) (int, error) {
 
 // resolveStages resolves any calls to previous stages with names to indices
 // Ex. --from=second_stage should be --from=1 for easier processing later on
+// As third party library lowers stage name in FROM instruction, this function resolves stage case insensitively.
 func resolveStages(stages []instructions.Stage) {
 	nameToIndex := make(map[string]string)
 	for i, stage := range stages {
@@ -214,7 +215,7 @@ func resolveStages(stages []instructions.Stage) {
 			switch c := cmd.(type) {
 			case *instructions.CopyCommand:
 				if c.From != "" {
-					if val, ok := nameToIndex[c.From]; ok {
+					if val, ok := nameToIndex[strings.ToLower(c.From)]; ok {
 						c.From = val
 					}
 

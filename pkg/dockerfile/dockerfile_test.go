@@ -197,8 +197,14 @@ func Test_resolveStages(t *testing.T) {
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
 	
-	FROM scratch
+	FROM scratch AS tHiRd
 	COPY --from=second /hi2 /hi3
+	COPY --from=1 /hi2 /hi3
+
+	FROM scratch
+	COPY --from=thIrD /hi3 /hi4
+	COPY --from=third /hi3 /hi4
+	COPY --from=2 /hi3 /hi4
 	`
 	stages, _, err := Parse([]byte(dockerfile))
 	if err != nil {
@@ -209,11 +215,14 @@ func Test_resolveStages(t *testing.T) {
 		if index == 0 {
 			continue
 		}
-		copyCmd := stage.Commands[0].(*instructions.CopyCommand)
 		expectedStage := strconv.Itoa(index - 1)
-		if copyCmd.From != expectedStage {
-			t.Fatalf("unexpected copy command: %s resolved to stage %s, expected %s", copyCmd.String(), copyCmd.From, expectedStage)
+		for _, command := range stage.Commands {
+			copyCmd := command.(*instructions.CopyCommand)
+			if copyCmd.From != expectedStage {
+				t.Fatalf("unexpected copy command: %s resolved to stage %s, expected %s", copyCmd.String(), copyCmd.From, expectedStage)
+			}
 		}
+
 	}
 }
 
