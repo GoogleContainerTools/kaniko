@@ -141,7 +141,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "getting tag for destination")
 		}
 		if opts.ImageNameDigestFile != "" {
-			imageName := []byte(destination + "@")
+			imageName := []byte(destRef.Repository.Name() + "@")
 			builder.Write(append(imageName, digestByteArray...))
 			builder.WriteString("\n")
 		}
