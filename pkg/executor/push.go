@@ -96,7 +96,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	return nil
 }
 
-func getDigest(image v1.Image) ([]byte, error){
+func getDigest(image v1.Image) ([]byte, error) {
 	digest, err := image.Digest()
 	if err != nil {
 		return nil, err

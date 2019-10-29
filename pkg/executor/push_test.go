@@ -205,19 +205,19 @@ func TestImageNameDigestFile(t *testing.T) {
 	}
 
 	opts := config.KanikoOptions{
-		NoPush:        true,
-		Destinations: []string{"gcr.io/foo/bar:latest", "bob/image"},
-		ImageNameDigestFile: "tmpFile",	
+		NoPush:              true,
+		Destinations:        []string{"gcr.io/foo/bar:latest", "bob/image"},
+		ImageNameDigestFile: "tmpFile",
 	}
 
 	defer os.Remove("tmpFile")
-	
+
 	if err := DoPush(image, &opts); err != nil {
 		t.Fatalf("could not push image: %s", err)
 	}
 
-	want := []byte("gcr.io/foo/bar@" + digest.String() + "\nindex.docker.io/bob/image@" + digest.String() +"\n")
-	
+	want := []byte("gcr.io/foo/bar@" + digest.String() + "\nindex.docker.io/bob/image@" + digest.String() + "\n")
+
 	got, err := ioutil.ReadFile("tmpFile")
 
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
