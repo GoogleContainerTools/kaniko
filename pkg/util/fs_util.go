@@ -84,9 +84,9 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 
 	for i, l := range layers {
 		if mediaType, err := l.MediaType(); err == nil {
-			logrus.Debugf("Extracting layer %d of media type %s", mediaType)
+			logrus.Tracef("Extracting layer %d of media type %s", mediaType)
 		} else {
-			logrus.Debugf("Extracting layer %d", i)
+			logrus.Tracef("Extracting layer %d", i)
 		}
 
 		r, err := l.Uncompressed()
@@ -206,10 +206,10 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	}
 	switch hdr.Typeflag {
 	case tar.TypeReg:
-		logrus.Debugf("creating file %s", path)
+		logrus.Tracef("creating file %s", path)
 		// It's possible a file is in the tar before its directory.
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+			logrus.Tracef("base %s for file %s does not exist. Creating.", base, path)
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return err
 			}
@@ -233,19 +233,19 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 		currFile.Close()
 	case tar.TypeDir:
-		logrus.Debugf("creating dir %s", path)
+		logrus.Tracef("creating dir %s", path)
 		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
 
 	case tar.TypeLink:
-		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
+		logrus.Tracef("link from %s to %s", hdr.Linkname, path)
 		abs, err := filepath.Abs(hdr.Linkname)
 		if err != nil {
 			return err
 		}
 		if CheckWhitelist(abs) {
-			logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
+			logrus.Tracef("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
 		// The base directory for a link may not exist before it is created.
@@ -265,7 +265,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 
 	case tar.TypeSymlink:
-		logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
+		logrus.Tracef("symlink from %s to %s", hdr.Linkname, path)
 		// The base directory for a symlink may not exist before it is created.
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
@@ -327,27 +327,27 @@ func DetectFilesystemWhitelist(path string) error {
 	reader := bufio.NewReader(f)
 	for {
 		line, err := reader.ReadString('\n')
-		logrus.Debugf("Read the following line from %s: %s", path, line)
+		logrus.Tracef("Read the following line from %s: %s", path, line)
 		if err != nil && err != io.EOF {
 			return err
 		}
 		lineArr := strings.Split(line, " ")
 		if len(lineArr) < 5 {
 			if err == io.EOF {
-				logrus.Debugf("Reached end of file %s", path)
+				logrus.Tracef("Reached end of file %s", path)
 				break
 			}
 			continue
 		}
 		if lineArr[4] != constants.RootDir {
-			logrus.Debugf("Appending %s from line: %s", lineArr[4], line)
+			logrus.Tracef("Appending %s from line: %s", lineArr[4], line)
 			whitelist = append(whitelist, WhitelistEntry{
 				Path:            lineArr[4],
 				PrefixMatchOnly: false,
 			})
 		}
 		if err == io.EOF {
-			logrus.Debugf("Reached end of file %s", path)
+			logrus.Tracef("Reached end of file %s", path)
 			break
 		}
 	}
@@ -422,7 +422,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
 	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
-		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
 		}
@@ -639,4 +639,18 @@ func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
 	// manually set permissions on file, since the default umask (022) will interfere
 	// Must chmod after chown because chown resets the file mode.
 	return os.Chmod(path, mode)
+}
+
+// CreateTargetTarfile creates target tar file for downloading the context file.
+// Make directory if directory does not exist
+func CreateTargetTarfile(tarpath string) (*os.File, error) {
+	baseDir := filepath.Dir(tarpath)
+	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
+		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, tarpath)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(tarpath)
+
 }
