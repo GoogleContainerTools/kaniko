@@ -21,13 +21,14 @@ import (
 	"path/filepath"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 type CopyCommand struct {
@@ -133,4 +134,47 @@ func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerf
 
 func (c *CopyCommand) MetadataOnly() bool {
 	return false
+}
+
+func (c *CopyCommand) RequiresUnpackedFS() bool {
+	return true
+}
+
+func (c *CopyCommand) ShouldCacheOutput() bool {
+	return true
+}
+
+// CacheCommand returns true since this command should be cached
+func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
+
+	return &CachingCopyCommand{
+		img: img,
+		cmd: c.cmd,
+	}
+}
+
+type CachingCopyCommand struct {
+	BaseCommand
+	img            v1.Image
+	extractedFiles []string
+	cmd            *instructions.CopyCommand
+}
+
+func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Infof("Found cached layer, extracting to filesystem")
+	var err error
+	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
+	if err != nil {
+		return errors.Wrap(err, "extracting fs from image")
+	}
+	return nil
+}
+
+func (cr *CachingCopyCommand) FilesToSnapshot() []string {
+	return cr.extractedFiles
+}
+
+func (cr *CachingCopyCommand) String() string {
+	return cr.cmd.String()
 }
