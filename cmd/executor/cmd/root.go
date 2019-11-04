@@ -54,20 +54,22 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := util.ConfigureLogging(logLevel); err != nil {
-			return err
-		}
-		if !opts.NoPush && len(opts.Destinations) == 0 {
-			return errors.New("You must provide --destination, or use --no-push")
-		}
-		if err := cacheFlagsValid(); err != nil {
-			return errors.Wrap(err, "cache flags invalid")
-		}
-		if err := resolveSourceContext(); err != nil {
-			return errors.Wrap(err, "error resolving source context")
-		}
-		if err := resolveDockerfilePath(); err != nil {
-			return errors.Wrap(err, "error resolving dockerfile path")
+		if cmd.Use == "executor" {
+			if err := util.ConfigureLogging(logLevel); err != nil {
+				return err
+			}
+			if !opts.NoPush && len(opts.Destinations) == 0 {
+				return errors.New("You must provide --destination, or use --no-push")
+			}
+			if err := cacheFlagsValid(); err != nil {
+				return errors.Wrap(err, "cache flags invalid")
+			}
+			if err := resolveSourceContext(); err != nil {
+				return errors.Wrap(err, "error resolving source context")
+			}
+			if err := resolveDockerfilePath(); err != nil {
+				return errors.Wrap(err, "error resolving dockerfile path")
+			}
 		}
 		return nil
 	},
@@ -80,6 +82,9 @@ var RootCmd = &cobra.Command{
 		}
 		if err := executor.CheckPushPermissions(opts); err != nil {
 			exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
+		}
+		if err := resolveRelativePaths(); err != nil {
+			exit(errors.Wrap(err, "error resolving relative paths to absolute paths"))
 		}
 		if err := os.Chdir("/"); err != nil {
 			exit(errors.Wrap(err, "error changing to root dir"))
@@ -165,7 +170,7 @@ func cacheFlagsValid() error {
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
 func resolveDockerfilePath() error {
-	if match, _ := regexp.MatchString("^https?://", opts.DockerfilePath); match {
+	if isURL(opts.DockerfilePath) {
 		return nil
 	}
 	if util.FilepathExists(opts.DockerfilePath) {
@@ -228,7 +233,44 @@ func resolveSourceContext() error {
 	return nil
 }
 
+func resolveRelativePaths() error {
+	optsPaths := []*string{
+		&opts.DockerfilePath,
+		&opts.SrcContext,
+		&opts.CacheDir,
+		&opts.TarPath,
+		&opts.DigestFile,
+	}
+
+	for _, p := range optsPaths {
+		if path := *p; shdSkip(path) {
+			logrus.Debugf("Skip resolving path %s", path)
+			continue
+		}
+
+		// Resolve relative path to absolute path
+		var err error
+		relp := *p // save original relative path
+		if *p, err = filepath.Abs(*p); err != nil {
+			return errors.Wrapf(err, "Couldn't resolve relative path %s to an absolute path", *p)
+		}
+		logrus.Debugf("Resolved relative path %s to %s", relp, *p)
+	}
+	return nil
+}
+
 func exit(err error) {
 	fmt.Println(err)
 	os.Exit(1)
+}
+
+func isURL(path string) bool {
+	if match, _ := regexp.MatchString("^https?://", path); match {
+		return true
+	}
+	return false
+}
+
+func shdSkip(path string) bool {
+	return path == "" || isURL(path) || filepath.IsAbs(path)
 }

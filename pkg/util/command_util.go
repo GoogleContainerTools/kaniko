@@ -37,13 +37,7 @@ import (
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
-		var resolved string
-		var err error
-		if IsSrcRemoteFileURL(value) {
-			resolved, err = ResolveEnvironmentReplacement(value, envs, false)
-		} else {
-			resolved, err = ResolveEnvironmentReplacement(value, envs, isFilepath)
-		}
+		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -65,7 +59,8 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool) (string, error) {
 	shlex := shell.NewLex(parser.DefaultEscapeToken)
 	fp, err := shlex.ProcessWord(value, envs)
-	if !isFilepath {
+	// Check after replacement if value is a remote URL
+	if !isFilepath || IsSrcRemoteFileURL(fp) {
 		return fp, err
 	}
 	if err != nil {

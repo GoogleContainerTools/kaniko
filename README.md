@@ -18,47 +18,53 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [How does kaniko work?](#how-does-kaniko-work)
-- [Known Issues](#known-issues)
-- [Demo](#demo)
-- [Using kaniko](#using-kaniko)
-  - [kaniko Build Contexts](#kaniko-build-contexts)
-  - [Running kaniko](#running-kaniko)
-    - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
-      - [Kubernetes secret](#kubernetes-secret)
-    - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-    - [Running kaniko in Docker](#running-kaniko-in-docker)
-  - [Caching](#caching)
-    - [Caching Layers](#caching-layers)
-    - [Caching Base Images](#caching-base-images)
-  - [Pushing to Different Registries](#pushing-to-different-registries)
-    - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
-  - [Additional Flags](#additional-flags)
-    - [--build-arg](#--build-arg)
-    - [--cache](#--cache)
-    - [--cache-dir](#--cache-dir)
-    - [--cache-repo](#--cache-repo)
-    - [--cleanup](#--cleanup)
-    - [--digest-file](#--digest-file)
-    - [--insecure](#--insecure)
-    - [--insecure-pull](#--insecure-pull)
-    - [--no-push](#--no-push)
-    - [--oci-layout-path](#--oci-layout-path)
-    - [--reproducible](#--reproducible)
-    - [--single-snapshot](#--single-snapshot)
-    - [--snapshotMode](#--snapshotmode)
-    - [--skip-tls-verify](#--skip-tls-verify)
-    - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
-    - [--target](#--target)
-    - [--tarPath](#--tarpath)
-    - [--verbosity](#--verbosity)
-  - [Debug Image](#debug-image)
-- [Security](#security)
-- [Comparison with Other Tools](#comparison-with-other-tools)
-- [Community](#community)
-- [Limitations](#limitations)
-  - [mtime and snapshotting](#mtime-and-snapshotting)
+- [kaniko - Build Images In Kubernetes](#kaniko---build-images-in-kubernetes)
+  - [How does kaniko work?](#how-does-kaniko-work)
+  - [Known Issues](#known-issues)
+  - [Demo](#demo)
+  - [Tutorial](#tutorial)
+  - [Using kaniko](#using-kaniko)
+    - [kaniko Build Contexts](#kaniko-build-contexts)
+    - [Using Private Git Repository](#using-private-git-repository)
+    - [Running kaniko](#running-kaniko)
+      - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+        - [Kubernetes secret](#kubernetes-secret)
+      - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
+      - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
+      - [Running kaniko in Docker](#running-kaniko-in-docker)
+    - [Caching](#caching)
+      - [Caching Layers](#caching-layers)
+      - [Caching Base Images](#caching-base-images)
+    - [Pushing to Different Registries](#pushing-to-different-registries)
+      - [Pushing to Docker Hub](#pushing-to-docker-hub)
+      - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+    - [Additional Flags](#additional-flags)
+      - [--build-arg](#build-arg)
+      - [--cache](#cache)
+      - [--cache-dir](#cache-dir)
+      - [--cache-repo](#cache-repo)
+      - [--digest-file](#digest-file)
+      - [--oci-layout-path](#oci-layout-path)
+      - [--insecure-registry](#insecure-registry)
+      - [--skip-tls-verify-registry](#skip-tls-verify-registry)
+      - [--cleanup](#cleanup)
+      - [--insecure](#insecure)
+      - [--insecure-pull](#insecure-pull)
+      - [--no-push](#no-push)
+      - [--reproducible](#reproducible)
+      - [--single-snapshot](#single-snapshot)
+      - [--skip-tls-verify](#skip-tls-verify)
+      - [--skip-tls-verify-pull](#skip-tls-verify-pull)
+      - [--snapshotMode](#snapshotmode)
+      - [--target](#target)
+      - [--tarPath](#tarpath)
+      - [--verbosity](#verbosity)
+    - [Debug Image](#debug-image)
+  - [Security](#security)
+  - [Comparison with Other Tools](#comparison-with-other-tools)
+  - [Community](#community)
+  - [Limitations](#limitations)
+    - [mtime and snapshotting](#mtime-and-snapshotting)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -77,6 +83,10 @@ kaniko does not support building Windows containers.
 
 ![Demo](/docs/demo.gif)
 
+## Tutorial
+
+For a detailed example of kaniko with local storage, please refer to a [getting started tutorial](./docs/tutorial.md).
+
 ## Using kaniko
 
 To use kaniko to build and push an image for you, you will need:
@@ -93,6 +103,7 @@ You will need to store your build context in a place that kaniko can access.
 Right now, kaniko supports these storage solutions:
 - GCS Bucket
 - S3 Bucket
+- Azure Blob Storage
 - Local Directory
 - Git Repository
 
@@ -118,13 +129,17 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 
 |  Source | Prefix  | Example |
 |---------|---------|---------|
-| Local Directory  | dir://[path to a directory in the kaniko container] | `dir:///workspace` |
-| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]                | `gs://kaniko-bucket/path/to/context.tar.gz` |
-| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]                | `s3://kaniko-bucket/path/to/context.tar.gz` |
-| Git Repository   | git://[repository url][#reference]                  | `git://github.com/acme/myproject.git#refs/heads/mybranch` |
+| Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
+| GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
+| S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
+| Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
+| Git Repository    | git://[repository url][#reference]                              | `git://github.com/acme/myproject.git#refs/heads/mybranch`     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
+
+### Using Azure Blob Storage
+If you are using Azure Blob Storage for context file, you will need to pass [Azure Storage Account Access Key](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string?toc=%2fazure%2fstorage%2fblobs%2ftoc.json) as an evironment variable named `AZURE_STORAGE_ACCESS_KEY` through Kubernetes Secrets
 
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
@@ -245,6 +260,17 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
   ```
 
+_NOTE: `run_in_docker.sh` expects a path to a 
+Dockerfile relative to the absolute path of the build context._
+
+An example run, specifying the Dockerfile in the container directory `/workspace`, the build
+context in the local directory `/home/user/kaniko-project`, and a Google Container Registry
+as a remote image destination:
+
+```shell
+./run_in_docker.sh /workspace/Dockerfile /home/user/kaniko-project gcr.io//<project-id>/<tag>
+```
+
 ### Caching
 
 #### Caching Layers
@@ -277,7 +303,29 @@ See the `examples` directory for how to use with kubernetes clusters and persist
 
 kaniko uses Docker credential helpers to push images to a registry.
 
-kaniko comes with support for GCR and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
+kaniko comes with support for GCR, Docker `config.json` and Amazon ECR, but configuring another credential helper should allow pushing to a different registry.
+
+#### Pushing to Docker Hub
+
+Get your docker registry user and password encoded in base64
+
+    echo USER:PASSWORD | base64
+
+Create a `config.json` file with your Docker registry url and the previous generated base64 string
+
+```
+{
+	"auths": {
+		"https://index.docker.io/v1/": {
+			"auth": "xxxxxxxxxxxxxxx"
+		}
+	}
+}
+```
+
+Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
+
+    docker run -ti --rm -v `pwd`:/workspace -v config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
 
 #### Pushing to Amazon ECR
 
@@ -430,10 +478,6 @@ Set this flag to skip TLS certificate validation when pushing to a registry. It 
 
 Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
-#### --skip-tls-verify-pull
-
-Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
-
 #### --snapshotMode
 
 You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
@@ -447,6 +491,7 @@ Set this flag to indicate which build stage is the target build stage.
 #### --tarPath
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+You need to set `--destination` as well (for example `--destination=image`).
 
 #### --verbosity
 

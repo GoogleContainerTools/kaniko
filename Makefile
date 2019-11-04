@@ -14,11 +14,10 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 11
+VERSION_MINOR ?= 13
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
-VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 SHELL := /bin/bash
 GOOS ?= $(shell go env GOOS)
@@ -28,6 +27,7 @@ PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
 
 REPOPATH ?= $(ORG)/$(PROJECT)
+VERSION_PACKAGE = $(REPOPATH)/pkg/version
 
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_LDFLAGS := '-extldflags "-static"
@@ -38,6 +38,7 @@ GO_LDFLAGS += '
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
+BUILD_ARG ?= 
 
 out/executor: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(EXECUTOR_PACKAGE)
@@ -55,6 +56,7 @@ integration-test:
 
 .PHONY: images
 images:
-	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker build -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
-	docker build -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build ${BUILD_ARG} -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+

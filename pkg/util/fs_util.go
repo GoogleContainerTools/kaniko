@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -82,11 +83,17 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 	extractedFiles := []string{}
 
 	for i, l := range layers {
-		logrus.Debugf("Extracting layer %d", i)
+		if mediaType, err := l.MediaType(); err == nil {
+			logrus.Tracef("Extracting layer %d of media type %s", mediaType)
+		} else {
+			logrus.Tracef("Extracting layer %d", i)
+		}
+
 		r, err := l.Uncompressed()
 		if err != nil {
 			return nil, err
 		}
+		defer r.Close()
 		tr := tar.NewReader(r)
 		for {
 			hdr, err := tr.Next()
@@ -94,7 +101,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				break
 			}
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, fmt.Sprintf("error reading tar %d", i))
 			}
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
@@ -121,6 +128,10 @@ func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
 		if CheckWhitelist(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s whitelisted, but not exists", path)
+				return nil
+			}
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -136,6 +147,14 @@ func DeleteFilesystem() error {
 		}
 		return os.RemoveAll(path)
 	})
+}
+
+// isExists returns true if path exists
+func isExist(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	}
+	return false
 }
 
 // ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
@@ -193,6 +212,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		fi, err := os.Stat(dir)
 		if os.IsNotExist(err) || !fi.IsDir() {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return err
 			}
@@ -216,19 +236,19 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 		currFile.Close()
 	case tar.TypeDir:
-		logrus.Debugf("creating dir %s", path)
+		logrus.Tracef("creating dir %s", path)
 		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
 
 	case tar.TypeLink:
-		logrus.Debugf("link from %s to %s", hdr.Linkname, path)
+		logrus.Tracef("link from %s to %s", hdr.Linkname, path)
 		abs, err := filepath.Abs(hdr.Linkname)
 		if err != nil {
 			return err
 		}
 		if CheckWhitelist(abs) {
-			logrus.Debugf("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
+			logrus.Tracef("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
 		// The base directory for a link may not exist before it is created.
@@ -248,7 +268,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 
 	case tar.TypeSymlink:
-		logrus.Debugf("symlink from %s to %s", hdr.Linkname, path)
+		logrus.Tracef("symlink from %s to %s", hdr.Linkname, path)
 		// The base directory for a symlink may not exist before it is created.
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
@@ -310,27 +330,27 @@ func DetectFilesystemWhitelist(path string) error {
 	reader := bufio.NewReader(f)
 	for {
 		line, err := reader.ReadString('\n')
-		logrus.Debugf("Read the following line from %s: %s", path, line)
+		logrus.Tracef("Read the following line from %s: %s", path, line)
 		if err != nil && err != io.EOF {
 			return err
 		}
 		lineArr := strings.Split(line, " ")
 		if len(lineArr) < 5 {
 			if err == io.EOF {
-				logrus.Debugf("Reached end of file %s", path)
+				logrus.Tracef("Reached end of file %s", path)
 				break
 			}
 			continue
 		}
 		if lineArr[4] != constants.RootDir {
-			logrus.Debugf("Appending %s from line: %s", lineArr[4], line)
+			logrus.Tracef("Appending %s from line: %s", lineArr[4], line)
 			whitelist = append(whitelist, WhitelistEntry{
 				Path:            lineArr[4],
 				PrefixMatchOnly: false,
 			})
 		}
 		if err == io.EOF {
-			logrus.Debugf("Reached end of file %s", path)
+			logrus.Tracef("Reached end of file %s", path)
 			break
 		}
 	}
@@ -348,9 +368,6 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		}
 		if CheckWhitelist(path) && !HasFilepathPrefix(path, root, false) {
 			return nil
-		}
-		if err != nil {
-			return err
 		}
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
@@ -408,7 +425,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
 	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
-		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
 		}
@@ -544,11 +561,15 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
-func GetExcludedFiles(buildcontext string) error {
-	path := filepath.Join(buildcontext, ".dockerignore")
+func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
+	path := dockerfilepath + ".dockerignore"
+	if !FilepathExists(path) {
+		path = filepath.Join(buildcontext, ".dockerignore")
+	}
 	if !FilepathExists(path) {
 		return nil
 	}
+	logrus.Infof("Using dockerignore file: %v", path)
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return errors.Wrap(err, "parsing .dockerignore")
@@ -578,10 +599,10 @@ func excludeFile(path, buildcontext string) bool {
 
 // HasFilepathPrefix checks  if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
-	path = filepath.Clean(path)
 	prefix = filepath.Clean(prefix)
-	pathArray := strings.Split(path, "/")
 	prefixArray := strings.Split(prefix, "/")
+	path = filepath.Clean(path)
+	pathArray := strings.SplitN(path, "/", len(prefixArray)+1)
 
 	if len(pathArray) < len(prefixArray) {
 		return false
@@ -621,4 +642,18 @@ func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
 	// manually set permissions on file, since the default umask (022) will interfere
 	// Must chmod after chown because chown resets the file mode.
 	return os.Chmod(path, mode)
+}
+
+// CreateTargetTarfile creates target tar file for downloading the context file.
+// Make directory if directory does not exist
+func CreateTargetTarfile(tarpath string) (*os.File, error) {
+	baseDir := filepath.Dir(tarpath)
+	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
+		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, tarpath)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(tarpath)
+
 }
