@@ -292,7 +292,7 @@ COPY --from=kaniko /kaniko /kaniko
 ...
 ```
 
-2. Install kaniko library to your docker image.
+2. Install `Kaniko` library to your docker image.
 ```bash
 ...
 pip install pykaniko
