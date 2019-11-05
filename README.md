@@ -32,6 +32,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
       - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
       - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
       - [Running kaniko in Docker](#running-kaniko-in-docker)
+      - [Running kaniko from Python](#running-kaniko-from-python)
     - [Caching](#caching)
       - [Caching Layers](#caching-layers)
       - [Caching Base Images](#caching-base-images)
@@ -152,6 +153,7 @@ There are several different ways to deploy and run kaniko:
 - [In gVisor](#running-kaniko-in-gvisor)
 - [In Google Cloud Build](#running-kaniko-in-google-cloud-build)
 - [In Docker](#running-kaniko-in-docker)
+- [From Python](#running-kaniko-from-python)
 
 #### Running kaniko in a Kubernetes cluster
 
@@ -270,6 +272,61 @@ as a remote image destination:
 ```shell
 ./run_in_docker.sh /workspace/Dockerfile /home/user/kaniko-project gcr.io//<project-id>/<tag>
 ```
+
+#### Running kaniko from Python
+
+Requirements:
+- [Python3](https://www.python.org)
+- [pykaniko](https://github.com/nxexox/pykaniko)
+
+For `pykaniko` to work, you need to have kaniko executor itself on disk. You can use the Docker image with kaniko as a basis for copying kaniko and use it in your application.
+
+1. Get `Kaniko` executor. Dockerfile example:
+```Dockerfile
+FROM gcr.io/kaniko-project/executor:v0.12.0 AS kaniko
+FROM <your docker repo>
+
+ENV DOCKER_CONFIG /kaniko/.docker
+
+COPY --from=kaniko /kaniko /kaniko
+...
+```
+
+2. Install kaniko library to your docker image.
+```bash
+...
+pip install pykaniko
+...
+```
+
+3. Run `Kaniko` from `Python`.
+```python
+from kaniko import Kaniko, KanikoSnapshotMode
+
+kaniko = Kaniko()
+kaniko.dockerfile = '/path/to/Dockerfile'
+kaniko.no_push = True
+kaniko.kaniko_path = 'you custom path to Kaniko executor folder'
+kaniko.snapshot_mode = KanikoSnapshotMode.full
+
+build_logs = kaniko.build()  # List[str]
+```
+Another way:
+```python
+from kaniko import Kaniko, KanikoSnapshotMode
+
+kaniko = Kaniko()
+build_logs = kaniko.build(
+    docker_registry_uri='https://index.docker.io/v1/',
+    registry_username='username',
+    registry_password='password',
+    destination='path-to-repo:tag',
+    dockerfile='/path/to/Dockerfile',
+    snapshot_mode=KanikoSnapshotMode.full,
+)
+```
+
+More information on the python library: https://github.com/nxexox/pykaniko
 
 ### Caching
 
