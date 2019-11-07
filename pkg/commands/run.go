@@ -138,14 +138,17 @@ func addDefaultHOME(u string, envs []string) []string {
 
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
-	home := fmt.Sprintf("%s=/", constants.HOME)
+	home := "/"
 	userObj, err := userLookup(u)
 	if err == nil {
-		u = userObj.Username
-		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
+		if userObj.HomeDir != "" {
+			home = userObj.HomeDir
+		} else {
+			home = fmt.Sprintf("/home/%s", userObj.Username)
+		}
 	}
 
-	return append(envs, home)
+	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, home))
 }
 
 // String returns some information about the command for the image config
