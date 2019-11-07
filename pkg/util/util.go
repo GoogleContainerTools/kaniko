@@ -20,9 +20,9 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -32,7 +32,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
@@ -141,4 +140,12 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
+}
+
+// CurrentPlatform returns the v1.Platform on which the code runs
+func currentPlatform() v1.Platform {
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
 }
