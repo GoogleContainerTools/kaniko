@@ -43,7 +43,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME isn't set, user isn't set",
+			name: "HOME not set, user not set",
 			user: "",
 			initial: []string{
 				"PATH=/something/else",
@@ -54,7 +54,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME isn't set, user and homedir for the user set",
+			name: "HOME not set, user and homedir for the user set",
 			user: "www-add",
 			mockUser: &user.User{
 				Username: "www-add",
@@ -65,11 +65,11 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/home/some-other",
+				"HOME=/home/www-add",
 			},
 		},
 		{
-			name: "HOME isn't set, user set",
+			name: "HOME not set, user set",
 			user: "www-add",
 			mockUser: &user.User{
 				Username: "www-add",
@@ -83,7 +83,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME isn't set, user is set",
+			name: "HOME not set, user is set",
 			user: "newuser",
 			mockUser: &user.User{
 				Username: "newuser",
@@ -97,7 +97,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME isn't set, user is set to root",
+			name: "HOME not set, user is set to root",
 			user: "root",
 			mockUser: &user.User{
 				Username: "root",

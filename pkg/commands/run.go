@@ -141,10 +141,7 @@ func addDefaultHOME(u string, envs []string) []string {
 	home := fmt.Sprintf("%s=/", constants.HOME)
 	userObj, err := userLookup(u)
 	if err == nil {
-		u = userObj.HomeDir
-		if u == "" {
-			u = userObj.Username
-		}
+		u = userObj.Username
 		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
 	}
 
