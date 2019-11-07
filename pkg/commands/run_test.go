@@ -58,7 +58,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			user: "www-add",
 			mockUser: &user.User{
 				Username: "www-add",
-				HomeDir: "some-other",
+				HomeDir:  "some-other",
 			},
 			initial: []string{
 				"PATH=/something/else",
@@ -113,8 +113,8 @@ func Test_addDefaultHOME(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			userLookup = func(username string) ( *user.User,  error) { return test.mockUser, nil}
-			defer func() {userLookup = user.Lookup}()
+			userLookup = func(username string) (*user.User, error) { return test.mockUser, nil }
+			defer func() { userLookup = user.Lookup }()
 			actual := addDefaultHOME(test.user, test.initial)
 			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
 		})

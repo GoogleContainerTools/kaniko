@@ -84,7 +84,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 
 	for i, l := range layers {
 		if mediaType, err := l.MediaType(); err == nil {
-			logrus.Tracef("Extracting layer %d of media type %s", mediaType)
+			logrus.Tracef("Extracting layer %d of media type %s", i, mediaType)
 		} else {
 			logrus.Tracef("Extracting layer %d", i)
 		}
