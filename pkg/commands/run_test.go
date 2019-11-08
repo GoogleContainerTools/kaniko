@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"os/user"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -25,6 +26,7 @@ func Test_addDefaultHOME(t *testing.T) {
 	tests := []struct {
 		name     string
 		user     string
+		mockUser *user.User
 		initial  []string
 		expected []string
 	}{
@@ -41,7 +43,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME isn't set, user isn't set",
+			name: "HOME not set and user not set",
 			user: "",
 			initial: []string{
 				"PATH=/something/else",
@@ -52,19 +54,54 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME isn't set, user is set",
-			user: "newuser",
+			name: "HOME not set and user and homedir for the user set",
+			user: "www-add",
+			mockUser: &user.User{
+				Username: "www-add",
+				HomeDir:  "/home/some-other",
+			},
 			initial: []string{
 				"PATH=/something/else",
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/",
+				"HOME=/home/some-other",
 			},
 		},
 		{
-			name: "HOME isn't set, user is set to root",
+			name: "HOME not set and user set",
+			user: "www-add",
+			mockUser: &user.User{
+				Username: "www-add",
+			},
+			initial: []string{
+				"PATH=/something/else",
+			},
+			expected: []string{
+				"PATH=/something/else",
+				"HOME=/home/www-add",
+			},
+		},
+		{
+			name: "HOME not set and user is set",
+			user: "newuser",
+			mockUser: &user.User{
+				Username: "newuser",
+			},
+			initial: []string{
+				"PATH=/something/else",
+			},
+			expected: []string{
+				"PATH=/something/else",
+				"HOME=/home/newuser",
+			},
+		},
+		{
+			name: "HOME not set and user is set to root",
 			user: "root",
+			mockUser: &user.User{
+				Username: "root",
+			},
 			initial: []string{
 				"PATH=/something/else",
 			},
@@ -76,6 +113,8 @@ func Test_addDefaultHOME(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			userLookup = func(username string) (*user.User, error) { return test.mockUser, nil }
+			defer func() { userLookup = user.Lookup }()
 			actual := addDefaultHOME(test.user, test.initial)
 			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
 		})
