@@ -1,3 +1,24 @@
+# v0.14.0 Release - 2019-11-08
+
+## New Features
+* Added --image-name-with-digest flag [#841](https://github.com/GoogleContainerTools/kaniko/pull/841)
+* Add support to download context file from Azure Blob Storage [#816](https://github.com/GoogleContainerTools/kaniko/pull/816)
+* Add BUILD_ARGs to ease use of proxy [#810](https://github.com/GoogleContainerTools/kaniko/pull/810)
+
+## Bug Fixes
+* fix tests for default home [#824](https://github.com/GoogleContainerTools/kaniko/pull/824)
+* Issue #439 Strip out double quotes in ARG value [#834](https://github.com/GoogleContainerTools/kaniko/pull/834)
+* Fixes caching with COPY command [#773](https://github.com/GoogleContainerTools/kaniko/pull/773)
+* 828: clean up docker doc, fix context var in run cmd [#829](https://github.com/GoogleContainerTools/kaniko/pull/829)
+* fix build_args in MakeFile, have Travis run make images to preven issue in future [#821](https://github.com/GoogleContainerTools/kaniko/pull/821)
+
+## Updates and Refactors
+* changing debug to trace [#825](https://github.com/GoogleContainerTools/kaniko/pull/825)
+
+## Documentation
+* Details about --tarPath usage improved [#811](https://github.com/GoogleContainerTools/kaniko/pull/811)
+
+
 # v0.13.0 Release - 2019-10-04
 
 ## New Features
