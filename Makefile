@@ -54,6 +54,10 @@ test: out/executor
 integration-test:
 	@ ./integration-test.sh
 
+.PHONY: debug-image
+debug-image:
+	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+
 .PHONY: images
 images:
 	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .

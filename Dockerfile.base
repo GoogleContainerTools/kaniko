@@ -1,0 +1,11 @@
+FROM debian:jessie-slim
+
+RUN set -x \
+  && apt-get -y update \
+  && echo '\nAPT::Install-Recommends "false";\nAPT::Install-Suggests "false";\n' >> /etc/apt/apt.conf \
+  && echo "deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/jessie-backports.list \
+  && apt-get -o Acquire::Check-Valid-Until=false -y update \
+  && apt-get -y -q dist-upgrade \
+  && apt-get -y -t jessie-backports install systemd \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*

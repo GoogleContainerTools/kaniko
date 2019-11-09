@@ -72,6 +72,7 @@ var excluded []string
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
 func GetFSFromImage(root string, img v1.Image) ([]string, error) {
+	logrus.Info("meow meow meow emow meow")
 	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return nil, err
 	}
@@ -95,6 +96,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 		}
 		defer r.Close()
 		tr := tar.NewReader(r)
+		logrus.Info("tar meow meow meow")
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {
@@ -103,6 +105,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("error reading tar %d", i))
 			}
+			logrus.Infof("next hdr name %s", hdr.Name)
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
@@ -114,8 +117,9 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				}
 				continue
 			}
+			logrus.Infof("First found it %s FileInfo %v Mode %v IsDir %t", path, hdr.FileInfo(), hdr.FileInfo().Mode(), hdr.FileInfo().IsDir())
 			if err := extractFile(root, hdr, tr); err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "error extracting file")
 			}
 			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
@@ -195,6 +199,9 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	uid := hdr.Uid
 	gid := hdr.Gid
 
+	if path == "/usr/share/bug/systemd" {
+		logrus.Infof("found it %s FileInfo %v Mode %v IsDir %t", path, hdr.FileInfo(), mode, hdr.FileInfo().IsDir())
+	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -212,9 +219,16 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		fi, err := os.Stat(dir)
 		if os.IsNotExist(err) || !fi.IsDir() {
 			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+			if dir == "/usr/share/bug/systemd" {
+				logrus.Info("thats it we're here")
+				if dir[len(dir)-1] != '/' {
+					logrus.Info("it was missing the trailing /")
+					dir = string(append([]byte(dir), '/'))
+				}
+			}
 
 			if err := os.MkdirAll(dir, 0755); err != nil {
-				return err
+				return errors.Wrapf(err, "Couldn't create directory path %s dir %s", path, dir)
 			}
 		}
 		// Check if something already exists at path (symlinks etc.)
@@ -226,19 +240,43 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 		currFile, err := os.Create(path)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "error creating %s", path)
 		}
 		if _, err = io.Copy(currFile, tr); err != nil {
-			return err
+			return errors.Wrapf(err, "error copying %s", path)
 		}
 		if err = setFilePermissions(path, mode, uid, gid); err != nil {
-			return err
+			return errors.Wrapf(err, "error setting permissions %s", path)
 		}
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Tracef("creating dir %s", path)
+		if path == "/usr/share/bug/systemd" {
+			logrus.Info("thats it we're here")
+			if path[len(path)-1] != '/' {
+				logrus.Info("it was missing the trailing /")
+				//path = string(append([]byte(path), '/'))
+			}
+			if f, err := os.Stat(path); err == nil {
+				logrus.Infof("something exists at path %s IsDir %b Mode %d", path, f.IsDir(), f.Mode())
+
+				if files, err := ioutil.ReadDir(path); err != nil {
+					logrus.Infof("couldn't read %s, %s", path, err)
+				} else {
+					for _, f := range files {
+						logrus.Infof("file %s", f.Name)
+					}
+				}
+			} else {
+				if os.IsNotExist(err) {
+					logrus.Infof("directory at path %s does not exist", path)
+				} else {
+					logrus.Infof("error checking if directory exists %s", err)
+				}
+			}
+		}
 		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
-			return err
+			return errors.Wrapf(err, "mkdirAllWithPermissions Couldn't create directory at path %s", path)
 		}
 
 	case tar.TypeLink:
@@ -625,7 +663,7 @@ func Volumes() []string {
 
 func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int) error {
 	if err := os.MkdirAll(path, mode); err != nil {
-		return err
+		return errors.Wrapf(err, "error making directory")
 	}
 	if err := os.Chown(path, uid, gid); err != nil {
 		return err
