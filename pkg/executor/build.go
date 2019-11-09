@@ -212,6 +212,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	if shouldUnpack {
+		logrus.Info("meow meow meow meow")
 		t := timing.Start("FS Unpacking")
 		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
 			return err
