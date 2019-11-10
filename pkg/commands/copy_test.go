@@ -122,6 +122,10 @@ func TestCopyExecuteCmd(t *testing.T) {
 			buildArgs := copySetUpBuildArgs()
 			dest := cfg.WorkingDir + "/" + test.sourcesAndDest[len(test.sourcesAndDest)-1]
 
+			if cmd.ShouldCacheOutput() != (cmd.cmd.From == "") {
+				t.Error()
+			}
+
 			err := cmd.ExecuteCommand(cfg, buildArgs)
 			if err != nil {
 				t.Error()

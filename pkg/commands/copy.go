@@ -140,8 +140,11 @@ func (c *CopyCommand) RequiresUnpackedFS() bool {
 	return true
 }
 
+// ShouldCacheOutput returns conditional for cached or not the output
+// Due to multistage dockerfile, we shouldn't cache output because of most of time the output is a blobb compiled by preveous stage,
+// Also glob was stored in local fs by previous stage command (may be cached before)
 func (c *CopyCommand) ShouldCacheOutput() bool {
-	return true
+	return c.cmd.From == ""
 }
 
 // CacheCommand returns true since this command should be cached
