@@ -46,6 +46,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
     - [--oci-layout-path](#--oci-layout-path)
+    - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
     - [--snapshotMode](#--snapshotmode)
@@ -440,6 +441,10 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 #### --no-push
 
 Set this flag if you only want to build the image, without pushing to a registry.
+
+#### --registry-mirror
+
+Set this flag if you want to use a registry mirror instead of default `index.docker.io`.
 
 #### --reproducible
 

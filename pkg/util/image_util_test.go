@@ -102,7 +102,7 @@ func Test_ScratchImageFromMirror(t *testing.T) {
 	actual, err := RetrieveSourceImage(config.KanikoStage{
 		Stage: stages[1],
 	}, &config.KanikoOptions{
-		RegistryMirror: "https://mirror.gcr.io",
+		RegistryMirror: "mirror.gcr.io",
 	})
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)

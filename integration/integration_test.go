@@ -171,7 +171,7 @@ func TestMain(m *testing.M) {
 		},
 		{
 			name:    "Building kaniko image using registry-mirror",
-			command: []string{"docker", "build", "--registry-mirror", "https://mirror.gcr.io", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
+			command: []string{"docker", "build", "--registry-mirror", "mirror.gcr.io", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
 		},
 	}
 
