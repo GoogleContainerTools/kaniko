@@ -68,6 +68,9 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
+## Community
+We'd love to hear from you! Join [#kaniko on Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
+
 ## How does kaniko work?
 
 The kaniko executor image is responsible for building an image from a Dockerfile and pushing it to a registry.
