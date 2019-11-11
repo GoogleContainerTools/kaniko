@@ -14,6 +14,8 @@ We do **not** recommend running the kaniko executor binary in another image, as 
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
+We'd love to hear from you! Join [#kaniko on Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
