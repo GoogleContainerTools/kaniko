@@ -561,7 +561,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if excludeFile(fullPath, buildcontext) {
+		if ExcludeFile(fullPath, buildcontext) {
 			logrus.Debugf("%s found in .dockerignore, ignoring", src)
 			continue
 		}
@@ -594,7 +594,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 
 // CopySymlink copies the symlink at src to dest
 func CopySymlink(src, dest, buildcontext string) (bool, error) {
-	if excludeFile(src, buildcontext) {
+	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
@@ -612,7 +612,7 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 
 // CopyFile copies the file at src to dest
 func CopyFile(src, dest, buildcontext string) (bool, error) {
-	if excludeFile(src, buildcontext) {
+	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
@@ -656,8 +656,8 @@ func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
 	return err
 }
 
-// excludeFile returns true if the .dockerignore specified this file should be ignored
-func excludeFile(path, buildcontext string) bool {
+// ExcludeFile returns true if the .dockerignore specified this file should be ignored
+func ExcludeFile(path, buildcontext string) bool {
 	if HasFilepathPrefix(path, buildcontext, false) {
 		var err error
 		path, err = filepath.Rel(buildcontext, path)
