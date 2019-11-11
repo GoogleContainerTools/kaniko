@@ -54,14 +54,18 @@ func (s *CompositeCache) Hash() (string, error) {
 	return util.SHA256(strings.NewReader(s.Key()))
 }
 
-func (s *CompositeCache) AddPath(p string) error {
+func (s *CompositeCache) AddPath(p, context string) error {
 	sha := sha256.New()
 	fi, err := os.Lstat(p)
 	if err != nil {
 		return err
 	}
+	if util.ExcludeFile(p, context) {
+		return os.ErrNotExist
+	}
+
 	if fi.Mode().IsDir() {
-		k, err := HashDir(p)
+		k, err := HashDir(p, context)
 		if err != nil {
 			return err
 		}
@@ -81,12 +85,20 @@ func (s *CompositeCache) AddPath(p string) error {
 }
 
 // HashDir returns a hash of the directory.
-func HashDir(p string) (string, error) {
+func HashDir(p, context string) (string, error) {
 	sha := sha256.New()
 	if err := filepath.Walk(p, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+		exclude := util.ExcludeFile(path, context)
+		if fi.IsDir() && exclude {
+			return filepath.SkipDir
+		}
+		if exclude {
+			return nil
+		}
+
 		fileHash, err := util.CacheHasher()(path)
 		if err != nil {
 			return err

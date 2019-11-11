@@ -811,14 +811,14 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 		}
 		for _, excl := range tt.args.excluded {
 			t.Run(tt.name+" to exclude "+excl, func(t *testing.T) {
-				if !excludeFile(excl, tt.args.buildcontext) {
+				if !ExcludeFile(excl, tt.args.buildcontext) {
 					t.Errorf("'%v' not excluded", excl)
 				}
 			})
 		}
 		for _, incl := range tt.args.included {
 			t.Run(tt.name+" to include "+incl, func(t *testing.T) {
-				if excludeFile(incl, tt.args.buildcontext) {
+				if ExcludeFile(incl, tt.args.buildcontext) {
 					t.Errorf("'%v' not included", incl)
 				}
 			})

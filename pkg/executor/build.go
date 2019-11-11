@@ -158,8 +158,10 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
 	}
 
+	srcCtx := s.opts.SrcContext
+
 	for _, f := range files {
-		if err := compositeKey.AddPath(f); err != nil {
+		if err := compositeKey.AddPath(f, srcCtx); err != nil {
 			return compositeKey, err
 		}
 	}
