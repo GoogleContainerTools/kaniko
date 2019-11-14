@@ -60,3 +60,8 @@ images:
 	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
 	docker build ${BUILD_ARG} -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 
+.PHONY: push
+push:
+    docker push $(REGISTRY)/executor:latest
+    docker push $(REGISTRY)/executor:debug
+    docker push $(REGISTRY)/warmer:latest
