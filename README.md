@@ -279,7 +279,7 @@ as a remote image destination:
 ### Caching
 
 #### Caching Layers
-kaniko currently can cache layers created by `RUN` commands in a remote repository.
+kaniko can cache layers created by `RUN` commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
@@ -290,7 +290,7 @@ If this flag isn't provided, a cached repo will be inferred from the `--destinat
 
 #### Caching Base Images
 
-kaniko can cache images in a local directory that can be volume mounted into the kaniko image.
+kaniko can cache images in a local directory that can be volume mounted into the kaniko pod.
 To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming
 image at `gcr.io/kaniko-project/warmer`:
 
@@ -301,7 +301,7 @@ docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=
 `--image` can be specified for any number of desired images.
 This command will cache those images by digest in a local directory named `cache`.
 Once the cache is populated, caching is opted into with the same `--cache=true` flag as above.
-The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer.
+The location of the local cache is provided via the `--cache-dir` flag, defaulting to `/cache` as with the cache warmer.
 See the `examples` directory for how to use with kubernetes clusters and persistent cache volumes.
 
 ### Pushing to Different Registries
