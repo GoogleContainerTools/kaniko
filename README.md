@@ -12,9 +12,14 @@ This enables building container images in environments that can't easily or secu
 kaniko is meant to be run as an image, `gcr.io/kaniko-project/executor`.
 We do **not** recommend running the kaniko executor binary in another image, as it might not work.
 
+
+We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
+
+:mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
+
+
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
-We'd love to hear from you! Join [#kaniko on Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
