@@ -1,0 +1,6 @@
+FROM busybox:1.31
+
+ARG REPO=kaniko
+ARG VERSION=v0.14.0
+
+ADD https://github.com/GoogleContainerTools/$REPO/archive/$VERSION.tar.gz /tmp/release.tar.gz
