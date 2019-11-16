@@ -123,23 +123,13 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 // stripEnclosingQuotes removes quotes enclosing the value of each instructions.ArgCommand in a slice
 // if the quotes are escaped it leaves them
 func stripEnclosingQuotes(metaArgs []instructions.ArgCommand) ([]instructions.ArgCommand, error) {
-	dbl := byte('"')
-	sgl := byte('\'')
-
 	for i := range metaArgs {
 		arg := metaArgs[i]
 		v := arg.Value
 		if v != nil {
-			val := *v
-			fmt.Printf("val %s\n", val)
-			if (val[0] == dbl && val[len(val)-1] == dbl) || (val[0] == sgl && val[len(val)-1] == sgl) {
-				val = val[1 : len(val)-1]
-			} else if val[:2] == `\"` && val[len(val)-2:] == `\"` {
-				continue
-			} else if val[:2] == `\'` && val[len(val)-2:] == `\'` {
-				continue
-			} else if val[0] == dbl || val[0] == sgl || val[len(val)-1] == dbl || val[len(val)-1] == sgl {
-				return nil, errors.New("quotes wrapping arg values must be matched")
+			val, err := extractValFromQuotes(*v)
+			if err != nil {
+				return nil, err
 			}
 
 			arg.Value = &val
@@ -147,6 +137,55 @@ func stripEnclosingQuotes(metaArgs []instructions.ArgCommand) ([]instructions.Ar
 		}
 	}
 	return metaArgs, nil
+}
+
+func extractValFromQuotes(val string) (string, error) {
+	backSlash := byte('\\')
+	if len(val) < 2 {
+		return val, nil
+	}
+
+	var leader string
+	var tail string
+
+	switch char := val[0]; char {
+	case '\'', '"':
+		leader = string([]byte{char})
+	case backSlash:
+		switch char := val[1]; char {
+		case '\'', '"':
+			leader = string([]byte{backSlash, char})
+		}
+	}
+
+	// If the length of leader is greater than one then it must be an escaped
+	// character.
+	if len(leader) < 2 {
+		switch char := val[len(val)-1]; char {
+		case '\'', '"':
+			tail = string([]byte{char})
+		}
+	} else {
+		switch char := val[len(val)-2:]; char {
+		case `\'`, `\"`:
+			tail = char
+		}
+	}
+
+	if leader != tail {
+		logrus.Infof("leader %s tail %s", leader, tail)
+		return "", errors.New("quotes wrapping arg values must be matched")
+	}
+
+	if leader == "" {
+		return val, nil
+	}
+
+	if len(leader) == 2 {
+		return val, nil
+	}
+
+	return val[1 : len(val)-1], nil
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build

@@ -118,7 +118,7 @@ func Test_stripEnclosingQuotes(t *testing.T) {
 		success:  true,
 	}, {
 		name:     "blank value with enclosing double quotes",
-		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", "\"\"")},
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", `""`)},
 		expected: []string{""},
 		success:  true,
 	}, {
@@ -143,6 +143,14 @@ func Test_stripEnclosingQuotes(t *testing.T) {
 			newArgCommand("MEW", `'Mrow'`),
 		},
 		expected: []string{"Purr", "Mrow"},
+		success:  true,
+	}, {
+		name: "multiple values, one blank, one a single int",
+		inArgs: []instructions.ArgCommand{
+			newArgCommand("MEOW", `""`),
+			newArgCommand("MEW", `1`),
+		},
+		expected: []string{"", "1"},
 		success:  true,
 	}, {
 		name:    "no values",
