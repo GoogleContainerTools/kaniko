@@ -19,9 +19,12 @@ package executor
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
 func Test_NewCompositeCache(t *testing.T) {
@@ -133,5 +136,435 @@ func Test_CompositeCache_AddPath_file(t *testing.T) {
 	hash2 := fn()
 	if hash1 != hash2 {
 		t.Errorf("expected hash %v to equal hash %v", hash1, hash2)
+	}
+}
+
+func createFilesystemStructure(root string, directories, files []string) error {
+	for _, d := range directories {
+		dirPath := path.Join(root, d)
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return err
+		}
+	}
+
+	for _, fileName := range files {
+		filePath := path.Join(root, fileName)
+		err := ioutil.WriteFile(filePath, []byte(fileName), 0644)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func setIgnoreContext(content string) error {
+	dockerIgnoreDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dockerIgnoreDir)
+	err = ioutil.WriteFile(dockerIgnoreDir+".dockerignore", []byte(content), 0644)
+	if err != nil {
+		return err
+	}
+	err = util.GetExcludedFiles(dockerIgnoreDir, "")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func hashDirectory(dirpath string) (string, error) {
+	cache1 := NewCompositeCache()
+	err := cache1.AddPath(dirpath, dirpath)
+	if err != nil {
+		return "", err
+	}
+
+	hash, err := cache1.Hash()
+	if err != nil {
+		return "", err
+	}
+	return hash, nil
+}
+
+func Test_CompositeKey_AddPath_Works(t *testing.T) {
+	tests := []struct {
+		name        string
+		directories []string
+		files       []string
+	}{
+		{
+			name:        "empty",
+			directories: []string{},
+			files:       []string{},
+		},
+		{
+			name:        "dirs",
+			directories: []string{"foo", "bar", "foobar", "f/o/o"},
+			files:       []string{},
+		},
+		{
+			name:        "files",
+			directories: []string{},
+			files:       []string{"foo", "bar", "foobar"},
+		},
+		{
+			name:        "all",
+			directories: []string{"foo", "bar"},
+			files:       []string{"foo/bar", "bar/baz", "foobar"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testDir1, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir1)
+			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			testDir2, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir2)
+			err = createFilesystemStructure(testDir2, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			hash1, err := hashDirectory(testDir1)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+			hash2, err := hashDirectory(testDir2)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+
+			if hash1 != hash2 {
+				t.Errorf("Expected equal hashes, got: %s and %s", hash1, hash2)
+			}
+		})
+	}
+}
+
+func Test_CompositeKey_AddPath_WithExtraFile_Works(t *testing.T) {
+	tests := []struct {
+		name        string
+		directories []string
+		files       []string
+		extraFile   string
+	}{
+		{
+			name:        "empty",
+			directories: []string{},
+			files:       []string{},
+			extraFile:   "file",
+		},
+		{
+			name:        "dirs",
+			directories: []string{"foo", "bar", "foobar", "f/o/o"},
+			files:       []string{},
+			extraFile:   "f/o/o/extra",
+		},
+		{
+			name:        "files",
+			directories: []string{},
+			files:       []string{"foo", "bar", "foobar"},
+			extraFile:   "foo.extra",
+		},
+		{
+			name:        "all",
+			directories: []string{"foo", "bar"},
+			files:       []string{"foo/bar", "bar/baz", "foobar"},
+			extraFile:   "bar/extra",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testDir1, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir1)
+			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			testDir2, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir2)
+			err = createFilesystemStructure(testDir2, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+			extraPath := path.Join(testDir2, test.extraFile)
+			err = ioutil.WriteFile(extraPath, []byte(test.extraFile), 0644)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			hash1, err := hashDirectory(testDir1)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+			hash2, err := hashDirectory(testDir2)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+
+			if hash1 == hash2 {
+				t.Errorf("Expected different hashes, got: %s and %s", hash1, hash2)
+			}
+		})
+	}
+}
+
+func Test_CompositeKey_AddPath_WithExtraDir_Works(t *testing.T) {
+	tests := []struct {
+		name        string
+		directories []string
+		files       []string
+		extraDir    string
+	}{
+		{
+			name:        "empty",
+			directories: []string{},
+			files:       []string{},
+			extraDir:    "extra",
+		},
+		{
+			name:        "dirs",
+			directories: []string{"foo", "bar", "foobar", "f/o/o"},
+			files:       []string{},
+			extraDir:    "f/o/o/extra",
+		},
+		{
+			name:        "files",
+			directories: []string{},
+			files:       []string{"foo", "bar", "foobar"},
+			extraDir:    "foo.extra",
+		},
+		{
+			name:        "all",
+			directories: []string{"foo", "bar"},
+			files:       []string{"foo/bar", "bar/baz", "foobar"},
+			extraDir:    "bar/extra",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testDir1, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir1)
+			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			testDir2, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir2)
+			err = createFilesystemStructure(testDir2, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+			extraPath := path.Join(testDir2, test.extraDir)
+			err = os.MkdirAll(extraPath, 0644)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			hash1, err := hashDirectory(testDir1)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+			hash2, err := hashDirectory(testDir2)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+
+			if hash1 == hash2 {
+				t.Errorf("Expected different hashes, got: %s and %s", hash1, hash2)
+			}
+		})
+	}
+}
+
+func Test_CompositeKey_AddPath_WithExtraFilIgnored_Works(t *testing.T) {
+	tests := []struct {
+		name        string
+		directories []string
+		files       []string
+		extraFile   string
+	}{
+		{
+			name:        "empty",
+			directories: []string{},
+			files:       []string{},
+			extraFile:   "extra",
+		},
+		{
+			name:        "dirs",
+			directories: []string{"foo", "bar", "foobar", "f/o/o"},
+			files:       []string{},
+			extraFile:   "f/o/o/extra",
+		},
+		{
+			name:        "files",
+			directories: []string{},
+			files:       []string{"foo", "bar", "foobar"},
+			extraFile:   "extra",
+		},
+		{
+			name:        "all",
+			directories: []string{"foo", "bar"},
+			files:       []string{"foo/bar", "bar/baz", "foobar"},
+			extraFile:   "bar/extra",
+		},
+	}
+
+	err := setIgnoreContext("**/extra")
+	if err != nil {
+		t.Fatalf("Error setting exlusion context: %s", err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testDir1, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir1)
+			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			testDir2, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir2)
+			err = createFilesystemStructure(testDir2, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+			extraPath := path.Join(testDir2, test.extraFile)
+			err = ioutil.WriteFile(extraPath, []byte(test.extraFile), 0644)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			hash1, err := hashDirectory(testDir1)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+			hash2, err := hashDirectory(testDir2)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+
+			if hash1 != hash2 {
+				t.Errorf("Expected equal hashes, got: %s and %s", hash1, hash2)
+			}
+		})
+	}
+}
+
+func Test_CompositeKey_AddPath_WithExtraDirIgnored_Works(t *testing.T) {
+	tests := []struct {
+		name        string
+		directories []string
+		files       []string
+		extraDir    string
+	}{
+		{
+			name:        "empty",
+			directories: []string{},
+			files:       []string{},
+			extraDir:    "extra",
+		},
+		{
+			name:        "dirs",
+			directories: []string{"foo", "bar", "foobar", "f/o/o"},
+			files:       []string{},
+			extraDir:    "f/o/o/extra",
+		},
+		{
+			name:        "files",
+			directories: []string{},
+			files:       []string{"foo", "bar", "foobar"},
+			extraDir:    "extra",
+		},
+		{
+			name:        "all",
+			directories: []string{"foo", "bar"},
+			files:       []string{"foo/bar", "bar/baz", "foobar"},
+			extraDir:    "bar/extra",
+		},
+	}
+
+	err := setIgnoreContext("**/extra")
+	if err != nil {
+		t.Fatalf("Error setting exlusion context: %s", err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testDir1, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir1)
+			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			testDir2, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatalf("Error creating tempdir: %s", err)
+			}
+			defer os.RemoveAll(testDir2)
+			err = createFilesystemStructure(testDir2, test.directories, test.files)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+			extraPath := path.Join(testDir2, test.extraDir)
+			err = os.MkdirAll(extraPath, 0644)
+			if err != nil {
+				t.Fatalf("Error creating filesytem structure: %s", err)
+			}
+
+			hash1, err := hashDirectory(testDir1)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+			hash2, err := hashDirectory(testDir2)
+			if err != nil {
+				t.Fatalf("Failed to calculate hash: %s", err)
+			}
+
+			if hash1 != hash2 {
+				t.Errorf("Expected equal hashes, got: %s and %s", hash1, hash2)
+			}
+		})
 	}
 }
