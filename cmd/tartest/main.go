@@ -14,7 +14,7 @@ import (
 
 func main() {
 	opts := new(config.KanikoOptions)
-	opts.DockerfilePath = "/usr/local/google/home/cgwippern/kaniko-dev/issues/830/Dockerfile.base"
+	opts.DockerfilePath = "Dockerfile.base"
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
 		panic(err)
