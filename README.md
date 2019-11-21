@@ -87,7 +87,11 @@ After each command, we append a layer of changed files to the base image (if the
 
 ## Known Issues
 
-kaniko does not support building Windows containers.
+*   kaniko does not support building Windows containers.
+*   Running kaniko in any Docker image other than the official kaniko image is
+    not supported (ie YMMV).
+    *   This includes copying the kaniko executables from the official image
+        into another image.
 
 ## Demo
 
