@@ -66,6 +66,14 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		if err != nil {
 			return err
 		}
+
+		// If the destination dir is a symlink we need to resolve the path and use
+		// that instead of the symlink path
+		destPath, err = resolveIfSymlink(destPath)
+		if err != nil {
+			return err
+		}
+
 		if fi.IsDir() {
 			if !filepath.IsAbs(dest) {
 				// we need to add '/' to the end to indicate the destination is a directory
@@ -177,4 +185,22 @@ func (cr *CachingCopyCommand) FilesToSnapshot() []string {
 
 func (cr *CachingCopyCommand) String() string {
 	return cr.cmd.String()
+}
+
+func resolveIfSymlink(destPath string) (string, error) {
+	baseDir := filepath.Dir(destPath)
+	if info, err := os.Lstat(baseDir); err == nil {
+		switch mode := info.Mode(); {
+		case mode&os.ModeSymlink != 0:
+			linkPath, err := os.Readlink(baseDir)
+			if err != nil {
+				return "", errors.Wrap(err, "error reading symlink")
+			}
+			absLinkPath := filepath.Join(filepath.Dir(baseDir), linkPath)
+			newPath := filepath.Join(absLinkPath, filepath.Base(destPath))
+			logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
+			return newPath, nil
+		}
+	}
+	return destPath, nil
 }

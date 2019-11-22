@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -164,4 +165,53 @@ func copySetUpBuildArgs() *dockerfile.BuildArgs {
 	d := "default"
 	buildArgs.AddArg("buildArg2", &d)
 	return buildArgs
+}
+
+func Test_resolveIfSymlink(t *testing.T) {
+	type testCase struct {
+		destPath     string
+		expectedPath string
+		err          error
+	}
+
+	tmpDir, err := ioutil.TempDir("", "copy-test")
+	if err != nil {
+		t.Error(err)
+	}
+
+	baseDir, err := ioutil.TempDir(tmpDir, "not-linked")
+	if err != nil {
+		t.Error(err)
+	}
+
+	path, err := ioutil.TempFile(baseDir, "foo.txt")
+	if err != nil {
+		t.Error(err)
+	}
+
+	thepath, err := filepath.Abs(filepath.Dir(path.Name()))
+	if err != nil {
+		t.Error(err)
+	}
+	cases := []testCase{{destPath: thepath, expectedPath: thepath, err: nil}}
+
+	baseDir = tmpDir
+	symLink := filepath.Join(baseDir, "symlink")
+	if err := os.Symlink(filepath.Base(thepath), symLink); err != nil {
+		t.Error(err)
+	}
+	cases = append(cases, testCase{filepath.Join(symLink, "foo.txt"), filepath.Join(thepath, "foo.txt"), nil})
+
+	for i, c := range cases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			res, e := resolveIfSymlink(c.destPath)
+			if e != c.err {
+				t.Errorf("%s: expected %v but got %v", c.destPath, c.err, e)
+			}
+
+			if res != c.expectedPath {
+				t.Errorf("%s: expected %v but got %v", c.destPath, c.expectedPath, res)
+			}
+		})
+	}
 }
