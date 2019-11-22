@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+	"github.com/pkg/errors"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 
@@ -74,12 +75,15 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	// If so, look in the local cache before trying the remote registry
 	if opts.CacheDir != "" {
 		cachedImage, err := cachedImage(opts, currentBaseName)
-		if cachedImage != nil {
-			return cachedImage, nil
-		}
-
 		if err != nil {
-			logrus.Infof("Error while retrieving image from cache: %v", err)
+			switch err.(type) {
+			case HardError:
+				return cachedImage, errors.Wrap(err, "Error retrieving cached image")
+			default:
+				logrus.Infof("Image not found in cache %v", currentBaseName)
+			}
+		} else if cachedImage != nil {
+			return cachedImage, nil
 		}
 	}
 
@@ -97,14 +101,14 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	logrus.Infof("Downloading base image %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return nil, err
+		return nil, newHardError(fmt.Sprintf("Error parsing reference for image %v", image), err)
 	}
 
 	registryName := ref.Context().RegistryStr()
 	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
 		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 		if err != nil {
-			return nil, err
+			return nil, newHardError(fmt.Sprintf("Error connecting to registry %v", registryName), err)
 		}
 		if tag, ok := ref.(name.Tag); ok {
 			tag.Repository.Registry = newReg
@@ -123,13 +127,22 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		}
 	}
 
-	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
+	remoteImage, err := remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
+	if err != nil {
+		switch err.(type) {
+		case *remote.ErrSchema1:
+			return remoteImage, newHardError("Kaniko does not support the Registry V1 API", err)
+		default:
+			return remoteImage, err
+		}
+	}
+	return remoteImage, nil
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return nil, err
+		return nil, newHardError(fmt.Sprintf("Error parsing reference for %v", image), err)
 	}
 
 	var cacheKey string
