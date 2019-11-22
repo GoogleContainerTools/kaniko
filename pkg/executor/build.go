@@ -52,6 +52,8 @@ import (
 // This is the size of an empty tar in Go
 const emptyTarSize = 1024
 
+type StopCacheErr error
+
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
 	stage           config.KanikoStage
@@ -169,12 +171,18 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 				logrus.Debugf("Failed to retrieve layer: %s", err)
 				logrus.Infof("No cached layer found for cmd %s", command.String())
 				logrus.Debugf("Key missing was: %s", compositeKey.Key())
-				break
+				var e StopCacheErr
+				e = errors.Wrap(err, "stop caching")
+				return e
 			}
 
 			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
 				logrus.Infof("Using caching version of cmd: %s", command.String())
 				s.cmds[i] = cacheCmd
+			} else {
+				var e StopCacheErr
+				e = errors.Wrap(err, "stop caching")
+				return e
 			}
 		}
 
@@ -193,9 +201,17 @@ func (s *stageBuilder) build() error {
 	compositeKey := NewCompositeCache(s.baseImageDigest)
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
+	// If any command misses the cache we must stop all cache lookups
+	// from that point forward
+	var stopCache error
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
-		return err
+		switch err.(type) {
+		case StopCacheErr:
+			stopCache = err
+		default:
+			return err
+		}
 	}
 
 	// Unpack file system to root if we need to.
@@ -283,7 +299,7 @@ func (s *stageBuilder) build() error {
 	if err := cacheGroup.Wait(); err != nil {
 		logrus.Warnf("error uploading layer to cache: %s", err)
 	}
-	return nil
+	return stopCache
 }
 
 func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
@@ -447,7 +463,13 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		if err := sb.build(); err != nil {
-			return nil, errors.Wrap(err, "error building stage")
+			switch err.(type) {
+			case StopCacheErr:
+				logrus.Info("Disabling cache for remainder of build")
+				opts.Cache = false
+			default:
+				return nil, errors.Wrap(err, "error building stage")
+			}
 		}
 		reviewConfig(stage, &sb.cf.Config)
 		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
