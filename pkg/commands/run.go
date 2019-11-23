@@ -186,15 +186,21 @@ type CachingRunCommand struct {
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.RunCommand
+	Layers         []v1.Layer
 }
 
 func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Infof("Found cached layer, extracting to filesystem")
-	var err error
-	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	//logrus.Infof("Found cached layer, extracting to filesystem")
+	//var err error
+	//cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	//if err != nil {
+	//        return errors.Wrap(err, "extracting fs from image")
+	//}
+	layers, err := cr.img.Layers()
 	if err != nil {
-		return errors.Wrap(err, "extracting fs from image")
+		return err
 	}
+	cr.Layers = layers
 	return nil
 }
 

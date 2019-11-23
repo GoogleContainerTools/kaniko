@@ -92,6 +92,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	if err != nil {
 		return nil, err
 	}
+	logrus.Info("newStageBuilder sourceImage digest %v", digest)
 	s := &stageBuilder{
 		stage:           stage,
 		image:           sourceImage,
@@ -148,6 +149,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			continue
 		}
 		compositeKey.AddKey(command.String())
+		logrus.Infof("compositeKey %v", compositeKey)
 		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&cfg, s.args)
 		if err != nil {
@@ -157,12 +159,14 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			if err := compositeKey.AddPath(f); err != nil {
 				return err
 			}
+			logrus.Infof("compositeKey AddPath %v", compositeKey)
 		}
 
 		ck, err := compositeKey.Hash()
 		if err != nil {
 			return err
 		}
+		logrus.Infof("cache key %v", ck)
 		if command.ShouldCacheOutput() {
 			img, err := layerCache.RetrieveLayer(ck)
 			if err != nil {
@@ -191,7 +195,11 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	compositeKey := NewCompositeCache(s.baseImageDigest)
+	logrus.Infof("baseImageDigest %v", s.baseImageDigest)
+	logrus.Infof("compositeKey %v", *compositeKey)
 	compositeKey.AddKey(s.opts.BuildArgs...)
+	logrus.Infof("BuildArgs %v", s.opts.BuildArgs)
+	logrus.Infof("compositeKey %v", *compositeKey)
 
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
@@ -254,30 +262,67 @@ func (s *stageBuilder) build() error {
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 			return err
 		}
-		files = command.FilesToSnapshot()
-		timing.DefaultRun.Stop(t)
+		switch v := command.(type) {
+		case *commands.CachingRunCommand:
+			for _, layer := range v.Layers {
+				logrus.Infof("layer %v", layer)
+				//ck, err := compositeKey.Hash()
+				//if err != nil {
+				//        return err
+				//}
+				// Push layer to cache (in parallel) now along with new config file
+				//if s.opts.Cache && command.ShouldCacheOutput() {
+				//        cacheGroup.Go(func() error {
+				//                return pushLayerToCache(s.opts, ck, tarPath, command.String())
+				//        })
+				//}
+				//if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
+				//        return err
+				//}
+				func() {
+					d, _ := layer.Digest()
+					logrus.Infof("CachingRunCommand mutate.Append layer digest %v", d)
+				}()
+				createdBy := command.String()
+				s.image, err = mutate.Append(s.image,
+					mutate.Addendum{
+						Layer: layer,
+						History: v1.History{
+							Author:    constants.Author,
+							CreatedBy: createdBy,
+						},
+					},
+				)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			files = command.FilesToSnapshot()
+			timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files) {
-			continue
-		}
+			if !s.shouldTakeSnapshot(index, files) {
+				continue
+			}
 
-		tarPath, err := s.takeSnapshot(files)
-		if err != nil {
-			return err
-		}
+			tarPath, err := s.takeSnapshot(files)
+			if err != nil {
+				return err
+			}
 
-		ck, err := compositeKey.Hash()
-		if err != nil {
-			return err
-		}
-		// Push layer to cache (in parallel) now along with new config file
-		if s.opts.Cache && command.ShouldCacheOutput() {
-			cacheGroup.Go(func() error {
-				return pushLayerToCache(s.opts, ck, tarPath, command.String())
-			})
-		}
-		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
-			return err
+			ck, err := compositeKey.Hash()
+			if err != nil {
+				return err
+			}
+			// Push layer to cache (in parallel) now along with new config file
+			if s.opts.Cache && command.ShouldCacheOutput() {
+				cacheGroup.Go(func() error {
+					return pushLayerToCache(s.opts, ck, tarPath, command.String())
+				})
+			}
+			if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
+				return err
+			}
 		}
 	}
 	if err := cacheGroup.Wait(); err != nil {
@@ -344,6 +389,10 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 	if err != nil {
 		return err
 	}
+	func() {
+		d, _ := layer.Digest()
+		logrus.Infof("mutate.Append layer digest %v", d)
+	}()
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
 			Layer: layer,
@@ -454,6 +503,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, err
 		}
+		func() {
+			d, _ := sourceImage.Digest()
+			logrus.Infof("sourceImage Digest 1 %v", d)
+		}()
 		if stage.Final {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
 			if err != nil {
@@ -478,6 +531,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				return nil, err
 			}
 		}
+		func() {
+			d, _ := sourceImage.Digest()
+			logrus.Infof("sourceImage Digest 2 %v", d)
+		}()
 
 		filesToSave, err := filesToSave(crossStageDependencies[index])
 		if err != nil {
@@ -496,6 +553,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := util.DeleteFilesystem(); err != nil {
 			return nil, err
 		}
+		func() {
+			d, _ := sourceImage.Digest()
+			logrus.Infof("sourceImage Digest 3 %v", d)
+		}()
 	}
 
 	return nil, err
@@ -580,6 +641,8 @@ func saveStageAsTarball(path string, image v1.Image) error {
 	}
 	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, path)
 	logrus.Infof("Storing source image from stage %s at path %s", path, tarPath)
+	d, _ := image.Digest()
+	logrus.Infof("Source image digest %v", d)
 	if err := os.MkdirAll(filepath.Dir(tarPath), 0750); err != nil {
 		return err
 	}
