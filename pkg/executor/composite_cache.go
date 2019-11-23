@@ -27,6 +27,9 @@ import (
 
 // NewCompositeCache returns an initialized composite cache object.
 func NewCompositeCache(initial ...string) *CompositeCache {
+	if initial == nil {
+		initial = make([]string, 0)
+	}
 	c := CompositeCache{
 		keys: initial,
 	}

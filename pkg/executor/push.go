@@ -239,6 +239,8 @@ func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTr
 	return tr
 }
 
+type cachePusher func(*config.KanikoOptions, string, string, string) error
+
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache
 // if opts.Cache doesn't exist, infer the cache from the given destination
 func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath string, createdBy string) error {

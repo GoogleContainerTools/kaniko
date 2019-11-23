@@ -17,6 +17,8 @@ limitations under the License.
 package executor
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,6 +26,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -461,4 +464,209 @@ func TestInitializeConfig(t *testing.T) {
 		actual, _ := initializeConfig(img)
 		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
 	}
+}
+
+func Test_stageBuilder_optimize_cache_status(t *testing.T) {
+	testCases := []struct {
+		opts     *config.KanikoOptions
+		err      error
+		retrieve bool
+	}{
+		{
+			opts: &config.KanikoOptions{Cache: true},
+			err:  stopCacheErr{},
+		},
+		{
+			opts:     &config.KanikoOptions{Cache: true},
+			err:      nil,
+			retrieve: true,
+		},
+		{
+			opts: &config.KanikoOptions{Cache: false},
+			err:  nil,
+		},
+		{
+			opts:     &config.KanikoOptions{Cache: false},
+			err:      nil,
+			retrieve: true,
+		},
+	}
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+			cf := &v1.ConfigFile{}
+			snap := fakeSnapShotter{}
+			lc := fakeLayerCache{retrieve: tc.retrieve}
+			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc}
+			ck := CompositeCache{}
+			file, err := ioutil.TempFile("", "foo")
+			if err != nil {
+				t.Error(err)
+			}
+			command := MockDockerCommand{
+				contextFiles: []string{file.Name()},
+				cacheCommand: MockCachedDockerCommand{},
+			}
+			sb.cmds = []commands.DockerCommand{command}
+			err = sb.optimize(ck, cf.Config)
+			if err == nil {
+				if tc.err != nil {
+					t.Errorf("Expected stopCacheErr but was %v", err)
+				}
+			} else {
+				if tc.err != nil {
+					if reflect.TypeOf(tc.err) != reflect.TypeOf(err) {
+						t.Errorf("Expected stopCacheErr but was %v", reflect.TypeOf(err))
+					}
+				} else {
+					t.Errorf("Expected error to be nil but was %v", err)
+				}
+			}
+		})
+	}
+}
+
+func Test_stageBuilder_build_cache_status(t *testing.T) {
+	testCases := []struct {
+		opts     *config.KanikoOptions
+		err      error
+		retrieve bool
+	}{
+		{
+			opts: &config.KanikoOptions{Cache: true},
+			err:  stopCacheErr{},
+		},
+		{
+			opts:     &config.KanikoOptions{Cache: true},
+			err:      nil,
+			retrieve: true,
+		},
+		{
+			opts: &config.KanikoOptions{Cache: false},
+			err:  nil,
+		},
+		{
+			opts:     &config.KanikoOptions{Cache: false},
+			err:      nil,
+			retrieve: true,
+		},
+	}
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+			file, err := ioutil.TempFile("", "foo")
+			if err != nil {
+				t.Error(err)
+			}
+
+			cf := &v1.ConfigFile{}
+			snap := fakeSnapShotter{file: file.Name()}
+			lc := fakeLayerCache{retrieve: tc.retrieve}
+			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc, pushCache: fakeCachePush}
+
+			command := MockDockerCommand{
+				contextFiles: []string{file.Name()},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{file.Name()},
+				},
+			}
+			sb.cmds = []commands.DockerCommand{command}
+			err = sb.build()
+			if err == nil {
+				if tc.err != nil {
+					t.Errorf("Expected stopCacheErr but was %v", err)
+				}
+			} else {
+				if tc.err != nil {
+					if reflect.TypeOf(tc.err) != reflect.TypeOf(err) {
+						t.Errorf("Expected stopCacheErr but was %v", reflect.TypeOf(err))
+					}
+				} else {
+					t.Errorf("Expected error to be nil but was %v", err)
+				}
+			}
+		})
+	}
+}
+
+func fakeCachePush(_ *config.KanikoOptions, _, _, _ string) error {
+	return nil
+}
+
+type fakeSnapShotter struct {
+	file string
+}
+
+func (f fakeSnapShotter) Init() error { return nil }
+func (f fakeSnapShotter) TakeSnapshotFS() (string, error) {
+	return f.file, nil
+}
+func (f fakeSnapShotter) TakeSnapshot(_ []string) (string, error) {
+	return f.file, nil
+}
+
+type MockDockerCommand struct {
+	contextFiles []string
+	cacheCommand commands.DockerCommand
+}
+
+func (m MockDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error { return nil }
+func (m MockDockerCommand) String() string {
+	return "meow"
+}
+func (m MockDockerCommand) FilesToSnapshot() []string {
+	return []string{"meow-snapshot-no-cache"}
+}
+func (m MockDockerCommand) CacheCommand(image v1.Image) commands.DockerCommand {
+	return m.cacheCommand
+}
+func (m MockDockerCommand) FilesUsedFromContext(c *v1.Config, args *dockerfile.BuildArgs) ([]string, error) {
+	return m.contextFiles, nil
+}
+func (m MockDockerCommand) MetadataOnly() bool {
+	return false
+}
+func (m MockDockerCommand) RequiresUnpackedFS() bool {
+	return false
+}
+func (m MockDockerCommand) ShouldCacheOutput() bool {
+	return true
+}
+
+type MockCachedDockerCommand struct {
+	contextFiles []string
+}
+
+func (m MockCachedDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error {
+	return nil
+}
+func (m MockCachedDockerCommand) String() string {
+	return "meow"
+}
+func (m MockCachedDockerCommand) FilesToSnapshot() []string {
+	return []string{"meow-snapshot"}
+}
+func (m MockCachedDockerCommand) CacheCommand(image v1.Image) commands.DockerCommand {
+	return nil
+}
+func (m MockCachedDockerCommand) FilesUsedFromContext(c *v1.Config, args *dockerfile.BuildArgs) ([]string, error) {
+	return m.contextFiles, nil
+}
+func (m MockCachedDockerCommand) MetadataOnly() bool {
+	return false
+}
+func (m MockCachedDockerCommand) RequiresUnpackedFS() bool {
+	return false
+}
+func (m MockCachedDockerCommand) ShouldCacheOutput() bool {
+	return true
+}
+
+type fakeLayerCache struct {
+	retrieve bool
+}
+
+func (f fakeLayerCache) RetrieveLayer(_ string) (v1.Image, error) {
+	if !f.retrieve {
+		return nil, errors.New("could not find layer")
+	}
+	return nil, nil
 }

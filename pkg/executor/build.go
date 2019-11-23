@@ -52,19 +52,33 @@ import (
 // This is the size of an empty tar in Go
 const emptyTarSize = 1024
 
-type StopCacheErr error
+type stopCacheErr struct {
+	msg string
+}
+
+func (s stopCacheErr) Error() string {
+	return fmt.Sprintf("stop caching: %v", s.msg)
+}
+
+type snapShotter interface {
+	Init() error
+	TakeSnapshotFS() (string, error)
+	TakeSnapshot([]string) (string, error)
+}
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
 	stage           config.KanikoStage
 	image           v1.Image
 	cf              *v1.ConfigFile
-	snapshotter     *snapshot.Snapshotter
+	snapshotter     snapShotter
 	baseImageDigest string
 	opts            *config.KanikoOptions
 	cmds            []commands.DockerCommand
 	args            *dockerfile.BuildArgs
 	crossStageDeps  map[int][]string
+	layerCache      cache.LayerCache
+	pushCache       cachePusher
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -102,6 +116,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		baseImageDigest: digest.String(),
 		opts:            opts,
 		crossStageDeps:  crossStageDeps,
+		pushCache:       pushLayerToCache,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -117,6 +132,13 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 
 	s.args = dockerfile.NewBuildArgs(s.opts.BuildArgs)
 	s.args.AddMetaArgs(s.stage.MetaArgs)
+
+	layerCache := &cache.RegistryCache{
+		Opts: s.opts,
+	}
+
+	s.layerCache = layerCache
+
 	return s, nil
 }
 
@@ -137,10 +159,6 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 		return nil
 	}
 
-	layerCache := &cache.RegistryCache{
-		Opts: s.opts,
-	}
-
 	// Possibly replace commands with their cached implementations.
 	// We walk through all the commands, running any commands that only operate on metadata.
 	// We throw the metadata away after, but we need it to properly track command dependencies
@@ -153,36 +171,32 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&cfg, s.args)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not get files used from context")
 		}
+
 		for _, f := range files {
 			if err := compositeKey.AddPath(f); err != nil {
-				return err
+				return errors.Wrap(err, "could not add path to composite key")
 			}
 		}
 
 		ck, err := compositeKey.Hash()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not hash composite key")
 		}
 		if command.ShouldCacheOutput() {
-			img, err := layerCache.RetrieveLayer(ck)
+			img, err := s.layerCache.RetrieveLayer(ck)
 			if err != nil {
 				logrus.Debugf("Failed to retrieve layer: %s", err)
 				logrus.Infof("No cached layer found for cmd %s", command.String())
 				logrus.Debugf("Key missing was: %s", compositeKey.Key())
-				var e StopCacheErr
-				e = errors.Wrap(err, "stop caching")
+				e := stopCacheErr{msg: err.Error()}
 				return e
 			}
 
 			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
 				logrus.Infof("Using caching version of cmd: %s", command.String())
 				s.cmds[i] = cacheCmd
-			} else {
-				var e StopCacheErr
-				e = errors.Wrap(err, "stop caching")
-				return e
 			}
 		}
 
@@ -207,7 +221,7 @@ func (s *stageBuilder) build() error {
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
 		switch err.(type) {
-		case StopCacheErr:
+		case stopCacheErr:
 			stopCache = err
 		default:
 			return err
@@ -289,7 +303,7 @@ func (s *stageBuilder) build() error {
 		// Push layer to cache (in parallel) now along with new config file
 		if s.opts.Cache && command.ShouldCacheOutput() {
 			cacheGroup.Go(func() error {
-				return pushLayerToCache(s.opts, ck, tarPath, command.String())
+				return s.pushCache(s.opts, ck, tarPath, command.String())
 			})
 		}
 		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
@@ -464,7 +478,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 		if err := sb.build(); err != nil {
 			switch err.(type) {
-			case StopCacheErr:
+			case stopCacheErr:
 				logrus.Info("Disabling cache for remainder of build")
 				opts.Cache = false
 			default:
