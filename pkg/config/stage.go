@@ -16,7 +16,9 @@ limitations under the License.
 
 package config
 
-import "github.com/moby/buildkit/frontend/dockerfile/instructions"
+import (
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+)
 
 // KanikoStage wraps a stage of the Dockerfile and provides extra information
 type KanikoStage struct {

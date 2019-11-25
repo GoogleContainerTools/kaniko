@@ -919,3 +919,51 @@ func generateTar(t *testing.T, dir string, fileNames ...string) []byte {
 	}
 	return buf.Bytes()
 }
+
+//=======
+//        testCases := []struct {
+//                opts     *config.KanikoOptions
+//                retrieve bool
+//        }{
+//                {
+//                        opts: &config.KanikoOptions{Cache: true},
+//                },
+//                {
+//                        opts:     &config.KanikoOptions{Cache: true},
+//                        retrieve: true,
+//                },
+//                {
+//                        opts: &config.KanikoOptions{Cache: false},
+//                },
+//                {
+//                        opts:     &config.KanikoOptions{Cache: false},
+//                        retrieve: true,
+//                },
+//        }
+//        for i, tc := range testCases {
+//                t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+//                        file, err := ioutil.TempFile("", "foo")
+//                        if err != nil {
+//                                t.Error(err)
+//                        }
+
+//                        cf := &v1.ConfigFile{}
+//                        snap := fakeSnapShotter{file: file.Name()}
+//                        lc := fakeLayerCache{retrieve: tc.retrieve}
+//                        sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc, pushCache: fakeCachePush}
+
+//                        command := MockDockerCommand{
+//                                contextFiles: []string{file.Name()},
+//                                cacheCommand: MockCachedDockerCommand{
+//                                        contextFiles: []string{file.Name()},
+//                                },
+//                        }
+//                        sb.cmds = []commands.DockerCommand{command}
+//                        err = sb.build()
+//                        if err != nil {
+//                                t.Errorf("Expected error to be nil but was %v", err)
+//                        }
+//                })
+//        }
+//}
+//>>>>>>> Add unit tests for stagebuilder build and optimize

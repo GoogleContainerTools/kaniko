@@ -64,9 +64,6 @@ type stageBuilder struct {
 	stage               config.KanikoStage
 	image               v1.Image
 	cf                  *v1.ConfigFile
-	snapshotter         snapShotter
-	layerCache          cache.LayerCache
-	pushCache           cachePusher
 	baseImageDigest     string
 	finalCacheKey       string
 	opts                *config.KanikoOptions
@@ -74,6 +71,9 @@ type stageBuilder struct {
 	args                *dockerfile.BuildArgs
 	crossStageDeps      map[int][]string
 	digestToCacheKeyMap map[string]string
+	snapshotter         snapShotter
+	layerCache          cache.LayerCache
+	pushCache           cachePusher
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -146,6 +146,38 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 	return imageConfig, nil
 }
 
+func (s *stageBuilder) populateCompositeKey(command commands.DockerCommand, files []string, compositeKey CompositeCache) (CompositeCache, error) {
+	// Add the next command to the cache key.
+	compositeKey.AddKey(command.String())
+	switch v := command.(type) {
+	case *commands.CopyCommand:
+		if v.From() != "" {
+			digest, ok := s.digestMap[v.From()]
+			if ok {
+				ds := digest.String()
+				logrus.Debugf("adding digest %v from previous stage to composite key for %v", ds, command.String())
+				compositeKey.AddKey(ds)
+			}
+		}
+	case *commands.CachingCopyCommand:
+		if v.From() != "" {
+			digest, ok := s.digestMap[v.From()]
+			if ok {
+				ds := digest.String()
+				logrus.Debugf("adding digest %v from previous stage to composite key for %v", ds, command.String())
+				compositeKey.AddKey(ds)
+			}
+		}
+	}
+
+	for _, f := range files {
+		if err := compositeKey.AddPath(f); err != nil {
+			return compositeKey, err
+		}
+	}
+	return compositeKey, nil
+}
+
 func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) error {
 	if !s.opts.Cache {
 		return nil
@@ -160,16 +192,14 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 		if command == nil {
 			continue
 		}
-		compositeKey.AddKey(command.String())
-		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&cfg, s.args)
 		if err != nil {
 			return errors.Wrap(err, "failed to get files used from context")
 		}
-		for _, f := range files {
-			if err := compositeKey.AddPath(f); err != nil {
-				return errors.Wrap(err, "failed to add path to composite key")
-			}
+
+		compositeKey, err = s.populateCompositeKey(command, files, compositeKey)
+		if err != nil {
+			return err
 		}
 
 		ck, err := compositeKey.Hash()
@@ -256,19 +286,19 @@ func (s *stageBuilder) build() error {
 			continue
 		}
 
-		// Add the next command to the cache key.
-		compositeKey.AddKey(command.String())
 		t := timing.Start("Command: " + command.String())
+
 		// If the command uses files from the context, add them.
 		files, err := command.FilesUsedFromContext(&s.cf.Config, s.args)
 		if err != nil {
 			return errors.Wrap(err, "failed to get files used from context")
 		}
-		for _, f := range files {
-			if err := compositeKey.AddPath(f); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("failed to add path to composite key %v", f))
-			}
+
+		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey)
+		if err != nil {
+			return err
 		}
+
 		logrus.Info(command.String())
 
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
@@ -303,6 +333,7 @@ func (s *stageBuilder) build() error {
 	if err := cacheGroup.Wait(); err != nil {
 		logrus.Warnf("error uploading layer to cache: %s", err)
 	}
+
 	return nil
 }
 
@@ -374,7 +405,6 @@ func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) err
 		},
 	)
 	return err
-
 }
 
 func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error) {
@@ -443,6 +473,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
 	digestToCacheKeyMap := make(map[string]string)
+
 	// Parse dockerfile and unpack base image to root
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
@@ -470,6 +501,14 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
+
+		d, err := sb.image.Digest()
+		if err != nil {
+			return nil, err
+		}
+
+		digestMap[fmt.Sprintf("%d", sb.stage.Index)] = d
+
 		reviewConfig(stage, &sb.cf.Config)
 		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
 		if err != nil {
