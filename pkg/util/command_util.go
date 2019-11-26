@@ -26,11 +26,15 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/moby/buildkit/frontend/dockerfile/shell"
+
 	"github.com/pkg/errors"
+
 	"github.com/sirupsen/logrus"
 )
 
