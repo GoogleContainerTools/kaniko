@@ -134,7 +134,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		Callback: func(path string, ent *godirwalk.Dirent) error {
 			if util.IsInWhitelist(path) {
 				if util.IsDestDir(path) {
-					logrus.Debugf("Skipping paths under %s, as it is a whitelisted directory", path)
+					logrus.Tracef("Skipping paths under %s, as it is a whitelisted directory", path)
 					return filepath.SkipDir
 				}
 				return nil
@@ -170,7 +170,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	filesToAdd := []string{}
 	for path := range memFs {
 		if util.CheckWhitelist(path) {
-			logrus.Debugf("Not adding %s to layer, as it's whitelisted", path)
+			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}
 		// Only add changed files.
@@ -179,7 +179,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, err
 		}
 		if fileChanged {
-			logrus.Debugf("Adding %s to layer, because it was changed.", path)
+			logrus.Tracef("Adding %s to layer, because it was changed.", path)
 			filesToAdd = append(filesToAdd, path)
 		}
 	}
