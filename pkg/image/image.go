@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/v1"
-
 	"github.com/sirupsen/logrus"
 )
 
