@@ -17,6 +17,8 @@ limitations under the License.
 package executor
 
 import (
+	"archive/tar"
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,6 +26,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -460,5 +463,318 @@ func TestInitializeConfig(t *testing.T) {
 		}
 		actual, _ := initializeConfig(img)
 		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
+	}
+}
+
+func Test_stageBuilder_optimize(t *testing.T) {
+	testCases := []struct {
+		opts     *config.KanikoOptions
+		retrieve bool
+		name     string
+	}{
+		{
+			name: "cache enabled and layer not present in cache",
+			opts: &config.KanikoOptions{Cache: true},
+		},
+		{
+			name:     "cache enabled and layer present in cache",
+			opts:     &config.KanikoOptions{Cache: true},
+			retrieve: true,
+		},
+		{
+			name: "cache disabled and layer not present in cache",
+			opts: &config.KanikoOptions{Cache: false},
+		},
+		{
+			name:     "cache disabled and layer present in cache",
+			opts:     &config.KanikoOptions{Cache: false},
+			retrieve: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cf := &v1.ConfigFile{}
+			snap := fakeSnapShotter{}
+			lc := &fakeLayerCache{retrieve: tc.retrieve}
+			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc}
+			ck := CompositeCache{}
+			file, err := ioutil.TempFile("", "foo")
+			if err != nil {
+				t.Error(err)
+			}
+			command := MockDockerCommand{
+				contextFiles: []string{file.Name()},
+				cacheCommand: MockCachedDockerCommand{},
+			}
+			sb.cmds = []commands.DockerCommand{command}
+			err = sb.optimize(ck, cf.Config)
+			if err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+
+		})
+	}
+}
+
+func Test_stageBuilder_build(t *testing.T) {
+	type testcase struct {
+		description       string
+		opts              *config.KanikoOptions
+		layerCache        *fakeLayerCache
+		expectedCacheKeys []string
+		pushedCacheKeys   []string
+		commands          []commands.DockerCommand
+		fileName          string
+		rootDir           string
+		image             v1.Image
+		config            *v1.ConfigFile
+	}
+	// The two copy command test cases use the same filesystem content and should generate the same cache keys. If they don't then something is wrong. They share this variable to help ensure that.
+	copyCommandCacheKey := "7263908b66952551d89fd895ffb067e2e30f474be9f38a8f1792af2b6df7c6e3"
+	tempDirAndFile := func() (string, string) {
+		dir, err := ioutil.TempDir("", "foo")
+		if err != nil {
+			t.Errorf("could not create temp dir %v", err)
+		}
+		filename := "bar.txt"
+		filepath := filepath.Join(dir, filename)
+		err = ioutil.WriteFile(filepath, []byte(`meow`), 0777)
+		if err != nil {
+			t.Errorf("could not create temp file %v", err)
+		}
+		buf := bytes.NewBuffer([]byte{})
+		writer := tar.NewWriter(buf)
+		defer writer.Close()
+
+		return dir, filename
+	}
+	testCases := []testcase{
+		{
+			description:       "fake command cache enabled but key not in cache",
+			opts:              &config.KanikoOptions{Cache: true},
+			expectedCacheKeys: []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
+			pushedCacheKeys:   []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
+		},
+		{
+			description: "fake command cache enabled and key in cache",
+			opts:        &config.KanikoOptions{Cache: true},
+			layerCache: &fakeLayerCache{
+				retrieve: true,
+			},
+			expectedCacheKeys: []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
+			pushedCacheKeys:   []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
+		},
+		{
+			description: "fake command cache disabled and key not in cache",
+			opts:        &config.KanikoOptions{Cache: false},
+		},
+		{
+			description: "fake command cache disabled and key in cache",
+			opts:        &config.KanikoOptions{Cache: false},
+			layerCache: &fakeLayerCache{
+				retrieve: true,
+			},
+		},
+		func() testcase {
+			dir, filename := tempDirAndFile()
+			filepath := filepath.Join(dir, filename)
+
+			buf := bytes.NewBuffer([]byte{})
+			writer := tar.NewWriter(buf)
+			defer writer.Close()
+
+			info, err := os.Stat(filepath)
+			if err != nil {
+				t.Errorf("could not get file info for temp file %v", err)
+			}
+			hdr, err := tar.FileInfoHeader(info, filename)
+			if err != nil {
+				t.Errorf("could not get tar header for temp file %v", err)
+			}
+
+			if err := writer.WriteHeader(hdr); err != nil {
+				t.Errorf("could not write tar header %v", err)
+			}
+
+			content, err := ioutil.ReadFile(filepath)
+			if err != nil {
+				t.Errorf("could not read tempfile %v", err)
+			}
+
+			if _, err := writer.Write(content); err != nil {
+				t.Errorf("could not write file contents to tar")
+			}
+			tarContent := buf.Bytes()
+			return testcase{
+				description: "copy command cache enabled and key in cache",
+				opts:        &config.KanikoOptions{Cache: true},
+				layerCache: &fakeLayerCache{
+					retrieve: true,
+					img: fakeImage{
+						ImageLayers: []v1.Layer{
+							fakeLayer{
+								TarContent: tarContent,
+							},
+						},
+					},
+				},
+				rootDir:           dir,
+				expectedCacheKeys: []string{copyCommandCacheKey},
+				// CachingCopyCommand is not pushed to the cache
+				pushedCacheKeys: []string{},
+				commands: func() []commands.DockerCommand {
+					cmd, err := commands.GetCommand(
+						&instructions.CopyCommand{
+							SourcesAndDest: []string{
+								filename, "foo.txt",
+							},
+						},
+						dir,
+					)
+					if err != nil {
+						panic(err)
+					}
+					return []commands.DockerCommand{
+						cmd,
+					}
+				}(),
+				fileName: filename,
+			}
+		}(),
+		func() testcase {
+			dir, filename := tempDirAndFile()
+
+			tarContent := []byte{}
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			return testcase{
+				description: "copy command cache enabled and key is not in cache",
+				opts:        &config.KanikoOptions{Cache: true},
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				layerCache: &fakeLayerCache{
+					retrieve: false,
+				},
+				image: fakeImage{
+					ImageLayers: []v1.Layer{
+						fakeLayer{
+							TarContent: tarContent,
+						},
+					},
+				},
+				rootDir:           dir,
+				expectedCacheKeys: []string{copyCommandCacheKey},
+				pushedCacheKeys:   []string{copyCommandCacheKey},
+				commands: func() []commands.DockerCommand {
+					cmd, err := commands.GetCommand(
+						&instructions.CopyCommand{
+							SourcesAndDest: []string{
+								filename, "foo.txt",
+							},
+						},
+						dir,
+					)
+					if err != nil {
+						panic(err)
+					}
+					return []commands.DockerCommand{
+						cmd,
+					}
+				}(),
+				fileName: filename,
+			}
+		}(),
+	}
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			var fileName string
+			if tc.commands == nil {
+				file, err := ioutil.TempFile("", "foo")
+				if err != nil {
+					t.Error(err)
+				}
+				command := MockDockerCommand{
+					contextFiles: []string{file.Name()},
+					cacheCommand: MockCachedDockerCommand{
+						contextFiles: []string{file.Name()},
+					},
+				}
+				tc.commands = []commands.DockerCommand{command}
+				fileName = file.Name()
+			} else {
+				fileName = tc.fileName
+			}
+
+			cf := tc.config
+			if cf == nil {
+				cf = &v1.ConfigFile{
+					Config: v1.Config{
+						Env: make([]string, 0),
+					},
+				}
+			}
+
+			snap := fakeSnapShotter{file: fileName}
+			lc := tc.layerCache
+			if lc == nil {
+				lc = &fakeLayerCache{}
+			}
+			keys := []string{}
+			sb := &stageBuilder{
+				args:        &dockerfile.BuildArgs{}, //required or code will panic
+				image:       tc.image,
+				opts:        tc.opts,
+				cf:          cf,
+				snapshotter: snap,
+				layerCache:  lc,
+				pushCache: func(_ *config.KanikoOptions, cacheKey, _, _ string) error {
+					keys = append(keys, cacheKey)
+					return nil
+				},
+			}
+			sb.cmds = tc.commands
+			tmp := commands.RootDir
+			if tc.rootDir != "" {
+				commands.RootDir = tc.rootDir
+			}
+			err := sb.build()
+			if err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+
+			if len(tc.expectedCacheKeys) != len(lc.receivedKeys) {
+				t.Errorf("expected to receive %v keys but was %v", len(tc.expectedCacheKeys), len(lc.receivedKeys))
+			}
+			for _, key := range tc.expectedCacheKeys {
+				match := false
+				for _, receivedKey := range lc.receivedKeys {
+					if key == receivedKey {
+						match = true
+						break
+					}
+				}
+				if !match {
+					t.Errorf("expected received keys to include %v but did not %v", key, lc.receivedKeys)
+				}
+			}
+			if len(tc.pushedCacheKeys) != len(keys) {
+				t.Errorf("expected to push %v keys but was %v", len(tc.pushedCacheKeys), len(keys))
+			}
+			for _, key := range tc.pushedCacheKeys {
+				match := false
+				for _, pushedKey := range keys {
+					if key == pushedKey {
+						match = true
+						break
+					}
+				}
+				if !match {
+					t.Errorf("expected pushed keys to include %v but did not %v", key, keys)
+				}
+			}
+			commands.RootDir = tmp
+
+		})
 	}
 }

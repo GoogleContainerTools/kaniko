@@ -176,7 +176,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		// Only add changed files.
 		fileChanged, err := s.l.CheckFileChange(path)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
 		}
 		if fileChanged {
 			logrus.Debugf("Adding %s to layer, because it was changed.", path)
