@@ -54,19 +54,21 @@ const emptyTarSize = 1024
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
 type stageBuilder struct {
-	stage           config.KanikoStage
-	image           v1.Image
-	cf              *v1.ConfigFile
-	snapshotter     *snapshot.Snapshotter
-	baseImageDigest string
-	opts            *config.KanikoOptions
-	cmds            []commands.DockerCommand
-	args            *dockerfile.BuildArgs
-	crossStageDeps  map[int][]string
+	stage               config.KanikoStage
+	image               v1.Image
+	cf                  *v1.ConfigFile
+	snapshotter         *snapshot.Snapshotter
+	baseImageDigest     string
+	finalCacheKey       string
+	opts                *config.KanikoOptions
+	cmds                []commands.DockerCommand
+	args                *dockerfile.BuildArgs
+	crossStageDeps      map[int][]string
+	digestToCacheKeyMap map[string]string
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string) (*stageBuilder, error) {
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string) (*stageBuilder, error) {
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
@@ -93,13 +95,14 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 	s := &stageBuilder{
-		stage:           stage,
-		image:           sourceImage,
-		cf:              imageConfig,
-		snapshotter:     snapshotter,
-		baseImageDigest: digest.String(),
-		opts:            opts,
-		crossStageDeps:  crossStageDeps,
+		stage:               stage,
+		image:               sourceImage,
+		cf:                  imageConfig,
+		snapshotter:         snapshotter,
+		baseImageDigest:     digest.String(),
+		opts:                opts,
+		crossStageDeps:      crossStageDeps,
+		digestToCacheKeyMap: dcm,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -163,6 +166,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 		if err != nil {
 			return err
 		}
+		s.finalCacheKey = ck
 		if command.ShouldCacheOutput() {
 			img, err := layerCache.RetrieveLayer(ck)
 			if err != nil {
@@ -190,7 +194,12 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 
 func (s *stageBuilder) build() error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
-	compositeKey := NewCompositeCache(s.baseImageDigest)
+	var compositeKey *CompositeCache
+	if cacheKey, ok := s.digestToCacheKeyMap[s.baseImageDigest]; ok {
+		compositeKey = NewCompositeCache(cacheKey)
+	} else {
+		compositeKey = NewCompositeCache(s.baseImageDigest)
+	}
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
@@ -422,6 +431,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
+	digestToCacheKeyMap := make(map[string]string)
 	// Parse dockerfile and unpack base image to root
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
@@ -442,7 +452,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
 	for index, stage := range stages {
-		sb, err := newStageBuilder(opts, stage, crossStageDependencies)
+		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKeyMap)
 		if err != nil {
 			return nil, err
 		}
@@ -454,6 +464,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, err
 		}
+		d, err := sourceImage.Digest()
+		if err != nil {
+			return nil, err
+		}
+		digestToCacheKeyMap[d.String()] = sb.finalCacheKey
 		if stage.Final {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
 			if err != nil {
