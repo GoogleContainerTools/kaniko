@@ -35,6 +35,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 func Test_reviewConfig(t *testing.T) {
@@ -529,8 +530,6 @@ func Test_stageBuilder_build(t *testing.T) {
 		image             v1.Image
 		config            *v1.ConfigFile
 	}
-	// The two copy command test cases use the same filesystem content and should generate the same cache keys. If they don't then something is wrong. They share this variable to help ensure that.
-	copyCommandCacheKey := "7263908b66952551d89fd895ffb067e2e30f474be9f38a8f1792af2b6df7c6e3"
 	tempDirAndFile := func() (string, string) {
 		dir, err := ioutil.TempDir("", "foo")
 		if err != nil {
@@ -549,21 +548,71 @@ func Test_stageBuilder_build(t *testing.T) {
 		return dir, filename
 	}
 	testCases := []testcase{
-		{
-			description:       "fake command cache enabled but key not in cache",
-			opts:              &config.KanikoOptions{Cache: true},
-			expectedCacheKeys: []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
-			pushedCacheKeys:   []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
-		},
-		{
-			description: "fake command cache enabled and key in cache",
-			opts:        &config.KanikoOptions{Cache: true},
-			layerCache: &fakeLayerCache{
-				retrieve: true,
-			},
-			expectedCacheKeys: []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
-			pushedCacheKeys:   []string{"2cd95a0195a42f2873273b7e8c970e3a87970bd0e5d330b3c7d068e7419e5017"},
-		},
+		func() testcase {
+			dir, file := tempDirAndFile()
+			filePath := filepath.Join(dir, file)
+			ch := NewCompositeCache("", "meow")
+
+			ch.AddPath(filePath)
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			command := MockDockerCommand{
+				contextFiles: []string{filePath},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{filePath},
+				},
+			}
+
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			return testcase{
+				description:       "fake command cache enabled but key not in cache",
+				config:            &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				opts:              &config.KanikoOptions{Cache: true},
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{hash},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
+		func() testcase {
+			dir, file := tempDirAndFile()
+			filePath := filepath.Join(dir, file)
+			ch := NewCompositeCache("", "meow")
+
+			ch.AddPath(filePath)
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			command := MockDockerCommand{
+				contextFiles: []string{filePath},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{filePath},
+				},
+			}
+
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			return testcase{
+				description: "fake command cache enabled and key in cache",
+				opts:        &config.KanikoOptions{Cache: true},
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				layerCache: &fakeLayerCache{
+					retrieve: true,
+				},
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
 		{
 			description: "fake command cache disabled and key not in cache",
 			opts:        &config.KanikoOptions{Cache: false},
@@ -605,6 +654,15 @@ func Test_stageBuilder_build(t *testing.T) {
 				t.Errorf("could not write file contents to tar")
 			}
 			tarContent := buf.Bytes()
+
+			ch := NewCompositeCache("", "")
+			ch.AddPath(filepath)
+			logrus.SetLevel(logrus.DebugLevel)
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			copyCommandCacheKey := hash
 			return testcase{
 				description: "copy command cache enabled and key in cache",
 				opts:        &config.KanikoOptions{Cache: true},
@@ -649,6 +707,14 @@ func Test_stageBuilder_build(t *testing.T) {
 			if err != nil {
 				t.Errorf("could not create temp dir %v", err)
 			}
+			filePath := filepath.Join(dir, filename)
+			ch := NewCompositeCache("", "")
+			ch.AddPath(filePath)
+			logrus.SetLevel(logrus.DebugLevel)
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
 			return testcase{
 				description: "copy command cache enabled and key is not in cache",
 				opts:        &config.KanikoOptions{Cache: true},
@@ -664,8 +730,8 @@ func Test_stageBuilder_build(t *testing.T) {
 					},
 				},
 				rootDir:           dir,
-				expectedCacheKeys: []string{copyCommandCacheKey},
-				pushedCacheKeys:   []string{copyCommandCacheKey},
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{hash},
 				commands: func() []commands.DockerCommand {
 					cmd, err := commands.GetCommand(
 						&instructions.CopyCommand{

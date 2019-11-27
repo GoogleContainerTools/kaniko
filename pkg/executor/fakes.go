@@ -101,7 +101,7 @@ func (m MockCachedDockerCommand) RequiresUnpackedFS() bool {
 	return false
 }
 func (m MockCachedDockerCommand) ShouldCacheOutput() bool {
-	return true
+	return false
 }
 
 type fakeLayerCache struct {
