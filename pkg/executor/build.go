@@ -211,10 +211,13 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 		if err != nil {
 			return errors.Wrap(err, "failed to hash composite key")
 		}
+
 		logrus.Debugf("optimize: cache key for command %v %v", command.String(), ck)
 		s.finalCacheKey = ck
+
 		if command.ShouldCacheOutput() && !stopCache {
 			img, err := s.layerCache.RetrieveLayer(ck)
+
 			if err != nil {
 				logrus.Debugf("Failed to retrieve layer: %s", err)
 				logrus.Infof("No cached layer found for cmd %s", command.String())
@@ -247,6 +250,7 @@ func (s *stageBuilder) build() error {
 	} else {
 		compositeKey = NewCompositeCache(s.baseImageDigest)
 	}
+
 	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
@@ -269,21 +273,26 @@ func (s *stageBuilder) build() error {
 
 	if shouldUnpack {
 		t := timing.Start("FS Unpacking")
-		if _, err := util.GetFSFromImage(constants.RootDir, s.image); err != nil {
+
+		if _, err := util.GetFSFromImage(constants.RootDir, s.image, util.ExtractFile); err != nil {
 			return errors.Wrap(err, "failed to get filesystem from image")
 		}
+
 		timing.DefaultRun.Stop(t)
 	} else {
 		logrus.Info("Skipping unpacking as no commands require it.")
 	}
+
 	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return errors.Wrap(err, "failed to check filesystem whitelist")
 	}
+
 	// Take initial snapshot
 	t := timing.Start("Initial FS snapshot")
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
+
 	timing.DefaultRun.Stop(t)
 
 	cacheGroup := errgroup.Group{}
@@ -327,6 +336,9 @@ func (s *stageBuilder) build() error {
 		if err != nil {
 			return errors.Wrap(err, "failed to hash composite key")
 		}
+
+		logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
+
 		// Push layer to cache (in parallel) now along with new config file
 		if s.opts.Cache && command.ShouldCacheOutput() {
 			cacheGroup.Go(func() error {
@@ -641,7 +653,7 @@ func extractImageToDependencyDir(name string, image v1.Image) error {
 		return err
 	}
 	logrus.Debugf("trying to extract to %s", dependencyDir)
-	_, err := util.GetFSFromImage(dependencyDir, image)
+	_, err := util.GetFSFromImage(dependencyDir, image, util.ExtractFile)
 	return err
 }
 

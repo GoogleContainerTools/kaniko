@@ -659,7 +659,7 @@ func TestExtractFile(t *testing.T) {
 			defer os.RemoveAll(r)
 
 			for _, hdr := range tc.hdrs {
-				if err := extractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
+				if err := ExtractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
 					t.Fatal(err)
 				}
 			}
