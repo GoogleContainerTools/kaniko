@@ -24,15 +24,10 @@ import (
 	"io/ioutil"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
-
-func fakeCachePush(_ *config.KanikoOptions, _, _, _ string) error {
-	return nil
-}
 
 type fakeSnapShotter struct {
 	file    string
@@ -108,10 +103,19 @@ type fakeLayerCache struct {
 	retrieve     bool
 	receivedKeys []string
 	img          v1.Image
+	keySequence  []string
 }
 
 func (f *fakeLayerCache) RetrieveLayer(key string) (v1.Image, error) {
 	f.receivedKeys = append(f.receivedKeys, key)
+	if len(f.keySequence) > 0 {
+		if f.keySequence[0] == key {
+			f.keySequence = f.keySequence[1:]
+			return f.img, nil
+		}
+		return f.img, errors.New("could not find layer")
+	}
+
 	if !f.retrieve {
 		return nil, errors.New("could not find layer")
 	}
