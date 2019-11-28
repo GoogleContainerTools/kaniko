@@ -141,7 +141,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 	layerCache := &cache.RegistryCache{
 		Opts: s.opts,
 	}
-
+	stopCache := false
 	// Possibly replace commands with their cached implementations.
 	// We walk through all the commands, running any commands that only operate on metadata.
 	// We throw the metadata away after, but we need it to properly track command dependencies
@@ -167,13 +167,14 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			return err
 		}
 		s.finalCacheKey = ck
-		if command.ShouldCacheOutput() {
+		if command.ShouldCacheOutput() && !stopCache {
 			img, err := layerCache.RetrieveLayer(ck)
 			if err != nil {
 				logrus.Debugf("Failed to retrieve layer: %s", err)
 				logrus.Infof("No cached layer found for cmd %s", command.String())
 				logrus.Debugf("Key missing was: %s", compositeKey.Key())
-				break
+				stopCache = true
+				continue
 			}
 
 			if cacheCmd := command.CacheCommand(img); cacheCmd != nil {
