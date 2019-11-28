@@ -531,59 +531,10 @@ func Test_stageBuilder_build(t *testing.T) {
 		image             v1.Image
 		config            *v1.ConfigFile
 	}
-	tempDirAndFile := func(filenames ...string) (string, []string) {
-		if len(filenames) == 0 {
-			filenames = []string{"bar.txt"}
-		}
-		dir, err := ioutil.TempDir("", "foo")
-		if err != nil {
-			t.Errorf("could not create temp dir %v", err)
-		}
-		for _, filename := range filenames {
-			filepath := filepath.Join(dir, filename)
-			err = ioutil.WriteFile(filepath, []byte(`meow`), 0777)
-			if err != nil {
-				t.Errorf("could not create temp file %v", err)
-			}
-		}
-
-		return dir, filenames
-	}
-	generateTar := func(dir string, fileNames ...string) []byte {
-		buf := bytes.NewBuffer([]byte{})
-		writer := tar.NewWriter(buf)
-		defer writer.Close()
-
-		for _, filename := range fileNames {
-			filePath := filepath.Join(dir, filename)
-			info, err := os.Stat(filePath)
-			if err != nil {
-				t.Errorf("could not get file info for temp file %v", err)
-			}
-			hdr, err := tar.FileInfoHeader(info, filename)
-			if err != nil {
-				t.Errorf("could not get tar header for temp file %v", err)
-			}
-
-			if err := writer.WriteHeader(hdr); err != nil {
-				t.Errorf("could not write tar header %v", err)
-			}
-
-			content, err := ioutil.ReadFile(filePath)
-			if err != nil {
-				t.Errorf("could not read tempfile %v", err)
-			}
-
-			if _, err := writer.Write(content); err != nil {
-				t.Errorf("could not write file contents to tar")
-			}
-		}
-		return buf.Bytes()
-	}
 
 	testCases := []testcase{
 		func() testcase {
-			dir, files := tempDirAndFile()
+			dir, files := tempDirAndFile(t)
 			file := files[0]
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
@@ -615,7 +566,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			}
 		}(),
 		func() testcase {
-			dir, files := tempDirAndFile()
+			dir, files := tempDirAndFile(t)
 			file := files[0]
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
@@ -661,11 +612,11 @@ func Test_stageBuilder_build(t *testing.T) {
 			},
 		},
 		func() testcase {
-			dir, filenames := tempDirAndFile()
+			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
 			filepath := filepath.Join(dir, filename)
 
-			tarContent := generateTar(dir, filename)
+			tarContent := generateTar(t, dir, filename)
 
 			ch := NewCompositeCache("", "")
 			ch.AddPath(filepath)
@@ -692,27 +643,18 @@ func Test_stageBuilder_build(t *testing.T) {
 				expectedCacheKeys: []string{copyCommandCacheKey},
 				// CachingCopyCommand is not pushed to the cache
 				pushedCacheKeys: []string{},
-				commands: func() []commands.DockerCommand {
-					cmd, err := commands.GetCommand(
-						&instructions.CopyCommand{
-							SourcesAndDest: []string{
-								filename, "foo.txt",
-							},
+				commands: getCommands(dir, []instructions.Command{
+					&instructions.CopyCommand{
+						SourcesAndDest: []string{
+							filename, "foo.txt",
 						},
-						dir,
-					)
-					if err != nil {
-						panic(err)
-					}
-					return []commands.DockerCommand{
-						cmd,
-					}
-				}(),
+					},
+				}),
 				fileName: filename,
 			}
 		}(),
 		func() testcase {
-			dir, filenames := tempDirAndFile()
+			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
 			tarContent := []byte{}
 			destDir, err := ioutil.TempDir("", "baz")
@@ -731,9 +673,7 @@ func Test_stageBuilder_build(t *testing.T) {
 				description: "copy command cache enabled and key is not in cache",
 				opts:        &config.KanikoOptions{Cache: true},
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
-				layerCache: &fakeLayerCache{
-					retrieve: false,
-				},
+				layerCache:  &fakeLayerCache{},
 				image: fakeImage{
 					ImageLayers: []v1.Layer{
 						fakeLayer{
@@ -744,29 +684,20 @@ func Test_stageBuilder_build(t *testing.T) {
 				rootDir:           dir,
 				expectedCacheKeys: []string{hash},
 				pushedCacheKeys:   []string{hash},
-				commands: func() []commands.DockerCommand {
-					cmd, err := commands.GetCommand(
-						&instructions.CopyCommand{
-							SourcesAndDest: []string{
-								filename, "foo.txt",
-							},
+				commands: getCommands(dir, []instructions.Command{
+					&instructions.CopyCommand{
+						SourcesAndDest: []string{
+							filename, "foo.txt",
 						},
-						dir,
-					)
-					if err != nil {
-						panic(err)
-					}
-					return []commands.DockerCommand{
-						cmd,
-					}
-				}(),
+					},
+				}),
 				fileName: filename,
 			}
 		}(),
 		func() testcase {
-			dir, filenames := tempDirAndFile()
+			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
-			tarContent := generateTar(filename)
+			tarContent := generateTar(t, filename)
 			destDir, err := ioutil.TempDir("", "baz")
 			if err != nil {
 				t.Errorf("could not create temp dir %v", err)
@@ -836,35 +767,7 @@ COPY %s bar.txt
 				// Due to CachingCopyCommand and CopyCommand returning different values the write cache key for the second copy command will never match the read cache key
 				// hash3 is the cachekey used to write to the cache for layer 2
 				pushedCacheKeys: []string{hash3},
-				commands: func() []commands.DockerCommand {
-					outCommands := make([]commands.DockerCommand, 0)
-					for _, c := range cmds {
-						cmd, err := commands.GetCommand(
-							c,
-							dir,
-						)
-						if err != nil {
-							panic(err)
-						}
-						outCommands = append(outCommands, cmd)
-					}
-					return outCommands
-					//fn := func(srcAndDest []string) commands.DockerCommand {
-					//        cmd, err := commands.GetCommand(
-					//                &instructions.CopyCommand{
-					//                        SourcesAndDest: srcAndDest,
-					//                },
-					//                dir,
-					//        )
-					//        if err != nil {
-					//                panic(err)
-					//        }
-					//        return cmd
-					//}
-					//return []commands.DockerCommand{
-					//        fn([]string{filename, "foo.txt"}), fn([]string{filename, "bar.txt"}),
-					//}
-				}(),
+				commands:        getCommands(dir, cmds),
 			}
 		}(),
 	}
@@ -925,40 +828,94 @@ COPY %s bar.txt
 				t.Errorf("Expected error to be nil but was %v", err)
 			}
 
-			if len(tc.expectedCacheKeys) != len(lc.receivedKeys) {
-				t.Errorf("expected to receive %v keys but was %v", len(tc.expectedCacheKeys), len(lc.receivedKeys))
-			}
-			expectedCached := tc.expectedCacheKeys
-			actualCached := lc.receivedKeys
-			sort.Slice(expectedCached, func(x, y int) bool {
-				return expectedCached[x] > expectedCached[y]
-			})
-			sort.Slice(actualCached, func(x, y int) bool {
-				return actualCached[x] > actualCached[y]
-			})
-			for i, key := range expectedCached {
-				if key != actualCached[i] {
-					t.Errorf("expected retrieved keys %d to be %v but was %v %v", i, key, actualCached[i], actualCached)
-				}
-			}
-			if len(tc.pushedCacheKeys) != len(keys) {
-				t.Errorf("expected to push %v keys but was %v", len(tc.pushedCacheKeys), len(keys))
-			}
-			expectedPushed := tc.pushedCacheKeys
-			actualPushed := keys
-			sort.Slice(expectedPushed, func(x, y int) bool {
-				return expectedPushed[x] > expectedPushed[y]
-			})
-			sort.Slice(actualPushed, func(x, y int) bool {
-				return actualPushed[x] > actualPushed[y]
-			})
-			for i, key := range expectedPushed {
-				if key != actualPushed[i] {
-					t.Errorf("expected pushed keys %d to be %v but was %v %v", i, key, actualPushed[i], actualPushed)
-				}
-			}
+			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
+			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
+
 			commands.RootDir = tmp
 
 		})
 	}
+}
+
+func assertCacheKeys(t *testing.T, expectedCacheKeys, actualCacheKeys []string, description string) {
+	if len(expectedCacheKeys) != len(actualCacheKeys) {
+		t.Errorf("expected to %v %v keys but was %v", description, len(expectedCacheKeys), len(actualCacheKeys))
+	}
+
+	sort.Slice(expectedCacheKeys, func(x, y int) bool {
+		return expectedCacheKeys[x] > expectedCacheKeys[y]
+	})
+	sort.Slice(actualCacheKeys, func(x, y int) bool {
+		return actualCacheKeys[x] > actualCacheKeys[y]
+	})
+	for i, key := range expectedCacheKeys {
+		if key != actualCacheKeys[i] {
+			t.Errorf("expected to %v keys %d to be %v but was %v %v", description, i, key, actualCacheKeys[i], actualCacheKeys)
+		}
+	}
+}
+
+func getCommands(dir string, cmds []instructions.Command) []commands.DockerCommand {
+	outCommands := make([]commands.DockerCommand, 0)
+	for _, c := range cmds {
+		cmd, err := commands.GetCommand(
+			c,
+			dir,
+		)
+		if err != nil {
+			panic(err)
+		}
+		outCommands = append(outCommands, cmd)
+	}
+	return outCommands
+
+}
+
+func tempDirAndFile(t *testing.T) (string, []string) {
+	filenames := []string{"bar.txt"}
+
+	dir, err := ioutil.TempDir("", "foo")
+	if err != nil {
+		t.Errorf("could not create temp dir %v", err)
+	}
+	for _, filename := range filenames {
+		filepath := filepath.Join(dir, filename)
+		err = ioutil.WriteFile(filepath, []byte(`meow`), 0777)
+		if err != nil {
+			t.Errorf("could not create temp file %v", err)
+		}
+	}
+
+	return dir, filenames
+}
+func generateTar(t *testing.T, dir string, fileNames ...string) []byte {
+	buf := bytes.NewBuffer([]byte{})
+	writer := tar.NewWriter(buf)
+	defer writer.Close()
+
+	for _, filename := range fileNames {
+		filePath := filepath.Join(dir, filename)
+		info, err := os.Stat(filePath)
+		if err != nil {
+			t.Errorf("could not get file info for temp file %v", err)
+		}
+		hdr, err := tar.FileInfoHeader(info, filename)
+		if err != nil {
+			t.Errorf("could not get tar header for temp file %v", err)
+		}
+
+		if err := writer.WriteHeader(hdr); err != nil {
+			t.Errorf("could not write tar header %v", err)
+		}
+
+		content, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			t.Errorf("could not read tempfile %v", err)
+		}
+
+		if _, err := writer.Write(content); err != nil {
+			t.Errorf("could not write file contents to tar")
+		}
+	}
+	return buf.Bytes()
 }
