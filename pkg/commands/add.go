@@ -19,11 +19,10 @@ package commands
 import (
 	"path/filepath"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-
-	"github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -141,4 +140,8 @@ func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfi
 
 func (a *AddCommand) MetadataOnly() bool {
 	return false
+}
+
+func (a *AddCommand) RequiresUnpackedFS() bool {
+	return true
 }

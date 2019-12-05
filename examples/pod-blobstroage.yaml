@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
+            "--context=https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz",
+            "--destination=<registry for image push>"]
+...
+ env:
+      - name: AZURE_STORAGE_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: azure-storage-access-key
+            key: azure-storage-access-key
+...
+  volumes:
+   - name: azure-storage-access-key
+    secret:
+      secretName: azure-storage-access-key

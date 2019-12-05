@@ -12,57 +12,72 @@ This enables building container images in environments that can't easily or secu
 kaniko is meant to be run as an image, `gcr.io/kaniko-project/executor`.
 We do **not** recommend running the kaniko executor binary in another image, as it might not work.
 
+
+We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
+
+:mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
+
+
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
+
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [How does kaniko work?](#how-does-kaniko-work)
-- [Known Issues](#known-issues)
-- [Demo](#demo)
-- [Tutorial](#tutorial)
-- [Using kaniko](#using-kaniko)
-  - [kaniko Build Contexts](#kaniko-build-contexts)
-  - [Running kaniko](#running-kaniko)
-    - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
-      - [Kubernetes secret](#kubernetes-secret)
-    - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-    - [Running kaniko in Docker](#running-kaniko-in-docker)
-  - [Caching](#caching)
-    - [Caching Layers](#caching-layers)
-    - [Caching Base Images](#caching-base-images)
-  - [Pushing to Different Registries](#pushing-to-different-registries)
-    - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
-  - [Additional Flags](#additional-flags)
-    - [--build-arg](#--build-arg)
-    - [--cache](#--cache)
-    - [--cache-dir](#--cache-dir)
-    - [--cache-repo](#--cache-repo)
-    - [--cleanup](#--cleanup)
-    - [--digest-file](#--digest-file)
-    - [--insecure](#--insecure)
-    - [--insecure-pull](#--insecure-pull)
-    - [--no-push](#--no-push)
-    - [--oci-layout-path](#--oci-layout-path)
-    - [--registry-mirror](#--registry-mirror)
-    - [--reproducible](#--reproducible)
-    - [--single-snapshot](#--single-snapshot)
-    - [--snapshotMode](#--snapshotmode)
-    - [--skip-tls-verify](#--skip-tls-verify)
-    - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
-    - [--target](#--target)
-    - [--tarPath](#--tarpath)
-    - [--verbosity](#--verbosity)
-  - [Debug Image](#debug-image)
-- [Security](#security)
-- [Comparison with Other Tools](#comparison-with-other-tools)
-- [Community](#community)
-- [Limitations](#limitations)
-  - [mtime and snapshotting](#mtime-and-snapshotting)
+- [kaniko - Build Images In Kubernetes](#kaniko---build-images-in-kubernetes)
+  - [How does kaniko work?](#how-does-kaniko-work)
+  - [Known Issues](#known-issues)
+  - [Demo](#demo)
+  - [Tutorial](#tutorial)
+  - [Using kaniko](#using-kaniko)
+    - [kaniko Build Contexts](#kaniko-build-contexts)
+    - [Using Private Git Repository](#using-private-git-repository)
+    - [Running kaniko](#running-kaniko)
+      - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+        - [Kubernetes secret](#kubernetes-secret)
+      - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
+      - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
+      - [Running kaniko in Docker](#running-kaniko-in-docker)
+    - [Caching](#caching)
+      - [Caching Layers](#caching-layers)
+      - [Caching Base Images](#caching-base-images)
+    - [Pushing to Different Registries](#pushing-to-different-registries)
+      - [Pushing to Docker Hub](#pushing-to-docker-hub)
+      - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+    - [Additional Flags](#additional-flags)
+      - [--build-arg](#build-arg)
+      - [--cache](#cache)
+      - [--cache-dir](#cache-dir)
+      - [--cache-repo](#cache-repo)
+      - [--digest-file](#digest-file)
+      - [--oci-layout-path](#oci-layout-path)
+      - [--insecure-registry](#insecure-registry)
+      - [--skip-tls-verify-registry](#skip-tls-verify-registry)
+      - [--cleanup](#cleanup)
+      - [--insecure](#insecure)
+      - [--insecure-pull](#insecure-pull)
+      - [--no-push](#no-push)
+      - [--registry-mirror](#--registry-mirror)
+      - [--reproducible](#reproducible)
+      - [--single-snapshot](#single-snapshot)
+      - [--skip-tls-verify](#skip-tls-verify)
+      - [--skip-tls-verify-pull](#skip-tls-verify-pull)
+      - [--snapshotMode](#snapshotmode)
+      - [--target](#target)
+      - [--tarPath](#tarpath)
+      - [--verbosity](#verbosity)
+    - [Debug Image](#debug-image)
+  - [Security](#security)
+  - [Comparison with Other Tools](#comparison-with-other-tools)
+  - [Community](#community)
+  - [Limitations](#limitations)
+    - [mtime and snapshotting](#mtime-and-snapshotting)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Community
+We'd love to hear from you! Join [#kaniko on Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
 
 ## How does kaniko work?
 
@@ -73,7 +88,10 @@ After each command, we append a layer of changed files to the base image (if the
 
 ## Known Issues
 
-kaniko does not support building Windows containers.
+* kaniko does not support building Windows containers.
+* Running kaniko in any Docker image other than the official kaniko image is not supported (ie YMMV).
+  * This includes copying the kaniko executables from the official image into another image.
+* kaniko does not support the v1 Registry API ([Registry v1 API Deprecation](https://engineering.docker.com/2019/03/registry-v1-api-deprecation/))
 
 ## Demo
 
@@ -99,6 +117,7 @@ You will need to store your build context in a place that kaniko can access.
 Right now, kaniko supports these storage solutions:
 - GCS Bucket
 - S3 Bucket
+- Azure Blob Storage
 - Local Directory
 - Git Repository
 
@@ -124,13 +143,17 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 
 |  Source | Prefix  | Example |
 |---------|---------|---------|
-| Local Directory  | dir://[path to a directory in the kaniko container] | `dir:///workspace` |
-| GCS Bucket       | gs://[bucket name]/[path to .tar.gz]                | `gs://kaniko-bucket/path/to/context.tar.gz` |
-| S3 Bucket        | s3://[bucket name]/[path to .tar.gz]                | `s3://kaniko-bucket/path/to/context.tar.gz` |
-| Git Repository   | git://[repository url][#reference]                  | `git://github.com/acme/myproject.git#refs/heads/mybranch` |
+| Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
+| GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
+| S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
+| Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
+| Git Repository    | git://[repository url][#reference]                              | `git://github.com/acme/myproject.git#refs/heads/mybranch`     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
+
+### Using Azure Blob Storage
+If you are using Azure Blob Storage for context file, you will need to pass [Azure Storage Account Access Key](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string?toc=%2fazure%2fstorage%2fblobs%2ftoc.json) as an evironment variable named `AZURE_STORAGE_ACCESS_KEY` through Kubernetes Secrets
 
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
@@ -250,6 +273,17 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ```shell
   ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
   ```
+
+_NOTE: `run_in_docker.sh` expects a path to a 
+Dockerfile relative to the absolute path of the build context._
+
+An example run, specifying the Dockerfile in the container directory `/workspace`, the build
+context in the local directory `/home/user/kaniko-project`, and a Google Container Registry
+as a remote image destination:
+
+```shell
+./run_in_docker.sh /workspace/Dockerfile /home/user/kaniko-project gcr.io//<project-id>/<tag>
+```
 
 ### Caching
 

@@ -17,12 +17,177 @@ limitations under the License.
 package dockerfile
 
 import (
+	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
+
+func Test_Stages_ArgValueWithQuotes(t *testing.T) {
+	dockerfile := `
+	ARG IMAGE="ubuntu:16.04"
+	FROM ${IMAGE}
+	RUN echo hi > /hi
+	
+	FROM scratch AS second
+	COPY --from=0 /hi /hi2
+	
+	FROM scratch
+	COPY --from=second /hi2 /hi3
+	`
+	tmpfile, err := ioutil.TempFile("", "Dockerfile.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	stages, err := Stages(&config.KanikoOptions{DockerfilePath: tmpfile.Name()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(stages) == 0 {
+		t.Fatal("length of stages expected to be greater than zero, but was zero")
+
+	}
+
+	if len(stages[0].MetaArgs) == 0 {
+		t.Fatal("length of stage[0] meta args expected to be greater than zero, but was zero")
+	}
+
+	expectedVal := "ubuntu:16.04"
+
+	arg := stages[0].MetaArgs[0]
+	if arg.ValueString() != expectedVal {
+		t.Fatalf("expected stages[0].MetaArgs[0] val to be %s but was %s", expectedVal, arg.ValueString())
+	}
+}
+
+func Test_stripEnclosingQuotes(t *testing.T) {
+	type testCase struct {
+		name     string
+		inArgs   []instructions.ArgCommand
+		expected []string
+		success  bool
+	}
+
+	newArgCommand := func(key, val string) instructions.ArgCommand {
+		return instructions.ArgCommand{
+			KeyValuePairOptional: instructions.KeyValuePairOptional{Key: key, Value: &val},
+		}
+	}
+
+	cases := []testCase{{
+		name:     "value with no enclosing quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", "Purr")},
+		expected: []string{"Purr"},
+		success:  true,
+	}, {
+		name:   "value with unmatched leading double quote",
+		inArgs: []instructions.ArgCommand{newArgCommand("MEOW", "\"Purr")},
+	}, {
+		name:   "value with unmatched trailing double quote",
+		inArgs: []instructions.ArgCommand{newArgCommand("MEOW", "Purr\"")},
+	}, {
+		name:     "value with enclosing double quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", "\"mrow\"")},
+		expected: []string{"mrow"},
+		success:  true,
+	}, {
+		name:   "value with unmatched leading single quote",
+		inArgs: []instructions.ArgCommand{newArgCommand("MEOW", "'Purr")},
+	}, {
+		name:   "value with unmatched trailing single quote",
+		inArgs: []instructions.ArgCommand{newArgCommand("MEOW", "Purr'")},
+	}, {
+		name:     "value with enclosing single quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", "'mrow'")},
+		expected: []string{"mrow"},
+		success:  true,
+	}, {
+		name:     "blank value with enclosing double quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", `""`)},
+		expected: []string{""},
+		success:  true,
+	}, {
+		name:     "blank value with enclosing single quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", "''")},
+		expected: []string{""},
+		success:  true,
+	}, {
+		name:     "value with escaped, enclosing double quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", `\"Purr\"`)},
+		expected: []string{`\"Purr\"`},
+		success:  true,
+	}, {
+		name:     "value with escaped, enclosing single quotes",
+		inArgs:   []instructions.ArgCommand{newArgCommand("MEOW", `\'Purr\'`)},
+		expected: []string{`\'Purr\'`},
+		success:  true,
+	}, {
+		name: "multiple values enclosed with single quotes",
+		inArgs: []instructions.ArgCommand{
+			newArgCommand("MEOW", `'Purr'`),
+			newArgCommand("MEW", `'Mrow'`),
+		},
+		expected: []string{"Purr", "Mrow"},
+		success:  true,
+	}, {
+		name: "multiple values, one blank, one a single int",
+		inArgs: []instructions.ArgCommand{
+			newArgCommand("MEOW", `""`),
+			newArgCommand("MEW", `1`),
+		},
+		expected: []string{"", "1"},
+		success:  true,
+	}, {
+		name:    "no values",
+		success: true,
+	}}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			inArgs := test.inArgs
+			expected := test.expected
+			success := test.success
+
+			out, err := stripEnclosingQuotes(inArgs)
+			if success && err != nil {
+				t.Fatal(err)
+			}
+
+			if !success && err == nil {
+				t.Fatal("expected an error but none received")
+			}
+
+			if len(expected) != len(out) {
+				t.Fatalf("Expected %d args but got %d", len(expected), len(out))
+			}
+
+			for i := range out {
+				if expected[i] != out[i].ValueString() {
+					t.Errorf(
+						"Expected arg at index %d to equal %v but instead equaled %v",
+						i,
+						expected[i],
+						out[i].ValueString())
+				}
+			}
+		})
+	}
+}
 
 func Test_resolveStages(t *testing.T) {
 	dockerfile := `

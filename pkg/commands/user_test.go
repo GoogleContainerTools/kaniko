@@ -34,6 +34,10 @@ var userTests = []struct {
 		expectedUID: "root",
 	},
 	{
+		user:        "root-add",
+		expectedUID: "root-add",
+	},
+	{
 		user:        "0",
 		expectedUID: "0",
 	},

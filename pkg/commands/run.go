@@ -28,7 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -38,6 +38,11 @@ type RunCommand struct {
 	BaseCommand
 	cmd *instructions.RunCommand
 }
+
+// for testing
+var (
+	userLookup = user.Lookup
+)
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	var newCommand []string
@@ -133,14 +138,17 @@ func addDefaultHOME(u string, envs []string) []string {
 
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
-	home := fmt.Sprintf("%s=/", constants.HOME)
-	userObj, err := user.Lookup(u)
+	home := "/"
+	userObj, err := userLookup(u)
 	if err == nil {
-		u = userObj.Username
-		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
+		if userObj.HomeDir != "" {
+			home = userObj.HomeDir
+		} else {
+			home = fmt.Sprintf("/home/%s", userObj.Username)
+		}
 	}
 
-	return append(envs, home)
+	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, home))
 }
 
 // String returns some information about the command for the image config

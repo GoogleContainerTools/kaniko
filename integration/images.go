@@ -135,6 +135,7 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 		"Dockerfile_test_cache":         {},
 		"Dockerfile_test_cache_install": {},
 		"Dockerfile_test_cache_perm":    {},
+		"Dockerfile_test_cache_copy":    {},
 	}
 	return &d
 }

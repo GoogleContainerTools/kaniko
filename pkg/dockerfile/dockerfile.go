@@ -111,7 +111,81 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	metaArgs, err = stripEnclosingQuotes(metaArgs)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return stages, metaArgs, nil
+}
+
+// stripEnclosingQuotes removes quotes enclosing the value of each instructions.ArgCommand in a slice
+// if the quotes are escaped it leaves them
+func stripEnclosingQuotes(metaArgs []instructions.ArgCommand) ([]instructions.ArgCommand, error) {
+	for i := range metaArgs {
+		arg := metaArgs[i]
+		v := arg.Value
+		if v != nil {
+			val, err := extractValFromQuotes(*v)
+			if err != nil {
+				return nil, err
+			}
+
+			arg.Value = &val
+			metaArgs[i] = arg
+		}
+	}
+	return metaArgs, nil
+}
+
+func extractValFromQuotes(val string) (string, error) {
+	backSlash := byte('\\')
+	if len(val) < 2 {
+		return val, nil
+	}
+
+	var leader string
+	var tail string
+
+	switch char := val[0]; char {
+	case '\'', '"':
+		leader = string([]byte{char})
+	case backSlash:
+		switch char := val[1]; char {
+		case '\'', '"':
+			leader = string([]byte{backSlash, char})
+		}
+	}
+
+	// If the length of leader is greater than one then it must be an escaped
+	// character.
+	if len(leader) < 2 {
+		switch char := val[len(val)-1]; char {
+		case '\'', '"':
+			tail = string([]byte{char})
+		}
+	} else {
+		switch char := val[len(val)-2:]; char {
+		case `\'`, `\"`:
+			tail = char
+		}
+	}
+
+	if leader != tail {
+		logrus.Infof("leader %s tail %s", leader, tail)
+		return "", errors.New("quotes wrapping arg values must be matched")
+	}
+
+	if leader == "" {
+		return val, nil
+	}
+
+	if len(leader) == 2 {
+		return val, nil
+	}
+
+	return val[1 : len(val)-1], nil
 }
 
 // targetStage returns the index of the target stage kaniko is trying to build
