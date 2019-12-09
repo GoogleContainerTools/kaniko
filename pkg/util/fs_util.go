@@ -424,10 +424,16 @@ func FilepathExists(path string) bool {
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
-	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
+	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
+		}
+	} else {
+		switch mode := info.Mode(); {
+		case mode&os.ModeSymlink != 0:
+			logrus.Infof("destination cannot be a symlink %v", baseDir)
+			return errors.New("destination cannot be a symlink")
 		}
 	}
 	dest, err := os.Create(path)
