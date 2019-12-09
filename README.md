@@ -322,7 +322,7 @@ kaniko comes with support for GCR, Docker `config.json` and Amazon ECR, but conf
 
 Get your docker registry user and password encoded in base64
 
-    echo USER:PASSWORD | base64
+    echo -n USER:PASSWORD | base64
 
 Create a `config.json` file with your Docker registry url and the previous generated base64 string
 
