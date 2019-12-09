@@ -551,6 +551,12 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
+	if src == dest {
+		// This is a no-op. Move on, but don't list it as ignored.
+		// We have to make sure we do this so we don't overwrite our own file.
+		// See iusse #904 for an example.
+		return false, nil
+	}
 	fi, err := os.Stat(src)
 	if err != nil {
 		return false, err

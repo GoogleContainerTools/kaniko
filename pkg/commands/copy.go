@@ -171,7 +171,7 @@ type CachingCopyCommand struct {
 func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Infof("Found cached layer, extracting to filesystem")
 	var err error
-	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+	cr.extractedFiles, err = util.GetFSFromImage(RootDir, cr.img)
 	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")

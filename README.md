@@ -46,33 +46,33 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
       - [Pushing to Docker Hub](#pushing-to-docker-hub)
       - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
     - [Additional Flags](#additional-flags)
-      - [--build-arg](#build-arg)
-      - [--cache](#cache)
-      - [--cache-dir](#cache-dir)
-      - [--cache-repo](#cache-repo)
-      - [--digest-file](#digest-file)
-      - [--oci-layout-path](#oci-layout-path)
-      - [--insecure-registry](#insecure-registry)
-      - [--skip-tls-verify-registry](#skip-tls-verify-registry)
-      - [--cleanup](#cleanup)
-      - [--insecure](#insecure)
-      - [--insecure-pull](#insecure-pull)
-      - [--no-push](#no-push)
+      - [--build-arg](#--build-arg)
+      - [--cache](#--cache)
+      - [--cache-dir](#--cache-dir)
+      - [--cache-repo](#--cache-repo)
+      - [--digest-file](#--digest-file)
+      - [--oci-layout-path](#--oci-layout-path)
+      - [--insecure-registry](#--insecure-registry)
+      - [--skip-tls-verify-registry](#--skip-tls-verify-registry)
+      - [--cleanup](#--cleanup)
+      - [--insecure](#--insecure)
+      - [--insecure-pull](#--insecure-pull)
+      - [--no-push](#--no-push)
       - [--registry-mirror](#--registry-mirror)
-      - [--reproducible](#reproducible)
-      - [--single-snapshot](#single-snapshot)
-      - [--skip-tls-verify](#skip-tls-verify)
-      - [--skip-tls-verify-pull](#skip-tls-verify-pull)
-      - [--snapshotMode](#snapshotmode)
-      - [--target](#target)
-      - [--tarPath](#tarpath)
-      - [--verbosity](#verbosity)
-    - [Debug Image](#debug-image)
+      - [--reproducible](#--reproducible)
+      - [--single-snapshot](#--single-snapshot)
+      - [--skip-tls-verify](#--skip-tls-verify)
+      - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
+      - [--snapshotMode](#--snapshotmode)
+      - [--target](#--target)
+      - [--tarPath](#--tarpath)
+      - [--verbosity](#--verbosity)
+  - [Debug Image](#debug-image)
   - [Security](#security)
   - [Comparison with Other Tools](#comparison-with-other-tools)
   - [Community](#community)
   - [Limitations](#limitations)
-    - [mtime and snapshotting](#mtime-and-snapshotting)
+  - [mtime and snapshotting](#mtime-and-snapshotting)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -288,7 +288,7 @@ as a remote image destination:
 ### Caching
 
 #### Caching Layers
-kaniko currently can cache layers created by `RUN` commands in a remote repository.
+kaniko can cache layers created by `RUN` commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
@@ -299,7 +299,7 @@ If this flag isn't provided, a cached repo will be inferred from the `--destinat
 
 #### Caching Base Images
 
-kaniko can cache images in a local directory that can be volume mounted into the kaniko image.
+kaniko can cache images in a local directory that can be volume mounted into the kaniko pod.
 To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming
 image at `gcr.io/kaniko-project/warmer`:
 
@@ -310,7 +310,7 @@ docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=
 `--image` can be specified for any number of desired images.
 This command will cache those images by digest in a local directory named `cache`.
 Once the cache is populated, caching is opted into with the same `--cache=true` flag as above.
-The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer.
+The location of the local cache is provided via the `--cache-dir` flag, defaulting to `/cache` as with the cache warmer.
 See the `examples` directory for how to use with kubernetes clusters and persistent cache volumes.
 
 ### Pushing to Different Registries
@@ -323,7 +323,7 @@ kaniko comes with support for GCR, Docker `config.json` and Amazon ECR, but conf
 
 Get your docker registry user and password encoded in base64
 
-    echo USER:PASSWORD | base64
+    echo -n USER:PASSWORD | base64
 
 Create a `config.json` file with your Docker registry url and the previous generated base64 string
 
@@ -346,7 +346,7 @@ Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
 To configure credentials, you will need to do the following:
 
-1. Update the `credHelpers` section of [config.json](https://github.com/GoogleContainerTools/kaniko/blob/master/files/config.json) with the specific URI of your ECR registry:
+1. Update the `credHelpers` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration) with the specific URI of your ECR registry:
 
   ```json
   {
