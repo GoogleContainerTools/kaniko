@@ -140,17 +140,6 @@ func TestMain(m *testing.M) {
 	}
 	imageBuilder = NewDockerFileBuilder(dockerfiles)
 
-	//g := errgroup.Group{}
-	//for dockerfile := range imageBuilder.FilesBuilt {
-	//        df := dockerfile
-	//        g.Go(func() error {
-	//                return imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, df)
-	//        })
-	//}
-	//if err := g.Wait(); err != nil {
-	//        fmt.Printf("Error building images: %s", err)
-	//        os.Exit(1)
-	//}
 	os.Exit(m.Run())
 }
 
