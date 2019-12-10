@@ -22,6 +22,7 @@ import (
 	"path"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -41,7 +42,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
-		img, err := remote.Image(cacheRef)
+		img, err := remote.Image(cacheRef, remote.WithAuthFromKeychain(creds.GetKeychain()))
 		if err != nil || img == nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}
