@@ -161,6 +161,10 @@ func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
 	}
 }
 
+func (c *CopyCommand) From() string {
+	return c.cmd.From
+}
+
 type CachingCopyCommand struct {
 	BaseCommand
 	img            v1.Image
@@ -185,6 +189,10 @@ func (cr *CachingCopyCommand) FilesToSnapshot() []string {
 
 func (cr *CachingCopyCommand) String() string {
 	return cr.cmd.String()
+}
+
+func (cr *CachingCopyCommand) From() string {
+	return cr.cmd.From
 }
 
 func resolveIfSymlink(destPath string) (string, error) {

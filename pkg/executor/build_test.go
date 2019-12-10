@@ -888,6 +888,7 @@ func tempDirAndFile(t *testing.T) (string, []string) {
 
 	return dir, filenames
 }
+
 func generateTar(t *testing.T, dir string, fileNames ...string) []byte {
 	buf := bytes.NewBuffer([]byte{})
 	writer := tar.NewWriter(buf)
