@@ -512,7 +512,7 @@ Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the lo
 
 ### Debug Image
 
-The kaniko executor image is based off of scratch and doesn't contain a shell.
+The kaniko executor image is based on scratch and doesn't contain a shell.
 We provide `gcr.io/kaniko-project/executor:debug`, a debug image which consists of the kaniko executor image along with a busybox shell to enter.
 
 You can launch the debug image with a shell entrypoint:
