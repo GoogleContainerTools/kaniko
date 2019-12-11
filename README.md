@@ -292,7 +292,7 @@ Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
 
-Users can opt in to caching by setting the `--cache=true` flag.
+Users can opt into caching by setting the `--cache=true` flag.
 A remote repository for storing cached layers can be provided via the `--cache-repo` flag.
 If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.
 
@@ -342,7 +342,7 @@ Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 
 #### Pushing to Amazon ECR
 
-The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
+The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built into the kaniko executor image.
 To configure credentials, you will need to do the following:
 
 1. Update the `credHelpers` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration) with the specific URI of your ECR registry:
@@ -407,7 +407,7 @@ You can set it multiple times for multiple arguments.
 
 #### --cache
 
-Set this flag as `--cache=true` to opt in to caching with kaniko.
+Set this flag as `--cache=true` to opt into caching with kaniko.
 
 #### --cache-dir
 
