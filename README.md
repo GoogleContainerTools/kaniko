@@ -567,7 +567,7 @@ builds can be done entirely without privilege).
 
 `umoci` works without any privileges, and also has no restrictions on the root
 filesystem being extracted (though it requires additional handling if your
-filesystem is sufficiently complicated). However it has no `Dockerfile`-like
+filesystem is sufficiently complicated). However, it has no `Dockerfile`-like
 build tooling (it's a slightly lower-level tool that can be used to build such
 builders -- such as `orca-build`).
 
@@ -599,7 +599,7 @@ To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.
 When taking a snapshot, kaniko's hashing algorithms include (or in the case of
 [`--snapshotMode=time`](#--snapshotmode), only use) a file's
 [`mtime`](https://en.wikipedia.org/wiki/Inode#POSIX_inode_description) to determine
-if the file has changed. Unfortunately there is a delay between when changes to a
+if the file has changed. Unfortunately, there is a delay between when changes to a
 file are made and when the `mtime` is updated. This means:
 
 * With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss changes
