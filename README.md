@@ -529,7 +529,7 @@ kaniko relies on the security features of your container runtime to provide buil
 
 The minimum permissions kaniko needs inside your container are governed by a few things:
 
-* The permissions required to unpack your base image into it's container
+* The permissions required to unpack your base image into its container
 * The permissions required to execute the RUN commands inside the container
 
 If you have a minimal base image (SCRATCH or similar) that doesn't require
