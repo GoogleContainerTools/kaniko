@@ -417,7 +417,7 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 
 #### --cache-repo
 
-Set this flag to specify a remote repository which will be used to store cached layers.
+Set this flag to specify a remote repository that will be used to store cached layers.
 
 If this flag is not provided, a cache repo will be inferred from the `--destination` flag.
 If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored in `gcr.io/kaniko-project/test/cache`.
