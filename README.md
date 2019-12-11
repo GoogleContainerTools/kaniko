@@ -554,7 +554,7 @@ Similar tools include:
 
 All of these tools build container images with different approaches.
 
-BuildKit (and `img`) can perform as a non root user from within a container, but requires
+BuildKit (and `img`) can perform as a non-root user from within a container, but requires
 seccomp and AppArmor to be disabled to create nested containers.  `kaniko`
 does not actually create nested containers, so it does not require seccomp and AppArmor
 to be disabled.
