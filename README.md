@@ -456,7 +456,7 @@ You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
 
-Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --cleanup
