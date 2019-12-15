@@ -218,6 +218,8 @@ func Test_resolveIfSymlink(t *testing.T) {
 }
 
 func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
+	tempDir := setupTestTemp()
+
 	tarContent, err := prepareTarFixture([]string{"foo.txt"})
 	if err != nil {
 		t.Errorf("couldn't prepare tar fixture %v", err)
@@ -238,12 +240,19 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 	}
 	testCases := []testCase{
 		func() testCase {
+			err = ioutil.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("meow"), 0644)
+			if err != nil {
+				t.Errorf("couldn't write tempfile %v", err)
+				t.FailNow()
+			}
+
 			c := &CachingCopyCommand{
 				img: fakeImage{
 					ImageLayers: []v1.Layer{
 						fakeLayer{TarContent: tarContent},
 					},
 				},
+				buildcontext: tempDir,
 				cmd: &instructions.CopyCommand{
 					SourcesAndDest: []string{
 						"foo.txt", "foo.txt",
@@ -339,17 +348,16 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 						t.Errorf("Expected extracted files to include %v but did not %v", file, cFiles)
 					}
 				}
-				// CachingCopyCommand does not override BaseCommand
-				// FilesUseFromContext so this will always return an empty slice and no error
-				// This seems like it might be a bug as it results in CopyCommands and CachingCopyCommands generating different cache keys - cvgw - 2019-11-27
+
 				cmdFiles, err := c.FilesUsedFromContext(
 					config, buildArgs,
 				)
 				if err != nil {
-					t.Errorf("failed to get files used from context from command")
+					t.Errorf("failed to get files used from context from command %v", err)
 				}
-				if len(cmdFiles) != 0 {
-					t.Errorf("expected files used from context to be empty but was not")
+
+				if len(cmdFiles) != len(tc.contextFiles) {
+					t.Errorf("expected files used from context to equal %v but was %v", tc.contextFiles, cmdFiles)
 				}
 			}
 
