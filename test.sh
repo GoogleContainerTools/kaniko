@@ -32,7 +32,6 @@ scripts=(
     "hack/boilerplate.sh"
     "hack/gofmt.sh"
     "hack/linter.sh"
-    "hack/dep.sh"
 )
 fail=0
 for s in "${scripts[@]}"
