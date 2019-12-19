@@ -141,3 +141,7 @@ func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfi
 func (a *AddCommand) MetadataOnly() bool {
 	return false
 }
+
+func (a *AddCommand) RequiresUnpackedFS() bool {
+	return true
+}

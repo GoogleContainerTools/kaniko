@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -66,6 +67,14 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		if err != nil {
 			return err
 		}
+
+		// If the destination dir is a symlink we need to resolve the path and use
+		// that instead of the symlink path
+		destPath, err = resolveIfSymlink(destPath)
+		if err != nil {
+			return err
+		}
+
 		if fi.IsDir() {
 			if !filepath.IsAbs(dest) {
 				// we need to add '/' to the end to indicate the destination is a directory
@@ -112,24 +121,7 @@ func (c *CopyCommand) String() string {
 }
 
 func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
-	// We don't use the context if we're performing a copy --from.
-	if c.cmd.From != "" {
-		return nil, nil
-	}
-
-	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	srcs, _, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
-	if err != nil {
-		return nil, err
-	}
-
-	files := []string{}
-	for _, src := range srcs {
-		fullPath := filepath.Join(c.buildcontext, src)
-		files = append(files, fullPath)
-	}
-	logrus.Infof("Using files from context: %v", files)
-	return files, nil
+	return copyCmdFilesUsedFromContext(config, buildArgs, c.cmd, c.buildcontext)
 }
 
 func (c *CopyCommand) MetadataOnly() bool {
@@ -148,9 +140,15 @@ func (c *CopyCommand) ShouldCacheOutput() bool {
 func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
 
 	return &CachingCopyCommand{
-		img: img,
-		cmd: c.cmd,
+		img:          img,
+		cmd:          c.cmd,
+		buildcontext: c.buildcontext,
+		extractFn:    util.ExtractFile,
 	}
+}
+
+func (c *CopyCommand) From() string {
+	return c.cmd.From
 }
 
 type CachingCopyCommand struct {
@@ -158,17 +156,29 @@ type CachingCopyCommand struct {
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.CopyCommand
+	buildcontext   string
+	extractFn      util.ExtractFunction
 }
 
 func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Infof("Found cached layer, extracting to filesystem")
 	var err error
-	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+
+	if cr.img == nil {
+		return errors.New(fmt.Sprintf("cached command image is nil %v", cr.String()))
+	}
+	cr.extractedFiles, err = util.GetFSFromImage(RootDir, cr.img, cr.extractFn)
+
 	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")
 	}
+
 	return nil
+}
+
+func (cr *CachingCopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
+	return copyCmdFilesUsedFromContext(config, buildArgs, cr.cmd, cr.buildcontext)
 }
 
 func (cr *CachingCopyCommand) FilesToSnapshot() []string {
@@ -176,5 +186,59 @@ func (cr *CachingCopyCommand) FilesToSnapshot() []string {
 }
 
 func (cr *CachingCopyCommand) String() string {
+	if cr.cmd == nil {
+		return "nil command"
+	}
 	return cr.cmd.String()
+}
+
+func (cr *CachingCopyCommand) From() string {
+	return cr.cmd.From
+}
+
+func resolveIfSymlink(destPath string) (string, error) {
+	baseDir := filepath.Dir(destPath)
+	if info, err := os.Lstat(baseDir); err == nil {
+		switch mode := info.Mode(); {
+		case mode&os.ModeSymlink != 0:
+			linkPath, err := os.Readlink(baseDir)
+			if err != nil {
+				return "", errors.Wrap(err, "error reading symlink")
+			}
+			absLinkPath := filepath.Join(filepath.Dir(baseDir), linkPath)
+			newPath := filepath.Join(absLinkPath, filepath.Base(destPath))
+			logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
+			return newPath, nil
+		}
+	}
+	return destPath, nil
+}
+
+func copyCmdFilesUsedFromContext(
+	config *v1.Config, buildArgs *dockerfile.BuildArgs, cmd *instructions.CopyCommand,
+	buildcontext string,
+) ([]string, error) {
+	// We don't use the context if we're performing a copy --from.
+	if cmd.From != "" {
+		return nil, nil
+	}
+
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+
+	srcs, _, err := util.ResolveEnvAndWildcards(
+		cmd.SourcesAndDest, buildcontext, replacementEnvs,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	files := []string{}
+	for _, src := range srcs {
+		fullPath := filepath.Join(buildcontext, src)
+		files = append(files, fullPath)
+	}
+
+	logrus.Debugf("Using files from context: %v", files)
+
+	return files, nil
 }

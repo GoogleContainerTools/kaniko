@@ -28,7 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -124,7 +124,8 @@ func LocalSource(opts *config.CacheOptions, cacheKey string) (v1.Image, error) {
 
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "getting file info")
+		logrus.Debugf("No file found for cache key %v %v", cacheKey, err)
+		return nil, nil
 	}
 
 	// A stale cache is a bad cache

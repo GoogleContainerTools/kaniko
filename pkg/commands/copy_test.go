@@ -16,6 +16,8 @@ limitations under the License.
 package commands
 
 import (
+	"archive/tar"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -164,4 +166,201 @@ func copySetUpBuildArgs() *dockerfile.BuildArgs {
 	d := "default"
 	buildArgs.AddArg("buildArg2", &d)
 	return buildArgs
+}
+
+func Test_resolveIfSymlink(t *testing.T) {
+	type testCase struct {
+		destPath     string
+		expectedPath string
+		err          error
+	}
+
+	tmpDir, err := ioutil.TempDir("", "copy-test")
+	if err != nil {
+		t.Error(err)
+	}
+
+	baseDir, err := ioutil.TempDir(tmpDir, "not-linked")
+	if err != nil {
+		t.Error(err)
+	}
+
+	path, err := ioutil.TempFile(baseDir, "foo.txt")
+	if err != nil {
+		t.Error(err)
+	}
+
+	thepath, err := filepath.Abs(filepath.Dir(path.Name()))
+	if err != nil {
+		t.Error(err)
+	}
+	cases := []testCase{{destPath: thepath, expectedPath: thepath, err: nil}}
+
+	baseDir = tmpDir
+	symLink := filepath.Join(baseDir, "symlink")
+	if err := os.Symlink(filepath.Base(thepath), symLink); err != nil {
+		t.Error(err)
+	}
+	cases = append(cases, testCase{filepath.Join(symLink, "foo.txt"), filepath.Join(thepath, "foo.txt"), nil})
+
+	for i, c := range cases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			res, e := resolveIfSymlink(c.destPath)
+			if e != c.err {
+				t.Errorf("%s: expected %v but got %v", c.destPath, c.err, e)
+			}
+
+			if res != c.expectedPath {
+				t.Errorf("%s: expected %v but got %v", c.destPath, c.expectedPath, res)
+			}
+		})
+	}
+}
+
+func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
+	tempDir := setupTestTemp()
+
+	tarContent, err := prepareTarFixture([]string{"foo.txt"})
+	if err != nil {
+		t.Errorf("couldn't prepare tar fixture %v", err)
+	}
+
+	config := &v1.Config{}
+	buildArgs := &dockerfile.BuildArgs{}
+
+	type testCase struct {
+		desctiption    string
+		expectLayer    bool
+		expectErr      bool
+		count          *int
+		expectedCount  int
+		command        *CachingCopyCommand
+		extractedFiles []string
+		contextFiles   []string
+	}
+	testCases := []testCase{
+		func() testCase {
+			err = ioutil.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("meow"), 0644)
+			if err != nil {
+				t.Errorf("couldn't write tempfile %v", err)
+				t.FailNow()
+			}
+
+			c := &CachingCopyCommand{
+				img: fakeImage{
+					ImageLayers: []v1.Layer{
+						fakeLayer{TarContent: tarContent},
+					},
+				},
+				buildcontext: tempDir,
+				cmd: &instructions.CopyCommand{
+					SourcesAndDest: []string{
+						"foo.txt", "foo.txt",
+					},
+				},
+			}
+			count := 0
+			tc := testCase{
+				desctiption:    "with valid image and valid layer",
+				count:          &count,
+				expectedCount:  1,
+				expectLayer:    true,
+				extractedFiles: []string{"/foo.txt"},
+				contextFiles:   []string{"foo.txt"},
+			}
+			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+				*tc.count++
+				return nil
+			}
+			tc.command = c
+			return tc
+		}(),
+		func() testCase {
+			c := &CachingCopyCommand{}
+			tc := testCase{
+				desctiption: "with no image",
+				expectErr:   true,
+			}
+			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+				return nil
+			}
+			tc.command = c
+			return tc
+		}(),
+		func() testCase {
+			c := &CachingCopyCommand{
+				img: fakeImage{},
+			}
+			tc := testCase{
+				desctiption: "with image containing no layers",
+			}
+			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+				return nil
+			}
+			tc.command = c
+			return tc
+		}(),
+		func() testCase {
+			c := &CachingCopyCommand{
+				img: fakeImage{
+					ImageLayers: []v1.Layer{
+						fakeLayer{},
+					},
+				},
+			}
+			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+				return nil
+			}
+			tc := testCase{
+				desctiption: "with image one layer which has no tar content",
+				expectErr:   false, // this one probably should fail but doesn't because of how ExecuteCommand and util.GetFSFromLayers are implemented - cvgw- 2019-11-25
+				expectLayer: true,
+			}
+			tc.command = c
+			return tc
+		}(),
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desctiption, func(t *testing.T) {
+			c := tc.command
+			err := c.ExecuteCommand(config, buildArgs)
+			if !tc.expectErr && err != nil {
+				t.Errorf("Expected err to be nil but was %v", err)
+			} else if tc.expectErr && err == nil {
+				t.Error("Expected err but was nil")
+			}
+
+			if tc.count != nil {
+				if *tc.count != tc.expectedCount {
+					t.Errorf("Expected extractFn to be called %v times but was called %v times", tc.expectedCount, *tc.count)
+				}
+				for _, file := range tc.extractedFiles {
+					match := false
+					cFiles := c.FilesToSnapshot()
+					for _, cFile := range cFiles {
+						if file == cFile {
+							match = true
+							break
+						}
+					}
+					if !match {
+						t.Errorf("Expected extracted files to include %v but did not %v", file, cFiles)
+					}
+				}
+
+				cmdFiles, err := c.FilesUsedFromContext(
+					config, buildArgs,
+				)
+				if err != nil {
+					t.Errorf("failed to get files used from context from command %v", err)
+				}
+
+				if len(cmdFiles) != len(tc.contextFiles) {
+					t.Errorf("expected files used from context to equal %v but was %v", tc.contextFiles, cmdFiles)
+				}
+			}
+
+		})
+	}
 }

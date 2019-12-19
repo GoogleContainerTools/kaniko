@@ -69,9 +69,17 @@ var volumes = []string{}
 
 var excluded []string
 
+type ExtractFunction func(string, *tar.Header, io.Reader) error
+
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
-func GetFSFromImage(root string, img v1.Image) ([]string, error) {
+func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]string, error) {
+	if extract == nil {
+		return nil, errors.New("must supply an extract function")
+	}
+	if img == nil {
+		return nil, errors.New("image cannot be nil")
+	}
 	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return nil, err
 	}
@@ -114,7 +122,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				}
 				continue
 			}
-			if err := extractFile(root, hdr, tr); err != nil {
+			if err := extract(root, hdr, tr); err != nil {
 				return nil, err
 			}
 			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
@@ -179,7 +187,7 @@ func unTar(r io.Reader, dest string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := extractFile(dest, hdr, tr); err != nil {
+		if err := ExtractFile(dest, hdr, tr); err != nil {
 			return nil, err
 		}
 		extractedFiles = append(extractedFiles, dest)
@@ -187,7 +195,7 @@ func unTar(r io.Reader, dest string) ([]string, error) {
 	return extractedFiles, nil
 }
 
-func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
+func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	path := filepath.Join(dest, filepath.Clean(hdr.Name))
 	base := filepath.Base(path)
 	dir := filepath.Dir(path)
@@ -424,10 +432,16 @@ func FilepathExists(path string) bool {
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
 	baseDir := filepath.Dir(path)
-	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
+	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
+		}
+	} else {
+		switch mode := info.Mode(); {
+		case mode&os.ModeSymlink != 0:
+			logrus.Infof("destination cannot be a symlink %v", baseDir)
+			return errors.New("destination cannot be a symlink")
 		}
 	}
 	dest, err := os.Create(path)
@@ -544,6 +558,12 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 	if excludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
+	}
+	if src == dest {
+		// This is a no-op. Move on, but don't list it as ignored.
+		// We have to make sure we do this so we don't overwrite our own file.
+		// See iusse #904 for an example.
+		return false, nil
 	}
 	fi, err := os.Stat(src)
 	if err != nil {
