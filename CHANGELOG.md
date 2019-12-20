@@ -1,3 +1,46 @@
+# v0.15.0 Release - 2019-12-20
+
+## Bug fixes
+* Fix #899 cached copy results in inconsistent key [#914](https://github.com/GoogleContainerTools/kaniko/pull/914)
+* Fix contribution issue sentence [#912](https://github.com/GoogleContainerTools/kaniko/pull/912)
+* Include source stage cache key in cache key for COPY commands using --from [#883](https://github.com/GoogleContainerTools/kaniko/pull/883)
+* Fix failure when using capital letters in image alias in 'FROM ... AS…' instruction [#839](https://github.com/GoogleContainerTools/kaniko/pull/839)
+* Add golangci.yaml file matching current config [#893](https://github.com/GoogleContainerTools/kaniko/pull/893)
+* when copying, skip files with the same name [#905](https://github.com/GoogleContainerTools/kaniko/pull/905)
+* Modified error message for writing image with digest file [#849](https://github.com/GoogleContainerTools/kaniko/pull/849)
+* Don't exit optimize early; record last cachekey [#892](https://github.com/GoogleContainerTools/kaniko/pull/892)
+* Final cachekey for stage [#891](https://github.com/GoogleContainerTools/kaniko/pull/891)
+* Update error handling and logging for cache [#879](https://github.com/GoogleContainerTools/kaniko/pull/879)
+* Resolve symlink targets to abs path before copying [#857](https://github.com/GoogleContainerTools/kaniko/pull/857)
+* Fix quote strip behavior for ARG values [#850](https://github.com/GoogleContainerTools/kaniko/pull/850)
+
+## Updates and Refactors
+* add unit tests for caching run and copy [#888](https://github.com/GoogleContainerTools/kaniko/pull/888)
+* Only build required docker images for integration tests [#898](https://github.com/GoogleContainerTools/kaniko/pull/898)
+* Add integration test for add url with arg [#863](https://github.com/GoogleContainerTools/kaniko/pull/863)
+* Add unit tests for compositecache and stagebuilder [#890](https://github.com/GoogleContainerTools/kaniko/pull/890)
+
+## Documentation
+* updated readme [#906](https://github.com/GoogleContainerTools/kaniko/pull/906)
+* nits in README [#861](https://github.com/GoogleContainerTools/kaniko/pull/861)
+* Invalid link to missing file config.json [#876](https://github.com/GoogleContainerTools/kaniko/pull/876)
+* Fix README.md anchor links [#872](https://github.com/GoogleContainerTools/kaniko/pull/872)
+* Update readme known issues [#874](https://github.com/GoogleContainerTools/kaniko/pull/874)
+
+Huge thank you for this release towards our contributors:
+- Balint Pato
+- Ben Einaudi
+- Cole Wippern
+- Eduard Laur
+- Josh Soref
+- Pweetoo
+- Tejal Desai
+- Will Ripley
+- poy
+- priyawadhwa
+- tommaso.doninelli
+
+
 # v0.14.0 Release - 2019-11-08
 
 ## New Features
