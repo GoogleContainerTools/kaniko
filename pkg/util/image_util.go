@@ -75,12 +75,19 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	if opts.CacheDir != "" {
 		cachedImage, err := cachedImage(opts, currentBaseName)
 		if err != nil {
-			logrus.Errorf("Error while retrieving image from cache: %v %v", currentBaseName, err)
+			switch {
+			case cache.IsNotFound(err):
+				logrus.Debugf("Image %v not found in cache", currentBaseName)
+			case cache.IsExpired(err):
+				logrus.Debugf("Image %v found in cache but was expired", currentBaseName)
+			default:
+				logrus.Errorf("Error while retrieving image from cache: %v %v", currentBaseName, err)
+			}
 		} else if cachedImage != nil {
 			return cachedImage, nil
 		}
 	}
-	logrus.Infof("Image %v not found in cache", currentBaseName)
+
 	// Otherwise, initialize image as usual
 	return RetrieveRemoteImage(currentBaseName, opts)
 }

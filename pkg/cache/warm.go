@@ -54,7 +54,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 
 		if !opts.Force {
 			_, err := LocalSource(&opts.CacheOptions, digest.String())
-			if err == nil {
+			if err == nil || IsExpired(err) {
 				continue
 			}
 		}
