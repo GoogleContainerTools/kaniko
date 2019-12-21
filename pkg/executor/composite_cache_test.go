@@ -80,7 +80,7 @@ func Test_CompositeCache_AddPath_dir(t *testing.T) {
 
 	fn := func() string {
 		r := NewCompositeCache()
-		if err := r.AddPath(tmpDir); err != nil {
+		if err := r.AddPath(tmpDir, ""); err != nil {
 			t.Errorf("expected error to be nil but was %v", err)
 		}
 
@@ -118,7 +118,7 @@ func Test_CompositeCache_AddPath_file(t *testing.T) {
 	p := tmpfile.Name()
 	fn := func() string {
 		r := NewCompositeCache()
-		if err := r.AddPath(p); err != nil {
+		if err := r.AddPath(p, ""); err != nil {
 			t.Errorf("expected error to be nil but was %v", err)
 		}
 
