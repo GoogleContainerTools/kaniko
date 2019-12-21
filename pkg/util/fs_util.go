@@ -214,7 +214,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	}
 	switch hdr.Typeflag {
 	case tar.TypeReg:
-		logrus.Debugf("creating file %s", path)
+		logrus.Tracef("creating file %s", path)
 		// It's possible a file is in the tar before its directory,
 		// or a file was copied over a directory prior to now
 		fi, err := os.Stat(dir)
@@ -510,7 +510,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
-			logrus.Debugf("Creating directory %s", destPath)
+			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
 			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
