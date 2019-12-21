@@ -17,12 +17,15 @@ limitations under the License.
 package cache
 
 import (
-	"fmt"
+	"bytes"
+	"io"
 	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -37,42 +40,111 @@ func WarmCache(opts *config.WarmerOptions) error {
 	logrus.Debugf("%s\n", images)
 
 	for _, image := range images {
-		cacheRef, err := name.NewTag(image, name.WeakValidation)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
-		}
-		img, err := remote.Image(cacheRef)
-		if err != nil || img == nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
+		tarBuf := new(bytes.Buffer)
+		manifestBuf := new(bytes.Buffer)
+
+		cw := &Warmer{
+			Remote:         remote.Image,
+			Local:          LocalSource,
+			TarWriter:      tarBuf,
+			ManifestWriter: manifestBuf,
 		}
 
-		digest, err := img.Digest()
+		digest, err := cw.Warm(image, opts)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve digest: %s", image))
+			if !IsAlreadyCached(err) {
+				return err
+			}
+
+			continue
 		}
+
 		cachePath := path.Join(cacheDir, digest.String())
 
-		if !opts.Force {
-			_, err := LocalSource(&opts.CacheOptions, digest.String())
-			if err == nil || IsExpired(err) {
-				continue
-			}
+		if err := writeBufsToFile(cachePath, tarBuf, manifestBuf); err != nil {
+			return err
 		}
 
-		err = tarball.WriteToFile(cachePath, cacheRef, img)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to write %s to cache", image))
-		}
-
-		mfst, err := img.RawManifest()
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve manifest for %s", image))
-		}
-		mfstPath := cachePath + ".json"
-		if err := ioutil.WriteFile(mfstPath, mfst, 0666); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Failed to save manifest for %s", image))
-		}
 		logrus.Debugf("Wrote %s to cache", image)
 	}
 	return nil
+}
+
+func writeBufsToFile(cachePath string, tarBuf, manifestBuf *bytes.Buffer) error {
+	f, err := os.Create(cachePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.Write(tarBuf.Bytes()); err != nil {
+		return errors.Wrap(err, "Failed to save tar to file")
+	}
+
+	mfstPath := cachePath + ".json"
+	if err := ioutil.WriteFile(mfstPath, manifestBuf.Bytes(), 0666); err != nil {
+		return errors.Wrap(err, "Failed to save manifest to file")
+	}
+
+	return nil
+}
+
+// FetchRemoteImage retrieves a Docker image manifest from a remote source.
+// github.com/google/go-containerregistry/pkg/v1/remote.Image can be used as
+// this type.
+type FetchRemoteImage func(name.Reference, ...remote.Option) (v1.Image, error)
+
+// FetchLocalSource retrieves a Docker image manifest from a local source.
+// github.com/GoogleContainerTools/kaniko/cache.LocalSource can be used as
+// this type.
+type FetchLocalSource func(*config.CacheOptions, string) (v1.Image, error)
+
+// Warmer is used to prepopulate the cache with a Docker image
+type Warmer struct {
+	Remote         FetchRemoteImage
+	Local          FetchLocalSource
+	TarWriter      io.Writer
+	ManifestWriter io.Writer
+}
+
+// Warm retrieves a Docker image and populates the supplied buffer with the image content and manifest
+// or returns an AlreadyCachedErr if the image is present in the cache.
+func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error) {
+	cacheRef, err := name.NewTag(image, name.WeakValidation)
+	if err != nil {
+		return v1.Hash{}, errors.Wrapf(err, "Failed to verify image name: %s", image)
+	}
+
+	img, err := w.Remote(cacheRef)
+	if err != nil || img == nil {
+		return v1.Hash{}, errors.Wrapf(err, "Failed to retrieve image: %s", image)
+	}
+
+	digest, err := img.Digest()
+	if err != nil {
+		return v1.Hash{}, errors.Wrapf(err, "Failed to retrieve digest: %s", image)
+	}
+
+	if !opts.Force {
+		_, err := w.Local(&opts.CacheOptions, digest.String())
+		if err == nil || IsExpired(err) {
+			return v1.Hash{}, AlreadyCachedErr{}
+		}
+	}
+
+	err = tarball.Write(cacheRef, img, w.TarWriter)
+	if err != nil {
+		return v1.Hash{}, errors.Wrapf(err, "Failed to write %s to tar buffer", image)
+	}
+
+	mfst, err := img.RawManifest()
+	if err != nil {
+		return v1.Hash{}, errors.Wrapf(err, "Failed to retrieve manifest for %s", image)
+	}
+
+	if _, err := w.ManifestWriter.Write(mfst); err != nil {
+		return v1.Hash{}, errors.Wrapf(err, "Failed to save manifest to buffer for %s", image)
+	}
+
+	return digest, nil
 }

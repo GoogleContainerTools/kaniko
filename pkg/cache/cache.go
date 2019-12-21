@@ -35,40 +35,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type NotFoundErr struct {
-	msg string
-}
-
-func (e NotFoundErr) Error() string {
-	return e.msg
-}
-
-type ExpiredErr struct {
-	msg string
-}
-
-func (e ExpiredErr) Error() string {
-	return e.msg
-}
-
-func IsNotFound(e error) bool {
-	switch e.(type) {
-	case NotFoundErr:
-		return true
-	}
-
-	return false
-}
-
-func IsExpired(e error) bool {
-	switch e.(type) {
-	case ExpiredErr:
-		return true
-	}
-
-	return false
-}
-
 // LayerCache is the layer cache
 type LayerCache interface {
 	RetrieveLayer(string) (v1.Image, error)
