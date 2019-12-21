@@ -155,7 +155,8 @@ func TestRun(t *testing.T) {
 				t.SkipNow()
 			}
 
-			imageBuilder.FilesBuilt[dockerfile] = buildImage(t, dockerfile, imageBuilder)
+			buildImage(t, dockerfile, imageBuilder)
+			imageBuilder.FilesBuilt[dockerfile] = true
 
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
@@ -280,7 +281,8 @@ func TestLayers(t *testing.T) {
 				t.SkipNow()
 			}
 
-			imageBuilder.FilesBuilt[dockerfile] = buildImage(t, dockerfile, imageBuilder)
+			buildImage(t, dockerfile, imageBuilder)
+			imageBuilder.FilesBuilt[dockerfile] = true
 
 			// Pull the kaniko image
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
@@ -297,9 +299,9 @@ func TestLayers(t *testing.T) {
 	}
 }
 
-func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) bool {
+func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
 	if imageBuilder.FilesBuilt[dockerfile] {
-		return true
+		return
 	}
 
 	if err := imageBuilder.BuildImage(
@@ -308,7 +310,8 @@ func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
 	}
-	return true
+
+	return
 }
 
 // Build each image with kaniko twice, and then make sure they're exactly the same

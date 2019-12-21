@@ -1,0 +1,14 @@
+dist: trusty
+sudo: required
+
+services:
+  - docker
+
+language: go
+
+go: 
+ - "1.10"
+
+script:
+ - go test -c -o test ./
+ - sudo ./test -test.v

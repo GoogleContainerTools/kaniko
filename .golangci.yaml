@@ -150,6 +150,9 @@ linters:
   disable:
     - errcheck
     - gas
+    - scopelint
+    - bodyclose
+    - staticcheck
   disable-all: false
   presets:
     - bugs
