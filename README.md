@@ -345,15 +345,10 @@ Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
 To configure credentials, you will need to do the following:
 
-1. Update the `credHelpers` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration) with the specific URI of your ECR registry,
-replacing AWS_ACCOUNT_ID and REGION:
+1. Update the `credsStore` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration):
 
   ```json
-  {
-    "credHelpers": {
-      "AWS_ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com": "ecr-login"
-    }
-  }
+  { "credsStore": "ecr-login" }
   ```
 
   You can mount in the new config as a configMap:
