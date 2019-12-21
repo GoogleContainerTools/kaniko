@@ -494,7 +494,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	digestToCacheKey := make(map[string]string)
 	stageIdxToDigest := make(map[string]string)
 
-	// Parse dockerfile and unpack base image to root
+	// Parse dockerfile
 	stages, err := dockerfile.Stages(opts)
 	if err != nil {
 		return nil, err
