@@ -32,7 +32,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -41,40 +40,6 @@ import (
 
 var config = initGCPConfig()
 var imageBuilder *DockerFileBuilder
-
-type gcpConfig struct {
-	gcsBucket         string
-	imageRepo         string
-	onbuildBaseImage  string
-	hardlinkBaseImage string
-}
-
-type imageDetails struct {
-	name      string
-	numLayers int
-	digest    string
-}
-
-func (i imageDetails) String() string {
-	return fmt.Sprintf("Image: [%s] Digest: [%s] Number of Layers: [%d]", i.name, i.digest, i.numLayers)
-}
-
-func initGCPConfig() *gcpConfig {
-	var c gcpConfig
-	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
-	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
-	flag.Parse()
-
-	if c.gcsBucket == "" || c.imageRepo == "" {
-		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)
-	}
-	if !strings.HasSuffix(c.imageRepo, "/") {
-		c.imageRepo = c.imageRepo + "/"
-	}
-	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
-	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
-	return &c
-}
 
 const (
 	daemonPrefix       = "daemon://"
@@ -101,19 +66,6 @@ const (
      }
    ]`
 )
-
-func meetsRequirements() bool {
-	requiredTools := []string{"container-diff", "gsutil"}
-	hasRequirements := true
-	for _, tool := range requiredTools {
-		_, err := exec.LookPath(tool)
-		if err != nil {
-			fmt.Printf("You must have %s installed and on your PATH\n", tool)
-			hasRequirements = false
-		}
-	}
-	return hasRequirements
-}
 
 func TestMain(m *testing.M) {
 	if !meetsRequirements() {
@@ -192,19 +144,9 @@ func TestMain(m *testing.M) {
 	}
 	imageBuilder = NewDockerFileBuilder(dockerfiles)
 
-	g := errgroup.Group{}
-	for dockerfile := range imageBuilder.FilesBuilt {
-		df := dockerfile
-		g.Go(func() error {
-			return imageBuilder.BuildImage(config.imageRepo, config.gcsBucket, dockerfilesPath, df)
-		})
-	}
-	if err := g.Wait(); err != nil {
-		fmt.Printf("Error building images: %s", err)
-		os.Exit(1)
-	}
 	os.Exit(m.Run())
 }
+
 func TestRun(t *testing.T) {
 	for dockerfile := range imageBuilder.FilesBuilt {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
@@ -216,6 +158,10 @@ func TestRun(t *testing.T) {
 			if _, ok := imageBuilder.TestCacheDockerfiles[dockerfile]; ok {
 				t.SkipNow()
 			}
+
+			buildImage(t, dockerfile, imageBuilder)
+			imageBuilder.FilesBuilt[dockerfile] = true
+
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 
@@ -333,10 +279,15 @@ func TestLayers(t *testing.T) {
 	for dockerfile := range imageBuilder.FilesBuilt {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
+
 			t.Parallel()
 			if _, ok := imageBuilder.DockerfilesToIgnore[dockerfile]; ok {
 				t.SkipNow()
 			}
+
+			buildImage(t, dockerfile, imageBuilder)
+			imageBuilder.FilesBuilt[dockerfile] = true
+
 			// Pull the kaniko image
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
@@ -350,6 +301,21 @@ func TestLayers(t *testing.T) {
 	if err != nil {
 		t.Logf("Failed to create benchmark file: %v", err)
 	}
+}
+
+func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
+	if imageBuilder.FilesBuilt[dockerfile] {
+		return
+	}
+
+	if err := imageBuilder.BuildImage(
+		config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile,
+	); err != nil {
+		t.Errorf("Error building image: %s", err)
+		t.FailNow()
+	}
+
+	return
 }
 
 // Build each image with kaniko twice, and then make sure they're exactly the same
@@ -525,4 +491,51 @@ func logBenchmarks(benchmark string) error {
 		defer f.Close()
 	}
 	return nil
+}
+
+type gcpConfig struct {
+	gcsBucket         string
+	imageRepo         string
+	onbuildBaseImage  string
+	hardlinkBaseImage string
+}
+
+type imageDetails struct {
+	name      string
+	numLayers int
+	digest    string
+}
+
+func (i imageDetails) String() string {
+	return fmt.Sprintf("Image: [%s] Digest: [%s] Number of Layers: [%d]", i.name, i.digest, i.numLayers)
+}
+
+func initGCPConfig() *gcpConfig {
+	var c gcpConfig
+	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
+	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
+	flag.Parse()
+
+	if c.gcsBucket == "" || c.imageRepo == "" {
+		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)
+	}
+	if !strings.HasSuffix(c.imageRepo, "/") {
+		c.imageRepo = c.imageRepo + "/"
+	}
+	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
+	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
+	return &c
+}
+
+func meetsRequirements() bool {
+	requiredTools := []string{"container-diff", "gsutil"}
+	hasRequirements := true
+	for _, tool := range requiredTools {
+		_, err := exec.LookPath(tool)
+		if err != nil {
+			fmt.Printf("You must have %s installed and on your PATH\n", tool)
+			hasRequirements = false
+		}
+	}
+	return hasRequirements
 }

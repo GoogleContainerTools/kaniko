@@ -46,7 +46,7 @@ var (
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
-	addKanikoOptionsFlags(RootCmd)
+	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
 }
 
@@ -118,7 +118,7 @@ var RootCmd = &cobra.Command{
 }
 
 // addKanikoOptionsFlags configures opts
-func addKanikoOptionsFlags(cmd *cobra.Command) {
+func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&opts.DockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SrcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
 	RootCmd.PersistentFlags().StringVarP(&opts.Bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")

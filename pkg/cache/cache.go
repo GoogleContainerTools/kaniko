@@ -113,7 +113,7 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
 
-// LocalSource retieves a source image from a local cache given cacheKey
+// LocalSource retrieves a source image from a local cache given cacheKey
 func LocalSource(opts *config.CacheOptions, cacheKey string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {

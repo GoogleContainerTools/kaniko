@@ -36,8 +36,8 @@ var (
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
-	addKanikoOptionsFlags(RootCmd)
-	addHiddenFlags(RootCmd)
+	addKanikoOptionsFlags()
+	addHiddenFlags()
 }
 
 var RootCmd = &cobra.Command{
@@ -65,7 +65,7 @@ var RootCmd = &cobra.Command{
 }
 
 // addKanikoOptionsFlags configures opts
-func addKanikoOptionsFlags(cmd *cobra.Command) {
+func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.Images, "image", "i", "Image to cache. Set it repeatedly for multiple images.")
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "c", "/cache", "Directory of the cache.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Force, "force", "f", false, "Force cache overwriting.")
@@ -73,7 +73,7 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
-func addHiddenFlags(cmd *cobra.Command) {
+func addHiddenFlags() {
 	RootCmd.PersistentFlags().MarkHidden("azure-container-registry-config")
 }
 

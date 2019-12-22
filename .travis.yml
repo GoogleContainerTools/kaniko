@@ -2,7 +2,7 @@ language: go
 os: linux
 
 go:
-  - "1.10"
+  - "1.13.3"
 go_import_path: github.com/GoogleContainerTools/kaniko
 
 script:
