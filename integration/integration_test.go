@@ -121,10 +121,6 @@ func TestMain(m *testing.M) {
 			name:    "Pushing hardlink base image",
 			command: []string{"docker", "push", config.hardlinkBaseImage},
 		},
-		{
-			name:    "Building kaniko image using registry-mirror",
-			command: []string{"docker", "build", "--registry-mirror", "mirror.gcr.io", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
-		},
 	}
 
 	for _, setupCmd := range setupCommands {
