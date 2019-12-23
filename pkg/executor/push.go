@@ -110,11 +110,10 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	var digestByteArray []byte
 	var builder strings.Builder
 
-        dir := strings.Split(opts.DigestFile, "/")
-        parent_dir := strings.Join(dir[:len(dir)-1], "/")
+        parent_dir := filepath.Dir(opts.DigestFile) 
         if _, err := os.Stat(parent_dir); os.IsNotExist(err) {
                os.MkdirAll(parent_dir, 0700)
-               logrus.Infof("Created directory %v", parent_dir)
+               logrus.Tracef("Created directory %v", parent_dir)
         }
 
 	if opts.DigestFile != "" || opts.ImageNameDigestFile != "" {
