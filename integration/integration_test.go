@@ -227,13 +227,14 @@ func TestGitBuildcontext(t *testing.T) {
 
 func TestGitBuildContextWithBranch(t *testing.T) {
 	repo := "github.com/GoogleContainerTools/kaniko#refs/tags/v0.10.0"
+	dockerfile := dockerfileTestRun
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
 	dockerCmd := exec.Command("docker",
 		append([]string{"build",
 			"-t", dockerImage,
-			"-f", dockerfileTestRun,
+			"-f", dockerfile,
 			repo})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
@@ -272,10 +273,11 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
+	dockerfile := dockerfileTestRun
 	dockerCmd := exec.Command("docker",
 		append([]string{"build",
 			"-t", dockerImage,
-			"-f", dockerfileTestRun,
+			"-f", dockerfile,
 			repo})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
