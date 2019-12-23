@@ -99,15 +99,6 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
-	rOpts, err := prepareRemoteRequest(ref, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return remote.Image(ref, rOpts...)
-}
-
-func prepareRemoteRequest(ref name.Reference, opts *config.KanikoOptions) ([]remote.Option, error) {
 	registryName := ref.Context().RegistryStr()
 	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
 		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
@@ -124,13 +115,23 @@ func prepareRemoteRequest(ref name.Reference, opts *config.KanikoOptions) ([]rem
 		}
 	}
 
+	rOpts := remoteOptions(registryName, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return remote.Image(ref, rOpts...)
+}
+
+func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {
 	tr := http.DefaultTransport.(*http.Transport)
 	if opts.SkipTLSVerifyPull || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		tr.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 	}
-	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}, nil
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
