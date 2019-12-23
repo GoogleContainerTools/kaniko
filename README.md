@@ -346,14 +346,10 @@ Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built into the kaniko executor image.
 To configure credentials, you will need to do the following:
 
-1. Update the `credHelpers` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration) with the specific URI of your ECR registry:
+1. Update the `credsStore` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration):
 
   ```json
-  {
-    "credHelpers": {
-      "aws_account_id.dkr.ecr.region.amazonaws.com": "ecr-login"
-    }
-  }
+  { "credsStore": "ecr-login" }
   ```
 
   You can mount in the new config as a configMap:
@@ -362,42 +358,47 @@ To configure credentials, you will need to do the following:
   kubectl create configmap docker-config --from-file=<path to config.json>
   ```
 
-2. Create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
+2. Configure credentials
 
-  To create the secret, run:
+    1. You can use instance roles when pushing to ECR from a EC2 instance or from EKS, by [configuring the instance role permissions](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html).
 
-  ```shell
-  kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
-  ```
+    2. Or you can create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
+    To create the secret, run:
+        ```shell
+        kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
+        ```
 
-  The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
+The Kubernetes Pod spec should look similar to this, with the args parameters filled in.
+Note that `aws-secret` volume mount and volume are only needed when using AWS credentials from a secret, not when using instance roles.
 
-  ```yaml
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: kaniko
-  spec:
-    containers:
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      args: ["--dockerfile=<path to Dockerfile within the build context>",
-              "--context=s3://<bucket name>/<path to .tar.gz>",
-              "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
-      volumeMounts:
-        - name: aws-secret
-          mountPath: /root/.aws/
-        - name: docker-config
-          mountPath: /kaniko/.docker/
-    restartPolicy: Never
-    volumes:
-      - name: aws-secret
-        secret:
-          secretName: aws-secret
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
+            "--context=s3://<bucket name>/<path to .tar.gz>",
+            "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
+    volumeMounts:
       - name: docker-config
-        configMap:
-          name: docker-config
-  ```
+        mountPath: /kaniko/.docker/
+      # when not using instance role
+      - name: aws-secret
+        mountPath: /root/.aws/
+  restartPolicy: Never
+  volumes:
+    - name: docker-config
+      configMap:
+        name: docker-config
+    # when not using instance role
+    - name: aws-secret
+      secret:
+        secretName: aws-secret
+```
 
 ### Additional Flags
 
