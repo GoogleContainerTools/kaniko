@@ -69,9 +69,17 @@ var volumes = []string{}
 
 var excluded []string
 
+type ExtractFunction func(string, *tar.Header, io.Reader) error
+
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
-func GetFSFromImage(root string, img v1.Image) ([]string, error) {
+func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]string, error) {
+	if extract == nil {
+		return nil, errors.New("must supply an extract function")
+	}
+	if img == nil {
+		return nil, errors.New("image cannot be nil")
+	}
 	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
 		return nil, err
 	}
@@ -114,7 +122,7 @@ func GetFSFromImage(root string, img v1.Image) ([]string, error) {
 				}
 				continue
 			}
-			if err := extractFile(root, hdr, tr); err != nil {
+			if err := extract(root, hdr, tr); err != nil {
 				return nil, err
 			}
 			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
@@ -179,7 +187,7 @@ func unTar(r io.Reader, dest string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := extractFile(dest, hdr, tr); err != nil {
+		if err := ExtractFile(dest, hdr, tr); err != nil {
 			return nil, err
 		}
 		extractedFiles = append(extractedFiles, dest)
@@ -187,7 +195,7 @@ func unTar(r io.Reader, dest string) ([]string, error) {
 	return extractedFiles, nil
 }
 
-func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
+func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	path := filepath.Join(dest, filepath.Clean(hdr.Name))
 	base := filepath.Base(path)
 	dir := filepath.Dir(path)
@@ -206,7 +214,7 @@ func extractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	}
 	switch hdr.Typeflag {
 	case tar.TypeReg:
-		logrus.Debugf("creating file %s", path)
+		logrus.Tracef("creating file %s", path)
 		// It's possible a file is in the tar before its directory,
 		// or a file was copied over a directory prior to now
 		fi, err := os.Stat(dir)
@@ -502,7 +510,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
-			logrus.Debugf("Creating directory %s", destPath)
+			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
 			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
@@ -550,6 +558,12 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 	if excludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
+	}
+	if src == dest {
+		// This is a no-op. Move on, but don't list it as ignored.
+		// We have to make sure we do this so we don't overwrite our own file.
+		// See iusse #904 for an example.
+		return false, nil
 	}
 	fi, err := os.Stat(src)
 	if err != nil {

@@ -158,7 +158,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	if opts.ImageNameDigestFile != "" {
 		err := ioutil.WriteFile(opts.ImageNameDigestFile, []byte(builder.String()), 0644)
 		if err != nil {
-			return errors.Wrap(err, "writing digest to file failed")
+			return errors.Wrap(err, "writing image name with digest to file failed")
 		}
 	}
 
