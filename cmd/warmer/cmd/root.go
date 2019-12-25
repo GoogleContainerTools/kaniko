@@ -21,7 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/cache"
+	"github.com/GoogleContainerTools/kaniko/pkg/warmer"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -58,7 +59,7 @@ var RootCmd = &cobra.Command{
 				exit(errors.Wrap(err, "Failed to create cache directory"))
 			}
 		}
-		if err := cache.WarmCache(opts); err != nil {
+		if err := warmer.WarmCache(opts); err != nil {
 			exit(errors.Wrap(err, "Failed warming cache"))
 		}
 	},
@@ -70,6 +71,12 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "c", "/cache", "Directory of the cache.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Force, "force", "f", false, "Force cache overwriting.")
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Insecure, "insecure", "", false, "Push to insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().BoolVarP(&opts.InsecurePull, "insecure-pull", "", false, "Pull from insecure registry using plain HTTP")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerifyPull, "skip-tls-verify-pull", "", false, "Pull from insecure registry ignoring TLS verify")
+	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
+	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text

@@ -29,34 +29,46 @@ type CacheOptions struct {
 // KanikoOptions are options that are set by command line arguments
 type KanikoOptions struct {
 	CacheOptions
-	DockerfilePath          string
-	SrcContext              string
-	SnapshotMode            string
-	Bucket                  string
-	TarPath                 string
-	Target                  string
-	CacheRepo               string
-	DigestFile              string
-	ImageNameDigestFile     string
-	OCILayoutPath           string
-	Destinations            multiArg
-	BuildArgs               multiArg
-	Insecure                bool
-	SkipTLSVerify           bool
-	InsecurePull            bool
-	SkipTLSVerifyPull       bool
-	SingleSnapshot          bool
-	Reproducible            bool
-	NoPush                  bool
-	Cache                   bool
-	Cleanup                 bool
-	InsecureRegistries      multiArg
-	SkipTLSVerifyRegistries multiArg
+	DockerfilePath      string
+	SrcContext          string
+	SnapshotMode        string
+	Bucket              string
+	TarPath             string
+	Target              string
+	CacheRepo           string
+	DigestFile          string
+	ImageNameDigestFile string
+	OCILayoutPath       string
+	Destinations        multiArg
+	BuildArgs           multiArg
+	SecureOptions       //security config
+	SingleSnapshot      bool
+	Reproducible        bool
+	NoPush              bool
+	Cache               bool
+	Cleanup             bool
+	ContextOptions
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
 type WarmerOptions struct {
-	CacheOptions
 	Images multiArg
-	Force  bool
+	SecureOptions
+	Force bool
+	CacheOptions
+}
+
+// secure options for registry
+type SecureOptions struct {
+	InsecureRegistries      multiArg
+	SkipTLSVerifyRegistries multiArg
+	Insecure                bool
+	SkipTLSVerify           bool
+	InsecurePull            bool
+	SkipTLSVerifyPull       bool
+}
+
+// extra build context options
+type ContextOptions struct {
+	InsecureGit bool
 }

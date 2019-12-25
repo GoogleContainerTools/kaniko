@@ -20,6 +20,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
@@ -32,7 +34,7 @@ type BuildContext interface {
 
 // GetBuildContext parses srcContext for the prefix and returns related buildcontext
 // parser
-func GetBuildContext(srcContext string) (BuildContext, error) {
+func GetBuildContext(srcContext string, options *config.ContextOptions) (BuildContext, error) {
 	split := strings.SplitAfter(srcContext, "://")
 	prefix := split[0]
 	context := split[1]
@@ -45,7 +47,7 @@ func GetBuildContext(srcContext string) (BuildContext, error) {
 	case constants.LocalDirBuildContextPrefix:
 		return &Dir{context: context}, nil
 	case constants.GitBuildContextPrefix:
-		return &Git{context: context}, nil
+		return &Git{context: context, options: options}, nil
 	case constants.HTTPSBuildContextPrefix:
 		if util.ValidAzureBlobStorageHost(srcContext) {
 			return &AzureBlob{context: srcContext}, nil

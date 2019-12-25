@@ -144,6 +144,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.InsecureGit, "insecure-git", "", false, "Insecure git using plain HTTP to git clone")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -224,7 +225,7 @@ func resolveSourceContext() error {
 			opts.SrcContext = opts.Bucket
 		}
 	}
-	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
+	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext, &opts.ContextOptions)
 	if err != nil {
 		return err
 	}

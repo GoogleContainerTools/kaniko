@@ -14,16 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cache
+package warmer
 
 import (
 	"fmt"
 	"io/ioutil"
 	"path"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -41,7 +43,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
-		img, err := remote.Image(cacheRef)
+		img, err := util.RetrieveRemoteImage(image, &opts.SecureOptions)
 		if err != nil || img == nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}
@@ -53,7 +55,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 		cachePath := path.Join(cacheDir, digest.String())
 
 		if !opts.Force {
-			_, err := LocalSource(&opts.CacheOptions, digest.String())
+			_, err := cache.LocalSource(&opts.CacheOptions, digest.String())
 			if err == nil {
 				continue
 			}

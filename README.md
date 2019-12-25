@@ -512,6 +512,10 @@ You need to set `--destination` as well (for example `--destination=image`).
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
 
+#### --insecure-git
+
+Set this flag as `--insecure-git=<true|false>` to use http to clone git . Defaults to `false`
+
 ### Debug Image
 
 The kaniko executor image is based on scratch and doesn't contain a shell.

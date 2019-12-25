@@ -82,7 +82,7 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	}
 	logrus.Infof("Image %v not found in cache", currentBaseName)
 	// Otherwise, initialize image as usual
-	return RetrieveRemoteImage(currentBaseName, opts)
+	return RetrieveRemoteImage(currentBaseName, &opts.SecureOptions)
 }
 
 func tarballImage(index int) (v1.Image, error) {
@@ -92,7 +92,7 @@ func tarballImage(index int) (v1.Image, error) {
 }
 
 // Retrieves the manifest for the specified image from the specified registry
-func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
+func remoteImage(image string, opts *config.SecureOptions) (v1.Image, error) {
 	logrus.Infof("Retrieving image manifest %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
@@ -123,7 +123,7 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	return remote.Image(ref, rOpts...)
 }
 
-func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {
+func remoteOptions(registryName string, opts *config.SecureOptions) []remote.Option {
 	tr := http.DefaultTransport.(*http.Transport)
 	if opts.SkipTLSVerifyPull || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		tr.TLSClientConfig = &tls.Config{
@@ -144,7 +144,7 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 	if d, ok := ref.(name.Digest); ok {
 		cacheKey = d.DigestStr()
 	} else {
-		image, err := remoteImage(image, opts)
+		image, err := remoteImage(image, &opts.SecureOptions)
 		if err != nil {
 			return nil, err
 		}

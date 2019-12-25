@@ -20,6 +20,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -28,14 +30,24 @@ import (
 // Git unifies calls to download and unpack the build context.
 type Git struct {
 	context string
+	options *config.ContextOptions
 }
 
 // UnpackTarFromBuildContext will provide the directory where Git Repository is Cloned
 func (g *Git) UnpackTarFromBuildContext() (string, error) {
-	directory := constants.BuildContextDir
+	directory := os.Getenv("GITPATH")
+	if directory == "" {
+		directory = constants.BuildContextDir
+	}
 	parts := strings.Split(g.context, "#")
+	url := parts[0]
+	if g.options.InsecureGit {
+		url = "http://" + url
+	} else {
+		url = "https://" + url
+	}
 	options := git.CloneOptions{
-		URL:      "https://" + parts[0],
+		URL:      url,
 		Progress: os.Stdout,
 	}
 	if len(parts) > 1 {
