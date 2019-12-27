@@ -4,7 +4,7 @@ We'd love to accept your patches and contributions to this project!!
 
 To get started developing, see our [DEVELOPMENT.md](./DEVELOPMENT.md).
 
-In this file you'll find info on:
+In this file you'll find information on:
 
 - [The CLA](#contributor-license-agreement)
 - [The code review process](#code-reviews)
