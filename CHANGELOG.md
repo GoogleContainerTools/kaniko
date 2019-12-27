@@ -1,6 +1,6 @@
 # v0.15.0 Release - 2019-12-20
 
-## Bug fixes
+## Bug fixes test
 * Fix #899 cached copy results in inconsistent key [#914](https://github.com/GoogleContainerTools/kaniko/pull/914)
 * Fix contribution issue sentence [#912](https://github.com/GoogleContainerTools/kaniko/pull/912)
 * Include source stage cache key in cache key for COPY commands using --from [#883](https://github.com/GoogleContainerTools/kaniko/pull/883)
