@@ -51,7 +51,7 @@ func Test_StandardImage(t *testing.T) {
 	defer func() {
 		RetrieveRemoteImage = original
 	}()
-	mock := func(image string, opts *config.SecureOptions) (v1.Image, error) {
+	mock := func(image string, opts config.SecureOptions) (v1.Image, error) {
 		return nil, nil
 	}
 	RetrieveRemoteImage = mock

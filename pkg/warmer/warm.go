@@ -43,7 +43,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to verify image name: %s", image))
 		}
-		img, err := util.RetrieveRemoteImage(image, &opts.SecureOptions)
+		img, err := util.RetrieveRemoteImage(image, opts.SecureOptions)
 		if err != nil || img == nil {
 			return errors.Wrap(err, fmt.Sprintf("Failed to retrieve image: %s", image))
 		}
