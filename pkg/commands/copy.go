@@ -59,12 +59,15 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		if err != nil {
 			return err
 		}
+		if fi.IsDir() && !strings.HasSuffix(fullPath, string(os.PathSeparator)) {
+			fullPath += "/"
+		}
 		cwd := config.WorkingDir
 		if cwd == "" {
 			cwd = constants.RootDir
 		}
 
-		destPath, err := util.DestinationFilepath(src, dest, cwd)
+		destPath, err := util.DestinationFilepath(fullPath, dest, cwd)
 		if err != nil {
 			return err
 		}
