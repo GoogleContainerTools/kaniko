@@ -18,13 +18,14 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
