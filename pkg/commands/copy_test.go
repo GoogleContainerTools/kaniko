@@ -201,7 +201,19 @@ func Test_resolveIfSymlink(t *testing.T) {
 	if err := os.Symlink(filepath.Base(thepath), symLink); err != nil {
 		t.Error(err)
 	}
-	cases = append(cases, testCase{filepath.Join(symLink, "foo.txt"), filepath.Join(thepath, "foo.txt"), nil})
+	cases = append(cases,
+		testCase{filepath.Join(symLink, "foo.txt"), filepath.Join(thepath, "foo.txt"), nil},
+		testCase{filepath.Join(symLink, "inner", "foo.txt"), filepath.Join(thepath, "inner", "foo.txt"), nil},
+	)
+
+	absSymlink := filepath.Join(tmpDir, "abs-symlink")
+	if err := os.Symlink(thepath, absSymlink); err != nil {
+		t.Error(err)
+	}
+	cases = append(cases,
+		testCase{filepath.Join(absSymlink, "foo.txt"), filepath.Join(thepath, "foo.txt"), nil},
+		testCase{filepath.Join(absSymlink, "inner", "foo.txt"), filepath.Join(thepath, "inner", "foo.txt"), nil},
+	)
 
 	for i, c := range cases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {

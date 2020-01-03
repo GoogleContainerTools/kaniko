@@ -18,14 +18,13 @@ package commands
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -63,6 +62,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		if cwd == "" {
 			cwd = constants.RootDir
 		}
+
 		destPath, err := util.DestinationFilepath(src, dest, cwd)
 		if err != nil {
 			return err
@@ -76,11 +76,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			if !filepath.IsAbs(dest) {
-				// we need to add '/' to the end to indicate the destination is a directory
-				dest = filepath.Join(cwd, dest) + "/"
-			}
-			copiedFiles, err := util.CopyDir(fullPath, dest, c.buildcontext)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext)
 			if err != nil {
 				return err
 			}
@@ -197,21 +193,43 @@ func (cr *CachingCopyCommand) From() string {
 }
 
 func resolveIfSymlink(destPath string) (string, error) {
-	baseDir := filepath.Dir(destPath)
-	if info, err := os.Lstat(baseDir); err == nil {
+	if !filepath.IsAbs(destPath) {
+		return "", errors.New("dest path must be abs")
+	}
+
+	pathPrefix := "/"
+	pathTokens := strings.Split(destPath, string(os.PathSeparator))
+	for i, pathToken := range pathTokens {
+		currentPath := filepath.Join(pathPrefix, pathToken)
+		info, err := os.Lstat(currentPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				pathPrefix = filepath.Join(append([]string{currentPath}, pathTokens[i+1:]...)...)
+				break
+			} else {
+				return "", errors.Wrap(err, "failed to lstat")
+			}
+		}
+
 		switch mode := info.Mode(); {
 		case mode&os.ModeSymlink != 0:
-			linkPath, err := os.Readlink(baseDir)
+			linkPath, err := os.Readlink(currentPath)
 			if err != nil {
-				return "", errors.Wrap(err, "error reading symlink")
+				return "", errors.Wrap(err, "failed to read symlink")
 			}
-			absLinkPath := filepath.Join(filepath.Dir(baseDir), linkPath)
-			newPath := filepath.Join(absLinkPath, filepath.Base(destPath))
-			logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
-			return newPath, nil
+			if filepath.IsAbs(linkPath) {
+				pathPrefix = linkPath
+			} else {
+				pathPrefix = filepath.Join(pathPrefix, linkPath)
+			}
+		default:
+			pathPrefix = filepath.Join(pathPrefix, pathToken)
 		}
 	}
-	return destPath, nil
+	if destPath != pathPrefix {
+		logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, pathPrefix)
+	}
+	return filepath.Clean(pathPrefix), nil
 }
 
 func copyCmdFilesUsedFromContext(
