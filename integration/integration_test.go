@@ -38,7 +38,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-var config = initGCPConfig()
+var config *gcpConfig
 var imageBuilder *DockerFileBuilder
 
 const (
@@ -72,6 +72,7 @@ func TestMain(m *testing.M) {
 		fmt.Println("Missing required tools")
 		os.Exit(1)
 	}
+	config = initGCPConfig()
 	contextFile, err := CreateIntegrationTarball()
 	if err != nil {
 		fmt.Println("Failed to create tarball of integration files for build context", err)
