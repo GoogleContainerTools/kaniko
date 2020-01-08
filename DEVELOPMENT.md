@@ -38,6 +38,7 @@ To check out this repository:
   cd kaniko
   git remote add upstream git@github.com:GoogleContainerTools/kaniko.git
   git remote set-url --push upstream no_push
+  go mod vendor
   ```
 
 _Adding the `upstream` remote sets you up nicely for regularly [syncing your

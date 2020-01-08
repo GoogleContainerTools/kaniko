@@ -1,0 +1,97 @@
+digraph ociimage {
+	rankdir=LR;
+	node [shape=box];
+	edge [splines=polyline];
+    lrank [style=invisible][color=white];
+
+    "manifest A"[label=<<table border="0">
+        <tr><td align="center">image manifest (platform A)</td></tr>
+        <tr><td align="center"></td></tr>
+        <tr><td align="left">- schema version</td></tr>
+        <tr><td align="left">- media type</td></tr>
+        <tr><td align="left">- config : descriptor</td></tr>
+        <tr><td align="left">- layers : array of descriptors</td></tr>
+        <tr><td align="left">- (annotations)</td></tr>
+    </table>>];
+
+    "image index"[label=<<table border="0">
+        <tr><td align="center">image index</td></tr>
+        <tr><td></td></tr>
+        <tr><td align="left">- schema version</td></tr>
+        <tr><td align="left">- media type</td></tr>
+        <tr><td align="left">- manifests : array of descriptors</td></tr>
+        <tr><td align="left">- (annotations)</td></tr>
+    </table>>];
+
+    // references
+    edge [color=red][style=dashed];
+    client [style=invisible][color=white];
+	client -> "image index"[label="image reference"];
+	client -> "manifest A"[label="image reference"];
+
+    // descriptors
+    edge [color=brown][style=solid];
+	"image index" -> "manifest A";
+	"image index" -> "image manifest (platform B)";
+	"configuration"[label=<<table border="0">
+        <tr><td align="center">configuration</td></tr>
+        <tr><td></td></tr>
+        <tr><td align="left">- rootfs/diff_ids : array of layer ids</td></tr>
+        <tr><td align="left">- container config</td></tr>
+        <tr><td align="left">- history</td></tr>
+    </table>>];
+	"manifest A" -> "configuration";
+	"layer 0"[label=<<table border="0">
+        <tr><td align="center">layer</td></tr>
+        <tr><td></td></tr>
+        <tr><td align="left">file system additions, overwrites, and deletions</td></tr>
+    </table>>];
+	"layer 1"[label=layer];
+	"layer 2"[label=layer];
+	"manifest A" -> "layer 0"[label=0];
+	"manifest A" -> "layer 1"[label=1];
+	"manifest A" -> "layer 2"[label=2];
+    
+    // ids
+    edge [color=blue][style=dotted];
+	"client" -> "configuration"[label="image id"];
+	"configuration" -> "layer 0"[label=0];
+	"configuration" -> "layer 1"[label=1];
+	"configuration" -> "layer 2"[label=2];
+   
+    // key
+    subgraph cluster {
+    k1 [label="Key:"][peripheries="0"];
+    node [style=invisible][color=white];
+    k2;
+    k3;
+    k4;
+    node [style=solid][color=black];
+    k1 -> k2[color=red][style=dashed][label=<<table border="0">
+        <tr><td align="center">image reference</td></tr>
+        <tr><td></td></tr>
+        <tr><td align="left">- hostname</td></tr>
+        <tr><td align="left">- path</td></tr>
+        <tr><td align="left">- (tag)</td></tr>
+        <tr><td align="left">- (SHA-256 digest of compressed content)</td></tr>
+    </table>>];
+    k2 -> k3[color=brown][style=solid][label=<<table border="0">
+        <tr><td align="center">descriptor</td></tr>
+        <tr><td></td></tr>
+        <tr><td align="left">targets content with the following properties:</td></tr>
+        <tr><td align="left">- media type</td></tr>
+        <tr><td align="left">- SHA-256 digest of compressed content</td></tr>
+        <tr><td align="left">- size</td></tr>
+        <tr><td align="left">- (urls)</td></tr>
+        <tr><td align="left">- (annotations)</td></tr>
+    </table>>];
+        k3 -> k4[color=blue][style=dotted][label=<<table border="0">
+        <tr><td align="center">id</td></tr>
+        <tr><td></td></tr>
+        <tr><td align="left">- SHA-256 digest of uncompressed content</td></tr>
+    </table>>];
+    }
+
+	{ rank=same; lrank -> "layer 2" -> "layer 1" -> "layer 0" [style=invis] }
+	{ rank=same; "manifest A", "image manifest (platform B)" } 
+}

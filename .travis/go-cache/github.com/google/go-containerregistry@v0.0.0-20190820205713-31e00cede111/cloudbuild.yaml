@@ -1,0 +1,32 @@
+steps:
+# Build the ko binary.
+- name: gcr.io/cloud-builders/go:debian
+  env: ['PROJECT_ROOT=github.com/google/go-containerregistry']
+  args: ['get', 'github.com/google/ko/cmd/ko']
+
+# Use the ko binary to build the crane and gcrane builder images.
+- name: gcr.io/cloud-builders/go:debian
+  env: ['GOPATH=/workspace/gopath', 'KO_DOCKER_REPO=gcr.io/$PROJECT_ID']
+  entrypoint: /workspace/gopath/bin/ko
+  dir: gopath/src
+  args: ['publish', '-P', 'github.com/google/go-containerregistry/cmd/crane']
+
+- name: gcr.io/cloud-builders/go:debian
+  env: ['GOPATH=/workspace/gopath', 'KO_DOCKER_REPO=gcr.io/$PROJECT_ID']
+  entrypoint: /workspace/gopath/bin/ko
+  dir: gopath/src
+  args: ['publish', '-P', 'github.com/google/go-containerregistry/cmd/gcrane']
+
+# Use the crane builder to retag crane and gcrane.
+- name: gcr.io/$PROJECT_ID/github.com/google/go-containerregistry/cmd/crane
+  args: ['copy', 'gcr.io/$PROJECT_ID/github.com/google/go-containerregistry/cmd/crane', 'gcr.io/$PROJECT_ID/crane']
+
+- name: gcr.io/$PROJECT_ID/github.com/google/go-containerregistry/cmd/crane
+  args: ['copy', 'gcr.io/$PROJECT_ID/github.com/google/go-containerregistry/cmd/gcrane', 'gcr.io/$PROJECT_ID/gcrane']
+
+# Use the crane builder to get the digest for crane and gcrane.
+- name: gcr.io/$PROJECT_ID/crane
+  args: ['digest', 'gcr.io/$PROJECT_ID/crane']
+
+- name: gcr.io/$PROJECT_ID/crane
+  args: ['digest', 'gcr.io/$PROJECT_ID/gcrane']

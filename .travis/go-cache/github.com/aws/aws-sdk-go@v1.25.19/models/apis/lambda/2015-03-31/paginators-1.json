@@ -1,0 +1,40 @@
+{
+  "pagination": {
+    "ListAliases": {
+      "input_token": "Marker",
+      "limit_key": "MaxItems",
+      "output_token": "NextMarker",
+      "result_key": "Aliases"
+    },
+    "ListEventSourceMappings": {
+      "input_token": "Marker",
+      "limit_key": "MaxItems",
+      "output_token": "NextMarker",
+      "result_key": "EventSourceMappings"
+    },
+    "ListFunctions": {
+      "input_token": "Marker",
+      "limit_key": "MaxItems",
+      "output_token": "NextMarker",
+      "result_key": "Functions"
+    },
+    "ListLayerVersions": {
+      "input_token": "Marker",
+      "limit_key": "MaxItems",
+      "output_token": "NextMarker",
+      "result_key": "LayerVersions"
+    },
+    "ListLayers": {
+      "input_token": "Marker",
+      "limit_key": "MaxItems",
+      "output_token": "NextMarker",
+      "result_key": "Layers"
+    },
+    "ListVersionsByFunction": {
+      "input_token": "Marker",
+      "limit_key": "MaxItems",
+      "output_token": "NextMarker",
+      "result_key": "Versions"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail
+
+case ${1:-} in
+    '')
+	gogo_version=$(awk '$1 == "github.com/gogo/protobuf" { print $2 }' vendor.conf)
+	docker build --build-arg GOGO_VERSION=$gogo_version -f ./hack/dockerfiles/generated-files.Dockerfile --target validate --force-rm .
+	;;
+    check)
+	diffs="$(git status --porcelain -- **/*.pb.go 2>/dev/null)"
+	set +x
+	if [ "$diffs" ] ; then
+	    {
+		echo 'The result of "go generate" differs'
+		echo
+		echo "$diffs"
+		echo
+		echo 'Please update with "make generated-files"'
+		echo
+	    } >&2
+	    false
+	fi
+	echo 'Congratulations! All auto generated files are correct.'
+	;;
+esac

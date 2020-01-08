@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail -x
+
+iidfile=$(mktemp -t docker-iidfile.XXXXXXXXXX)
+docker build --build-arg VNDR_VERSION=1fc68ee0c852556a9ed53cbde16247033f104111 --iidfile $iidfile -f ./hack/dockerfiles/vendor.Dockerfile --force-rm .
+iid=$(cat $iidfile)
+cid=$(docker create $iid noop)
+rm -rf ./vendor
+docker cp $cid:/go/src/github.com/moby/buildkit/vendor .
+docker rm $cid
+rm -f $iidfile

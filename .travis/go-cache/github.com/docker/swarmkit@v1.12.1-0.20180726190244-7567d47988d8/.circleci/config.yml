@@ -1,0 +1,104 @@
+version: 2
+jobs:
+  build:
+    # CircleCI by default sets the gopath to be ~/.go_workspace and /usr/local/go_workspace
+    # apparently.  We cannot set the working directory or environment variables by using
+    # other environment variables (although the working directory can use the `~` character,
+    # but environment variables cannot), so to avoid having to override the GOPATH for every
+    # run command, just hard code in the directory to be CircleCI expects it to be.
+    working_directory: /home/circleci/.go_workspace/src/github.com/docker/swarmkit
+    environment:
+      # Needed to install go
+      OS: linux
+      ARCH: amd64
+      GOVERSION: 1.10.3
+      # Needed to install protoc
+      PROTOC: https://github.com/google/protobuf/releases/download/v3.5.0/protoc-3.5.0-linux-x86_64.zip
+
+    # Note(cyli): We create a tmpfs mount to be used for temporary files created by tests
+    # to mitigate the excessive I/O latencies that sometimes cause the tests to fail.
+    # See https://github.com/docker/swarmkit/pull/2254.
+
+    # There is no way to mount tmpfs volumes in the docker executor, so we are using
+    # the machine executor. However, this incur a performance overhead
+    # (https://discuss.circleci.com/t/using-docker-compose-in-2-0/9492/4)
+    # and in the future could incur additional pricing changes
+    # (https://circleci.com/docs/2.0/executor-types/#using-machine).
+
+    # One possible hack is the following:
+
+    # /dev/shm in the container is tmpfs although files in /dev/shm are not executable.
+    # If we specify TMPDIR=/dev/shm, /dev/shm will be used by our tests, which call
+    # ioutil.TempDir/ioutil.TempFile, to write temporary files.
+    # We can also specify GOTMPDIR=/tmp or some other non-tmpfs directory
+    # (see https://golang.org/doc/go1.10#goroot) - this is the directory in which the
+    # go tool itself will put temporarily compiled test executables, etc.
+
+    # However, using this hack still resulted in occasional WAL test failures,
+    # so it seems like it does not work, or there may be some other failure.
+    # It may be something to explore again if the penalty for using the machine
+    # executor becomes unacceptable.
+
+    machine: true
+
+    steps:
+    - checkout
+
+    # This would not be needed if we used a golang docker image
+    - run:
+        name: Install go
+        command: |
+            sudo rm -rf /usr/local/go
+            curl -fsSL -o "$HOME/go.tar.gz" "https://storage.googleapis.com/golang/go$GOVERSION.$OS-$ARCH.tar.gz"
+            sudo tar -C /usr/local -xzf "$HOME/go.tar.gz"
+
+    - run:
+        name: Output debugging information
+        command: |
+            go version
+            env
+
+    - run:
+        name: Install protoc
+        command: |
+            curl -fsSL -o "$HOME/$(basename $PROTOC)" "$PROTOC"
+            unzip -o "$HOME/$(basename $PROTOC)" -d "$HOME"
+            sudo cp -R "$HOME/include/google" /usr/local/include
+            sudo chmod 777 -R /usr/local/include/google
+            sudo cp -R "$HOME/bin/protoc" /usr/local/bin
+            sudo chmod 777 /usr/local/bin/protoc
+
+    - run:
+        name: Install test/lint dependencies
+        command: make setup
+
+    - run:
+        name: Validate dependency vendoring
+        command: |
+            git fetch origin
+            if test -n "`git diff --stat=1000 origin/master | grep -E \"^[[:space:]]*vendor\"`"; then
+                make dep-validate;
+            fi
+
+    # The GOPATH setting would not be needed if we used the golang docker image
+    - run:
+        name: Compile/lint/vet/protobuf validation
+        command: make check binaries checkprotos
+
+    - run:
+        name: Run unit tests
+        command: |
+            sudo mkdir /tmpfs
+            sudo mount -t tmpfs tmpfs /tmpfs
+            sudo chown 1000:1000 /tmpfs
+            TMPDIR=/tmpfs make coverage
+
+    - run:
+        name: Run integration tests
+        command: |
+            # TMPFS has already been set up previously in the unit test step
+            TMPDIR=/tmpfs make coverage-integration
+
+    - run:
+        name: Push coverage info to codecov.io
+        command: bash <(curl -fsSL https://codecov.io/bash)

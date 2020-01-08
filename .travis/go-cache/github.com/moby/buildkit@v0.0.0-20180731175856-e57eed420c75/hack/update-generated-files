@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail -x
+
+gogo_version=$(awk '$1 == "github.com/gogo/protobuf" { print $2 }' vendor.conf)
+iidfile=$(mktemp -t docker-iidfile.XXXXXXXXXX)
+docker build --build-arg GOGO_VERSION=$gogo_version --iidfile $iidfile -f ./hack/dockerfiles/generated-files.Dockerfile --target update --force-rm .
+iid=$(cat $iidfile)
+cid=$(docker create $iid noop)
+
+docker export $cid | tar -xf - --strip-components=1 generated-files
+
+docker rm $cid
+
+rm -f $iidfile

@@ -5,6 +5,11 @@ go:
   - "1.13.3"
 go_import_path: github.com/GoogleContainerTools/kaniko
 
+before_script:
+  - mkdir -p $GOPATH/pkg
+  - go clean --modcache
+  - cp -r ./.travis/go-cache $GOPATH/pkg/mod
+  - go mod vendor
 script:
   - make test
   - make images

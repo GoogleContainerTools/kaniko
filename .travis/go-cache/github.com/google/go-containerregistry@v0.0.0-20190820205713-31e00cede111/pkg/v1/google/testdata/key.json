@@ -1,0 +1,35 @@
+{
+  "_class": "OAuth2Credentials",
+  "_module": "oauth2client.client",
+  "access_token": "foo_access_token",
+  "client_id": "foo_client_id",
+  "client_secret": "foo_client_secret",
+  "id_token": {
+    "at_hash": "foo_at_hash",
+    "aud": "foo_aud",
+    "azp": "foo_azp",
+    "cid": "foo_cid",
+    "email": "foo@example.com",
+    "email_verified": true,
+    "exp": 1420573614,
+    "iat": 1420569714,
+    "id": "1337",
+    "iss": "accounts.google.com",
+    "sub": "1337",
+    "token_hash": "foo_token_hash",
+    "verified_email": true
+  },
+  "invalid": false,
+  "refresh_token": "foo_refresh_token",
+  "revoke_uri": "https://accounts.google.com/o/oauth2/revoke",
+  "token_expiry": "3015-01-09T00:51:51Z",
+  "token_response": {
+    "access_token": "foo_access_token",
+    "expires_in": 3600,
+    "id_token": "foo_id_token",
+    "token_type": "Bearer"
+  },
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "user_agent": "Cloud SDK Command Line Tool",
+  "type": "authorized_user"
+}

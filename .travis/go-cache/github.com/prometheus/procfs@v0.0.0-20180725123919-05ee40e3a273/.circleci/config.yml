@@ -1,0 +1,21 @@
+---
+version: 2
+
+jobs:
+  test:
+    docker:
+    - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/prometheus/procfs
+
+    steps:
+    - checkout
+    - run: make style check_license vet test staticcheck
+
+workflows:
+  version: 2
+  node_exporter:
+    jobs:
+    - test:
+        filters:
+          tags:
+            only: /.*/

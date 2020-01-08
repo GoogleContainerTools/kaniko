@@ -1,0 +1,9 @@
+language: go
+go:
+- "1.12.1"
+script:
+- export GO111MODULE=on
+- GOOS=linux go build ./azblob
+- GOOS=darwin go build ./azblob
+- GOOS=windows go build ./azblob
+- go test -race -short -cover -v ./azblob

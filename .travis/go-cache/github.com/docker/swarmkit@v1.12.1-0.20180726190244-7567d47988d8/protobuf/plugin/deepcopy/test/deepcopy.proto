@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package test;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.gostring_all) = false;
+option (gogoproto.face_all) = false;
+option (gogoproto.unmarshaler_all) = false;
+option (gogoproto.marshaler_all) = false;
+option (gogoproto.sizer_all) = false;
+option (gogoproto.protosizer_all) = false;
+option (gogoproto.goproto_enum_stringer_all) = false;
+option (gogoproto.enum_stringer_all) = false;
+option (gogoproto.unsafe_marshaler_all) = false;
+option (gogoproto.unsafe_unmarshaler_all) = false;
+
+
+option (gogoproto.testgen_all) = true;
+option (gogoproto.populate_all) = true;
+option (gogoproto.equal_all) = true;
+
+message BasicScalar {
+	double Field1 = 1;
+	float Field2 = 2;
+	int32 Field3 = 3;
+	int64 Field4 = 4;
+	uint32 Field5 = 5;
+	uint64 Field6 = 6;
+	sint32 Field7 = 7;
+	sint64 Field8 = 8;
+	fixed32 Field9 = 9;
+	sfixed32 Field10 = 10;
+	fixed64 Field11 = 11;
+	sfixed64 Field12 = 12;
+	bool Field13 = 13;
+	string Field14 = 14;
+	bytes Field15 = 15;
+}
+
+message RepeatedScalar {
+	repeated double Field1 = 1;
+	repeated float Field2 = 2;
+	repeated int32 Field3 = 3;
+	repeated int64 Field4 = 4;
+	repeated uint32 Field5 = 5;
+	repeated uint64 Field6 = 6;
+	repeated sint32 Field7 = 7;
+	repeated sint64 Field8 = 8;
+	repeated fixed32 Field9 = 9;
+	repeated sfixed32 Field10 = 10;
+	repeated fixed64 Field11 = 11;
+	repeated sfixed64 Field12 = 12;
+	repeated bool Field13 = 13;
+	repeated string Field14 = 14;
+	repeated bytes Field15 = 15;
+}
+
+message RepeatedScalarPacked {
+	repeated double Field1 = 1 [packed = true];
+	repeated float Field2 = 2 [packed = true];
+	repeated int32 Field3 = 3 [packed = true];
+	repeated int64 Field4 = 4 [packed = true];
+	repeated uint32 Field5 = 5 [packed = true];
+	repeated uint64 Field6 = 6 [packed = true];
+	repeated sint32 Field7 = 7 [packed = true];
+	repeated sint64 Field8 = 8 [packed = true];
+	repeated fixed32 Field9 = 9 [packed = true];
+	repeated sfixed32 Field10 = 10 [packed = true];
+	repeated fixed64 Field11 = 11 [packed = true];
+	repeated sfixed64 Field12 = 12 [packed = true];
+	repeated bool Field13 = 13 [packed = true];
+}
+
+message ExternalStruct {
+	BasicScalar Field1 = 1;
+	RepeatedScalar Field2 = 2;
+	RepeatedScalarPacked Field3 = 3;
+}
+
+message RepeatedExternalStruct {
+	repeated BasicScalar Field1 = 1;
+	repeated RepeatedScalar Field2 = 2;
+	repeated RepeatedScalarPacked Field3 = 3;
+}
+
+message NonNullableExternalStruct {
+	BasicScalar Field1 = 1 [(gogoproto.nullable) = false];
+	RepeatedScalar Field2 = 2 [(gogoproto.nullable) = false];
+	RepeatedScalarPacked Field3 = 3 [(gogoproto.nullable) = false];
+}
+
+message RepeatedNonNullableExternalStruct {
+	repeated BasicScalar Field1 = 1 [(gogoproto.nullable) = false];
+	repeated RepeatedScalar Field2 = 2 [(gogoproto.nullable) = false];
+	repeated RepeatedScalarPacked Field3 = 3 [(gogoproto.nullable) = false];
+}
+
+message MapStruct {
+	map <string, BasicScalar> nullable_map = 1;
+	map <string, BasicScalar> nonnullable_map = 2 [(gogoproto.nullable) = false];
+}
+
+message OneOf {
+	oneof fields {
+		double Field1 = 1;
+		float Field2 = 2;
+		int32 Field3 = 3;
+		int64 Field4 = 4;
+		uint32 Field5 = 5;
+		string Field6 = 6;
+		bytes Field7 = 7;
+		MapStruct Field8 = 8;
+		RepeatedNonNullableExternalStruct Field9 = 9;
+	}
+
+	oneof fieldsTwo {
+		NonNullableExternalStruct Field10 = 10;
+		RepeatedExternalStruct Field11 = 11;
+	}
+}
+

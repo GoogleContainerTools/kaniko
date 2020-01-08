@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail -x
+
+iidfile=$(mktemp -t docker-iidfile.XXXXXXXXXX)
+
+docker build --iidfile $iidfile --target integration-tests -f ./hack/dockerfiles/test.Dockerfile --force-rm .
+
+iid=$(cat $iidfile)
+rm -f $iidfile
+
+docker run --rm -v /tmp --privileged $iid go test ${TESTFLAGS:--v} ${TESTPKGS:-./...}
+
+docker run --rm $iid go build ./frontend/gateway/client
+docker run --rm $iid go build ./frontend/dockerfile/cmd/dockerfile-frontend
+docker run --rm $iid go build -tags dfrunmount ./frontend/dockerfile/cmd/dockerfile-frontend

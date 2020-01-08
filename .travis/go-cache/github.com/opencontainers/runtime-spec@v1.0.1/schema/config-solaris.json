@@ -1,0 +1,75 @@
+{
+    "solaris": {
+        "description": "Solaris platform-specific configurations",
+        "id": "https://opencontainers.org/schema/bundle/solaris",
+        "type": "object",
+        "properties": {
+            "milestone": {
+                "id": "https://opencontainers.org/schema/bundle/solaris/milestone",
+                "type": "string"
+            },
+            "limitpriv": {
+                "id": "https://opencontainers.org/schema/bundle/solaris/limitpriv",
+                "type": "string"
+            },
+            "maxShmMemory": {
+                "id": "https://opencontainers.org/schema/bundle/solaris/maxShmMemory",
+                "type": "string"
+            },
+            "cappedCPU": {
+                "id": "https://opencontainers.org/schema/bundle/solaris/cappedCPU",
+                "type": "object",
+                "properties": {
+                    "ncpus": {
+                        "id": "https://opencontainers.org/schema/bundle/solaris/cappedCPU/ncpus",
+                        "type": "string"
+                    }
+                }
+            },
+            "cappedMemory": {
+                "id": "https://opencontainers.org/schema/bundle/solaris/cappedMemory",
+                "type": "object",
+                "properties": {
+                    "physical": {
+                        "id": "https://opencontainers.org/schema/bundle/solaris/cappedMemory/physical",
+                        "type": "string"
+                    },
+                    "swap": {
+                        "id": "https://opencontainers.org/schema/bundle/solaris/cappedMemory/swap",
+                        "type": "string"
+                    }
+                }
+            },
+            "anet": {
+                "id": "https://opencontainers.org/schema/bundle/solaris/anet",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "linkname": {
+                            "type": "string"
+                        },
+                        "lowerLink": {
+                            "type": "string"
+                        },
+                        "allowedAddress": {
+                            "type": "string"
+                        },
+                        "configureAllowedAddress": {
+                            "type": "string"
+                        },
+                        "defrouter": {
+                            "type": "string"
+                        },
+                        "macAddress": {
+                            "type": "string"
+                        },
+                        "linkProtection": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

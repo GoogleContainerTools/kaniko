@@ -17,7 +17,7 @@
 #!/bin/bash
 
 # Ignore these paths in the following tests.
-ignore="vendor\|out"
+ignore=".travis\|vendor\|out"
 BOILERPLATEDIR=./hack/boilerplate
 # Grep returns a non-zero exit code if we don't match anything, which is good in this case.
 set +e

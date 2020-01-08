@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail -x
+
+iidfile=$(mktemp -t docker-iidfile.XXXXXXXXXX)
+docker build --build-arg VNDR_VERSION=1fc68ee0c852556a9ed53cbde16247033f104111 --iidfile $iidfile -f ./hack/dockerfiles/vendor.Dockerfile --force-rm .
+iid=$(cat $iidfile)
+diffs="$(docker run --rm $iid git status --porcelain -- vendor 2>/dev/null)"
+if [ "$diffs" ]; then
+    {
+        set +x
+        echo 'The result of vndr differs'
+        echo
+        echo "$diffs"
+        echo
+        echo 'Please vendor your package with github.com/LK4D4/vndr.'
+        echo
+    } >&2
+    false
+fi
+echo 'Congratulations! All vendoring changes are done the right way.'
+rm -f $iidfile

@@ -1,0 +1,37 @@
+language: go
+sudo: false
+go:
+  - 1.10.x
+before_install:
+  - go get github.com/golang/lint/golint
+  - go get honnef.co/go/tools/cmd/staticcheck
+jobs:
+  include:
+    - script: make all
+    - stage: Run Test Coverage
+      script: make cover
+      after_success: bash <(curl -s https://codecov.io/bash)
+    - stage: Build Release
+      script:
+        - make release
+        - echo "Deploying to GitHub releases ..."
+      deploy:
+        provider: releases
+        file:
+          - cross/amicontained-linux-amd64.md5
+          - cross/amicontained-linux-arm
+          - cross/amicontained-linux-arm64.sha256
+          - cross/amicontained-linux-arm.sha256
+          - cross/amicontained-linux-386.sha256
+          - cross/amicontained-linux-arm64.md5
+          - cross/amicontained-linux-arm64
+          - cross/amicontained-linux-amd64.sha256
+          - cross/amicontained-linux-386.md5
+          - cross/amicontained-linux-arm.md5
+          - cross/amicontained-linux-386
+          - cross/amicontained-linux-amd64
+        skip_cleanup: true
+        on:
+          tags: true
+        api_key:
+          secure: "PMnPJQ00zNL2MeTosnC2uL47srkL38PDgHllf7VlEQCjTtAd0LiPuYWXIhRncEXyXQX66uAmz2nDSuR0H+2mB1tIt9gpTMe0bItUHIQhcgJllJWtcMIwE7decMwDRaXVhh/vlzGYTLnT2wZEGFQS57nHZdZd9kXD9w2sepQvgaLmELnAlwXP+TXf7U8WWZ1fw3a4LdotnZRRcy4NkzpsaRep2tTRJTPu01YPMALusucaPGAmlw/pCKvflNR7fqEMKR/dP+hmtk0DFhCNaSSIWHplwFMc4PGOTRjWIdGEvIivqx7HVfF/jFqAZDGr38qcErpW4jUVNBTTrBW22RKLt1vZ/BgdcBYn5siWeytu4YWnZpsxh2u9bcoHhO323SHRdQtDU5N96UV5NqFymYKCl941xRS8mZ1Wu5vetswYYtRG45OEDq3KZFw88QDBjGeNDkXk6hQdu3hQt3CNDNCI/2vzh20/rWErc7jiDy9uNsJdIiruO+3AWt20aZgzw+X7GfbNYGa42RcW6a//4RoN9S7iEaw/xbfHuh08gNCT4Zfg6EY98XU3yX+IJupoqST68kMWIupr0cA9WKwtUHcHquZP1VbkPXkg7xeb6zLCPNDyJ3ly1UFeZ7L+TGUdyNP2NWNAcbgkMgN+TkdbidywSn0GoK1D4rw9vXuqzgRQGK8="

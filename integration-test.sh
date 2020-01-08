@@ -33,6 +33,10 @@ if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
 fi
 
 echo "Running integration tests..."
+mkdir -p $GOPATH/pkg
+go clean --modcache
+cp -r ./.travis/go-cache $GOPATH/pkg/mod
+go mod vendor
 make out/executor
 make out/warmer
 pushd integration

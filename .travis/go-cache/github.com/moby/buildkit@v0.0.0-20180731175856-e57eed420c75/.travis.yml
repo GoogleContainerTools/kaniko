@@ -1,0 +1,4 @@
+dist: trusty
+sudo: required
+script:
+  - make binaries-all validate-all

@@ -1,0 +1,1 @@
+{"architecture": "amd64", "author": "Bazel", "config": {}, "created": "1970-01-01T00:00:00Z", "history": [{"author": "Bazel", "created": "1970-01-01T00:00:00Z", "created_by": "bazel build ..."}], "os": "linux", "rootfs": {"diff_ids": ["sha256:3610aa5267a210147ba6ca02cdd87610dfc08522de9c5f5015edd8ee14853fd8"], "type": "layers"}}

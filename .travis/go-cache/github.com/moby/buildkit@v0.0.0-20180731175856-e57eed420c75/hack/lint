@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail -x
+
+iidfile=$(mktemp -t docker-iidfile.XXXXXXXXXX)
+docker build --iidfile $iidfile -f ./hack/dockerfiles/lint.Dockerfile --force-rm .
+iid=$(cat $iidfile)
+docker run $iid gometalinter --config=gometalinter.json ./...
+rm -f $iidfile

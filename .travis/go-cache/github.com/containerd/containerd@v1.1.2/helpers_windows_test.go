@@ -1,0 +1,57 @@
+// +build windows
+
+/*
+   Copyright The containerd Authors.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package containerd
+
+import (
+	"context"
+	"strconv"
+
+	"github.com/containerd/containerd/containers"
+	"github.com/containerd/containerd/oci"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+)
+
+const newLine = "\r\n"
+
+func withExitStatus(es int) oci.SpecOpts {
+	return func(_ context.Context, _ oci.Client, _ *containers.Container, s *specs.Spec) error {
+		s.Process.Args = []string{"powershell", "-noprofile", "exit", strconv.Itoa(es)}
+		return nil
+	}
+}
+
+func withProcessArgs(args ...string) oci.SpecOpts {
+	return oci.WithProcessArgs(append([]string{"powershell", "-noprofile"}, args...)...)
+}
+
+func withCat() oci.SpecOpts {
+	return oci.WithProcessArgs("cmd", "/c", "more")
+}
+
+func withTrue() oci.SpecOpts {
+	return oci.WithProcessArgs("cmd", "/c")
+}
+
+func withExecExitStatus(s *specs.Process, es int) {
+	s.Args = []string{"powershell", "-noprofile", "exit", strconv.Itoa(es)}
+}
+
+func withExecArgs(s *specs.Process, args ...string) {
+	s.Args = append([]string{"powershell", "-noprofile"}, args...)
+}

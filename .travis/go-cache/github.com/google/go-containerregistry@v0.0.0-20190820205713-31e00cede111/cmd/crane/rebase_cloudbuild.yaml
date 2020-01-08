@@ -1,0 +1,55 @@
+steps:
+# This test assumes that gcr.io/$PROJECT_ID/crane exists, as built according to
+# this repo's cloudbuild.yaml
+
+# Run a simple example that builds two base images and an image based on one,
+# then rebases it on the other.
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args:
+  - -c
+  - |
+    # Build old base, rebase-base.
+    cat > Dockerfile.base << EOF
+    FROM ubuntu
+    RUN echo foo > /base.txt
+    EOF
+    docker build -t gcr.io/$PROJECT_ID/rebase-base -f Dockerfile.base .
+
+    # Build image FROM base, base-test
+    cat > Dockerfile << EOF
+    FROM gcr.io/$PROJECT_ID/rebase-base
+    ENTRYPOINT ["cat", "/base.txt"]
+    EOF
+    docker build -t gcr.io/$PROJECT_ID/rebase-test .
+
+    # Build new base, rebase-newbase.
+    cat > Dockerfile.newbase << EOF
+    FROM ubuntu
+    RUN echo bar > /base.txt
+    EOF
+    docker build -t gcr.io/$PROJECT_ID/rebase-newbase -f Dockerfile.newbase .
+
+    # Check that image FROM base does what base would have it do.
+    docker run gcr.io/$PROJECT_ID/rebase-test | grep foo
+
+    # Push all images. Rebasing is performed on images already in the registry.
+    docker push gcr.io/$PROJECT_ID/rebase-base
+    docker push gcr.io/$PROJECT_ID/rebase-test
+    docker push gcr.io/$PROJECT_ID/rebase-newbase
+
+# Perform rebase in the registry, producing image tagged :rebased.
+- name: 'gcr.io/$PROJECT_ID/crane'
+  args:
+  - rebase
+  - --original=gcr.io/$PROJECT_ID/rebase-test:latest
+  - --old_base=gcr.io/$PROJECT_ID/rebase-base:latest
+  - --new_base=gcr.io/$PROJECT_ID/rebase-newbase:latest
+  - --rebased=gcr.io/$PROJECT_ID/rebase-test:rebased
+
+# Check that rebased image does what *newbase* would have it do.
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args:
+  - -c
+  - docker run gcr.io/$PROJECT_ID/rebase-test:rebased | grep bar

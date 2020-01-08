@@ -1,0 +1,18 @@
+language: go
+go:
+  - tip
+  - 1.x
+  - 1.8.x
+  - 1.7.x
+  - 1.6.x
+  - 1.5.x
+
+# let us have pretty, fast Docker-based Travis workers!
+sudo: false
+
+install:
+  - go get -d ./...
+
+script:
+  - go test -v ./...
+  - go vet ./...
