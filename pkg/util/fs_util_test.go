@@ -963,7 +963,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ignored, err := CopyFile(tempFile, tempFile, "")
+	ignored, err := CopyFile(tempFile, tempFile, "", -1, -1)
 	if err != nil {
 		t.Fatal(err)
 	}

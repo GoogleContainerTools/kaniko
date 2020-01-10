@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -303,7 +304,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Tracef("creating dir %s", path)
-		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
+		if err := mkdirAllWithPermissions(path, mode, int64(uid), int64(gid)); err != nil {
 			return err
 		}
 
@@ -540,7 +541,7 @@ func DownloadFileToDest(rawurl, dest string) error {
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest, buildcontext string) ([]string, error) {
+func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err
@@ -562,9 +563,12 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
-			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
-			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
-
+			if uid < 0 {
+				uid = int64(int(fi.Sys().(*syscall.Stat_t).Uid))
+			}
+			if gid < 0 {
+				gid = int64(int(fi.Sys().(*syscall.Stat_t).Gid))
+			}
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
@@ -575,7 +579,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if _, err := CopyFile(fullPath, destPath, buildcontext); err != nil {
+			if _, err := CopyFile(fullPath, destPath, buildcontext, uid, gid); err != nil {
 				return nil, err
 			}
 		}
@@ -606,7 +610,7 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest, buildcontext string) (bool, error) {
+func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
@@ -627,9 +631,13 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 		return false, err
 	}
 	defer srcFile.Close()
-	uid := fi.Sys().(*syscall.Stat_t).Uid
-	gid := fi.Sys().(*syscall.Stat_t).Gid
-	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
+	if uid < 0 {
+		uid = int64(fi.Sys().(*syscall.Stat_t).Uid)
+	}
+	if gid < 0 {
+		gid = int64(fi.Sys().(*syscall.Stat_t).Gid)
+	}
+	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
@@ -699,12 +707,15 @@ func Volumes() []string {
 	return volumes
 }
 
-func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int) error {
+func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
 	if err := os.MkdirAll(path, mode); err != nil {
 		return err
 	}
-
-	if err := os.Chown(path, uid, gid); err != nil {
+	if uid > math.MaxUint32 || gid > math.MaxUint32 {
+		// due to https://github.com/golang/go/issues/8537
+		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", math.MaxUint32))
+	}
+	if err := os.Chown(path, int(uid), int(gid)); err != nil {
 		return err
 	}
 	// In some cases, MkdirAll doesn't change the permissions, so run Chmod

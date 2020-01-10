@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -326,6 +327,22 @@ Loop:
 	return nil
 }
 
+// Extract user and group id from a string formatted 'user:group'.
+// If gidEqualToUIDIfNotGiven is set, the gid is equal to uid if the group is not specified
+// otherwise gid is set to zero.
+func GetUIDAndGIDFromString(uidStr string, gidStr string) (uint32, uint32, error) {
+	// uid and gid need to be fit into uint32
+	uid64, err := strconv.ParseUint(uidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+	gid64, err := strconv.ParseUint(gidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+	return uint32(uid64), uint32(gid64), nil
+}
+
 func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
 	// Lookup by username
 	userObj, err := Lookup(userStr)
@@ -349,7 +366,7 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	}
 
 	uid := userObj.Uid
-	gid := ""
+	gid := userObj.Gid
 	if group != nil {
 		gid = group.Gid
 	}

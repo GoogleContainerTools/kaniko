@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -80,23 +79,12 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		}
 
 		uidStr, gidStr, err := util.GetUserFromUsername(userStr, groupStr)
-		if err != nil {
+		if err !=nil{
 			return err
 		}
-
-		// uid and gid need to be uint32
-		uid64, err := strconv.ParseUint(uidStr, 10, 32)
+		uid, gid, err := util.GetUIDAndGIDFromString(uidStr, gidStr)
 		if err != nil {
 			return err
-		}
-		uid := uint32(uid64)
-		var gid uint32
-		if gidStr != "" {
-			gid64, err := strconv.ParseUint(gidStr, 10, 32)
-			if err != nil {
-				return err
-			}
-			gid = uint32(gid64)
 		}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
