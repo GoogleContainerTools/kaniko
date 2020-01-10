@@ -71,8 +71,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opencontainers/selinux v1.0.0-rc1 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
-	github.com/otiai10/copy v0.0.0-20180813032824-7e9a647135a1
-	github.com/otiai10/mint v1.3.0 // indirect
+	github.com/otiai10/copy v1.0.2
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pelletier/go-buffruneio v0.2.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
