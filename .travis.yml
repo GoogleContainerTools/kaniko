@@ -1,10 +1,27 @@
 language: go
 os: linux
-
+dist: bionic
 go:
   - "1.13.3"
 go_import_path: github.com/GoogleContainerTools/kaniko
+before_install:
+  - openssl aes-256-cbc -K $encrypted_e1c6713007c8_key -iv $encrypted_e1c6713007c8_iv -in integration/google-key.json.enc -out integration/google-key.json -d
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+  - curl -s https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-275.0.0-linux-x86_64.tar.gz | tar xz -C $HOME/
+  - source "$HOME/google-cloud-sdk/path.bash.inc"
+  - gcloud auth activate-service-account --key-file=integration/google-key.json
+  - gcloud auth configure-docker -q
+  - gcloud config set project "${GCP_PROJECT_ID}"
+  - curl -LO https://storage.googleapis.com/container-diff/latest/container-diff-linux-amd64 && chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
 
 script:
   - make test
+  - "docker run -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/google-key.json
+    -v $(pwd)/integration:/workspace gcr.io/kaniko-project/executor:latest
+    --dockerfile=/workspace/dockerfiles/Dockerfile_test_add --context=dir:///workspace
+    --destination=$IMAGE_REPO/kaniko-test --force"
+  - ./integration-test.sh -serviceAccount integration/google-key.json
   - make images

@@ -118,6 +118,39 @@ Additionally, the integration tests can output benchmarking information to a `be
 BENCHMARK=true go test -v --bucket $GCS_BUCKET --repo $IMAGE_REPO
 ```
 
+## Travis CI
+Travis CI is used to test pull requests and runs unit tests and integration tests.
+However, authentication to GCP is needed since our integration test depends
+on GCS and GCR.
+
+If you wish to setup Travis CI you need to do the following:
+1. Create a service account with nesseary permissions:
+```shell
+PROJECT_ID="$(gcloud config get-value project -q)" # fetch current GCP project ID
+SVCACCT_NAME=travisci-deployer # choose name for service account
+gcloud iam service-accounts create "${SVCACCT_NAME?}"
+SVCACCT_EMAIL="$(gcloud iam service-accounts list \
+  --filter="name:${SVCACCT_NAME?}@"  \
+    --format=value\(email\))"
+gcloud iam service-accounts keys create "integration/google-key.json" \
+   --iam-account="${SVCACCT_EMAIL?}"
+gcloud projects add-iam-policy-binding "${PROJECT_ID?}" \
+   --member="serviceAccount:${SVCACCT_EMAIL?}" \
+      --role="roles/storage.admin"
+```
+
+2. Encrypt the service account key and configure Travis
+```shell
+# Note that if you forked the repo you must change repo to your forked repo
+REPO=GoogleContainerTools/kaniko
+GCS_BUCKET="gs://kaniko-testing"
+IMAGE_REPO="gcr.io/xyz"
+travis encrypt-file integration/google-key.json --repo $REPO --add
+travis env set --repo $REPO GCS_BUCKET "$GCS_BUCKET"
+travis env set --repo $REPO IMAGE_REPO "$IMAGE_REPO"
+travis env set --repo $REPO GCP_PROJECT_ID "$PROJECT_ID"
+```
+
 ## Creating a PR
 
 When you have changes you would like to propose to kaniko, you will need to:
