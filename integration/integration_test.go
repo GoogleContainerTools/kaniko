@@ -200,13 +200,14 @@ func TestGitBuildcontext(t *testing.T) {
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-			ExecutorImage,
-			"-f", dockerfile,
-			"-d", kanikoImage,
-			"-c", fmt.Sprintf("git://%s", repo)})...)
+	dockerRunFlags := []string{"run"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
@@ -243,13 +244,14 @@ func TestGitBuildContextWithBranch(t *testing.T) {
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-			ExecutorImage,
-			"-f", dockerfile,
-			"-d", kanikoImage,
-			"-c", fmt.Sprintf("git://%s", repo)})...)
+	dockerRunFlags := []string{"run"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
@@ -306,7 +308,7 @@ func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder
 	}
 
 	if err := imageBuilder.BuildImage(
-		config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile,
+		config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile, config.serviceAccount,
 	); err != nil {
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
@@ -324,11 +326,11 @@ func TestCache(t *testing.T) {
 			t.Parallel()
 			cache := filepath.Join(config.imageRepo, "cache", fmt.Sprintf("%v", time.Now().UnixNano()))
 			// Build the initial image which will cache layers
-			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 0); err != nil {
+			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, config.serviceAccount, 0); err != nil {
 				t.Fatalf("error building cached image for the first time: %v", err)
 			}
 			// Build the second image which should pull from the cache
-			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 1); err != nil {
+			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, config.serviceAccount, 1); err != nil {
 				t.Fatalf("error building cached image for the first time: %v", err)
 			}
 			// Make sure both images are the same
@@ -359,7 +361,7 @@ func TestRelativePaths(t *testing.T) {
 
 	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
 		t.Parallel()
-		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile)
+		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile, config.serviceAccount)
 
 		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
@@ -495,6 +497,7 @@ type gcpConfig struct {
 	imageRepo         string
 	onbuildBaseImage  string
 	hardlinkBaseImage string
+	serviceAccount    string
 }
 
 type imageDetails struct {
@@ -510,8 +513,21 @@ func (i imageDetails) String() string {
 func initGCPConfig() *gcpConfig {
 	var c gcpConfig
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
-	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
+	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
+	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
 	flag.Parse()
+
+	if len(c.serviceAccount) > 0 {
+		absPath, err := filepath.Abs("../" + c.serviceAccount)
+		if err != nil {
+			log.Fatalf("Error getting absolute path for service account: %s\n", c.serviceAccount)
+		}
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			log.Fatalf("Service account does not exist: %s\n", absPath)
+		}
+		c.serviceAccount = absPath
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", absPath)
+	}
 
 	if c.gcsBucket == "" || c.imageRepo == "" {
 		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)

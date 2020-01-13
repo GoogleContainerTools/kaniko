@@ -140,10 +140,21 @@ func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
 	return &d
 }
 
+func addServiceAccountFlags(flags []string, serviceAccount string) []string {
+	if len(serviceAccount) > 0 {
+		flags = append(flags, "-e",
+			"GOOGLE_APPLICATION_CREDENTIALS=/secret/"+filepath.Base(serviceAccount),
+			"-v", filepath.Dir(serviceAccount)+":/secret/")
+	} else {
+		flags = append(flags, "-v", os.Getenv("HOME")+"/.config/gcloud:/root/.config/gcloud")
+	}
+	return flags
+}
+
 // BuildImage will build dockerfile (located at dockerfilesPath) using both kaniko and docker.
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
-func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile string) error {
+func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile, serviceAccount string) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -172,6 +183,7 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
+	fmt.Printf("Build image for Dockerfile %s as %s. docker build output: %s \n", dockerfile, dockerImage, out)
 
 	contextFlag := "-c"
 	contextPath := buildContextPath
@@ -206,18 +218,22 @@ func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, do
 	// build kaniko image
 	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-			"-v", benchmarkDir + ":/kaniko/benchmarks",
-			"-v", cwd + ":/workspace",
-			"-e", benchmarkEnv,
-			ExecutorImage,
-			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-			"-d", kanikoImage, reproducibleFlag,
-			contextFlag, contextPath},
-			additionalFlags...)...,
-	)
+	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
+	dockerRunFlags := []string{
+		"run", "-e", benchmarkEnv,
+		"-v", cwd + ":/workspace",
+		"-v", benchmarkDir + ":/kaniko/benchmarks",
+	}
+
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+		"-d", kanikoImage, reproducibleFlag,
+		contextFlag, contextPath)
+	dockerRunFlags = append(dockerRunFlags, additionalFlags...)
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	timer = timing.Start(dockerfile + "_kaniko")
 	out, err = RunCommandWithoutTest(kanikoCmd)
@@ -235,6 +251,7 @@ func populateVolumeCache() error {
 	cwd := filepath.Dir(ex)
 	warmerCmd := exec.Command("docker",
 		append([]string{"run",
+			"-d",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
 			"-v", cwd + ":/workspace",
 			WarmerImage,
@@ -251,7 +268,7 @@ func populateVolumeCache() error {
 }
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
-func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesPath string, version int) error {
+func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesPath, serviceAccount string, version int) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -264,19 +281,19 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 			benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
 		}
 		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
-		kanikoCmd := exec.Command("docker",
-			append([]string{"run",
-				"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-				"-v", cwd + ":/workspace",
-				"-e", benchmarkEnv,
-				ExecutorImage,
-				"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-				"-d", kanikoImage,
-				"-c", buildContextPath,
-				cacheFlag,
-				"--cache-repo", cacheRepo,
-				"--cache-dir", cacheDir})...,
-		)
+
+		dockerRunFlags := []string{"run",
+			"-v", cwd + ":/workspace",
+			"-e", benchmarkEnv}
+		dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+		dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+			"-d", kanikoImage,
+			"-c", buildContextPath,
+			cacheFlag,
+			"--cache-repo", cacheRepo,
+			"--cache-dir", cacheDir)
+		kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 		timer := timing.Start(dockerfile + "_kaniko_cached_" + strconv.Itoa(version))
 		_, err := RunCommandWithoutTest(kanikoCmd)
@@ -289,24 +306,22 @@ func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesP
 }
 
 // buildRelativePathsImage builds the images for testing passing relatives paths to Kaniko
-func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile string) error {
+func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, serviceAccount string) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
 	buildContextPath := "./relative-subdirectory"
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-			"-v", cwd + ":/workspace",
-			ExecutorImage,
-			"-f", dockerfile,
-			"-d", kanikoImage,
-			"--digest-file", "./digest",
-			"-c", buildContextPath,
-		})...,
-	)
+	dockerRunFlags := []string{"run", "-v", cwd + ":/workspace"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"--digest-file", "./digest",
+		"-c", buildContextPath)
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	timer := timing.Start(dockerfile + "_kaniko_relative_paths")
 	_, err := RunCommandWithoutTest(kanikoCmd)
