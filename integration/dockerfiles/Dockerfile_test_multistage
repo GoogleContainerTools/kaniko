@@ -1,4 +1,4 @@
-FROM gcr.io/google-appengine/debian9@sha256:f0159d14385afcb58a9b2fa8955c0cb64bd3abc365e8589f8c2dd38150fbfdbe as base
+FROM debian:9.11 as base
 COPY . .
 
 FROM scratch as second
@@ -20,4 +20,4 @@ FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5a
 FROM fourth
 ARG file
 COPY --from=second /foo ${file}
-COPY --from=gcr.io/google-appengine/debian9@sha256:00109fa40230a081f5ecffe0e814725042ff62a03e2d1eae0563f1f82eaeae9b /etc/os-release /new
+COPY --from=debian:9.11 /etc/os-release /new
