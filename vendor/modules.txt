@@ -331,7 +331,7 @@ github.com/opencontainers/selinux/go-selinux/label
 github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/ext
 github.com/opentracing/opentracing-go/log
-# github.com/otiai10/copy v0.0.0-20180813032824-7e9a647135a1
+# github.com/otiai10/copy v1.0.2
 github.com/otiai10/copy
 # github.com/pelletier/go-buffruneio v0.2.0
 github.com/pelletier/go-buffruneio
