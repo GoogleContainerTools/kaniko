@@ -79,6 +79,8 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	// Also add parent directories to keep the permission of them correctly.
 	filesToAdd := filesWithParentDirs(files)
 
+	sort.Strings(filesToAdd)
+
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
