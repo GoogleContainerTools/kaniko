@@ -123,10 +123,6 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	}
 
 	rOpts := remoteOptions(registryName, opts)
-	if err != nil {
-		return nil, err
-	}
-
 	return remote.Image(ref, rOpts...)
 }
 
