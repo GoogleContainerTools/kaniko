@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"time"
 
-	otiai10Cpy "github.com/otiai10/copy"
-
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -565,6 +563,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			}
 		}
 
+		//
 		filesToSave, err := filesToSave(crossStageDependencies[index])
 		if err != nil {
 			return nil, err
@@ -574,8 +573,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		for _, p := range filesToSave {
-			logrus.Infof("Saving file %s for later use.", p)
-			otiai10Cpy.Copy(p, filepath.Join(dstDir, p))
+			logrus.Infof("Saving file %s for later use", p)
+			util.CopyFileOrSymlink(p, dstDir)
 		}
 
 		// Delete the filesystem
@@ -587,16 +586,28 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	return nil, err
 }
 
+// fileToSave returns all the files matching the given pattern in deps.
+// If a file is a symlink, it also returns the target file.
+// It first returns all the target files and then symlinks so they can copied
+// in that order to the kaniko workspace.
 func filesToSave(deps []string) ([]string, error) {
-	allFiles := []string{}
+	srcFiles := []string{}
+	symLinks := []string{}
 	for _, src := range deps {
 		srcs, err := filepath.Glob(src)
 		if err != nil {
 			return nil, err
 		}
-		allFiles = append(allFiles, srcs...)
+		for _, f := range srcs {
+			if link, err := util.CanonicalizeLink(f); err == nil {
+				symLinks = append(symLinks, f)
+				srcFiles = append(srcFiles, link)
+			} else {
+				srcFiles = append(srcFiles, f)
+			}
+		}
 	}
-	return allFiles, nil
+	return append(srcFiles, symLinks...), nil
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {

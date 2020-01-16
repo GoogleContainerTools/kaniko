@@ -112,7 +112,6 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	if err := writeToTar(t, filesToAdd, filesToWhiteOut); err != nil {
 		return "", err
 	}
-
 	return f.Name(), nil
 }
 
@@ -170,7 +169,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	filesToAdd := []string{}
 	for path := range memFs {
 		if util.CheckWhitelist(path) {
-			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
+			logrus.Infof("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}
 		// Only add changed files.
@@ -179,8 +178,12 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
 		}
 		if fileChanged {
-			logrus.Tracef("Adding %s to layer, because it was changed.", path)
-			filesToAdd = append(filesToAdd, path)
+			files, err := filesWithLinks(path)
+			if err != nil {
+				return nil, nil, err
+			}
+			logrus.Debug("Adding files %s to layer, because it was changed.", files)
+			filesToAdd = append(filesToAdd, files...)
 		}
 	}
 
@@ -188,7 +191,6 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	filesToAdd = filesWithParentDirs(filesToAdd)
 
 	sort.Strings(filesToAdd)
-
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
@@ -235,4 +237,14 @@ func filesWithParentDirs(files []string) []string {
 	}
 
 	return newFiles
+}
+
+func filesWithLinks(path string) ([]string, error) {
+	link, err := util.CanonicalizeLink(path)
+	if err == util.NotSymLink {
+		return []string{path}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return []string{path, link}, nil
 }

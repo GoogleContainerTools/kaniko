@@ -1,0 +1,5 @@
+FROM alpine:3.11 as t
+RUN apk add gcc
+
+FROM scratch
+COPY --from=t /usr/lib/libstdc++.so.6 /usr/lib/

@@ -30,6 +30,8 @@ import (
 	"syscall"
 	"time"
 
+	otiai10Cpy "github.com/otiai10/copy"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
@@ -443,18 +445,8 @@ func FilepathExists(path string) bool {
 // CreateFile creates a file at path and copies over contents from the reader
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
-	baseDir := filepath.Dir(path)
-	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
-		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
-		if err := os.MkdirAll(baseDir, 0755); err != nil {
-			return err
-		}
-	} else {
-		switch mode := info.Mode(); {
-		case mode&os.ModeSymlink != 0:
-			logrus.Infof("destination cannot be a symlink %v", baseDir)
-			return errors.New("destination cannot be a symlink")
-		}
+	if err := createParentDirectory(path); err != nil {
+		return err
 	}
 	dest, err := os.Create(path)
 	if err != nil {
@@ -531,7 +523,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
-		} else if fi.Mode()&os.ModeSymlink != 0 {
+		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
 			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
@@ -553,7 +545,7 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
-	link, err := os.Readlink(src)
+	link, err := filepath.EvalSymlinks(src)
 	if err != nil {
 		return false, err
 	}
@@ -561,6 +553,9 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 		if err := os.RemoveAll(dest); err != nil {
 			return false, err
 		}
+	}
+	if err := createParentDirectory(dest); err != nil {
+		return false, err
 	}
 	return false, os.Symlink(link, dest)
 }
@@ -689,4 +684,51 @@ func CreateTargetTarfile(tarpath string) (*os.File, error) {
 	}
 	return os.Create(tarpath)
 
+}
+
+// Returns true if a file is a symlink
+func IsSymlink(fi os.FileInfo) bool {
+	return fi.Mode()&os.ModeSymlink != 0
+}
+
+var NotSymLink = fmt.Errorf("not a symlink")
+
+func CanonicalizeLink(path string) (string, error) {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+	if !IsSymlink(fi) {
+		return "", NotSymLink
+	}
+	return filepath.EvalSymlinks(path)
+}
+
+// otiai10Cpy.Copy in case the src file is a symlink, will copy the target
+// file at destination instead of creating a symlink. See #915 for more details.
+func CopyFileOrSymlink(src string, destDir string) error {
+	destFile := filepath.Join(destDir, src)
+	if fi, _ := os.Lstat(src); IsSymlink(fi) {
+		if link, err := os.Readlink(src); err != nil {
+			return err
+		} else {
+			return os.Symlink(link, destFile)
+		}
+	} else {
+		return otiai10Cpy.Copy(src, destFile)
+	}
+}
+
+func createParentDirectory(path string) error {
+	baseDir := filepath.Dir(path)
+	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
+		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return err
+		}
+	} else if IsSymlink(info) {
+		logrus.Infof("destination cannot be a symlink %v", baseDir)
+		return errors.New("destination cannot be a symlink")
+	}
+	return nil
 }
