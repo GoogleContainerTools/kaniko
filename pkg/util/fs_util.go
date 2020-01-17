@@ -691,7 +691,7 @@ func IsSymlink(fi os.FileInfo) bool {
 	return fi.Mode()&os.ModeSymlink != 0
 }
 
-var NotSymLink = fmt.Errorf("not a symlink")
+var ErrNotSymLink = fmt.Errorf("not a symlink")
 
 func CanonicalizeLink(path string) (string, error) {
 	fi, err := os.Lstat(path)
@@ -699,7 +699,7 @@ func CanonicalizeLink(path string) (string, error) {
 		return "", err
 	}
 	if !IsSymlink(fi) {
-		return "", NotSymLink
+		return "", ErrNotSymLink
 	}
 	return filepath.EvalSymlinks(path)
 }
@@ -709,14 +709,13 @@ func CanonicalizeLink(path string) (string, error) {
 func CopyFileOrSymlink(src string, destDir string) error {
 	destFile := filepath.Join(destDir, src)
 	if fi, _ := os.Lstat(src); IsSymlink(fi) {
-		if link, err := os.Readlink(src); err != nil {
+		link, err := os.Readlink(src)
+		if err != nil {
 			return err
-		} else {
-			return os.Symlink(link, destFile)
 		}
-	} else {
-		return otiai10Cpy.Copy(src, destFile)
+		return os.Symlink(link, destFile)
 	}
+	return otiai10Cpy.Copy(src, destFile)
 }
 
 func createParentDirectory(path string) error {

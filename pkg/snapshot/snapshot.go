@@ -182,7 +182,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			logrus.Debug("Adding files %s to layer, because it was changed.", files)
+			logrus.Debugf("Adding files %s to layer, because it was changed.", files)
 			filesToAdd = append(filesToAdd, files...)
 		}
 	}
@@ -241,7 +241,7 @@ func filesWithParentDirs(files []string) []string {
 
 func filesWithLinks(path string) ([]string, error) {
 	link, err := util.CanonicalizeLink(path)
-	if err == util.NotSymLink {
+	if err == util.ErrNotSymLink {
 		return []string{path}, nil
 	} else if err != nil {
 		return nil, err
