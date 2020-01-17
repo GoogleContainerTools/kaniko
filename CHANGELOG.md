@@ -1,3 +1,57 @@
+# v0.16.0 Release - 2020-01-17
+
+Happy New Year 2020!
+
+## Bug Fixes
+* Support for private registries in the cache warmer [#941](https://github.com/GoogleContainerTools/kaniko/pull/941)
+* Fix bug with docker compatibility ArgsEscaped [#964](https://github.com/GoogleContainerTools/kaniko/pull/964)
+* Clean code (Condition is always 'false' because 'err' is always 'nil' ). [#967](https://github.com/GoogleContainerTools/kaniko/pull/967)
+* Fix #647 Copy dir permissions [#961](https://github.com/GoogleContainerTools/kaniko/pull/961)
+* Allow setting serviceAccount in integration test [#965](https://github.com/GoogleContainerTools/kaniko/pull/965)
+* Fix #926 cache warmer and method signature [#927](https://github.com/GoogleContainerTools/kaniko/pull/927)
+* Fix #948 update valid license years [#949](https://github.com/GoogleContainerTools/kaniko/pull/949)
+* Move hash bang to first line. [#954](https://github.com/GoogleContainerTools/kaniko/pull/954)
+* Fix #944 include docker-credential-acr-linux [#945](https://github.com/GoogleContainerTools/kaniko/pull/945)
+* Fix #925 broken insecure pull [#932](https://github.com/GoogleContainerTools/kaniko/pull/932)
+* Push to ECR using instance roles [#930](https://github.com/GoogleContainerTools/kaniko/pull/930)
+* Upgrade aws go sdk for supporting eks oidc credential chain [#832](https://github.com/GoogleContainerTools/kaniko/pull/832)
+* Push image [#866](https://github.com/GoogleContainerTools/kaniko/pull/866)
+
+# Updates and Refactors
+* Fixes #950 integration test failing on go 1.13 [#955](https://github.com/GoogleContainerTools/kaniko/pull/955)
+* Tidy dependencies [#939](https://github.com/GoogleContainerTools/kaniko/pull/939)
+* changing to modules from dependencies [#869](https://github.com/GoogleContainerTools/kaniko/pull/869)
+* Changing Log to trace [#920](https://github.com/GoogleContainerTools/kaniko/pull/920)
+
+# Documentation
+* docs: fix document on DoBuild [#668](https://github.com/GoogleContainerTools/kaniko/pull/668)
+* Update outdated toc in README.md [#867](https://github.com/GoogleContainerTools/kaniko/pull/867)
+
+Huge thank you for this release towards our contributors:
+- Adrian Mouat
+- Balint Pato
+- Ben Einaudi
+- Benjamin EINAUDI
+- Carlos Sanchez
+- Cole Wippern
+- Daniel Strobusch
+- Eduard Laur
+- Fahri Yardımcı
+- Josh Soref
+- lou-lan
+- Nao YONASHIRO
+- poy
+- Prashant Arya
+- priyawadhwa
+- Pweetoo
+- Remko van Hunen
+- Sam Stoelinga
+- Stijn De Haes
+- Tejal Desai
+- tommaso.doninelli
+- Will Ripley
+
+
 # v0.15.0 Release - 2019-12-20
 
 ## Bug fixes
