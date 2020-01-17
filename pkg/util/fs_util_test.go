@@ -29,7 +29,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mock_v1"
+	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -924,7 +924,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 
 	f(expectedFiles, tw)
 
-	mockLayer := mock_v1.NewMockLayer(ctrl)
+	mockLayer := mockv1.NewMockLayer(ctrl)
 	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
 
 	rc := ioutil.NopCloser(buf)
@@ -939,7 +939,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 
 	f(secondLayerFiles, tw)
 
-	mockLayer2 := mock_v1.NewMockLayer(ctrl)
+	mockLayer2 := mockv1.NewMockLayer(ctrl)
 	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
 
 	rc = ioutil.NopCloser(buf)
@@ -1013,7 +1013,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 
 	f(expectedFiles, tw)
 
-	mockLayer := mock_v1.NewMockLayer(ctrl)
+	mockLayer := mockv1.NewMockLayer(ctrl)
 	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
 
 	rc := ioutil.NopCloser(buf)
@@ -1028,7 +1028,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 
 	f(secondLayerFiles, tw)
 
-	mockLayer2 := mock_v1.NewMockLayer(ctrl)
+	mockLayer2 := mockv1.NewMockLayer(ctrl)
 	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
 
 	rc = ioutil.NopCloser(buf)
@@ -1095,7 +1095,7 @@ func Test_GetFSFromLayers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mockLayer := mock_v1.NewMockLayer(ctrl)
+	mockLayer := mockv1.NewMockLayer(ctrl)
 	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
 
 	rc := ioutil.NopCloser(buf)
