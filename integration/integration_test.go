@@ -286,7 +286,7 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	dockerfile = "integration/dockerfiles/Dockerfile_test_run_3"
+	dockerfile = "integration/dockerfiles/Dockerfile_registry_3"
 	kanikoCmd := exec.Command("docker",
 		append([]string{"run",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
