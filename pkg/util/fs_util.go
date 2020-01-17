@@ -49,13 +49,6 @@ var initialWhitelist = []WhitelistEntry{
 		PrefixMatchOnly: false,
 	},
 	{
-		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
-		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
-		// in the image with no way to tell if it came from the base image or not.
-		Path:            "/var/run",
-		PrefixMatchOnly: false,
-	},
-	{
 		// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
 		// from the base image
 		Path:            "/etc/mtab",
@@ -68,6 +61,10 @@ var whitelist = initialWhitelist
 var volumes = []string{}
 
 var excluded []string
+
+func AddToWhitelist(path string) {
+	initialWhitelist = append(initialWhitelist, WhitelistEntry{Path: path})
+}
 
 type ExtractFunction func(string, *tar.Header, io.Reader) error
 

@@ -64,10 +64,31 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/dev", false},
 		{"/dev/pts", false},
 		{"/sys", false},
-		{"/var/run", false},
 		{"/etc/mtab", false},
 	}
 	actualWhitelist := whitelist
+	sort.Slice(actualWhitelist, func(i, j int) bool {
+		return actualWhitelist[i].Path < actualWhitelist[j].Path
+	})
+	sort.Slice(expectedWhitelist, func(i, j int) bool {
+		return expectedWhitelist[i].Path < expectedWhitelist[j].Path
+	})
+	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
+
+	tmpInitial := make([]WhitelistEntry, len(initialWhitelist))
+
+	copy(tmpInitial, initialWhitelist)
+	defer func() {
+		initialWhitelist = tmpInitial
+	}()
+
+	AddToWhitelist("/var/run")
+
+	err = DetectFilesystemWhitelist(path)
+	expectedWhitelist = append(expectedWhitelist,
+		WhitelistEntry{"/var/run", false})
+
+	actualWhitelist = whitelist
 	sort.Slice(actualWhitelist, func(i, j int) bool {
 		return actualWhitelist[i].Path < actualWhitelist[j].Path
 	})
