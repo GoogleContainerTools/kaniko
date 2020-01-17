@@ -160,12 +160,14 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				}
 
 				if !cfg.includeWhiteout {
+					logrus.Debug("not including whiteout files")
 					continue
 				}
-			} else {
-				if err := cfg.extractFunc(root, hdr, tr); err != nil {
-					return nil, err
-				}
+
+			}
+
+			if err := cfg.extractFunc(root, hdr, tr); err != nil {
+				return nil, err
 			}
 
 			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))

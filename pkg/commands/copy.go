@@ -167,7 +167,13 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	if cr.img == nil {
 		return errors.New(fmt.Sprintf("cached command image is nil %v", cr.String()))
 	}
-	cr.extractedFiles, err = util.GetFSFromImage(RootDir, cr.img, cr.extractFn)
+
+	layers, err := cr.img.Layers()
+	if err != nil {
+		return errors.Wrapf(err, "retrieve image layers")
+	}
+
+	cr.extractedFiles, err = util.GetFSFromLayers(RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
 	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
 	if err != nil {
@@ -182,7 +188,10 @@ func (cr *CachingCopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs 
 }
 
 func (cr *CachingCopyCommand) FilesToSnapshot() []string {
-	return cr.extractedFiles
+	f := cr.extractedFiles
+	logrus.Debugf("files extracted by caching copy command %s", f)
+
+	return f
 }
 
 func (cr *CachingCopyCommand) String() string {

@@ -197,7 +197,18 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	if cr.img == nil {
 		return errors.New(fmt.Sprintf("command image is nil %v", cr.String()))
 	}
-	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img, cr.extractFn)
+
+	layers, err := cr.img.Layers()
+	if err != nil {
+		return errors.Wrap(err, "retrieving image layers")
+	}
+
+	cr.extractedFiles, err = util.GetFSFromLayers(
+		constants.RootDir,
+		layers,
+		util.ExtractFunc(cr.extractFn),
+		util.IncludeWhiteout(),
+	)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")
 	}
@@ -206,7 +217,10 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 }
 
 func (cr *CachingRunCommand) FilesToSnapshot() []string {
-	return cr.extractedFiles
+	f := cr.extractedFiles
+	logrus.Debugf("files extracted from caching run command %s", f)
+
+	return f
 }
 
 func (cr *CachingRunCommand) String() string {

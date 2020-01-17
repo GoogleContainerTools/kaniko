@@ -892,21 +892,20 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 	expectErr := false
 
 	f := func(expectedFiles []string, tw *tar.Writer) {
-		body := "Hello World\n"
 		for _, f := range expectedFiles {
 			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
 
 			hdr := &tar.Header{
 				Name: f,
 				Mode: 0644,
-				Size: int64(len(body)),
+				Size: int64(len("Hello World\n")),
 			}
 
 			if err := tw.WriteHeader(hdr); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := tw.Write([]byte(body)); err != nil {
+			if _, err := tw.Write([]byte("Hello World\n")); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -982,21 +981,20 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 	expectErr := false
 
 	f := func(expectedFiles []string, tw *tar.Writer) {
-		body := "Hello World\n"
 		for _, f := range expectedFiles {
 			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
 
 			hdr := &tar.Header{
 				Name: f,
 				Mode: 0644,
-				Size: int64(len(body)),
+				Size: int64(len("Hello world\n")),
 			}
 
 			if err := tw.WriteHeader(hdr); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := tw.Write([]byte(body)); err != nil {
+			if _, err := tw.Write([]byte("Hello world\n")); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -1075,21 +1073,20 @@ func Test_GetFSFromLayers(t *testing.T) {
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
 
-	body := "Hello World\n"
 	for _, f := range expectedFiles {
 		f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
 
 		hdr := &tar.Header{
 			Name: f,
 			Mode: 0644,
-			Size: int64(len(body)),
+			Size: int64(len("Hello world\n")),
 		}
 
 		if err := tw.WriteHeader(hdr); err != nil {
 			t.Fatal(err)
 		}
 
-		if _, err := tw.Write([]byte(body)); err != nil {
+		if _, err := tw.Write([]byte("Hello world\n")); err != nil {
 			t.Fatal(err)
 		}
 	}
