@@ -154,7 +154,8 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 // BuildImage will build dockerfile (located at dockerfilesPath) using both kaniko and docker.
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
-func (d *DockerFileBuilder) BuildImage(imageRepo, gcsBucket, dockerfilesPath, dockerfile, serviceAccount string) error {
+func (d *DockerFileBuilder) BuildImage(config *gcpConfig, dockerfilesPath, dockerfile string) error {
+	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
@@ -268,7 +269,8 @@ func populateVolumeCache() error {
 }
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
-func (d *DockerFileBuilder) buildCachedImages(imageRepo, cacheRepo, dockerfilesPath, serviceAccount string, version int) error {
+func (d *DockerFileBuilder) buildCachedImages(config *gcpConfig, cacheRepo, dockerfilesPath string, version int) error {
+	imageRepo, serviceAccount := config.imageRepo, config.serviceAccount
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 

@@ -18,6 +18,8 @@ set -ex
 GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
 IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 
+docker version
+
 # Sets up a kokoro (Google internal integration testing tool) environment
 if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
     echo "Installing dependencies..."
