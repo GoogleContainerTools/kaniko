@@ -71,25 +71,58 @@ var excluded []string
 
 type ExtractFunction func(string, *tar.Header, io.Reader) error
 
+type FSConfig struct {
+	includeWhiteout bool
+	extractFunc     ExtractFunction
+}
+
+type FSOpt func(*FSConfig)
+
+func IncludeWhiteout() FSOpt {
+	return func(opts *FSConfig) {
+		opts.includeWhiteout = true
+	}
+}
+
+func ExtractFunc(extractFunc ExtractFunction) FSOpt {
+	return func(opts *FSConfig) {
+		opts.extractFunc = extractFunc
+	}
+}
+
 // GetFSFromImage extracts the layers of img to root
 // It returns a list of all files extracted
 func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]string, error) {
-	if extract == nil {
-		return nil, errors.New("must supply an extract function")
-	}
 	if img == nil {
 		return nil, errors.New("image cannot be nil")
 	}
-	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
-		return nil, err
-	}
-	logrus.Debugf("Mounted directories: %v", whitelist)
+
 	layers, err := img.Layers()
 	if err != nil {
 		return nil, err
 	}
-	extractedFiles := []string{}
 
+	return GetFSFromLayers(root, layers, ExtractFunc(extract))
+}
+
+func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, error) {
+	cfg := new(FSConfig)
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	if cfg.extractFunc == nil {
+		return nil, errors.New("must supply an extract function")
+	}
+
+	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
+		return nil, err
+	}
+
+	logrus.Debugf("Mounted directories: %v", whitelist)
+
+	extractedFiles := []string{}
 	for i, l := range layers {
 		if mediaType, err := l.MediaType(); err == nil {
 			logrus.Tracef("Extracting layer %d of media type %s", i, mediaType)
@@ -102,29 +135,39 @@ func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]strin
 			return nil, err
 		}
 		defer r.Close()
+
 		tr := tar.NewReader(r)
 		for {
 			hdr, err := tr.Next()
 			if err == io.EOF {
 				break
 			}
+
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("error reading tar %d", i))
 			}
+
 			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
+
 			if strings.HasPrefix(base, ".wh.") {
 				logrus.Debugf("Whiting out %s", path)
+
 				name := strings.TrimPrefix(base, ".wh.")
 				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
 					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
 				}
-				continue
+
+				if !cfg.includeWhiteout {
+					continue
+				}
+			} else {
+				if err := cfg.extractFunc(root, hdr, tr); err != nil {
+					return nil, err
+				}
 			}
-			if err := extract(root, hdr, tr); err != nil {
-				return nil, err
-			}
+
 			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
 	}
