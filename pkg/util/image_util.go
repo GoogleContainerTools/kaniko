@@ -108,7 +108,6 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 
 	registryName := ref.Context().RegistryStr()
 	var newReg name.Registry
-	var err error
 
 	if opts.RegistryMirror != "" && registryName == name.DefaultRegistry {
 		registryName = opts.RegistryMirror
