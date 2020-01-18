@@ -184,6 +184,7 @@ func (r *RunCommand) ShouldCacheOutput() bool {
 
 type CachingRunCommand struct {
 	BaseCommand
+	caching
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.RunCommand
@@ -202,6 +203,13 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	if err != nil {
 		return errors.Wrap(err, "retrieving image layers")
 	}
+
+	if len(layers) != 1 {
+		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	}
+
+	cr.layer = layers[0]
+	cr.readSuccess = true
 
 	cr.extractedFiles, err = util.GetFSFromLayers(
 		constants.RootDir,

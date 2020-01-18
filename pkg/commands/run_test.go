@@ -238,14 +238,16 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 			c := &CachingRunCommand{
 				img: fakeImage{},
 			}
-			tc := testCase{
-				desctiption: "with image containing no layers",
-			}
+
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
 				return nil
 			}
-			tc.command = c
-			return tc
+
+			return testCase{
+				desctiption: "with image containing no layers",
+				expectErr:   true,
+				command:     c,
+			}
 		}(),
 		func() testCase {
 			c := &CachingRunCommand{
@@ -309,6 +311,16 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 				if len(cmdFiles) != 0 {
 					t.Errorf("expected files used from context to be empty but was not")
 				}
+			}
+
+			if c.layer == nil && tc.expectLayer {
+				t.Error("expected the command to have a layer set but instead was nil")
+			} else if c.layer != nil && !tc.expectLayer {
+				t.Error("expected the command to have no layer set but instead found a layer")
+			}
+
+			if c.readSuccess != tc.expectLayer {
+				t.Errorf("expected read success to be %v but was %v", tc.expectLayer, c.readSuccess)
 			}
 		})
 	}
