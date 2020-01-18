@@ -83,7 +83,7 @@ If you want to run `make integration-test`, you must override the project using 
 You can also run tests with `go test`, for example to run tests individually:
 
 ```shell
-go test -v --bucket $GCS_BUCKET --repo $IMAGE_REPO -run TestLayers/test_layer_Dockerfile_test_copy_bucket
+go test ./integration -v --bucket $GCS_BUCKET --repo $IMAGE_REPO -run TestLayers/test_layer_Dockerfile_test_copy_bucket
 ```
 
 Requirements:

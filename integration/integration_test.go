@@ -38,7 +38,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-var config = initGCPConfig()
+var config *gcpConfig
 var imageBuilder *DockerFileBuilder
 
 const (
@@ -68,11 +68,27 @@ const (
 	dockerfileTestRun = "integration/dockerfiles/Dockerfile_test_run_2"
 )
 
+func getDockerMajorVersion() int {
+	out, err := exec.Command("docker", "version", "--format", "{{.Server.Version}}").Output()
+	if err != nil {
+		log.Fatal("Error getting docker version of server:", err)
+	}
+	versionArr := strings.Split(string(out), ".")
+
+	ver, err := strconv.Atoi(versionArr[0])
+	if err != nil {
+		log.Fatal("Error getting docker version of server during parsing version string:", err)
+	}
+	return ver
+}
+
 func TestMain(m *testing.M) {
 	if !meetsRequirements() {
 		fmt.Println("Missing required tools")
 		os.Exit(1)
 	}
+	config = initGCPConfig()
+
 	contextFile, err := CreateIntegrationTarball()
 	if err != nil {
 		fmt.Println("Failed to create tarball of integration files for build context", err)
@@ -200,13 +216,14 @@ func TestGitBuildcontext(t *testing.T) {
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-			ExecutorImage,
-			"-f", dockerfile,
-			"-d", kanikoImage,
-			"-c", fmt.Sprintf("git://%s", repo)})...)
+	dockerRunFlags := []string{"run"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
@@ -243,13 +260,14 @@ func TestGitBuildContextWithBranch(t *testing.T) {
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-			ExecutorImage,
-			"-f", dockerfile,
-			"-d", kanikoImage,
-			"-c", fmt.Sprintf("git://%s", repo)})...)
+	dockerRunFlags := []string{"run"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
@@ -351,9 +369,7 @@ func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder
 		return
 	}
 
-	if err := imageBuilder.BuildImage(
-		config.imageRepo, config.gcsBucket, dockerfilesPath, dockerfile,
-	); err != nil {
+	if err := imageBuilder.BuildImage(config, dockerfilesPath, dockerfile); err != nil {
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
 	}
@@ -368,13 +384,14 @@ func TestCache(t *testing.T) {
 		t.Run("test_cache_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
 			t.Parallel()
+
 			cache := filepath.Join(config.imageRepo, "cache", fmt.Sprintf("%v", time.Now().UnixNano()))
 			// Build the initial image which will cache layers
-			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 0); err != nil {
+			if err := imageBuilder.buildCachedImages(config, cache, dockerfilesPath, 0); err != nil {
 				t.Fatalf("error building cached image for the first time: %v", err)
 			}
 			// Build the second image which should pull from the cache
-			if err := imageBuilder.buildCachedImages(config.imageRepo, cache, dockerfilesPath, 1); err != nil {
+			if err := imageBuilder.buildCachedImages(config, cache, dockerfilesPath, 1); err != nil {
 				t.Fatalf("error building cached image for the first time: %v", err)
 			}
 			// Make sure both images are the same
@@ -405,7 +422,7 @@ func TestRelativePaths(t *testing.T) {
 
 	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
 		t.Parallel()
-		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile)
+		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile, config.serviceAccount)
 
 		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
@@ -428,14 +445,46 @@ type fileDiff struct {
 	Size int
 }
 
+type fileDiffResult struct {
+	Adds []fileDiff
+	Dels []fileDiff
+}
+
+type metaDiffResult struct {
+	Adds []string
+	Dels []string
+}
+
 type diffOutput struct {
 	Image1   string
 	Image2   string
 	DiffType string
-	Diff     struct {
-		Adds []fileDiff
-		Dels []fileDiff
+	Diff     interface{}
+}
+
+func (diff *diffOutput) UnmarshalJSON(data []byte) error {
+	type Alias diffOutput
+	aux := &struct{ *Alias }{Alias: (*Alias)(diff)}
+	var rawJSON json.RawMessage
+	aux.Diff = &rawJSON
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return err
 	}
+	switch diff.DiffType {
+	case "File":
+		var dst fileDiffResult
+		err = json.Unmarshal(rawJSON, &dst)
+		diff.Diff = &dst
+	case "Metadata":
+		var dst metaDiffResult
+		err = json.Unmarshal(rawJSON, &dst)
+		diff.Diff = &dst
+	}
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 var allowedDiffPaths = []string{"/sys"}
@@ -459,13 +508,35 @@ func checkContainerDiffOutput(t *testing.T, diff []byte, expected string) {
 	}
 
 	// Some differences (whitelisted paths, etc.) are known and expected.
-	diffInt[0].Diff.Adds = filterDiff(diffInt[0].Diff.Adds)
-	diffInt[0].Diff.Dels = filterDiff(diffInt[0].Diff.Dels)
+	fdr := diffInt[0].Diff.(*fileDiffResult)
+	fdr.Adds = filterFileDiff(fdr.Adds)
+	fdr.Dels = filterFileDiff(fdr.Dels)
+	// Remove some of the meta diffs that shouldn't be checked
+	mdr := diffInt[1].Diff.(*metaDiffResult)
+	mdr.Adds = filterMetaDiff(mdr.Adds)
+	mdr.Dels = filterMetaDiff(mdr.Dels)
 
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedInt, diffInt)
 }
 
-func filterDiff(f []fileDiff) []fileDiff {
+func filterMetaDiff(metaDiff []string) []string {
+	// TODO remove this once we agree testing shouldn't run on docker 18.xx
+	// currently docker 18.xx will build an image with Metadata set
+	// ArgsEscaped: true, however Docker 19.xx will build an image and have
+	// ArgsEscaped: false
+	if config.dockerMajorVersion == 19 {
+		return metaDiff
+	}
+	newDiffs := []string{}
+	for _, meta := range metaDiff {
+		if !strings.HasPrefix(meta, "ArgsEscaped") {
+			newDiffs = append(newDiffs, meta)
+		}
+	}
+	return newDiffs
+}
+
+func filterFileDiff(f []fileDiff) []fileDiff {
 	var newDiffs []fileDiff
 	for _, diff := range f {
 		isWhitelisted := false
@@ -537,10 +608,12 @@ func logBenchmarks(benchmark string) error {
 }
 
 type gcpConfig struct {
-	gcsBucket         string
-	imageRepo         string
-	onbuildBaseImage  string
-	hardlinkBaseImage string
+	gcsBucket          string
+	imageRepo          string
+	onbuildBaseImage   string
+	hardlinkBaseImage  string
+	serviceAccount     string
+	dockerMajorVersion int
 }
 
 type imageDetails struct {
@@ -556,8 +629,21 @@ func (i imageDetails) String() string {
 func initGCPConfig() *gcpConfig {
 	var c gcpConfig
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
-	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo.")
+	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
+	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
 	flag.Parse()
+
+	if len(c.serviceAccount) > 0 {
+		absPath, err := filepath.Abs("../" + c.serviceAccount)
+		if err != nil {
+			log.Fatalf("Error getting absolute path for service account: %s\n", c.serviceAccount)
+		}
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			log.Fatalf("Service account does not exist: %s\n", absPath)
+		}
+		c.serviceAccount = absPath
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", absPath)
+	}
 
 	if c.gcsBucket == "" || c.imageRepo == "" {
 		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)
@@ -565,6 +651,7 @@ func initGCPConfig() *gcpConfig {
 	if !strings.HasSuffix(c.imageRepo, "/") {
 		c.imageRepo = c.imageRepo + "/"
 	}
+	c.dockerMajorVersion = getDockerMajorVersion()
 	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
 	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
 	return &c

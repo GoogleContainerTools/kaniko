@@ -34,7 +34,6 @@ require (
 	github.com/genuinetools/amicontained v0.4.3
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gliderlabs/ssh v0.2.2 // indirect
-	github.com/go-ini/ini v1.38.1 // indirect
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/protobuf v1.1.0 // indirect
@@ -72,8 +71,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opencontainers/selinux v1.0.0-rc1 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
-	github.com/otiai10/copy v0.0.0-20180813032824-7e9a647135a1
-	github.com/otiai10/mint v1.3.0 // indirect
+	github.com/otiai10/copy v1.0.2
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pelletier/go-buffruneio v0.2.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -84,7 +82,6 @@ require (
 	github.com/prometheus/procfs v0.0.0-20180725123919-05ee40e3a273 // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/afero v1.2.1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.1
@@ -104,7 +101,6 @@ require (
 	google.golang.org/genproto v0.0.0-20180731170733-daca94659cb5 // indirect
 	google.golang.org/grpc v1.2.1-0.20180320012744-8124abf74e76 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/ini.v1 v1.51.0 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.2.0 // indirect
 	gopkg.in/src-d/go-git-fixtures.v3 v3.5.0 // indirect
 	gopkg.in/src-d/go-git.v4 v4.6.0
