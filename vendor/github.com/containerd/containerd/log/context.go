@@ -30,7 +30,7 @@ var (
 	// messages.
 	G = GetLogger
 
-	// L is an alias for the the standard logger.
+	// L is an alias for the standard logger.
 	L = logrus.NewEntry(logrus.StandardLogger())
 )
 
@@ -41,6 +41,10 @@ type (
 // TraceLevel is the log level for tracing. Trace level is lower than debug level,
 // and is usually used to trace detailed behavior of the program.
 const TraceLevel = logrus.Level(uint32(logrus.DebugLevel + 1))
+
+// RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
+// ensure the formatted time is always the same number of characters.
+const RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
 
 // ParseLevel takes a string level and returns the Logrus log level constant.
 // It supports trace level.

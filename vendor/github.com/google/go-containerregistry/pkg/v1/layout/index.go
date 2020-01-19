@@ -28,8 +28,9 @@ import (
 var _ v1.ImageIndex = (*layoutIndex)(nil)
 
 type layoutIndex struct {
-	path     Path
-	rawIndex []byte
+	mediaType types.MediaType
+	path      Path
+	rawIndex  []byte
 }
 
 // ImageIndexFromPath is a convenience function which constructs a Path and returns its v1.ImageIndex.
@@ -49,19 +50,24 @@ func (l Path) ImageIndex() (v1.ImageIndex, error) {
 	}
 
 	idx := &layoutIndex{
-		path:     l,
-		rawIndex: rawIndex,
+		mediaType: types.OCIImageIndex,
+		path:      l,
+		rawIndex:  rawIndex,
 	}
 
 	return idx, nil
 }
 
 func (i *layoutIndex) MediaType() (types.MediaType, error) {
-	return types.OCIImageIndex, nil
+	return i.mediaType, nil
 }
 
 func (i *layoutIndex) Digest() (v1.Hash, error) {
 	return partial.Digest(i)
+}
+
+func (i *layoutIndex) Size() (int64, error) {
+	return partial.Size(i)
 }
 
 func (i *layoutIndex) IndexManifest() (*v1.IndexManifest, error) {
@@ -109,8 +115,9 @@ func (i *layoutIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
 	}
 
 	return &layoutIndex{
-		path:     i.path,
-		rawIndex: rawIndex,
+		mediaType: desc.MediaType,
+		path:      i.path,
+		rawIndex:  rawIndex,
 	}, nil
 }
 

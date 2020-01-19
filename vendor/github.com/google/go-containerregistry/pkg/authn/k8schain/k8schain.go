@@ -17,20 +17,12 @@ package k8schain
 import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	credentialprovider "github.com/vdemeester/k8s-pkg-credentialprovider"
+	credentialprovidersecrets "github.com/vdemeester/k8s-pkg-credentialprovider/secrets"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/credentialprovider"
-	credentialprovidersecrets "k8s.io/kubernetes/pkg/credentialprovider/secrets"
-
-	// Credential providers
-	_ "k8s.io/kubernetes/pkg/credentialprovider/aws"
-	_ "k8s.io/kubernetes/pkg/credentialprovider/azure"
-	_ "k8s.io/kubernetes/pkg/credentialprovider/gcp"
-	// TODO(mattmoor): This doesn't seem to build, figure out why `dep ensure`
-	// is not working and add constraints.
-	// _ "k8s.io/kubernetes/pkg/credentialprovider/rancher"
 )
 
 // Options holds configuration data for guiding credential resolution.
@@ -45,9 +37,6 @@ type Options struct {
 	// Namespace) containing credential data to use for the image pull.
 	ImagePullSecrets []string
 }
-
-// origKeyRing is a variable so that testing can adjust it.
-var origKeyRing = credentialprovider.NewDockerKeyring()
 
 // New returns a new authn.Keychain suitable for resolving image references as
 // scoped by the provided Options.  It speaks to Kubernetes through the provided
@@ -93,7 +82,7 @@ func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 	}
 
 	// Third, extend the default keyring with the pull secrets.
-	kr, err := credentialprovidersecrets.MakeDockerKeyring(pullSecrets, origKeyRing)
+	kr, err := credentialprovidersecrets.MakeDockerKeyring(pullSecrets, credentialprovider.NewDockerKeyring())
 	if err != nil {
 		return nil, err
 	}
@@ -133,19 +122,15 @@ func NewNoClient() (authn.Keychain, error) {
 type lazyProvider credentialprovider.LazyAuthConfiguration
 
 // Authorization implements Authenticator.
-func (lp lazyProvider) Authorization() (string, error) {
+func (lp lazyProvider) Authorization() (*authn.AuthConfig, error) {
 	authConfig := credentialprovider.LazyProvide(credentialprovider.LazyAuthConfiguration(lp))
-	if authConfig.Auth != "" {
-		return "Basic " + authConfig.Auth, nil
-	}
-	if authConfig.Username != "" {
-		basic := authn.Basic{
-			Username: authConfig.Username,
-			Password: authConfig.Password,
-		}
-		return basic.Authorization()
-	}
-	return authn.Anonymous.Authorization()
+	return &authn.AuthConfig{
+		Username:      authConfig.Username,
+		Password:      authConfig.Password,
+		Auth:          authConfig.Auth,
+		IdentityToken: authConfig.IdentityToken,
+		RegistryToken: authConfig.RegistryToken,
+	}, nil
 }
 
 type keychain struct {
@@ -153,10 +138,17 @@ type keychain struct {
 }
 
 // Resolve implements authn.Keychain
-func (kc *keychain) Resolve(reg name.Registry) (authn.Authenticator, error) {
-	// TODO(mattmoor): Lookup expects an image reference and we only have a registry,
-	// find something better than this.
-	creds, found := kc.keyring.Lookup(reg.String() + "/foo/bar")
+func (kc *keychain) Resolve(target authn.Resource) (authn.Authenticator, error) {
+	var (
+		creds []credentialprovider.LazyAuthConfiguration
+		found bool
+	)
+	if repo, ok := target.(name.Repository); ok {
+		creds, found = kc.keyring.Lookup(repo.String())
+	} else {
+		// Lookup expects an image reference and we only have a registry.
+		creds, found = kc.keyring.Lookup(target.RegistryStr() + "/foo/bar")
+	}
 	if !found || len(creds) < 1 {
 		return authn.Anonymous, nil
 	}

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/containerd/continuity/fs"
 	"github.com/docker/docker/api/types"
@@ -128,7 +129,7 @@ func (container *Container) CopyImagePathContent(v volume.Volume, destination st
 		return err
 	}
 
-	if _, err = ioutil.ReadDir(rootfs); err != nil {
+	if _, err := os.Stat(rootfs); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
@@ -174,8 +175,8 @@ func (container *Container) HasMountFor(path string) bool {
 	return false
 }
 
-// UnmountIpcMount uses the provided unmount function to unmount shm if it was mounted
-func (container *Container) UnmountIpcMount(unmount func(pth string) error) error {
+// UnmountIpcMount unmounts shm if it was mounted
+func (container *Container) UnmountIpcMount() error {
 	if container.HasMountFor("/dev/shm") {
 		return nil
 	}
@@ -189,10 +190,8 @@ func (container *Container) UnmountIpcMount(unmount func(pth string) error) erro
 	if shmPath == "" {
 		return nil
 	}
-	if err = unmount(shmPath); err != nil && !os.IsNotExist(err) {
-		if mounted, mErr := mount.Mounted(shmPath); mounted || mErr != nil {
-			return errors.Wrapf(err, "umount %s", shmPath)
-		}
+	if err = mount.Unmount(shmPath); err != nil && !os.IsNotExist(err) {
+		return err
 	}
 	return nil
 }
@@ -343,6 +342,9 @@ func (container *Container) UpdateContainer(hostConfig *containertypes.HostConfi
 	if resources.CPURealtimeRuntime != 0 {
 		cResources.CPURealtimeRuntime = resources.CPURealtimeRuntime
 	}
+	if resources.PidsLimit != nil {
+		cResources.PidsLimit = resources.PidsLimit
+	}
 
 	// update HostConfig of container
 	if hostConfig.RestartPolicy.Name != "" {
@@ -382,10 +384,23 @@ func (container *Container) DetachAndUnmount(volumeEventLog func(name, action st
 
 	for _, mountPath := range mountPaths {
 		if err := mount.Unmount(mountPath); err != nil {
-			logrus.Warnf("%s unmountVolumes: Failed to do lazy umount fo volume '%s': %v", container.ID, mountPath, err)
+			logrus.WithError(err).WithField("container", container.ID).
+				Warn("Unable to unmount")
 		}
 	}
 	return container.UnmountVolumes(volumeEventLog)
+}
+
+// ignoreUnsupportedXAttrs ignores errors when extended attributes
+// are not supported
+func ignoreUnsupportedXAttrs() fs.CopyDirOpt {
+	xeh := func(dst, src, xattrKey string, err error) error {
+		if errors.Cause(err) != syscall.ENOTSUP {
+			return err
+		}
+		return nil
+	}
+	return fs.WithXAttrErrorHandler(xeh)
 }
 
 // copyExistingContents copies from the source to the destination and
@@ -399,7 +414,7 @@ func copyExistingContents(source, destination string) error {
 		// destination is not empty, do not copy
 		return nil
 	}
-	return fs.CopyDir(destination, source)
+	return fs.CopyDir(destination, source, ignoreUnsupportedXAttrs())
 }
 
 // TmpfsMounts returns the list of tmpfs mounts

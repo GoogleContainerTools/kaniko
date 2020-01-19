@@ -12,6 +12,7 @@ import (
 
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
+	"github.com/tonistiigi/fsutil/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,7 +26,7 @@ type DiskWriterOpt struct {
 	Filter        FilterFunc
 }
 
-type FilterFunc func(*Stat) bool
+type FilterFunc func(string, *types.Stat) bool
 
 type DiskWriter struct {
 	opt  DiskWriterOpt
@@ -83,6 +84,12 @@ func (dw *DiskWriter) HandleChange(kind ChangeKind, p string, fi os.FileInfo, er
 	destPath := filepath.Join(dw.dest, filepath.FromSlash(p))
 
 	if kind == ChangeKindDelete {
+		if dw.filter != nil {
+			var empty types.Stat
+			if ok := dw.filter(p, &empty); !ok {
+				return nil
+			}
+		}
 		// todo: no need to validate if diff is trusted but is it always?
 		if err := os.RemoveAll(destPath); err != nil {
 			return errors.Wrapf(err, "failed to remove: %s", destPath)
@@ -95,7 +102,7 @@ func (dw *DiskWriter) HandleChange(kind ChangeKind, p string, fi os.FileInfo, er
 		return nil
 	}
 
-	stat, ok := fi.Sys().(*Stat)
+	stat, ok := fi.Sys().(*types.Stat)
 	if !ok {
 		return errors.Errorf("%s invalid change without stat information", p)
 	}
@@ -103,7 +110,7 @@ func (dw *DiskWriter) HandleChange(kind ChangeKind, p string, fi os.FileInfo, er
 	statCopy := *stat
 
 	if dw.filter != nil {
-		if ok := dw.filter(&statCopy); !ok {
+		if ok := dw.filter(p, &statCopy); !ok {
 			return nil
 		}
 	}
@@ -187,7 +194,7 @@ func (dw *DiskWriter) HandleChange(kind ChangeKind, p string, fi os.FileInfo, er
 
 	if isRegularFile {
 		if dw.opt.AsyncDataCb != nil {
-			dw.requestAsyncFileData(p, destPath, fi)
+			dw.requestAsyncFileData(p, destPath, fi, &statCopy)
 		}
 	} else {
 		return dw.processChange(kind, p, fi, nil)
@@ -196,7 +203,7 @@ func (dw *DiskWriter) HandleChange(kind ChangeKind, p string, fi os.FileInfo, er
 	return nil
 }
 
-func (dw *DiskWriter) requestAsyncFileData(p, dest string, fi os.FileInfo) {
+func (dw *DiskWriter) requestAsyncFileData(p, dest string, fi os.FileInfo, st *types.Stat) {
 	// todo: limit worker threads
 	dw.eg.Go(func() error {
 		if err := dw.processChange(ChangeKindAdd, p, fi, &lazyFileWriter{
@@ -204,7 +211,7 @@ func (dw *DiskWriter) requestAsyncFileData(p, dest string, fi os.FileInfo) {
 		}); err != nil {
 			return err
 		}
-		return chtimes(dest, fi.ModTime().UnixNano()) // TODO: parent dirs
+		return chtimes(dest, st.ModTime) // TODO: parent dirs
 	})
 }
 
@@ -246,7 +253,7 @@ type hashedWriter struct {
 }
 
 func newHashWriter(ch ContentHasher, fi os.FileInfo, w io.WriteCloser) (*hashedWriter, error) {
-	stat, ok := fi.Sys().(*Stat)
+	stat, ok := fi.Sys().(*types.Stat)
 	if !ok {
 		return nil, errors.Errorf("invalid change without stat information")
 	}
