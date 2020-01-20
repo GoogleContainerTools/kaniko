@@ -215,6 +215,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	switch hdr.Typeflag {
 	case tar.TypeReg:
 		logrus.Tracef("creating file %s", path)
+
 		// It's possible a file is in the tar before its directory,
 		// or a file was copied over a directory prior to now
 		fi, err := os.Stat(dir)
@@ -225,6 +226,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return err
 			}
 		}
+
 		// Check if something already exists at path (symlinks etc.)
 		// If so, delete it
 		if FilepathExists(path) {
@@ -232,16 +234,26 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 				return errors.Wrapf(err, "error removing %s to make way for new file.", path)
 			}
 		}
+
 		currFile, err := os.Create(path)
 		if err != nil {
 			return err
 		}
+
 		if _, err = io.Copy(currFile, tr); err != nil {
 			return err
 		}
+
 		if err = setFilePermissions(path, mode, uid, gid); err != nil {
 			return err
 		}
+
+		// We set AccessTime because its a required arg but we only care about
+		// ModTime. The file will get accessed again so AccessTime will change.
+		if err := os.Chtimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
+			return err
+		}
+
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Tracef("creating dir %s", path)
@@ -647,6 +659,7 @@ func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int) error 
 	if err := os.MkdirAll(path, mode); err != nil {
 		return err
 	}
+
 	if err := os.Chown(path, uid, gid); err != nil {
 		return err
 	}
