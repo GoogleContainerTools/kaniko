@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
 set -ex
 
 GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
 IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
+
+docker version
 
 # Sets up a kokoro (Google internal integration testing tool) environment
 if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
@@ -35,5 +37,4 @@ fi
 echo "Running integration tests..."
 make out/executor
 make out/warmer
-pushd integration
-go test -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 30m
+go test ./integration/... -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 30m "$@"

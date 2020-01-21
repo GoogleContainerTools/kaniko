@@ -49,7 +49,8 @@ func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	config.Cmd = newCommand
-	config.ArgsEscaped = true
+	// ArgsEscaped is only used in windows environments
+	config.ArgsEscaped = false
 	return nil
 }
 

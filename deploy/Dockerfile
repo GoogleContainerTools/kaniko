@@ -23,6 +23,9 @@ RUN docker-credential-gcr configure-docker
 # Get Amazon ECR credential helper
 RUN go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
 RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64
+# ACR docker credential helper
+ADD https://aadacr.blob.core.windows.net/acr-docker-credential-helper/docker-credential-acr-linux-amd64.tar.gz /usr/local/bin
+RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-acr-linux-amd64.tar.gz
 
 COPY . .
 RUN make
@@ -31,6 +34,7 @@ FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
+COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr-linux
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /root/.docker/config.json /kaniko/.docker/config.json
 ENV HOME /root

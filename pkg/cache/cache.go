@@ -124,15 +124,17 @@ func LocalSource(opts *config.CacheOptions, cacheKey string) (v1.Image, error) {
 
 	fi, err := os.Stat(path)
 	if err != nil {
-		logrus.Debugf("No file found for cache key %v %v", cacheKey, err)
-		return nil, nil
+		msg := fmt.Sprintf("No file found for cache key %v %v", cacheKey, err)
+		logrus.Debug(msg)
+		return nil, NotFoundErr{msg: msg}
 	}
 
 	// A stale cache is a bad cache
 	expiry := fi.ModTime().Add(opts.CacheTTL)
 	if expiry.Before(time.Now()) {
-		logrus.Debugf("Cached image is too old: %v", fi.ModTime())
-		return nil, nil
+		msg := fmt.Sprintf("Cached image is too old: %v", fi.ModTime())
+		logrus.Debug(msg)
+		return nil, ExpiredErr{msg: msg}
 	}
 
 	logrus.Infof("Found %s in local cache", cacheKey)

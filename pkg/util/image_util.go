@@ -75,12 +75,19 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	if opts.CacheDir != "" {
 		cachedImage, err := cachedImage(opts, currentBaseName)
 		if err != nil {
-			logrus.Errorf("Error while retrieving image from cache: %v %v", currentBaseName, err)
+			switch {
+			case cache.IsNotFound(err):
+				logrus.Debugf("Image %v not found in cache", currentBaseName)
+			case cache.IsExpired(err):
+				logrus.Debugf("Image %v found in cache but was expired", currentBaseName)
+			default:
+				logrus.Errorf("Error while retrieving image from cache: %v %v", currentBaseName, err)
+			}
 		} else if cachedImage != nil {
 			return cachedImage, nil
 		}
 	}
-	logrus.Infof("Image %v not found in cache", currentBaseName)
+
 	// Otherwise, initialize image as usual
 	return RetrieveRemoteImage(currentBaseName, opts)
 }
@@ -99,15 +106,6 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
-	rOpts, err := prepareRemoteRequest(ref, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return remote.Image(ref, rOpts...)
-}
-
-func prepareRemoteRequest(ref name.Reference, opts *config.KanikoOptions) ([]remote.Option, error) {
 	registryName := ref.Context().RegistryStr()
 	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
 		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
@@ -124,13 +122,19 @@ func prepareRemoteRequest(ref name.Reference, opts *config.KanikoOptions) ([]rem
 		}
 	}
 
+	rOpts := remoteOptions(registryName, opts)
+	return remote.Image(ref, rOpts...)
+}
+
+func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {
 	tr := http.DefaultTransport.(*http.Transport)
 	if opts.SkipTLSVerifyPull || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		tr.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 	}
-	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}, nil
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
