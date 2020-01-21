@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,14 +27,14 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/moby/buildkit/frontend/dockerfile/shell"
-	
+
 	"github.com/pkg/errors"
-	
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -81,13 +82,16 @@ func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string,
 	// First, resolve any environment replacement
 	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.Wrap(err, "failed to resolve environment")
+	}
+	if len(resolvedEnvs) == 0 {
+		return nil, "", errors.New("resolved envs is empty")
 	}
 	dest := resolvedEnvs[len(resolvedEnvs)-1]
 	// Resolve wildcards and get a list of resolved sources
 	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.Wrap(err, "failed to resolve sources")
 	}
 	err = IsSrcsValid(sd, srcs, buildcontext)
 	return srcs, dest, err
@@ -223,9 +227,10 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		if IsSrcRemoteFileURL(resolvedSources[0]) {
 			return nil
 		}
-		fi, err := os.Lstat(filepath.Join(root, resolvedSources[0]))
+		path := filepath.Join(root, resolvedSources[0])
+		fi, err := os.Lstat(path)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("failed to get fileinfo for %v", path))
 		}
 		if fi.IsDir() {
 			return nil
@@ -241,7 +246,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		src = filepath.Clean(src)
 		files, err := RelativeFiles(src, root)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
 			if excludeFile(file, root) {

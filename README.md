@@ -25,53 +25,54 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [kaniko - Build Images In Kubernetes](#kaniko---build-images-in-kubernetes)
-  - [How does kaniko work?](#how-does-kaniko-work)
-  - [Known Issues](#known-issues)
-  - [Demo](#demo)
-  - [Tutorial](#tutorial)
-  - [Using kaniko](#using-kaniko)
-    - [kaniko Build Contexts](#kaniko-build-contexts)
-    - [Using Private Git Repository](#using-private-git-repository)
-    - [Running kaniko](#running-kaniko)
-      - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
-        - [Kubernetes secret](#kubernetes-secret)
-      - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-      - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-      - [Running kaniko in Docker](#running-kaniko-in-docker)
-    - [Caching](#caching)
-      - [Caching Layers](#caching-layers)
-      - [Caching Base Images](#caching-base-images)
-    - [Pushing to Different Registries](#pushing-to-different-registries)
-      - [Pushing to Docker Hub](#pushing-to-docker-hub)
-      - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
-    - [Additional Flags](#additional-flags)
-      - [--build-arg](#build-arg)
-      - [--cache](#cache)
-      - [--cache-dir](#cache-dir)
-      - [--cache-repo](#cache-repo)
-      - [--digest-file](#digest-file)
-      - [--oci-layout-path](#oci-layout-path)
-      - [--insecure-registry](#insecure-registry)
-      - [--skip-tls-verify-registry](#skip-tls-verify-registry)
-      - [--cleanup](#cleanup)
-      - [--insecure](#insecure)
-      - [--insecure-pull](#insecure-pull)
-      - [--no-push](#no-push)
-      - [--reproducible](#reproducible)
-      - [--single-snapshot](#single-snapshot)
-      - [--skip-tls-verify](#skip-tls-verify)
-      - [--skip-tls-verify-pull](#skip-tls-verify-pull)
-      - [--snapshotMode](#snapshotmode)
-      - [--target](#target)
-      - [--tarPath](#tarpath)
-      - [--verbosity](#verbosity)
-    - [Debug Image](#debug-image)
-  - [Security](#security)
-  - [Comparison with Other Tools](#comparison-with-other-tools)
-  - [Community](#community)
-  - [Limitations](#limitations)
-    - [mtime and snapshotting](#mtime-and-snapshotting)
+- [Community](#community)
+- [How does kaniko work?](#how-does-kaniko-work)
+- [Known Issues](#known-issues)
+- [Demo](#demo)
+- [Tutorial](#tutorial)
+- [Using kaniko](#using-kaniko)
+  - [kaniko Build Contexts](#kaniko-build-contexts)
+  - [Using Azure Blob Storage](#using-azure-blob-storage)
+  - [Using Private Git Repository](#using-private-git-repository)
+  - [Running kaniko](#running-kaniko)
+    - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+      - [Kubernetes secret](#kubernetes-secret)
+    - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
+    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
+    - [Running kaniko in Docker](#running-kaniko-in-docker)
+  - [Caching](#caching)
+    - [Caching Layers](#caching-layers)
+    - [Caching Base Images](#caching-base-images)
+  - [Pushing to Different Registries](#pushing-to-different-registries)
+    - [Pushing to Docker Hub](#pushing-to-docker-hub)
+    - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+  - [Additional Flags](#additional-flags)
+    - [--build-arg](#--build-arg)
+    - [--cache](#--cache)
+    - [--cache-dir](#--cache-dir)
+    - [--cache-repo](#--cache-repo)
+    - [--digest-file](#--digest-file)
+    - [--oci-layout-path](#--oci-layout-path)
+    - [--insecure-registry](#--insecure-registry)
+    - [--skip-tls-verify-registry](#--skip-tls-verify-registry)
+    - [--cleanup](#--cleanup)
+    - [--insecure](#--insecure)
+    - [--insecure-pull](#--insecure-pull)
+    - [--no-push](#--no-push)
+    - [--reproducible](#--reproducible)
+    - [--single-snapshot](#--single-snapshot)
+    - [--skip-tls-verify](#--skip-tls-verify)
+    - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
+    - [--snapshotMode](#--snapshotmode)
+    - [--target](#--target)
+    - [--tarPath](#--tarpath)
+    - [--verbosity](#--verbosity)
+  - [Debug Image](#debug-image)
+- [Security](#security)
+- [Comparison with Other Tools](#comparison-with-other-tools)
+- [Community](#community-1)
+- [Limitations](#limitations)
+  - [mtime and snapshotting](#mtime-and-snapshotting)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -152,7 +153,7 @@ If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
 
 ### Using Azure Blob Storage
-If you are using Azure Blob Storage for context file, you will need to pass [Azure Storage Account Access Key](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string?toc=%2fazure%2fstorage%2fblobs%2ftoc.json) as an evironment variable named `AZURE_STORAGE_ACCESS_KEY` through Kubernetes Secrets
+If you are using Azure Blob Storage for context file, you will need to pass [Azure Storage Account Access Key](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string?toc=%2fazure%2fstorage%2fblobs%2ftoc.json) as an environment variable named `AZURE_STORAGE_ACCESS_KEY` through Kubernetes Secrets
 
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
@@ -287,18 +288,18 @@ as a remote image destination:
 ### Caching
 
 #### Caching Layers
-kaniko currently can cache layers created by `RUN` commands in a remote repository.
+kaniko can cache layers created by `RUN` commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
 
-Users can opt in to caching by setting the `--cache=true` flag.
+Users can opt into caching by setting the `--cache=true` flag.
 A remote repository for storing cached layers can be provided via the `--cache-repo` flag.
 If this flag isn't provided, a cached repo will be inferred from the `--destination` provided.
 
 #### Caching Base Images
 
-kaniko can cache images in a local directory that can be volume mounted into the kaniko image.
+kaniko can cache images in a local directory that can be volume mounted into the kaniko pod.
 To do so, the cache must first be populated, as it is read-only. We provide a kaniko cache warming
 image at `gcr.io/kaniko-project/warmer`:
 
@@ -309,7 +310,7 @@ docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=
 `--image` can be specified for any number of desired images.
 This command will cache those images by digest in a local directory named `cache`.
 Once the cache is populated, caching is opted into with the same `--cache=true` flag as above.
-The location of the local cache is provided via the `--cache-dir` flag, defaulting at `/cache` as with the cache warmer.
+The location of the local cache is provided via the `--cache-dir` flag, defaulting to `/cache` as with the cache warmer.
 See the `examples` directory for how to use with kubernetes clusters and persistent cache volumes.
 
 ### Pushing to Different Registries
@@ -322,7 +323,7 @@ kaniko comes with support for GCR, Docker `config.json` and Amazon ECR, but conf
 
 Get your docker registry user and password encoded in base64
 
-    echo USER:PASSWORD | base64
+    echo -n USER:PASSWORD | base64
 
 Create a `config.json` file with your Docker registry url and the previous generated base64 string
 
@@ -342,17 +343,13 @@ Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 
 #### Pushing to Amazon ECR
 
-The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built in to the kaniko executor image.
+The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built into the kaniko executor image.
 To configure credentials, you will need to do the following:
 
-1. Update the `credHelpers` section of [config.json](https://github.com/GoogleContainerTools/kaniko/blob/master/files/config.json) with the specific URI of your ECR registry:
+1. Update the `credsStore` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration):
 
   ```json
-  {
-    "credHelpers": {
-      "aws_account_id.dkr.ecr.region.amazonaws.com": "ecr-login"
-    }
-  }
+  { "credsStore": "ecr-login" }
   ```
 
   You can mount in the new config as a configMap:
@@ -361,42 +358,47 @@ To configure credentials, you will need to do the following:
   kubectl create configmap docker-config --from-file=<path to config.json>
   ```
 
-2. Create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
+2. Configure credentials
 
-  To create the secret, run:
+    1. You can use instance roles when pushing to ECR from a EC2 instance or from EKS, by [configuring the instance role permissions](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html).
 
-  ```shell
-  kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
-  ```
+    2. Or you can create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
+    To create the secret, run:
+        ```shell
+        kubectl create secret generic aws-secret --from-file=<path to .aws/credentials>
+        ```
 
-  The Kubernetes Pod spec should look similar to this, with the args parameters filled in:
+The Kubernetes Pod spec should look similar to this, with the args parameters filled in.
+Note that `aws-secret` volume mount and volume are only needed when using AWS credentials from a secret, not when using instance roles.
 
-  ```yaml
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    name: kaniko
-  spec:
-    containers:
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      args: ["--dockerfile=<path to Dockerfile within the build context>",
-              "--context=s3://<bucket name>/<path to .tar.gz>",
-              "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
-      volumeMounts:
-        - name: aws-secret
-          mountPath: /root/.aws/
-        - name: docker-config
-          mountPath: /kaniko/.docker/
-    restartPolicy: Never
-    volumes:
-      - name: aws-secret
-        secret:
-          secretName: aws-secret
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=<path to Dockerfile within the build context>",
+            "--context=s3://<bucket name>/<path to .tar.gz>",
+            "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
+    volumeMounts:
       - name: docker-config
-        configMap:
-          name: docker-config
-  ```
+        mountPath: /kaniko/.docker/
+      # when not using instance role
+      - name: aws-secret
+        mountPath: /root/.aws/
+  restartPolicy: Never
+  volumes:
+    - name: docker-config
+      configMap:
+        name: docker-config
+    # when not using instance role
+    - name: aws-secret
+      secret:
+        secretName: aws-secret
+```
 
 ### Additional Flags
 
@@ -407,7 +409,7 @@ You can set it multiple times for multiple arguments.
 
 #### --cache
 
-Set this flag as `--cache=true` to opt in to caching with kaniko.
+Set this flag as `--cache=true` to opt into caching with kaniko.
 
 #### --cache-dir
 
@@ -417,7 +419,7 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 
 #### --cache-repo
 
-Set this flag to specify a remote repository which will be used to store cached layers.
+Set this flag to specify a remote repository that will be used to store cached layers.
 
 If this flag is not provided, a cache repo will be inferred from the `--destination` flag.
 If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored in `gcr.io/kaniko-project/test/cache`.
@@ -456,7 +458,7 @@ You can set it multiple times for multiple registries.
 
 #### --skip-tls-verify-registry
 
-Set this flag to skip TLS cerificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
+Set this flag to skip TLS certificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --cleanup
@@ -512,7 +514,7 @@ Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the lo
 
 ### Debug Image
 
-The kaniko executor image is based off of scratch and doesn't contain a shell.
+The kaniko executor image is based on scratch and doesn't contain a shell.
 We provide `gcr.io/kaniko-project/executor:debug`, a debug image which consists of the kaniko executor image along with a busybox shell to enter.
 
 You can launch the debug image with a shell entrypoint:
@@ -529,7 +531,7 @@ kaniko relies on the security features of your container runtime to provide buil
 
 The minimum permissions kaniko needs inside your container are governed by a few things:
 
-* The permissions required to unpack your base image into it's container
+* The permissions required to unpack your base image into its container
 * The permissions required to execute the RUN commands inside the container
 
 If you have a minimal base image (SCRATCH or similar) that doesn't require
@@ -554,7 +556,7 @@ Similar tools include:
 
 All of these tools build container images with different approaches.
 
-BuildKit (and `img`) can perform as a non root user from within a container, but requires
+BuildKit (and `img`) can perform as a non-root user from within a container but requires
 seccomp and AppArmor to be disabled to create nested containers.  `kaniko`
 does not actually create nested containers, so it does not require seccomp and AppArmor
 to be disabled.
@@ -567,7 +569,7 @@ builds can be done entirely without privilege).
 
 `umoci` works without any privileges, and also has no restrictions on the root
 filesystem being extracted (though it requires additional handling if your
-filesystem is sufficiently complicated). However it has no `Dockerfile`-like
+filesystem is sufficiently complicated). However, it has no `Dockerfile`-like
 build tooling (it's a slightly lower-level tool that can be used to build such
 builders -- such as `orca-build`).
 
@@ -599,7 +601,7 @@ To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.
 When taking a snapshot, kaniko's hashing algorithms include (or in the case of
 [`--snapshotMode=time`](#--snapshotmode), only use) a file's
 [`mtime`](https://en.wikipedia.org/wiki/Inode#POSIX_inode_description) to determine
-if the file has changed. Unfortunately there is a delay between when changes to a
+if the file has changed. Unfortunately, there is a delay between when changes to a
 file are made and when the `mtime` is updated. This means:
 
 * With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss changes

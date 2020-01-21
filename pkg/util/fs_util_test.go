@@ -659,7 +659,7 @@ func TestExtractFile(t *testing.T) {
 			defer os.RemoveAll(r)
 
 			for _, hdr := range tc.hdrs {
-				if err := extractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
+				if err := ExtractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -823,5 +823,43 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func Test_CopyFile_skips_self(t *testing.T) {
+	t.Parallel()
+	tempDir, err := ioutil.TempDir("", "kaniko_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tempFile := filepath.Join(tempDir, "foo")
+	expected := "bar"
+
+	if err := ioutil.WriteFile(
+		tempFile,
+		[]byte(expected),
+		0755,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	ignored, err := CopyFile(tempFile, tempFile, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ignored {
+		t.Fatal("expected file to NOT be ignored")
+	}
+
+	// Ensure file has expected contents
+	actualData, err := ioutil.ReadFile(tempFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if actual := string(actualData); actual != expected {
+		t.Fatalf("expected file contents to be %q, but got %q", expected, actual)
 	}
 }

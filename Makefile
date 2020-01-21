@@ -14,7 +14,7 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 14
+VERSION_MINOR ?= 15
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
@@ -40,6 +40,12 @@ WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
 BUILD_ARG ?= 
 
+# Force using Go Modules and always read the dependencies from
+# the `vendor` folder.
+export GO111MODULE = on
+export GOFLAGS = -mod=vendor
+
+
 out/executor: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(EXECUTOR_PACKAGE)
 
@@ -60,3 +66,8 @@ images:
 	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
 	docker build ${BUILD_ARG} -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 
+.PHONY: push
+push:
+    docker push $(REGISTRY)/executor:latest
+    docker push $(REGISTRY)/executor:debug
+    docker push $(REGISTRY)/warmer:latest

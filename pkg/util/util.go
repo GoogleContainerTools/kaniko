@@ -26,7 +26,7 @@ import (
 	"sync"
 	"syscall"
 
-	highwayhash "github.com/minio/HighwayHash"
+	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
