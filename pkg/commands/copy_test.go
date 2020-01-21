@@ -194,8 +194,10 @@ func Test_resolveIfSymlink(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	cases := []testCase{{destPath: thepath, expectedPath: thepath, err: nil}}
-
+	cases := []testCase{
+		{destPath: thepath, expectedPath: thepath, err: nil},
+		{destPath: "/", expectedPath: "/", err: nil},
+	}
 	baseDir = tmpDir
 	symLink := filepath.Join(baseDir, "symlink")
 	if err := os.Symlink(filepath.Base(thepath), symLink); err != nil {

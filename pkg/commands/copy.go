@@ -201,39 +201,38 @@ func resolveIfSymlink(destPath string) (string, error) {
 		return "", errors.New("dest path must be abs")
 	}
 
-	pathPrefix := "/"
-	pathTokens := strings.Split(destPath, string(os.PathSeparator))
-	for i, pathToken := range pathTokens {
-		currentPath := filepath.Join(pathPrefix, pathToken)
-		info, err := os.Lstat(currentPath)
+	var nonexistentPaths []string
+
+	newPath := destPath
+	for newPath != "/" {
+		_, err := os.Lstat(newPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				pathPrefix = filepath.Join(append([]string{currentPath}, pathTokens[i+1:]...)...)
-				break
+				dir, file := filepath.Split(newPath)
+				newPath = filepath.Clean(dir)
+				nonexistentPaths = append(nonexistentPaths, file)
+				continue
 			} else {
 				return "", errors.Wrap(err, "failed to lstat")
 			}
 		}
 
-		switch mode := info.Mode(); {
-		case mode&os.ModeSymlink != 0:
-			linkPath, err := os.Readlink(currentPath)
-			if err != nil {
-				return "", errors.Wrap(err, "failed to read symlink")
-			}
-			if filepath.IsAbs(linkPath) {
-				pathPrefix = linkPath
-			} else {
-				pathPrefix = filepath.Join(pathPrefix, linkPath)
-			}
-		default:
-			pathPrefix = filepath.Join(pathPrefix, pathToken)
+		newPath, err = filepath.EvalSymlinks(newPath)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to eval symlinks")
 		}
+		break
 	}
-	if destPath != pathPrefix {
-		logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, pathPrefix)
+
+	for i := len(nonexistentPaths) - 1; i >= 0; i-- {
+		newPath = filepath.Join(newPath, nonexistentPaths[i])
 	}
-	return filepath.Clean(pathPrefix), nil
+
+	if destPath != newPath {
+		logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
+	}
+
+	return filepath.Clean(newPath), nil
 }
 
 func copyCmdFilesUsedFromContext(
