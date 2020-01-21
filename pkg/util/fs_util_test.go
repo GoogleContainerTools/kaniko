@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
@@ -445,6 +446,19 @@ func fileMatches(p string, c []byte) checker {
 	}
 }
 
+func timesMatch(p string, fTime time.Time) checker {
+	return func(root string, t *testing.T) {
+		fi, err := os.Stat(filepath.Join(root, p))
+		if err != nil {
+			t.Fatalf("error statting file %s", p)
+		}
+
+		if fi.ModTime().UTC() != fTime.UTC() {
+			t.Errorf("Expected modtime to equal %v but was %v", fTime, fi.ModTime())
+		}
+	}
+}
+
 func permissionsMatch(p string, perms os.FileMode) checker {
 	return func(root string, t *testing.T) {
 		fi, err := os.Stat(filepath.Join(root, p))
@@ -488,14 +502,16 @@ func filesAreHardlinks(first, second string) checker {
 	}
 }
 
-func fileHeader(name string, contents string, mode int64) *tar.Header {
+func fileHeader(name string, contents string, mode int64, fTime time.Time) *tar.Header {
 	return &tar.Header{
-		Name:     name,
-		Size:     int64(len(contents)),
-		Mode:     mode,
-		Typeflag: tar.TypeReg,
-		Uid:      os.Getuid(),
-		Gid:      os.Getgid(),
+		Name:       name,
+		Size:       int64(len(contents)),
+		Mode:       mode,
+		Typeflag:   tar.TypeReg,
+		Uid:        os.Getuid(),
+		Gid:        os.Getgid(),
+		AccessTime: fTime,
+		ModTime:    fTime,
 	}
 }
 
@@ -618,21 +634,27 @@ func TestExtractFile(t *testing.T) {
 		checkers []checker
 	}
 
+	defaultTestTime, err := time.Parse(time.RFC3339, "1912-06-23T00:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tcs := []tc{
 		{
 			name:     "normal file",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0644)},
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
 				permissionsMatch("/bar", 0644),
+				timesMatch("/bar", defaultTestTime),
 			},
 		},
 		{
 			name:     "normal file, directory does not exist",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0644)},
+			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/foo/bar"),
 				fileMatches("/foo/bar", []byte("helloworld")),
@@ -644,7 +666,7 @@ func TestExtractFile(t *testing.T) {
 			name:     "normal file, directory is created after",
 			contents: []byte("helloworld"),
 			hdrs: []*tar.Header{
-				fileHeader("./foo/bar", "helloworld", 0644),
+				fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime),
 				dirHeader("./foo", 0722),
 			},
 			checkers: []checker{
@@ -688,7 +710,7 @@ func TestExtractFile(t *testing.T) {
 			name:   "hardlink",
 			tmpdir: "/tmp/hardlink",
 			hdrs: []*tar.Header{
-				fileHeader("/bin/gzip", "gzip-binary", 0751),
+				fileHeader("/bin/gzip", "gzip-binary", 0751, defaultTestTime),
 				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
 			},
 			checkers: []checker{
@@ -699,7 +721,7 @@ func TestExtractFile(t *testing.T) {
 		{
 			name:     "file with setuid bit",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644)},
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
@@ -711,7 +733,7 @@ func TestExtractFile(t *testing.T) {
 			contents: []byte("helloworld"),
 			hdrs: []*tar.Header{
 				dirHeader("./foo", 01755),
-				fileHeader("./foo/bar", "helloworld", 0644),
+				fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime),
 			},
 			checkers: []checker{
 				fileExists("/foo/bar"),
