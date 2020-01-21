@@ -153,13 +153,13 @@ var destinationFilepathTests = []struct {
 		src:              "context/bar/",
 		cwd:              "/",
 		dest:             "pkg/",
-		expectedFilepath: "/pkg/bar",
+		expectedFilepath: "/pkg/",
 	},
 	{
 		src:              "context/bar/",
 		cwd:              "/newdir",
 		dest:             "pkg/",
-		expectedFilepath: "/newdir/pkg/bar",
+		expectedFilepath: "/newdir/pkg/",
 	},
 	{
 		src:              "./context/empty",
@@ -177,7 +177,7 @@ var destinationFilepathTests = []struct {
 		src:              "./",
 		cwd:              "/",
 		dest:             "/dir",
-		expectedFilepath: "/dir",
+		expectedFilepath: "/dir/",
 	},
 	{
 		src:              "context/foo",
