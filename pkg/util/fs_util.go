@@ -190,7 +190,7 @@ func unTar(r io.Reader, dest string) ([]string, error) {
 		if err := ExtractFile(dest, hdr, tr); err != nil {
 			return nil, err
 		}
-		extractedFiles = append(extractedFiles, dest)
+		extractedFiles = append(extractedFiles, filepath.Join(dest, filepath.Clean(hdr.Name)))
 	}
 	return extractedFiles, nil
 }
