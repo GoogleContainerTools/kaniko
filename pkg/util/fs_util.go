@@ -695,8 +695,8 @@ func IsSymlink(fi os.FileInfo) bool {
 var ErrNotSymLink = fmt.Errorf("not a symlink")
 
 func GetSymLink(path string) (string, error) {
-  if err := getSymlink(path); err != nil {
-    return "", err
+	if err := getSymlink(path); err != nil {
+		return "", err
 	}
 	return os.Readlink(path)
 }
