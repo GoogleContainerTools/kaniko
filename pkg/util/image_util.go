@@ -134,7 +134,10 @@ func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Opt
 		}
 	}
 
-	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}
+	// on which v1.Platform is this currently running?
+	platform := currentPlatform()
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
