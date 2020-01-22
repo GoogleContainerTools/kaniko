@@ -88,26 +88,28 @@ func TestMain(m *testing.M) {
 	}
 	config = initGCPConfig()
 
-	contextFile, err := CreateIntegrationTarball()
-	if err != nil {
-		fmt.Println("Failed to create tarball of integration files for build context", err)
-		os.Exit(1)
-	}
+	if config.uploadToGCS {
+		contextFile, err := CreateIntegrationTarball()
+		if err != nil {
+			fmt.Println("Failed to create tarball of integration files for build context", err)
+			os.Exit(1)
+		}
 
-	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
-	if err != nil {
-		fmt.Println("Failed to upload build context", err)
-		os.Exit(1)
-	}
+		fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
+		if err != nil {
+			fmt.Println("Failed to upload build context", err)
+			os.Exit(1)
+		}
 
-	err = os.Remove(contextFile)
-	if err != nil {
-		fmt.Printf("Failed to remove tarball at %s: %s\n", contextFile, err)
-		os.Exit(1)
-	}
+		err = os.Remove(contextFile)
+		if err != nil {
+			fmt.Printf("Failed to remove tarball at %s: %s\n", contextFile, err)
+			os.Exit(1)
+		}
 
-	RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
-	defer DeleteFromBucket(fileInBucket)
+		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
+		defer DeleteFromBucket(fileInBucket)
+	}
 
 	setupCommands := []struct {
 		name    string
@@ -197,52 +199,25 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestGitBuildcontext(t *testing.T) {
-	repo := "github.com/GoogleContainerTools/kaniko"
-	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
-
-	// Build with docker
-	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
-	dockerCmd := exec.Command("docker",
-		append([]string{"build",
-			"-t", dockerImage,
-			"-f", dockerfile,
-			repo})...)
-	out, err := RunCommandWithoutTest(dockerCmd)
-	if err != nil {
-		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+func getGitRepo() string {
+	var branch, repoSlug string
+	if _, ok := os.LookupEnv("TRAVIS"); ok {
+		if os.Getenv("TRAVIS_PULL_REQUEST") != "false" {
+			branch = os.Getenv("TRAVIS_PULL_REQUEST_BRANCH")
+			repoSlug = os.Getenv("TRAVIS_PULL_REQUEST_SLUG")
+			log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
+		} else {
+			branch = os.Getenv("TRAVIS_BRANCH")
+			repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
+			log.Printf("Travis CI pepo: %s branch: %s\n", repoSlug, branch)
+		}
+		return "github.com/" + repoSlug + "#refs/heads/" + branch
 	}
-
-	// Build with kaniko
-	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	dockerRunFlags := []string{"run"}
-	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
-	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
-		"-f", dockerfile,
-		"-d", kanikoImage,
-		"-c", fmt.Sprintf("git://%s", repo))
-
-	kanikoCmd := exec.Command("docker", dockerRunFlags...)
-
-	out, err = RunCommandWithoutTest(kanikoCmd)
-	if err != nil {
-		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
-	}
-
-	// container-diff
-	daemonDockerImage := daemonPrefix + dockerImage
-	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-		daemonDockerImage, kanikoImage,
-		"-q", "--type=file", "--type=metadata", "--json")
-	diff := RunCommand(containerdiffCmd, t)
-	t.Logf("diff = %s", string(diff))
-
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
-	checkContainerDiffOutput(t, diff, expected)
+	return "github.com/GoogleContainerTools/kaniko"
 }
 
-func TestGitBuildContextWithBranch(t *testing.T) {
-	repo := "github.com/GoogleContainerTools/kaniko#refs/tags/v0.10.0"
+func TestGitBuildcontext(t *testing.T) {
+	repo := getGitRepo()
 	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
 
 	// Build with docker
@@ -259,7 +234,7 @@ func TestGitBuildContextWithBranch(t *testing.T) {
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	dockerRunFlags := []string{"run"}
+	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
@@ -567,6 +542,7 @@ type gcpConfig struct {
 	hardlinkBaseImage  string
 	serviceAccount     string
 	dockerMajorVersion int
+	uploadToGCS        bool
 }
 
 type imageDetails struct {
@@ -584,6 +560,7 @@ func initGCPConfig() *gcpConfig {
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
+	flag.BoolVar(&c.uploadToGCS, "uploadToGCS", true, "Upload the tar-ed contents of `integration` dir to GCS bucket. Default is true. Set this to false to prevent uploading.")
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {

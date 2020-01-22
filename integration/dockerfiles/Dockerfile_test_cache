@@ -16,7 +16,7 @@
 # If the image is built twice, /date should be the same in both images
 # if the cache is implemented correctly
 
-FROM gcr.io/google-appengine/debian9@sha256:1d6a9a6d106bd795098f60f4abb7083626354fa6735e81743c7f8cfca11259f0
+FROM debian:9.11
 RUN date > /date
 COPY context/foo /foo
 RUN echo hey

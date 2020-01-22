@@ -220,8 +220,8 @@ func (d *DockerFileBuilder) BuildImage(config *gcpConfig, dockerfilesPath, docke
 	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
-	dockerRunFlags := []string{
-		"run", "-e", benchmarkEnv,
+	dockerRunFlags := []string{"run", "--net=host",
+		"-e", benchmarkEnv,
 		"-v", cwd + ":/workspace",
 		"-v", benchmarkDir + ":/kaniko/benchmarks",
 	}
@@ -251,7 +251,7 @@ func populateVolumeCache() error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 	warmerCmd := exec.Command("docker",
-		append([]string{"run",
+		append([]string{"run", "--net=host",
 			"-d",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
 			"-v", cwd + ":/workspace",
@@ -284,7 +284,7 @@ func (d *DockerFileBuilder) buildCachedImages(config *gcpConfig, cacheRepo, dock
 		}
 		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
 
-		dockerRunFlags := []string{"run",
+		dockerRunFlags := []string{"run", "--net=host",
 			"-v", cwd + ":/workspace",
 			"-e", benchmarkEnv}
 		dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
@@ -315,7 +315,7 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 	buildContextPath := "./relative-subdirectory"
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 
-	dockerRunFlags := []string{"run", "-v", cwd + ":/workspace"}
+	dockerRunFlags := []string{"run", "--net=host", "-v", cwd + ":/workspace"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
