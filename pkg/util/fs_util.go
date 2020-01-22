@@ -506,6 +506,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		fullPath := filepath.Join(src, file)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
+			fmt.Println(" i am returning from here this", err)
 			return nil, err
 		}
 		if excludeFile(fullPath, buildcontext) {
@@ -545,7 +546,7 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
-	link, err := filepath.EvalSymlinks(src)
+	link, err := os.Readlink(src)
 	if err != nil {
 		return false, err
 	}
@@ -693,15 +694,29 @@ func IsSymlink(fi os.FileInfo) bool {
 
 var ErrNotSymLink = fmt.Errorf("not a symlink")
 
-func CanonicalizeLink(path string) (string, error) {
-	fi, err := os.Lstat(path)
-	if err != nil {
+func GetSymLink(path string) (string, error) {
+  if err := getSymlink(path); err != nil {
+    return "", err
+	}
+	return os.Readlink(path)
+}
+
+func EvalSymLink(path string) (string, error) {
+	if err := getSymlink(path); err != nil {
 		return "", err
 	}
-	if !IsSymlink(fi) {
-		return "", ErrNotSymLink
-	}
 	return filepath.EvalSymlinks(path)
+}
+
+func getSymlink(path string) error {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !IsSymlink(fi) {
+		return ErrNotSymLink
+	}
+	return nil
 }
 
 // otiai10Cpy.Copy in case the src file is a symlink, will copy the target

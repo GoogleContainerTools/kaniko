@@ -19,6 +19,7 @@ package snapshot
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"syscall"
@@ -197,7 +198,6 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("unable to add file %s to layered map: %s", file, err)
 		}
 	}
-
 	return filesToAdd, filesToWhiteOut, nil
 }
 
@@ -240,11 +240,18 @@ func filesWithParentDirs(files []string) []string {
 }
 
 func filesWithLinks(path string) ([]string, error) {
-	link, err := util.CanonicalizeLink(path)
+	link, err := util.GetSymLink(path)
 	if err == util.ErrNotSymLink {
 		return []string{path}, nil
 	} else if err != nil {
 		return nil, err
+	}
+	// Add symlink if it exists in the FS
+	if !filepath.IsAbs(link) {
+		link = filepath.Join(filepath.Dir(path), link)
+	}
+	if _, err := os.Stat(link); err != nil {
+		return []string{path}, nil
 	}
 	return []string{path, link}, nil
 }

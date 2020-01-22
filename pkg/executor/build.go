@@ -563,7 +563,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			}
 		}
 
-		//
 		filesToSave, err := filesToSave(crossStageDependencies[index])
 		if err != nil {
 			return nil, err
@@ -599,7 +598,7 @@ func filesToSave(deps []string) ([]string, error) {
 			return nil, err
 		}
 		for _, f := range srcs {
-			if link, err := util.CanonicalizeLink(f); err == nil {
+			if link, err := util.EvalSymLink(f); err == nil {
 				symLinks = append(symLinks, f)
 				srcFiles = append(srcFiles, link)
 			} else {
