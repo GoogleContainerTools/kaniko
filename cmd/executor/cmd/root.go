@@ -55,6 +55,7 @@ var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
+			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
 			if err := util.ConfigureLogging(logLevel); err != nil {
 				return err
 			}
@@ -198,6 +199,17 @@ func resolveDockerfilePath() error {
 		return copyDockerfile()
 	}
 	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
+}
+
+// resolveEnvironmentBuildArgs replace build args without value by the same named environment variable
+func resolveEnvironmentBuildArgs(arguments []string, resolver func(string) string) {
+	for index, argument := range arguments {
+		i := strings.Index(argument, "=")
+		if i < 0 {
+			value := resolver(argument)
+			arguments[index] = fmt.Sprintf("%s=%s", argument, value)
+		}
+	}
 }
 
 // copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
