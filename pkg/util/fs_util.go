@@ -719,8 +719,9 @@ func getSymlink(path string) error {
 	return nil
 }
 
-// otiai10Cpy.Copy in case the src file is a symlink, will copy the target
-// file at destination instead of creating a symlink. See #915 for more details.
+// For cross stage dependencies kaniko must persist the referenced path so that it can be used in
+// the dependent stage. For symlinks we copy the target path because copying the symlink would
+// result in a dead link
 func CopyFileOrSymlink(src string, destDir string) error {
 	destFile := filepath.Join(destDir, src)
 	if fi, _ := os.Lstat(src); IsSymlink(fi) {

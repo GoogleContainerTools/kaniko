@@ -170,7 +170,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	filesToAdd := []string{}
 	for path := range memFs {
 		if util.CheckWhitelist(path) {
-			logrus.Infof("Not adding %s to layer, as it's whitelisted", path)
+			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}
 		// Only add changed files.
@@ -183,7 +183,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			logrus.Debugf("Adding files %s to layer, because it was changed.", files)
+			logrus.Tracef("Adding files %s to layer, because it was changed.", files)
 			filesToAdd = append(filesToAdd, files...)
 		}
 	}
