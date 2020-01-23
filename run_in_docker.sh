@@ -30,15 +30,21 @@ if [[ ! -z "$4" ]]; then
     cache=$4
 fi
 
-if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
-    echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
-    exit 1
+if [[ $destination == *"gcr"* ]]; then
+    if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
+        echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
+        exit 1
+    fi
+    docker run \
+        -v "$HOME"/.config/gcloud:/root/.config/gcloud \
+        -v "$context":/workspace \
+        gcr.io/kaniko-project/executor:latest \
+        --dockerfile "${dockerfile}" --destination "${destination}" --context dir:///workspace/ \
+        --cache="${cache}"
+else
+    docker run \
+        -v "$context":/workspace \
+        gcr.io/kaniko-project/executor:latest \
+        --dockerfile "${dockerfile}" --destination "${destination}" --context dir:///workspace/ \
+        --cache="${cache}"
 fi
-
-docker run \
-    -v "$HOME"/.config/gcloud:/root/.config/gcloud \
-    -v "$context":/workspace \
-    gcr.io/kaniko-project/executor:latest \
-    --dockerfile "${dockerfile}" --destination "${destination}" --context dir:///workspace/ \
-    --cache="${cache}"
-
