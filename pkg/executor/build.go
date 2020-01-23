@@ -587,11 +587,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 
 // fileToSave returns all the files matching the given pattern in deps.
 // If a file is a symlink, it also returns the target file.
-// It first returns all the target files and then symlinks so they can copied
-// in that order to the kaniko workspace.
 func filesToSave(deps []string) ([]string, error) {
 	srcFiles := []string{}
-	symLinks := []string{}
 	for _, src := range deps {
 		srcs, err := filepath.Glob(src)
 		if err != nil {
@@ -599,14 +596,12 @@ func filesToSave(deps []string) ([]string, error) {
 		}
 		for _, f := range srcs {
 			if link, err := util.EvalSymLink(f); err == nil {
-				symLinks = append(symLinks, f)
 				srcFiles = append(srcFiles, link)
-			} else {
-				srcFiles = append(srcFiles, f)
 			}
+			srcFiles = append(srcFiles, f)
 		}
 	}
-	return append(srcFiles, symLinks...), nil
+	return srcFiles, nil
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
