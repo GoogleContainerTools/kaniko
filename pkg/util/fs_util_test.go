@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,7 +30,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/golang/mock/gomock"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 func Test_DetectFilesystemWhitelist(t *testing.T) {
@@ -964,5 +969,279 @@ func Test_CopyFile_skips_self(t *testing.T) {
 
 	if actual := string(actualData); actual != expected {
 		t.Fatalf("expected file contents to be %q, but got %q", expected, actual)
+	}
+}
+
+func fakeExtract(dest string, hdr *tar.Header, tr io.Reader) error {
+	return nil
+}
+
+func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+		IncludeWhiteout(),
+	}
+
+	expectErr := false
+
+	f := func(expectedFiles []string, tw *tar.Writer) {
+		for _, f := range expectedFiles {
+			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+			hdr := &tar.Header{
+				Name: f,
+				Mode: 0644,
+				Size: int64(len("Hello World\n")),
+			}
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tw.Write([]byte("Hello World\n")); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	secondLayerFiles := []string{
+		filepath.Join(root, ".wh.foobar"),
+	}
+
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(secondLayerFiles, tw)
+
+	mockLayer2 := mockv1.NewMockLayer(ctrl)
+	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc = ioutil.NopCloser(buf)
+	mockLayer2.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+		mockLayer2,
+	}
+
+	expectedFiles = append(expectedFiles, secondLayerFiles...)
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		expectErr,
+	)
+}
+
+func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+	}
+
+	expectErr := false
+
+	f := func(expectedFiles []string, tw *tar.Writer) {
+		for _, f := range expectedFiles {
+			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+			hdr := &tar.Header{
+				Name: f,
+				Mode: 0644,
+				Size: int64(len("Hello world\n")),
+			}
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tw.Write([]byte("Hello world\n")); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	secondLayerFiles := []string{
+		filepath.Join(root, ".wh.foobar"),
+	}
+
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(secondLayerFiles, tw)
+
+	mockLayer2 := mockv1.NewMockLayer(ctrl)
+	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc = ioutil.NopCloser(buf)
+	mockLayer2.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+		mockLayer2,
+	}
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		expectErr,
+	)
+}
+
+func Test_GetFSFromLayers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+	}
+
+	expectErr := false
+	expectedFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	for _, f := range expectedFiles {
+		f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+		hdr := &tar.Header{
+			Name: f,
+			Mode: 0644,
+			Size: int64(len("Hello world\n")),
+		}
+
+		if err := tw.WriteHeader(hdr); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := tw.Write([]byte("Hello world\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+	}
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		expectErr,
+	)
+}
+
+func assertGetFSFromLayers(
+	t *testing.T,
+	actualFiles []string,
+	expectedFiles []string,
+	err error,
+	expectErr bool,
+) {
+	if !expectErr && err != nil {
+		t.Error(err)
+		t.FailNow()
+	} else if expectErr && err == nil {
+		t.Error("expected err to not be nil")
+		t.FailNow()
+	}
+
+	if len(actualFiles) != len(expectedFiles) {
+		t.Errorf("expected %s to equal %s", actualFiles, expectedFiles)
+		t.FailNow()
+	}
+
+	for i := range expectedFiles {
+		if actualFiles[i] != expectedFiles[i] {
+			t.Errorf("expected %s to equal %s", actualFiles[i], expectedFiles[i])
+		}
 	}
 }
