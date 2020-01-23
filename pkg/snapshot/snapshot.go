@@ -179,6 +179,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
 		}
 		if fileChanged {
+			// Get target file for symlinks so the symlink is not a dead link.
 			files, err := filesWithLinks(path)
 			if err != nil {
 				return nil, nil, err
@@ -239,6 +240,7 @@ func filesWithParentDirs(files []string) []string {
 	return newFiles
 }
 
+// filesWithLinks returns the symlink and the target path if its exists.
 func filesWithLinks(path string) ([]string, error) {
 	link, err := util.GetSymLink(path)
 	if err == util.ErrNotSymLink {

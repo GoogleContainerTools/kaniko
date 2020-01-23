@@ -1,5 +1,6 @@
-FROM alpine:3.11 as t
-RUN apk add gcc
+FROM busybox as t
+RUN echo "hello" > /tmp/target
+RUN ln -s /tmp/target /tmp/link
 
 FROM scratch
-COPY --from=t /usr/lib/libstdc++.so.6 /usr/lib/
+COPY --from=t /tmp/link /tmp
