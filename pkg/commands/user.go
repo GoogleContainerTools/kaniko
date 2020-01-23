@@ -40,7 +40,7 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return err
 	}
-	var groupStr string
+	groupStr := userStr
 	if len(userAndGroup) > 1 {
 		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
 		if err != nil {
@@ -48,9 +48,8 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 	}
 
-	if groupStr != "" {
-		userStr = userStr + ":" + groupStr
-	}
+	userStr = userStr + ":" + groupStr
+
 	config.User = userStr
 	return nil
 }

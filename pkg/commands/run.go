@@ -68,13 +68,12 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	cmd.Env = addDefaultHOME(config.User, replacementEnvs)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
+	var userStr string
 	// If specified, run the command as a specific user
 	if config.User != "" {
 		userAndGroup := strings.Split(config.User, ":")
-		userStr := userAndGroup[0]
+		userStr = userAndGroup[0]
 		var groupStr string
 		if len(userAndGroup) > 1 {
 			groupStr = userAndGroup[1]
@@ -101,6 +100,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
+	cmd.Env = addDefaultHOME(userStr, replacementEnvs)
 
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "starting command")
