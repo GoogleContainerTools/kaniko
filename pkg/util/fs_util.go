@@ -400,7 +400,7 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 }
 
 // ParentDirectories returns a list of paths to all parent directories
-// Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
+// Ex. /some/temp/dir -> [/, /some, /some/temp]
 func ParentDirectories(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")

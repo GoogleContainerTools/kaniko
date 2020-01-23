@@ -170,6 +170,13 @@ func Test_ParentDirectories(t *testing.T) {
 				"/",
 			},
 		},
+		{
+			name: "root",
+			path: "/",
+			expected: []string{
+				"/",
+			},
+		},
 	}
 
 	for _, tt := range tests {

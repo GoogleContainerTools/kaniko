@@ -73,10 +73,10 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 		return "", nil
 	}
 	logrus.Info("Taking snapshot of files...")
-	logrus.Debugf("Taking snapshot of files %v", files)
 
 	// Also add parent directories to keep the permission of them correctly.
 	filesToAdd := filesWithParentDirs(files)
+	logrus.Debugf("Taking snapshot of files %v", files)
 
 	// Add files to the layered map
 	for _, file := range filesToAdd {
@@ -220,6 +220,9 @@ func filesWithParentDirs(files []string) []string {
 	filesSet := map[string]bool{}
 
 	for _, file := range files {
+		if _, ok := filesSet[file]; ok {
+			continue
+		}
 		file = filepath.Clean(file)
 		filesSet[file] = true
 
@@ -229,7 +232,7 @@ func filesWithParentDirs(files []string) []string {
 		}
 	}
 
-	newFiles := []string{}
+	newFiles := make([]string, len(filesSet))
 	for file := range filesSet {
 		newFiles = append(newFiles, file)
 	}
