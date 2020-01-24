@@ -259,6 +259,14 @@ func Test_CheckWhitelist(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "prefix match only ",
+			args: args{
+				path:      "/tmp/apt-key-gpghome.xft/gpg.key",
+				whitelist: []WhitelistEntry{{"/tmp/apt-key-gpghome.*", true}},
+			},
+			want: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
