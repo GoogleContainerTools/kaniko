@@ -147,20 +147,20 @@ func SHA256(r io.Reader) (string, error) {
 
 // CurrentPlatform returns the v1.Platform on which the code runs
 func currentPlatform() v1.Platform {
-	var arch_variant string
+	var archVariant string
 	if strings.HasPrefix(runtime.GOARCH, "arm") {
 		switch goarm {
 		case "6":
-			arch_variant="v6"
+			archVariant="v6"
 		case "7":
-			arch_variant="v7"
+			archVariant="v7"
 		case "8":
-			arch_variant="v8"
+			archVariant="v8"
 		}
 	}
 	return v1.Platform{
 		OS:           runtime.GOOS,
 		Architecture: runtime.GOARCH,
-		Variant:      arch_variant,
+		Variant:      archVariant,
 	}
 }
