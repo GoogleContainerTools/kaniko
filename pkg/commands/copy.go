@@ -45,8 +45,8 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
 	}
 	var uid, gid int64
-	uid = -1
-	gid = -1
+	uid = util.DoNotChangeUID
+	gid = util.DoNotChangeGID
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 

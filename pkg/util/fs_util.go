@@ -41,6 +41,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const DoNotChangeUID = -1
+const DoNotChangeGID = -1
+
 type WhitelistEntry struct {
 	Path            string
 	PrefixMatchOnly bool
@@ -539,6 +542,18 @@ func DownloadFileToDest(rawurl, dest string) error {
 	return os.Chtimes(dest, mTime, mTime)
 }
 
+// DetermineTargetFileOwnership returns the user provided uid/gid combination.
+// If they are set to -1, the uid/gid from the original file is used.
+func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64) {
+	if uid <= DoNotChangeUID {
+		uid = int64(fi.Sys().(*syscall.Stat_t).Uid)
+	}
+	if gid <= DoNotChangeGID {
+		gid = int64(fi.Sys().(*syscall.Stat_t).Gid)
+	}
+	return uid, gid
+}
+
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
 func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
@@ -563,12 +578,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
-			if uid < 0 {
-				uid = int64(int(fi.Sys().(*syscall.Stat_t).Uid))
-			}
-			if gid < 0 {
-				gid = int64(int(fi.Sys().(*syscall.Stat_t).Gid))
-			}
+			uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
@@ -631,12 +641,7 @@ func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
 		return false, err
 	}
 	defer srcFile.Close()
-	if uid < 0 {
-		uid = int64(fi.Sys().(*syscall.Stat_t).Uid)
-	}
-	if gid < 0 {
-		gid = int64(fi.Sys().(*syscall.Stat_t).Gid)
-	}
+	uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
 	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
 }
 
