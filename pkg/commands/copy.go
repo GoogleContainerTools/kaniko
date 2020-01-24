@@ -175,7 +175,7 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 
 	cr.extractedFiles, err = util.GetFSFromLayers(RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
-	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
+	logrus.Debugf("extractedFiles: %s", cr.extractedFiles)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")
 	}
