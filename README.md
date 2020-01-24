@@ -63,6 +63,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--single-snapshot](#--single-snapshot)
     - [--skip-tls-verify](#--skip-tls-verify)
     - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
+    - [--additional-whitelist](#--additional-whitelist)
     - [--snapshotMode](#--snapshotmode)
     - [--target](#--target)
     - [--tarPath](#--tarpath)
@@ -492,6 +493,9 @@ Set this flag to skip TLS certificate validation when pushing to a registry. It 
 #### --skip-tls-verify-pull
 
 Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --additional-whitelist
+Set this flag with a list of filepaths and Kaniko will ignore these paths during the build. Useful for improving build performance on large filesystems.
 
 #### --snapshotMode
 

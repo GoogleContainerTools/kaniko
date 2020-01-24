@@ -75,12 +75,6 @@ var RootCmd = &cobra.Command{
 				return errors.New("You must provide --destination if setting ImageNameDigestFile")
 			}
 
-			if additionalWhitelist == nil {
-				additionalWhitelist = []string{
-					"/var/run",
-				}
-			}
-
 			for _, path := range additionalWhitelist {
 				util.AddToWhitelist(path)
 			}
@@ -158,7 +152,7 @@ func addKanikoOptionsFlags() {
 
 	// We use nil as the default value so we can differentiate between the flag passed
 	// with an empty list and the flag not set
-	RootCmd.PersistentFlags().StringSliceVar(&additionalWhitelist, "additional-whitelist", nil, "Paths to whitelist. These will be ignored be kaniko to improve performance.")
+	RootCmd.PersistentFlags().StringSliceVar(&additionalWhitelist, "additional-whitelist", []string{}, "Paths to whitelist. These will be ignored by kaniko to improve performance.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
