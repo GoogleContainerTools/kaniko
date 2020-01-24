@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"strings"
 
 	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
@@ -33,6 +34,8 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
+
+var goarm string //Taken from linker flag at compile time
 
 // ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
 func ConfigureLogging(logLevel string) error {
@@ -144,8 +147,20 @@ func SHA256(r io.Reader) (string, error) {
 
 // CurrentPlatform returns the v1.Platform on which the code runs
 func currentPlatform() v1.Platform {
+	var arch_variant string
+	if strings.HasPrefix(runtime.GOARCH, "arm") {
+		switch goarm {
+		case "6":
+			arch_variant="v6"
+		case "7":
+			arch_variant="v7"
+		case "8":
+			arch_variant="v8"
+		}
+	}
 	return v1.Platform{
 		OS:           runtime.GOOS,
 		Architecture: runtime.GOARCH,
+		Variant:      arch_variant,
 	}
 }
