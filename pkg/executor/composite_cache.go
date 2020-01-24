@@ -60,16 +60,22 @@ func (s *CompositeCache) AddPath(p, context string) error {
 	if err != nil {
 		return err
 	}
-	if util.ExcludeFile(p, context) {
-		return os.ErrNotExist
-	}
 
 	if fi.Mode().IsDir() {
-		k, err := HashDir(p, context)
+		empty, k, err := hashDir(p, context)
 		if err != nil {
 			return err
 		}
-		s.keys = append(s.keys, k)
+
+		// Only add the hash of this directory to the key
+		// if there is any whitelisted content.
+		if !empty || !util.ExcludeFile(p, context) {
+			s.keys = append(s.keys, k)
+		}
+		return nil
+	}
+
+	if util.ExcludeFile(p, context) {
 		return nil
 	}
 	fh, err := util.CacheHasher()(p)
@@ -85,16 +91,14 @@ func (s *CompositeCache) AddPath(p, context string) error {
 }
 
 // HashDir returns a hash of the directory.
-func HashDir(p, context string) (string, error) {
+func hashDir(p, context string) (bool, string, error) {
 	sha := sha256.New()
+	empty := true
 	if err := filepath.Walk(p, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		exclude := util.ExcludeFile(path, context)
-		if fi.IsDir() && exclude {
-			return filepath.SkipDir
-		}
 		if exclude {
 			return nil
 		}
@@ -106,10 +110,11 @@ func HashDir(p, context string) (string, error) {
 		if _, err := sha.Write([]byte(fileHash)); err != nil {
 			return err
 		}
+		empty = false
 		return nil
 	}); err != nil {
-		return "", err
+		return false, "", err
 	}
 
-	return fmt.Sprintf("%x", sha.Sum(nil)), nil
+	return empty, fmt.Sprintf("%x", sha.Sum(nil)), nil
 }
