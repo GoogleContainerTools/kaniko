@@ -66,6 +66,7 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/sys", false},
 		{"/var/run", false},
 		{"/etc/mtab", false},
+		{"/tmp/apt-key-gpghome", true},
 	}
 	actualWhitelist := whitelist
 	sort.Slice(actualWhitelist, func(i, j int) bool {

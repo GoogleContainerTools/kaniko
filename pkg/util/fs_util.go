@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -696,7 +695,7 @@ func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	}
 
 	for index := range prefixArray {
-		m, err := regexp.MatchString(prefixArray[index], pathArray[index])
+		m, err := filepath.Match(prefixArray[index], pathArray[index])
 		if err != nil {
 			return false
 		}
