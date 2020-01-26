@@ -125,6 +125,9 @@ func (w *Writer) open() error {
 		if attrs.KMSKeyName != "" {
 			call.KmsKeyName(attrs.KMSKeyName)
 		}
+		if attrs.PredefinedACL != "" {
+			call.PredefinedAcl(attrs.PredefinedACL)
+		}
 		if err := setEncryptionHeaders(call.Header(), w.o.encryptionKey, false); err != nil {
 			w.mu.Lock()
 			w.err = err

@@ -684,7 +684,7 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 }
 
 func resolveOnBuild(stage *config.KanikoStage, config *v1.Config) error {
-	if config.OnBuild == nil {
+	if config.OnBuild == nil || len(config.OnBuild) == 0 {
 		return nil
 	}
 	// Otherwise, parse into commands

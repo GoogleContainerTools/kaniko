@@ -45,7 +45,7 @@ type StoreOptions struct {
 	MetadataStorePathTemplate string
 	GraphDriver               string
 	GraphDriverOptions        []string
-	IDMappings                *idtools.IDMappings
+	IDMapping                 *idtools.IdentityMapping
 	PluginGetter              plugingetter.PluginGetter
 	ExperimentalEnabled       bool
 	OS                        string
@@ -56,8 +56,8 @@ func NewStoreFromOptions(options StoreOptions) (Store, error) {
 	driver, err := graphdriver.New(options.GraphDriver, options.PluginGetter, graphdriver.Options{
 		Root:                options.Root,
 		DriverOptions:       options.GraphDriverOptions,
-		UIDMaps:             options.IDMappings.UIDs(),
-		GIDMaps:             options.IDMappings.GIDs(),
+		UIDMaps:             options.IDMapping.UIDs(),
+		GIDMaps:             options.IDMapping.GIDs(),
 		ExperimentalEnabled: options.ExperimentalEnabled,
 	})
 	if err != nil {
@@ -119,6 +119,10 @@ func newStoreFromGraphDriver(root string, driver graphdriver.Driver, os string) 
 	}
 
 	return ls, nil
+}
+
+func (ls *layerStore) Driver() graphdriver.Driver {
+	return ls.driver
 }
 
 func (ls *layerStore) loadLayer(layer ChainID) (*roLayer, error) {
@@ -249,12 +253,13 @@ func (ls *layerStore) applyTar(tx *fileMetadataTransaction, ts io.Reader, parent
 	}
 
 	applySize, err := ls.driver.ApplyDiff(layer.cacheID, parent, rdr)
+	// discard trailing data but ensure metadata is picked up to reconstruct stream
+	// unconditionally call io.Copy here before checking err to ensure the resources
+	// allocated by NewInputTarStream above are always released
+	io.Copy(ioutil.Discard, rdr) // ignore error as reader may be closed
 	if err != nil {
 		return err
 	}
-
-	// Discard trailing data but ensure metadata is picked up to reconstruct stream
-	io.Copy(ioutil.Discard, rdr) // ignore error as reader may be closed
 
 	layer.size = applySize
 	layer.diffID = DiffID(digester.Digest())

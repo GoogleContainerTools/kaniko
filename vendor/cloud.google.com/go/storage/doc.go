@@ -22,9 +22,11 @@ https://cloud.google.com/storage/docs.
 See https://godoc.org/cloud.google.com/go for authentication, timeouts,
 connection pooling and similar aspects of this package.
 
-All of the methods of this package use exponential backoff to retry calls
-that fail with certain errors, as described in
-https://cloud.google.com/storage/docs/exponential-backoff.
+All of the methods of this package use exponential backoff to retry calls that fail
+with certain errors, as described in
+https://cloud.google.com/storage/docs/exponential-backoff. Retrying continues
+indefinitely unless the controlling context is canceled or the client is closed. See
+context.WithTimeout and context.WithCancel.
 
 
 Creating a Client
