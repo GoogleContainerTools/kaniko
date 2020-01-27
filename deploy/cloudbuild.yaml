@@ -16,5 +16,4 @@ steps:
            "-t", "gcr.io/kaniko-project/warmer:${COMMIT_SHA}", "."]
 images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}",
          "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}",
-         "gcr.io/kaniko-project/executor:debug",
          "gcr.io/kaniko-project/warmer:${COMMIT_SHA}"]
