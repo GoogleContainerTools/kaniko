@@ -19,6 +19,7 @@ package snapshot
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"syscall"
@@ -112,7 +113,6 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	if err := writeToTar(t, filesToAdd, filesToWhiteOut); err != nil {
 		return "", err
 	}
-
 	return f.Name(), nil
 }
 
@@ -179,8 +179,13 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
 		}
 		if fileChanged {
-			logrus.Tracef("Adding %s to layer, because it was changed.", path)
-			filesToAdd = append(filesToAdd, path)
+			// Get target file for symlinks so the symlink is not a dead link.
+			files, err := filesWithLinks(path)
+			if err != nil {
+				return nil, nil, err
+			}
+			logrus.Tracef("Adding files %s to layer, because it was changed.", files)
+			filesToAdd = append(filesToAdd, files...)
 		}
 	}
 
@@ -188,14 +193,12 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	filesToAdd = filesWithParentDirs(filesToAdd)
 
 	sort.Strings(filesToAdd)
-
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
 			return nil, nil, fmt.Errorf("unable to add file %s to layered map: %s", file, err)
 		}
 	}
-
 	return filesToAdd, filesToWhiteOut, nil
 }
 
@@ -235,4 +238,22 @@ func filesWithParentDirs(files []string) []string {
 	}
 
 	return newFiles
+}
+
+// filesWithLinks returns the symlink and the target path if its exists.
+func filesWithLinks(path string) ([]string, error) {
+	link, err := util.GetSymLink(path)
+	if err == util.ErrNotSymLink {
+		return []string{path}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	// Add symlink if it exists in the FS
+	if !filepath.IsAbs(link) {
+		link = filepath.Join(filepath.Dir(path), link)
+	}
+	if _, err := os.Stat(link); err != nil {
+		return []string{path}, nil
+	}
+	return []string{path, link}, nil
 }

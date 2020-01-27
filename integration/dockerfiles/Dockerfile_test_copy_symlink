@@ -1,0 +1,6 @@
+FROM busybox as t
+RUN echo "hello" > /tmp/target
+RUN ln -s /tmp/target /tmp/link
+
+FROM scratch
+COPY --from=t /tmp/link /tmp

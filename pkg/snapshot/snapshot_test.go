@@ -31,7 +31,7 @@ import (
 )
 
 func TestSnapshotFSFileChange(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -90,7 +90,7 @@ func TestSnapshotFSFileChange(t *testing.T) {
 }
 
 func TestSnapshotFSIsReproducible(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -129,7 +129,7 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 }
 
 func TestSnapshotFSChangePermissions(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -180,7 +180,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 }
 
 func TestSnapshotFiles(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -230,7 +230,7 @@ func TestSnapshotFiles(t *testing.T) {
 }
 
 func TestEmptySnapshotFS(t *testing.T) {
-	_, snapshotter, cleanup, err := setUpTestDir()
+	_, snapshotter, cleanup, err := setUpTest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,28 +253,103 @@ func TestEmptySnapshotFS(t *testing.T) {
 	}
 }
 
-func setUpTestDir() (string, *Snapshotter, func(), error) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
+func TestFileWithLinks(t *testing.T) {
+
+	link := "baz/link"
+	tcs := []struct {
+		name           string
+		path           string
+		linkFileTarget string
+		expected       []string
+		shouldErr      bool
+	}{
+		{
+			name:           "given path is a symlink that points to a valid target",
+			path:           link,
+			linkFileTarget: "file",
+			expected:       []string{link, "baz/file"},
+		},
+		{
+			name:           "given path is a symlink points to non existing path",
+			path:           link,
+			linkFileTarget: "does-not-exists",
+			expected:       []string{link},
+		},
+		{
+			name:           "given path is a regular file",
+			path:           "kaniko/file",
+			linkFileTarget: "file",
+			expected:       []string{"kaniko/file"},
+		},
 	}
 
+	for _, tt := range tcs {
+		t.Run(tt.name, func(t *testing.T) {
+			testDir, cleanup, err := setUpTestDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer cleanup()
+			if err := setupSymlink(testDir, link, tt.linkFileTarget); err != nil {
+				t.Fatalf("could not set up symlink due to %s", err)
+			}
+			actual, err := filesWithLinks(filepath.Join(testDir, tt.path))
+			if err != nil {
+				t.Fatalf("unexpected error %s", err)
+			}
+			sortAndCompareFilepaths(t, testDir, tt.expected, actual)
+		})
+	}
+}
+
+func setupSymlink(dir string, link string, target string) error {
+	return os.Symlink(target, filepath.Join(dir, link))
+}
+
+func sortAndCompareFilepaths(t *testing.T, testDir string, expected []string, actual []string) {
+	expectedFullPaths := make([]string, len(expected))
+	for i, file := range expected {
+		expectedFullPaths[i] = filepath.Join(testDir, file)
+	}
+	sort.Strings(expectedFullPaths)
+	sort.Strings(actual)
+	testutil.CheckDeepEqual(t, expectedFullPaths, actual)
+}
+
+func setUpTestDir() (string, func(), error) {
+	testDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", nil, errors.Wrap(err, "setting up temp dir")
+	}
+	files := map[string]string{
+		"foo":         "baz1",
+		"bar/bat":     "baz2",
+		"kaniko/file": "file",
+		"baz/file":    "testfile",
+	}
+	// Set up initial files
+	if err := testutil.SetupFiles(testDir, files); err != nil {
+		return "", nil, errors.Wrap(err, "setting up file system")
+	}
+
+	cleanup := func() {
+		os.RemoveAll(testDir)
+	}
+
+	return testDir, cleanup, nil
+}
+
+func setUpTest() (string, *Snapshotter, func(), error) {
+	testDir, dirCleanUp, err := setUpTestDir()
+	if err != nil {
+		return "", nil, nil, err
+	}
 	snapshotPath, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
 	}
 
 	snapshotPathPrefix = snapshotPath
-
-	files := map[string]string{
-		"foo":         "baz1",
-		"bar/bat":     "baz2",
-		"kaniko/file": "file",
-	}
-	// Set up initial files
-	if err := testutil.SetupFiles(testDir, files); err != nil {
-		return "", nil, nil, errors.Wrap(err, "setting up file system")
-	}
 
 	// Take the initial snapshot
 	l := NewLayeredMap(util.Hasher(), util.CacheHasher())
@@ -285,7 +360,7 @@ func setUpTestDir() (string, *Snapshotter, func(), error) {
 
 	cleanup := func() {
 		os.RemoveAll(snapshotPath)
-		os.RemoveAll(testDir)
+		dirCleanUp()
 	}
 
 	return testDir, snapshotter, cleanup, nil

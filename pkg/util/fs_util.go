@@ -30,6 +30,8 @@ import (
 	"syscall"
 	"time"
 
+	otiai10Cpy "github.com/otiai10/copy"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
@@ -485,18 +487,8 @@ func FilepathExists(path string) bool {
 // CreateFile creates a file at path and copies over contents from the reader
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
-	baseDir := filepath.Dir(path)
-	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
-		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
-		if err := os.MkdirAll(baseDir, 0755); err != nil {
-			return err
-		}
-	} else {
-		switch mode := info.Mode(); {
-		case mode&os.ModeSymlink != 0:
-			logrus.Infof("destination cannot be a symlink %v", baseDir)
-			return errors.New("destination cannot be a symlink")
-		}
+	if err := createParentDirectory(path); err != nil {
+		return err
 	}
 	dest, err := os.Create(path)
 	if err != nil {
@@ -556,6 +548,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 		fullPath := filepath.Join(src, file)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
+			fmt.Println(" i am returning from here this", err)
 			return nil, err
 		}
 		if excludeFile(fullPath, buildcontext) {
@@ -573,7 +566,7 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
-		} else if fi.Mode()&os.ModeSymlink != 0 {
+		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
 			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
@@ -603,6 +596,9 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 		if err := os.RemoveAll(dest); err != nil {
 			return false, err
 		}
+	}
+	if err := createParentDirectory(dest); err != nil {
+		return false, err
 	}
 	return false, os.Symlink(link, dest)
 }
@@ -731,4 +727,65 @@ func CreateTargetTarfile(tarpath string) (*os.File, error) {
 	}
 	return os.Create(tarpath)
 
+}
+
+// Returns true if a file is a symlink
+func IsSymlink(fi os.FileInfo) bool {
+	return fi.Mode()&os.ModeSymlink != 0
+}
+
+var ErrNotSymLink = fmt.Errorf("not a symlink")
+
+func GetSymLink(path string) (string, error) {
+	if err := getSymlink(path); err != nil {
+		return "", err
+	}
+	return os.Readlink(path)
+}
+
+func EvalSymLink(path string) (string, error) {
+	if err := getSymlink(path); err != nil {
+		return "", err
+	}
+	return filepath.EvalSymlinks(path)
+}
+
+func getSymlink(path string) error {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !IsSymlink(fi) {
+		return ErrNotSymLink
+	}
+	return nil
+}
+
+// For cross stage dependencies kaniko must persist the referenced path so that it can be used in
+// the dependent stage. For symlinks we copy the target path because copying the symlink would
+// result in a dead link
+func CopyFileOrSymlink(src string, destDir string) error {
+	destFile := filepath.Join(destDir, src)
+	if fi, _ := os.Lstat(src); IsSymlink(fi) {
+		link, err := os.Readlink(src)
+		if err != nil {
+			return err
+		}
+		return os.Symlink(link, destFile)
+	}
+	return otiai10Cpy.Copy(src, destFile)
+}
+
+func createParentDirectory(path string) error {
+	baseDir := filepath.Dir(path)
+	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
+		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return err
+		}
+	} else if IsSymlink(info) {
+		logrus.Infof("destination cannot be a symlink %v", baseDir)
+		return errors.New("destination cannot be a symlink")
+	}
+	return nil
 }

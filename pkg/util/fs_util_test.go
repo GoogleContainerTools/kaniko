@@ -859,6 +859,9 @@ func TestCopySymlink(t *testing.T) {
 			tc := tc
 			t.Parallel()
 			r, err := ioutil.TempDir("", "")
+			os.MkdirAll(filepath.Join(r, filepath.Dir(tc.linkTarget)), 0777)
+			tc.linkTarget = filepath.Join(r, tc.linkTarget)
+			ioutil.WriteFile(tc.linkTarget, nil, 0644)
 			if err != nil {
 				t.Fatal(err)
 			}
