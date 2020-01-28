@@ -38,96 +38,43 @@ import (
 )
 
 func Test_DetectFilesystemWhitelist(t *testing.T) {
-	type testcase struct {
-		desc                string
-		additionalWhitelist []string
-		expectedWhitelist   []WhitelistEntry
+	testDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Error creating tempdir: %s", err)
 	}
-
-	expectedWhitelist := []WhitelistEntry{
-		{"/kaniko", false},
-		{"/proc", false},
-		{"/dev", false},
-		{"/dev/pts", false},
-		{"/sys", false},
-		{"/etc/mtab", false},
-	}
-
-	testCases := []testcase{
-		{
-			desc:              "no additional whitelist",
-			expectedWhitelist: expectedWhitelist,
-		},
-		{
-			desc:                "one additional whitelist - /var/run",
-			additionalWhitelist: []string{"/var/run"},
-			expectedWhitelist:   append(expectedWhitelist, WhitelistEntry{"/var/run", false}),
-		},
-		{
-			desc:                "two additional whitelist - /var/run, /usr/bin",
-			additionalWhitelist: []string{"/var/run", "/usr/bin"},
-			expectedWhitelist: append(
-				expectedWhitelist,
-				WhitelistEntry{"/var/run", false},
-				WhitelistEntry{"/usr/bin", false},
-			),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.desc, func(t *testing.T) {
-			expectedWhitelist := tc.expectedWhitelist
-			additionalWhitelist := tc.additionalWhitelist
-
-			tmpWhitelist := make([]WhitelistEntry, len(initialWhitelist))
-			copy(tmpWhitelist, initialWhitelist)
-
-			testDir, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			fileContents := `
+	fileContents := `
 	228 122 0:90 / / rw,relatime - aufs none rw,si=f8e2406af90782bc,dio,dirperm1
 	229 228 0:98 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
 	230 228 0:99 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
 	231 230 0:100 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666
 	232 228 0:101 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro`
 
-			path := filepath.Join(testDir, "mountinfo")
-			if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			if err := ioutil.WriteFile(path, []byte(fileContents), 0644); err != nil {
-				t.Fatalf("Error writing file contents to %s: %s", path, err)
-			}
-
-			for _, wl := range additionalWhitelist {
-				AddToWhitelist(wl)
-			}
-
-			err = DetectFilesystemWhitelist(path)
-			actualWhitelist := whitelist
-
-			if len(actualWhitelist) != len(expectedWhitelist) {
-				t.Errorf(
-					"expected whitelist to have %d items but was %d",
-					len(expectedWhitelist),
-					len(actualWhitelist),
-				)
-			}
-
-			sort.Slice(actualWhitelist, func(i, j int) bool {
-				return actualWhitelist[i].Path < actualWhitelist[j].Path
-			})
-			sort.Slice(expectedWhitelist, func(i, j int) bool {
-				return expectedWhitelist[i].Path < expectedWhitelist[j].Path
-			})
-
-			testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
-
-			initialWhitelist = tmpWhitelist
-		})
+	path := filepath.Join(testDir, "mountinfo")
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+		t.Fatalf("Error creating tempdir: %s", err)
 	}
+	if err := ioutil.WriteFile(path, []byte(fileContents), 0644); err != nil {
+		t.Fatalf("Error writing file contents to %s: %s", path, err)
+	}
+
+	err = DetectFilesystemWhitelist(path)
+	expectedWhitelist := []WhitelistEntry{
+		{"/kaniko", false},
+		{"/proc", false},
+		{"/dev", false},
+		{"/dev/pts", false},
+		{"/sys", false},
+		{"/var/run", false},
+		{"/etc/mtab", false},
+	}
+	actualWhitelist := whitelist
+	sort.Slice(actualWhitelist, func(i, j int) bool {
+		return actualWhitelist[i].Path < actualWhitelist[j].Path
+	})
+	sort.Slice(expectedWhitelist, func(i, j int) bool {
+		return expectedWhitelist[i].Path < expectedWhitelist[j].Path
+	})
+	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
 }
 
 var tests = []struct {

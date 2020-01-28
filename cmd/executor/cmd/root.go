@@ -38,10 +38,9 @@ import (
 )
 
 var (
-	opts                = &config.KanikoOptions{}
-	logLevel            string
-	force               bool
-	additionalWhitelist []string
+	opts     = &config.KanikoOptions{}
+	logLevel string
+	force    bool
 )
 
 func init() {
@@ -73,10 +72,6 @@ var RootCmd = &cobra.Command{
 			}
 			if len(opts.Destinations) == 0 && opts.ImageNameDigestFile != "" {
 				return errors.New("You must provide --destination if setting ImageNameDigestFile")
-			}
-
-			for _, path := range additionalWhitelist {
-				util.AddToWhitelist(path)
 			}
 		}
 		return nil
@@ -149,10 +144,6 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
-
-	// We use nil as the default value so we can differentiate between the flag passed
-	// with an empty list and the flag not set
-	RootCmd.PersistentFlags().StringSliceVar(&additionalWhitelist, "additional-whitelist", []string{}, "Paths to whitelist. These will be ignored by kaniko to improve performance.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
