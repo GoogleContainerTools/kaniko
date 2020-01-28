@@ -51,13 +51,6 @@ var initialWhitelist = []WhitelistEntry{
 		PrefixMatchOnly: false,
 	},
 	{
-		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
-		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
-		// in the image with no way to tell if it came from the base image or not.
-		Path:            "/var/run",
-		PrefixMatchOnly: false,
-	},
-	{
 		// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
 		// from the base image
 		Path:            "/etc/mtab",
@@ -791,4 +784,18 @@ func createParentDirectory(path string) error {
 		return errors.New("destination cannot be a symlink")
 	}
 	return nil
+}
+
+// UpdateInitialWhitelist will add /var/run to whitelisted paths if
+func UpdateWhitelist(whitelistVarRun bool) {
+	if !whitelistVarRun {
+		return
+	}
+	whitelist = append(initialWhitelist, WhitelistEntry{
+		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
+		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
+		// in the image with no way to tell if it came from the base image or not.
+		Path:            "/var/run",
+		PrefixMatchOnly: false,
+	})
 }

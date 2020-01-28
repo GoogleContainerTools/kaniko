@@ -41,6 +41,8 @@ type KanikoOptions struct {
 	OCILayoutPath           string
 	Destinations            multiArg
 	BuildArgs               multiArg
+	InsecureRegistries      multiArg
+	SkipTLSVerifyRegistries multiArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool
@@ -50,8 +52,7 @@ type KanikoOptions struct {
 	NoPush                  bool
 	Cache                   bool
 	Cleanup                 bool
-	InsecureRegistries      multiArg
-	SkipTLSVerifyRegistries multiArg
+	WhitelistVarRun         bool
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
