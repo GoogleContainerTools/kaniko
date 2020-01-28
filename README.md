@@ -67,6 +67,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--target](#--target)
     - [--tarPath](#--tarpath)
     - [--verbosity](#--verbosity)
+    - [--whitelist-var-run](#--whitelist-var-run)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -511,6 +512,10 @@ You need to set `--destination` as well (for example `--destination=image`).
 #### --verbosity
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
+
+#### --whitelist-var-run
+
+Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
 
 ### Debug Image
 

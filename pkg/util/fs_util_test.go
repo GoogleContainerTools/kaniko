@@ -64,7 +64,6 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/dev", false},
 		{"/dev/pts", false},
 		{"/sys", false},
-		{"/var/run", false},
 		{"/etc/mtab", false},
 	}
 	actualWhitelist := whitelist
@@ -1246,5 +1245,53 @@ func assertGetFSFromLayers(
 		if actualFiles[i] != expectedFiles[i] {
 			t.Errorf("expected %s to equal %s", actualFiles[i], expectedFiles[i])
 		}
+	}
+}
+
+func TestUpdateWhitelist(t *testing.T) {
+	tests := []struct {
+		name            string
+		whitelistVarRun bool
+		expected        []WhitelistEntry
+	}{
+		{
+			name:            "var/run whitelisted",
+			whitelistVarRun: true,
+			expected: []WhitelistEntry{
+				{
+					Path:            "/kaniko",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/etc/mtab",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/var/run",
+					PrefixMatchOnly: false,
+				},
+			},
+		},
+		{
+			name: "var/run not whitelisted",
+			expected: []WhitelistEntry{
+				{
+					Path:            "/kaniko",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/etc/mtab",
+					PrefixMatchOnly: false,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			whitelist = initialWhitelist
+			defer func() { whitelist = initialWhitelist }()
+			UpdateWhitelist(tt.whitelistVarRun)
+			testutil.CheckDeepEqual(t, tt.expected, whitelist)
+		})
 	}
 }
