@@ -213,7 +213,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
 		for _, src := range srcs {
-			if excludeFile(src, root) {
+			if ExcludeFile(src, root) {
 				continue
 			}
 			totalSrcs++
@@ -250,7 +250,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 			return errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
-			if excludeFile(file, root) {
+			if ExcludeFile(file, root) {
 				continue
 			}
 			totalFiles++
