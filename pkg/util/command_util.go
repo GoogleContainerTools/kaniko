@@ -164,20 +164,25 @@ func IsDestDir(path string) bool {
 //	If dest is a dir, copy it to /dest/relpath
 // 	If dest is a file, copy directly to dest
 // If source is a dir:
-//	Assume dest is also a dir, and copy to dest/relpath
+//	Assume dest is also a dir, and copy to dest/
 // If dest is not an absolute filepath, add /cwd to the beginning
 func DestinationFilepath(src, dest, cwd string) (string, error) {
-	if IsDestDir(dest) {
-		destPath := filepath.Join(dest, filepath.Base(src))
-		if filepath.IsAbs(dest) {
-			return destPath, nil
-		}
-		return filepath.Join(cwd, destPath), nil
+	_, srcFileName := filepath.Split(src)
+	newDest := dest
+
+	if IsDestDir(newDest) {
+		newDest = filepath.Join(newDest, srcFileName)
 	}
-	if filepath.IsAbs(dest) {
-		return dest, nil
+
+	if !filepath.IsAbs(newDest) {
+		newDest = filepath.Join(cwd, newDest)
 	}
-	return filepath.Join(cwd, dest), nil
+
+	if len(srcFileName) <= 0 && !strings.HasSuffix(newDest, "/") {
+		newDest += "/"
+	}
+
+	return newDest, nil
 }
 
 // URLDestinationFilepath gives the destination a file from a remote URL should be saved to
@@ -208,7 +213,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
 		for _, src := range srcs {
-			if excludeFile(src, root) {
+			if ExcludeFile(src, root) {
 				continue
 			}
 			totalSrcs++
@@ -245,7 +250,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 			return errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
-			if excludeFile(file, root) {
+			if ExcludeFile(file, root) {
 				continue
 			}
 			totalFiles++

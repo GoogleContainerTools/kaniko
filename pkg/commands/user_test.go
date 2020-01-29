@@ -28,22 +28,23 @@ import (
 var userTests = []struct {
 	user        string
 	expectedUID string
+	expectedGID string
 }{
 	{
 		user:        "root",
-		expectedUID: "root",
+		expectedUID: "root:root",
 	},
 	{
 		user:        "root-add",
-		expectedUID: "root-add",
+		expectedUID: "root-add:root-add",
 	},
 	{
 		user:        "0",
-		expectedUID: "0",
+		expectedUID: "0:0",
 	},
 	{
 		user:        "fakeUser",
-		expectedUID: "fakeUser",
+		expectedUID: "fakeUser:fakeUser",
 	},
 	{
 		user:        "root:root",
@@ -56,6 +57,7 @@ var userTests = []struct {
 	{
 		user:        "root:0",
 		expectedUID: "root:0",
+		expectedGID: "f0",
 	},
 	{
 		user:        "0:0",
@@ -63,11 +65,15 @@ var userTests = []struct {
 	},
 	{
 		user:        "$envuser",
-		expectedUID: "root",
+		expectedUID: "root:root",
 	},
 	{
 		user:        "root:$envgroup",
-		expectedUID: "root:root",
+		expectedUID: "root:grp",
+	},
+	{
+		user:        "some:grp",
+		expectedUID: "some:grp",
 	},
 }
 
@@ -76,7 +82,7 @@ func TestUpdateUser(t *testing.T) {
 		cfg := &v1.Config{
 			Env: []string{
 				"envuser=root",
-				"envgroup=root",
+				"envgroup=grp",
 			},
 		}
 		cmd := UserCommand{

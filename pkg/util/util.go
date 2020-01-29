@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -29,6 +30,8 @@ import (
 	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
@@ -137,4 +140,12 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
+}
+
+// CurrentPlatform returns the v1.Platform on which the code runs
+func currentPlatform() v1.Platform {
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
 }

@@ -90,14 +90,17 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 // baseImageIndex returns the index of the stage the current stage is built off
 // returns -1 if the current stage isn't built off a previous stage
 func baseImageIndex(currentStage int, stages []instructions.Stage) int {
+	currentStageBaseName := strings.ToLower(stages[currentStage].BaseName)
+
 	for i, stage := range stages {
 		if i > currentStage {
 			break
 		}
-		if stage.Name == stages[currentStage].BaseName {
+		if stage.Name == currentStageBaseName {
 			return i
 		}
 	}
+
 	return -1
 }
 
@@ -245,15 +248,19 @@ func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 
 // SaveStage returns true if the current stage will be needed later in the Dockerfile
 func saveStage(index int, stages []instructions.Stage) bool {
+	currentStageName := stages[index].Name
+
 	for stageIndex, stage := range stages {
 		if stageIndex <= index {
 			continue
 		}
-		if stage.BaseName == stages[index].Name {
+
+		if strings.ToLower(stage.BaseName) == currentStageName {
 			if stage.BaseName != "" {
 				return true
 			}
 		}
 	}
+
 	return false
 }

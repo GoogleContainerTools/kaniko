@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -59,11 +59,15 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		if err != nil {
 			return err
 		}
+		if fi.IsDir() && !strings.HasSuffix(fullPath, string(os.PathSeparator)) {
+			fullPath += "/"
+		}
 		cwd := config.WorkingDir
 		if cwd == "" {
 			cwd = constants.RootDir
 		}
-		destPath, err := util.DestinationFilepath(src, dest, cwd)
+
+		destPath, err := util.DestinationFilepath(fullPath, dest, cwd)
 		if err != nil {
 			return err
 		}
@@ -76,16 +80,12 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			if !filepath.IsAbs(dest) {
-				// we need to add '/' to the end to indicate the destination is a directory
-				dest = filepath.Join(cwd, dest) + "/"
-			}
-			copiedFiles, err := util.CopyDir(fullPath, dest, c.buildcontext)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext)
 			if err != nil {
 				return err
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
-		} else if fi.Mode()&os.ModeSymlink != 0 {
+		} else if util.IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
 			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
 			if err != nil {
@@ -167,9 +167,15 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	if cr.img == nil {
 		return errors.New(fmt.Sprintf("cached command image is nil %v", cr.String()))
 	}
-	cr.extractedFiles, err = util.GetFSFromImage(RootDir, cr.img, cr.extractFn)
 
-	logrus.Infof("extractedFiles: %s", cr.extractedFiles)
+	layers, err := cr.img.Layers()
+	if err != nil {
+		return errors.Wrapf(err, "retrieve image layers")
+	}
+
+	cr.extractedFiles, err = util.GetFSFromLayers(RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
+
+	logrus.Debugf("extractedFiles: %s", cr.extractedFiles)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")
 	}
@@ -182,7 +188,10 @@ func (cr *CachingCopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs 
 }
 
 func (cr *CachingCopyCommand) FilesToSnapshot() []string {
-	return cr.extractedFiles
+	f := cr.extractedFiles
+	logrus.Debugf("files extracted by caching copy command %s", f)
+
+	return f
 }
 
 func (cr *CachingCopyCommand) String() string {
@@ -197,21 +206,42 @@ func (cr *CachingCopyCommand) From() string {
 }
 
 func resolveIfSymlink(destPath string) (string, error) {
-	baseDir := filepath.Dir(destPath)
-	if info, err := os.Lstat(baseDir); err == nil {
-		switch mode := info.Mode(); {
-		case mode&os.ModeSymlink != 0:
-			linkPath, err := os.Readlink(baseDir)
-			if err != nil {
-				return "", errors.Wrap(err, "error reading symlink")
-			}
-			absLinkPath := filepath.Join(filepath.Dir(baseDir), linkPath)
-			newPath := filepath.Join(absLinkPath, filepath.Base(destPath))
-			logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
-			return newPath, nil
-		}
+	if !filepath.IsAbs(destPath) {
+		return "", errors.New("dest path must be abs")
 	}
-	return destPath, nil
+
+	var nonexistentPaths []string
+
+	newPath := destPath
+	for newPath != "/" {
+		_, err := os.Lstat(newPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				dir, file := filepath.Split(newPath)
+				newPath = filepath.Clean(dir)
+				nonexistentPaths = append(nonexistentPaths, file)
+				continue
+			} else {
+				return "", errors.Wrap(err, "failed to lstat")
+			}
+		}
+
+		newPath, err = filepath.EvalSymlinks(newPath)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to eval symlinks")
+		}
+		break
+	}
+
+	for i := len(nonexistentPaths) - 1; i >= 0; i-- {
+		newPath = filepath.Join(newPath, nonexistentPaths[i])
+	}
+
+	if destPath != newPath {
+		logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
+	}
+
+	return filepath.Clean(newPath), nil
 }
 
 func copyCmdFilesUsedFromContext(

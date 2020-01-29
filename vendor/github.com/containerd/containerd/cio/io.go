@@ -18,9 +18,13 @@ package cio
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/containerd/containerd/defaults"
@@ -140,6 +144,15 @@ func NewCreator(opts ...Opt) Creator {
 		if err != nil {
 			return nil, err
 		}
+		if streams.Stdin == nil {
+			fifos.Stdin = ""
+		}
+		if streams.Stdout == nil {
+			fifos.Stdout = ""
+		}
+		if streams.Stderr == nil {
+			fifos.Stderr = ""
+		}
 		return copyIO(fifos, streams)
 	}
 }
@@ -212,7 +225,90 @@ type DirectIO struct {
 	cio
 }
 
-var _ IO = &DirectIO{}
+var (
+	_ IO = &DirectIO{}
+	_ IO = &logURI{}
+)
+
+// LogURI provides the raw logging URI
+func LogURI(uri *url.URL) Creator {
+	return func(_ string) (IO, error) {
+		return &logURI{
+			config: Config{
+				Stdout: uri.String(),
+				Stderr: uri.String(),
+			},
+		}, nil
+	}
+}
+
+// BinaryIO forwards container STDOUT|STDERR directly to a logging binary
+func BinaryIO(binary string, args map[string]string) Creator {
+	return func(_ string) (IO, error) {
+		binary = filepath.Clean(binary)
+		if !strings.HasPrefix(binary, "/") {
+			return nil, errors.New("absolute path needed")
+		}
+		uri := &url.URL{
+			Scheme: "binary",
+			Path:   binary,
+		}
+		q := uri.Query()
+		for k, v := range args {
+			q.Set(k, v)
+		}
+		uri.RawQuery = q.Encode()
+		res := uri.String()
+		return &logURI{
+			config: Config{
+				Stdout: res,
+				Stderr: res,
+			},
+		}, nil
+	}
+}
+
+// LogFile creates a file on disk that logs the task's STDOUT,STDERR.
+// If the log file already exists, the logs will be appended to the file.
+func LogFile(path string) Creator {
+	return func(_ string) (IO, error) {
+		path = filepath.Clean(path)
+		if !strings.HasPrefix(path, "/") {
+			return nil, errors.New("absolute path needed")
+		}
+		uri := &url.URL{
+			Scheme: "file",
+			Path:   path,
+		}
+		res := uri.String()
+		return &logURI{
+			config: Config{
+				Stdout: res,
+				Stderr: res,
+			},
+		}, nil
+	}
+}
+
+type logURI struct {
+	config Config
+}
+
+func (l *logURI) Config() Config {
+	return l.config
+}
+
+func (l *logURI) Cancel() {
+
+}
+
+func (l *logURI) Wait() {
+
+}
+
+func (l *logURI) Close() error {
+	return nil
+}
 
 // Load the io for a container but do not attach
 //
@@ -223,4 +319,8 @@ func Load(set *FIFOSet) (IO, error) {
 		config:  set.Config,
 		closers: []io.Closer{set},
 	}, nil
+}
+
+func (p *pipes) closers() []io.Closer {
+	return []io.Closer{p.Stdin, p.Stdout, p.Stderr}
 }

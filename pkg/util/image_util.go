@@ -49,12 +49,12 @@ var (
 func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Retrieving Source Image")
 	defer timing.DefaultRun.Stop(t)
-	buildArgs := opts.BuildArgs
-	var metaArgsString []string
+	var buildArgs []string
+
 	for _, arg := range stage.MetaArgs {
-		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+		buildArgs = append(buildArgs, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
 	}
-	buildArgs = append(buildArgs, metaArgsString...)
+	buildArgs = append(buildArgs, opts.BuildArgs...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
@@ -148,7 +148,10 @@ func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Opt
 		}
 	}
 
-	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}
+	// on which v1.Platform is this currently running?
+	platform := currentPlatform()
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {

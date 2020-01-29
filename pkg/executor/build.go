@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"time"
 
-	otiai10Cpy "github.com/otiai10/copy"
-
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -158,8 +156,10 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
 	}
 
+	srcCtx := s.opts.SrcContext
+
 	for _, f := range files {
-		if err := compositeKey.AddPath(f); err != nil {
+		if err := compositeKey.AddPath(f, srcCtx); err != nil {
 			return compositeKey, err
 		}
 	}
@@ -574,8 +574,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		for _, p := range filesToSave {
-			logrus.Infof("Saving file %s for later use.", p)
-			otiai10Cpy.Copy(p, filepath.Join(dstDir, p))
+			logrus.Infof("Saving file %s for later use", p)
+			util.CopyFileOrSymlink(p, dstDir)
 		}
 
 		// Delete the filesystem
@@ -587,16 +587,23 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	return nil, err
 }
 
+// fileToSave returns all the files matching the given pattern in deps.
+// If a file is a symlink, it also returns the target file.
 func filesToSave(deps []string) ([]string, error) {
-	allFiles := []string{}
+	srcFiles := []string{}
 	for _, src := range deps {
 		srcs, err := filepath.Glob(src)
 		if err != nil {
 			return nil, err
 		}
-		allFiles = append(allFiles, srcs...)
+		for _, f := range srcs {
+			if link, err := util.EvalSymLink(f); err == nil {
+				srcFiles = append(srcFiles, link)
+			}
+			srcFiles = append(srcFiles, f)
+		}
 	}
-	return allFiles, nil
+	return srcFiles, nil
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
@@ -684,7 +691,7 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 }
 
 func resolveOnBuild(stage *config.KanikoStage, config *v1.Config) error {
-	if config.OnBuild == nil {
+	if config.OnBuild == nil || len(config.OnBuild) == 0 {
 		return nil
 	}
 	// Otherwise, parse into commands
