@@ -29,9 +29,6 @@ import (
 // image accesses an image from a docker daemon
 type image struct {
 	v1.Image
-
-	opener tarball.Opener
-	ref    name.Reference
 }
 
 var _ v1.Image = (*image)(nil)
@@ -73,7 +70,7 @@ type ImageSaver interface {
 
 // This is a variable so we can override in tests.
 var getImageSaver = func() (ImageSaver, error) {
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}

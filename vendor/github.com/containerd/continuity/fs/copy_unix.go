@@ -1,5 +1,21 @@
 // +build solaris darwin freebsd
 
+/*
+   Copyright The containerd Authors.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package fs
 
 import (
@@ -53,18 +69,34 @@ func copyFileContent(dst, src *os.File) error {
 	return err
 }
 
-func copyXAttrs(dst, src string) error {
+func copyXAttrs(dst, src string, xeh XAttrErrorHandler) error {
 	xattrKeys, err := sysx.LListxattr(src)
 	if err != nil {
-		return errors.Wrapf(err, "failed to list xattrs on %s", src)
+		e := errors.Wrapf(err, "failed to list xattrs on %s", src)
+		if xeh != nil {
+			e = xeh(dst, src, "", e)
+		}
+		return e
 	}
 	for _, xattr := range xattrKeys {
 		data, err := sysx.LGetxattr(src, xattr)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get xattr %q on %s", xattr, src)
+			e := errors.Wrapf(err, "failed to get xattr %q on %s", xattr, src)
+			if xeh != nil {
+				if e = xeh(dst, src, xattr, e); e == nil {
+					continue
+				}
+			}
+			return e
 		}
 		if err := sysx.LSetxattr(dst, xattr, data, 0); err != nil {
-			return errors.Wrapf(err, "failed to set xattr %q on %s", xattr, dst)
+			e := errors.Wrapf(err, "failed to set xattr %q on %s", xattr, dst)
+			if xeh != nil {
+				if e = xeh(dst, src, xattr, e); e == nil {
+					continue
+				}
+			}
+			return e
 		}
 	}
 

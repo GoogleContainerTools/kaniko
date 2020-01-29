@@ -16,6 +16,7 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/pkg/errors"
 )
 
 // ImageLoader is an interface for testing.
@@ -35,7 +35,7 @@ type ImageLoader interface {
 
 // GetImageLoader is a variable so we can override in tests.
 var GetImageLoader = func() (ImageLoader, error) {
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -68,13 +68,13 @@ func Write(tag name.Tag, img v1.Image) (string, error) {
 	// write the image in docker save format first, then load it
 	resp, err := cli.ImageLoad(context.Background(), pr, false)
 	if err != nil {
-		return "", errors.Wrapf(err, "error loading image")
+		return "", fmt.Errorf("error loading image: %v", err)
 	}
 	defer resp.Body.Close()
 	b, readErr := ioutil.ReadAll(resp.Body)
 	response := string(b)
 	if readErr != nil {
-		return response, errors.Wrapf(err, "error reading load response body")
+		return response, fmt.Errorf("error reading load response body: %v", err)
 	}
 	return response, nil
 }
