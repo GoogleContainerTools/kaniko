@@ -40,12 +40,10 @@ type KanikoOptions struct {
 	ImageNameDigestFile     string
 	OCILayoutPath           string
 	RegistryMirror          string
-  InsecureRegistries      multiArg
+	InsecureRegistries      multiArg
 	SkipTLSVerifyRegistries multiArg
 	Destinations            multiArg
 	BuildArgs               multiArg
-	InsecureRegistries      multiArg
-	SkipTLSVerifyRegistries multiArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool

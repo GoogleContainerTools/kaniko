@@ -65,7 +65,6 @@ const (
        }
      }
    ]`
-	dockerfileTestRun = "integration/dockerfiles/Dockerfile_test_run_2"
 )
 
 func getDockerMajorVersion() int {
@@ -216,7 +215,7 @@ func getGitRepo() string {
 	}
 	return "github.com/GoogleContainerTools/kaniko"
 }
-  
+
 func TestGitBuildcontext(t *testing.T) {
 	repo := getGitRepo()
 	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
@@ -262,11 +261,11 @@ func TestGitBuildcontext(t *testing.T) {
 }
 
 func TestBuildViaRegistryMirror(t *testing.T) {
-	repo := "github.com/GoogleContainerTools/kaniko"
+	repo := getGitRepo()
+	dockerfile := "integration/dockerfiles/Dockerfile_registry_mirror"
 
 	// Build with docker
-	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
-	dockerfile := dockerfileTestRun
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerCmd := exec.Command("docker",
 		append([]string{"build",
 			"-t", dockerImage,
@@ -278,17 +277,15 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 	}
 
 	// Build with kaniko
-	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	dockerfile = "integration/dockerfiles/Dockerfile_registry_mirror"
-	kanikoCmd := exec.Command("docker",
-		append([]string{"run",
-			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
-                	ExecutorImage,
-			"-f", dockerfile,
-			"-d", kanikoImage,
-			"--registry-mirror", "gcr.io",
-                        contextFlag, contextPath
-			"-b", config.gcsBucket)...)
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
