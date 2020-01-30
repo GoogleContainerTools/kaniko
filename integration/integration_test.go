@@ -33,12 +33,14 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 
+	"github.com/pkg/errors"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-var config *gcpConfig
+var config *integrationTestConfig
 var imageBuilder *DockerFileBuilder
 
 const (
@@ -80,37 +82,65 @@ func getDockerMajorVersion() int {
 	}
 	return ver
 }
+func launchTests(m *testing.M, dockerfiles []string) (int, error) {
+
+	if config.isGcrRepository() {
+		contextFile, err := CreateIntegrationTarball()
+		if err != nil {
+			return 1, errors.Wrap(err, "Failed to create tarball of integration files for build context")
+		}
+
+		fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
+		if err != nil {
+			return 1, errors.Wrap(err, "Failed to upload build context")
+		}
+
+		if err = os.Remove(contextFile); err != nil {
+			return 1, errors.Wrap(err, fmt.Sprintf("Failed to remove tarball at %s", contextFile))
+		}
+
+		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
+		defer DeleteFromBucket(fileInBucket)
+	} else {
+		var err error
+		var migratedFiles []string
+		if migratedFiles, err = MigrateGCRRegistry(dockerfilesPath, dockerfiles, config.imageRepo); err != nil {
+			RollbackMigratedFiles(dockerfilesPath, migratedFiles)
+			return 1, errors.Wrap(err, "Fail to migrate dockerfiles from gcs")
+		}
+		RunOnInterrupt(func() { RollbackMigratedFiles(dockerfilesPath, migratedFiles) })
+		defer RollbackMigratedFiles(dockerfilesPath, migratedFiles)
+	}
+	if err := buildRequiredImages(); err != nil {
+		return 1, errors.Wrap(err, "Error while building images")
+	}
+
+	imageBuilder = NewDockerFileBuilder(dockerfiles)
+
+	return m.Run(), nil
+}
 
 func TestMain(m *testing.M) {
 	if !meetsRequirements() {
 		fmt.Println("Missing required tools")
 		os.Exit(1)
 	}
-	config = initGCPConfig()
 
-	if config.uploadToGCS {
-		contextFile, err := CreateIntegrationTarball()
+	if dockerfiles, err := FindDockerFiles(dockerfilesPath); err != nil {
+		fmt.Println("Coudn't create map of dockerfiles", err)
+		os.Exit(1)
+	} else {
+		config = initIntegrationTestConfig()
+		exitCode, err := launchTests(m, dockerfiles)
 		if err != nil {
-			fmt.Println("Failed to create tarball of integration files for build context", err)
-			os.Exit(1)
+			fmt.Println(err)
 		}
-
-		fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
-		if err != nil {
-			fmt.Println("Failed to upload build context", err)
-			os.Exit(1)
-		}
-
-		err = os.Remove(contextFile)
-		if err != nil {
-			fmt.Printf("Failed to remove tarball at %s: %s\n", contextFile, err)
-			os.Exit(1)
-		}
-
-		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
-		defer DeleteFromBucket(fileInBucket)
+		os.Exit(exitCode)
 	}
 
+}
+
+func buildRequiredImages() error {
 	setupCommands := []struct {
 		name    string
 		command []string
@@ -145,20 +175,10 @@ func TestMain(m *testing.M) {
 		fmt.Println(setupCmd.name)
 		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
 		if out, err := RunCommandWithoutTest(cmd); err != nil {
-			fmt.Printf("%s failed: %s", setupCmd.name, err)
-			fmt.Println(string(out))
-			os.Exit(1)
+			return errors.Wrap(err, fmt.Sprintf("%s failed: %s", setupCmd.name, string(out)))
 		}
 	}
-
-	dockerfiles, err := FindDockerFiles(dockerfilesPath)
-	if err != nil {
-		fmt.Printf("Coudn't create map of dockerfiles: %s", err)
-		os.Exit(1)
-	}
-	imageBuilder = NewDockerFileBuilder(dockerfiles)
-
-	os.Exit(m.Run())
+	return nil
 }
 
 func TestRun(t *testing.T) {
@@ -535,16 +555,6 @@ func logBenchmarks(benchmark string) error {
 	return nil
 }
 
-type gcpConfig struct {
-	gcsBucket          string
-	imageRepo          string
-	onbuildBaseImage   string
-	hardlinkBaseImage  string
-	serviceAccount     string
-	dockerMajorVersion int
-	uploadToGCS        bool
-}
-
 type imageDetails struct {
 	name      string
 	numLayers int
@@ -555,12 +565,11 @@ func (i imageDetails) String() string {
 	return fmt.Sprintf("Image: [%s] Digest: [%s] Number of Layers: [%d]", i.name, i.digest, i.numLayers)
 }
 
-func initGCPConfig() *gcpConfig {
-	var c gcpConfig
+func initIntegrationTestConfig() *integrationTestConfig {
+	var c integrationTestConfig
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
-	flag.BoolVar(&c.uploadToGCS, "uploadToGCS", true, "Upload the tar-ed contents of `integration` dir to GCS bucket. Default is true. Set this to false to prevent uploading.")
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {
@@ -575,8 +584,12 @@ func initGCPConfig() *gcpConfig {
 		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", absPath)
 	}
 
-	if c.gcsBucket == "" || c.imageRepo == "" {
-		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)
+	if c.imageRepo == "" {
+		log.Fatal("You must provide a image repository")
+	}
+
+	if c.isGcrRepository() && c.gcsBucket == "" {
+		log.Fatalf("You must provide a gcs bucket when using a Google Container Registry (\"%s\" was provided)", c.imageRepo)
 	}
 	if !strings.HasSuffix(c.imageRepo, "/") {
 		c.imageRepo = c.imageRepo + "/"
