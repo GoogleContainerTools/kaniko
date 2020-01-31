@@ -56,6 +56,12 @@ var initialWhitelist = []WhitelistEntry{
 		Path:            "/etc/mtab",
 		PrefixMatchOnly: false,
 	},
+	{
+		// we whitelist /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
+		// from the base image
+		Path:            "/tmp/apt-key-gpghome",
+		PrefixMatchOnly: true,
+	},
 }
 
 var whitelist = initialWhitelist
@@ -663,7 +669,7 @@ func ExcludeFile(path, buildcontext string) bool {
 	return match
 }
 
-// HasFilepathPrefix checks  if the given file path begins with prefix
+// HasFilepathPrefix checks if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	prefix = filepath.Clean(prefix)
 	prefixArray := strings.Split(prefix, "/")
@@ -676,11 +682,15 @@ func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	if prefixMatchOnly && len(pathArray) == len(prefixArray) {
 		return false
 	}
+
 	for index := range prefixArray {
-		if prefixArray[index] == pathArray[index] {
-			continue
+		m, err := filepath.Match(prefixArray[index], pathArray[index])
+		if err != nil {
+			return false
 		}
-		return false
+		if !m {
+			return false
+		}
 	}
 	return true
 }

@@ -65,6 +65,7 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/dev/pts", false},
 		{"/sys", false},
 		{"/etc/mtab", false},
+		{"/tmp/apt-key-gpghome", true},
 	}
 	actualWhitelist := whitelist
 	sort.Slice(actualWhitelist, func(i, j int) bool {
@@ -257,6 +258,14 @@ func Test_CheckWhitelist(t *testing.T) {
 				whitelist: []WhitelistEntry{{"/foo/bat", false}},
 			},
 			want: false,
+		},
+		{
+			name: "prefix match only ",
+			args: args{
+				path:      "/tmp/apt-key-gpghome.xft/gpg.key",
+				whitelist: []WhitelistEntry{{"/tmp/apt-key-gpghome.*", true}},
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
