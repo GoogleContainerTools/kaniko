@@ -1300,6 +1300,12 @@ func TestUpdateWhitelist(t *testing.T) {
 			whitelist = initialWhitelist
 			defer func() { whitelist = initialWhitelist }()
 			UpdateWhitelist(tt.whitelistVarRun)
+			sort.Slice(tt.expected, func(i, j int) bool {
+				return tt.expected[i].Path < tt.expected[j].Path
+			})
+			sort.Slice(whitelist, func(i, j int) bool {
+				return whitelist[i].Path < whitelist[j].Path
+			})
 			testutil.CheckDeepEqual(t, tt.expected, whitelist)
 		})
 	}
