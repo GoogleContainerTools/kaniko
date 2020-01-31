@@ -71,18 +71,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	var userStr string
 	// If specified, run the command as a specific user
 	if config.User != "" {
-		userAndGroup := strings.Split(config.User, ":")
-		userStr = userAndGroup[0]
-		var groupStr string
-		if len(userAndGroup) > 1 {
-			groupStr = userAndGroup[1]
-		}
-
-		uidStr, gidStr, err := util.GetUserFromUsername(userStr, groupStr)
-		if err !=nil{
-			return err
-		}
-		uid, gid, err := util.GetUIDAndGIDFromString(uidStr, gidStr)
+		uid, gid, err := util.GetUIDAndGIDFromString(config.User, false)
 		if err != nil {
 			return err
 		}

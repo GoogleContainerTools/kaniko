@@ -328,9 +328,20 @@ Loop:
 }
 
 // Extract user and group id from a string formatted 'user:group'.
-// If gidEqualToUIDIfNotGiven is set, the gid is equal to uid if the group is not specified
+// If fallbackToUID is set, the gid is equal to uid if the group is not specified
 // otherwise gid is set to zero.
-func GetUIDAndGIDFromString(uidStr string, gidStr string) (uint32, uint32, error) {
+func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+	userAndGroup := strings.Split(userGroupString, ":")
+	userStr := userAndGroup[0]
+	var groupStr string
+	if len(userAndGroup) > 1 {
+		groupStr = userAndGroup[1]
+	}
+
+	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
+	if err != nil {
+		return 0, 0, err
+	}
 	// uid and gid need to be fit into uint32
 	uid64, err := strconv.ParseUint(uidStr, 10, 32)
 	if err != nil {
@@ -343,7 +354,7 @@ func GetUIDAndGIDFromString(uidStr string, gidStr string) (uint32, uint32, error
 	return uint32(uid64), uint32(gid64), nil
 }
 
-func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
+func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (string, string, error) {
 	// Lookup by username
 	userObj, err := Lookup(userStr)
 	if err != nil {
@@ -366,7 +377,10 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	}
 
 	uid := userObj.Uid
-	gid := userObj.Gid
+	gid := ""
+	if fallbackToUID {
+		gid = userObj.Gid
+	}
 	if group != nil {
 		gid = group.Gid
 	}
