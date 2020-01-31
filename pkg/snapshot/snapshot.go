@@ -161,7 +161,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		dir := filepath.Dir(path)
 		if _, ok := memFs[dir]; ok {
 			if s.l.MaybeAddWhiteout(path) {
-				logrus.Infof("Adding whiteout for %s", path)
+				logrus.Debugf("Adding whiteout for %s", path)
 				filesToWhiteOut = append(filesToWhiteOut, path)
 			}
 		}
