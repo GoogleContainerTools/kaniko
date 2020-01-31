@@ -328,16 +328,9 @@ Loop:
 
 func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
 	// Lookup by username
-	userObj, err := user.Lookup(userStr)
+	userObj, err := Lookup(userStr)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); !ok {
-			return "", "", err
-		}
-		// Lookup by id
-		userObj, err = user.LookupId(userStr)
-		if err != nil {
-			return "", "", err
-		}
+		return "", "", err
 	}
 
 	// Same dance with groups
