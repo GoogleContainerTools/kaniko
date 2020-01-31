@@ -26,6 +26,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// for testing
+var (
+	Lookup = util.Lookup
+)
+
 type UserCommand struct {
 	BaseCommand
 	cmd *instructions.UserCommand
@@ -40,7 +45,11 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return err
 	}
-	groupStr := userStr
+	userObj, err := Lookup(userStr)
+	if err != nil {
+		return err
+	}
+	groupStr := userObj.Gid
 	if len(userAndGroup) > 1 {
 		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
 		if err != nil {

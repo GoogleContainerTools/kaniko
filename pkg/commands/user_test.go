@@ -16,9 +16,11 @@ limitations under the License.
 package commands
 
 import (
+	"os/user"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -27,52 +29,64 @@ import (
 
 var userTests = []struct {
 	user        string
+	userObj     user.User
 	expectedUID string
 	expectedGID string
 }{
 	{
 		user:        "root",
+		userObj:     user.User{Uid: "root", Gid: "root"},
 		expectedUID: "root:root",
 	},
 	{
 		user:        "root-add",
-		expectedUID: "root-add:root-add",
+		userObj:     user.User{Uid: "root-add", Gid: "root"},
+		expectedUID: "root-add:root",
 	},
 	{
 		user:        "0",
+		userObj:     user.User{Uid: "0", Gid: "0"},
 		expectedUID: "0:0",
 	},
 	{
 		user:        "fakeUser",
+		userObj:     user.User{Uid: "fakeUser", Gid: "fakeUser"},
 		expectedUID: "fakeUser:fakeUser",
 	},
 	{
 		user:        "root:root",
+		userObj:     user.User{Uid: "root", Gid: "some"},
 		expectedUID: "root:root",
 	},
 	{
 		user:        "0:root",
+		userObj:     user.User{Uid: "0"},
 		expectedUID: "0:root",
 	},
 	{
 		user:        "root:0",
+		userObj:     user.User{Uid: "root"},
 		expectedUID: "root:0",
 		expectedGID: "f0",
 	},
 	{
 		user:        "0:0",
+		userObj:     user.User{Uid: "0"},
 		expectedUID: "0:0",
 	},
 	{
 		user:        "$envuser",
+		userObj:     user.User{Uid: "root", Gid: "root"},
 		expectedUID: "root:root",
 	},
 	{
 		user:        "root:$envgroup",
+		userObj:     user.User{Uid: "root"},
 		expectedUID: "root:grp",
 	},
 	{
 		user:        "some:grp",
+		userObj:     user.User{Uid: "some"},
 		expectedUID: "some:grp",
 	},
 }
@@ -90,6 +104,10 @@ func TestUpdateUser(t *testing.T) {
 				User: test.user,
 			},
 		}
+		Lookup = func(_ string) (*user.User, error) {
+			return &test.userObj, nil
+		}
+		defer func() { Lookup = util.Lookup }()
 		buildArgs := dockerfile.NewBuildArgs([]string{})
 		err := cmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedUID, cfg.User)

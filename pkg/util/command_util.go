@@ -363,3 +363,18 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 
 	return uid, gid, nil
 }
+
+func Lookup(userStr string) (*user.User, error) {
+	userObj, err := user.Lookup(userStr)
+	if err != nil {
+		if _, ok := err.(user.UnknownUserError); !ok {
+			return nil, err
+		}
+		// Lookup by id
+		userObj, err = user.LookupId(userStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return userObj, nil
+}
