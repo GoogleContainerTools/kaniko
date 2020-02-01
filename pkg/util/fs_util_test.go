@@ -1279,6 +1279,10 @@ func TestUpdateWhitelist(t *testing.T) {
 					Path:            "/var/run",
 					PrefixMatchOnly: false,
 				},
+				{
+					Path:            "/tmp/apt-key-gpghome",
+					PrefixMatchOnly: true,
+				},
 			},
 		},
 		{
@@ -1291,6 +1295,10 @@ func TestUpdateWhitelist(t *testing.T) {
 				{
 					Path:            "/etc/mtab",
 					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/tmp/apt-key-gpghome",
+					PrefixMatchOnly: true,
 				},
 			},
 		},
