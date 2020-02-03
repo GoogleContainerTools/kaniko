@@ -1,3 +1,42 @@
+# v0.17.0 Release - 2020-02-03
+
+## New Features
+* Expand build argument from environment when no value specified [#993](https://github.com/GoogleContainerTools/kaniko/pull/993)
+* whitelist  /tmp/apt-key-gpghome.* directory [#1000](https://github.com/GoogleContainerTools/kaniko/pull/1000)
+* Add flag to `--whitelist-var-run` set to true to preserver default kani… [#1011](https://github.com/GoogleContainerTools/kaniko/pull/1011)
+* Prefer platform that is currently running for pulling remote images and kaniko binary Makefile target [#980](https://github.com/GoogleContainerTools/kaniko/pull/980)
+
+## Bug Fixes
+* Fix caching to respect .dockerignore [#854](https://github.com/GoogleContainerTools/kaniko/pull/854)
+* Fixes #988 run_in_docker.sh only works with gcr.io [#990](https://github.com/GoogleContainerTools/kaniko/pull/990)
+* Fix Symlinks not being copied across stages [#971](https://github.com/GoogleContainerTools/kaniko/pull/971)
+* Fix home and group set for user command [#995](https://github.com/GoogleContainerTools/kaniko/pull/995)
+* Fix COPY or ADD to symlink destination breaks image [#943](https://github.com/GoogleContainerTools/kaniko/pull/943)
+* [Caching] Fix bug with deleted files and cached run and copy commands
+* [Mutistage Build] Fix bug with capital letter in stage names [#983](https://github.com/GoogleContainerTools/kaniko/pull/983)
+* Fix #940 set modtime when extracting [#981](https://github.com/GoogleContainerTools/kaniko/pull/981)
+* Fix Ability for ADD to unTar a file [#792](https://github.com/GoogleContainerTools/kaniko/pull/792)
+
+# Updates and Refactors
+* fix test flake [#1016](https://github.com/GoogleContainerTools/kaniko/pull/1016)
+* Upgrade go-containerregistry third-party library [#957](https://github.com/GoogleContainerTools/kaniko/pull/957)
+* Remove debug tag being built for every push to master [#1004](https://github.com/GoogleContainerTools/kaniko/pull/1004)
+* Run integration tests in Travis CI [#979](https://github.com/GoogleContainerTools/kaniko/pull/979)
+
+
+Huge thank you for this release towards our contributors:
+- Anthony Davies
+- Ben Einaudi
+- Cole Wippern
+- cvgw
+- Logan.Price
+- Moritz Wanzenböck
+- ohchang-kwon
+- Sam Stoelinga
+- Tejal Desai
+- Thomas Bonfort
+- Wietse Muizelaar
+
 # v0.16.0 Release - 2020-01-17
 
 Happy New Year 2020!
