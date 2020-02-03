@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"os/user"
 	"testing"
 
@@ -29,65 +30,69 @@ import (
 
 var userTests = []struct {
 	user        string
-	userObj     user.User
+	userObj     *user.User
 	expectedUID string
 	expectedGID string
 }{
 	{
 		user:        "root",
-		userObj:     user.User{Uid: "root", Gid: "root"},
+		userObj:     &user.User{Uid: "root", Gid: "root"},
 		expectedUID: "root:root",
 	},
 	{
 		user:        "root-add",
-		userObj:     user.User{Uid: "root-add", Gid: "root"},
+		userObj:     &user.User{Uid: "root-add", Gid: "root"},
 		expectedUID: "root-add:root",
 	},
 	{
 		user:        "0",
-		userObj:     user.User{Uid: "0", Gid: "0"},
+		userObj:     &user.User{Uid: "0", Gid: "0"},
 		expectedUID: "0:0",
 	},
 	{
 		user:        "fakeUser",
-		userObj:     user.User{Uid: "fakeUser", Gid: "fakeUser"},
+		userObj:     &user.User{Uid: "fakeUser", Gid: "fakeUser"},
 		expectedUID: "fakeUser:fakeUser",
 	},
 	{
 		user:        "root:root",
-		userObj:     user.User{Uid: "root", Gid: "some"},
+		userObj:     &user.User{Uid: "root", Gid: "some"},
 		expectedUID: "root:root",
 	},
 	{
 		user:        "0:root",
-		userObj:     user.User{Uid: "0"},
+		userObj:     &user.User{Uid: "0"},
 		expectedUID: "0:root",
 	},
 	{
 		user:        "root:0",
-		userObj:     user.User{Uid: "root"},
+		userObj:     &user.User{Uid: "root"},
 		expectedUID: "root:0",
 		expectedGID: "f0",
 	},
 	{
 		user:        "0:0",
-		userObj:     user.User{Uid: "0"},
+		userObj:     &user.User{Uid: "0"},
 		expectedUID: "0:0",
 	},
 	{
 		user:        "$envuser",
-		userObj:     user.User{Uid: "root", Gid: "root"},
+		userObj:     &user.User{Uid: "root", Gid: "root"},
 		expectedUID: "root:root",
 	},
 	{
 		user:        "root:$envgroup",
-		userObj:     user.User{Uid: "root"},
+		userObj:     &user.User{Uid: "root"},
 		expectedUID: "root:grp",
 	},
 	{
 		user:        "some:grp",
-		userObj:     user.User{Uid: "some"},
+		userObj:     &user.User{Uid: "some"},
 		expectedUID: "some:grp",
+	},
+	{
+		user:        "some",
+		expectedUID: "some:",
 	},
 }
 
@@ -105,7 +110,10 @@ func TestUpdateUser(t *testing.T) {
 			},
 		}
 		Lookup = func(_ string) (*user.User, error) {
-			return &test.userObj, nil
+			if test.userObj != nil {
+				return test.userObj, nil
+			}
+			return nil, fmt.Errorf("error while looking up user.")
 		}
 		defer func() { Lookup = util.Lookup }()
 		buildArgs := dockerfile.NewBuildArgs([]string{})

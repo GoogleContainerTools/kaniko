@@ -17,6 +17,8 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -43,17 +45,13 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("resolving user %s", userAndGroup[0]))
 	}
-	userObj, err := Lookup(userStr)
-	if err != nil {
-		return err
-	}
-	groupStr := userObj.Gid
+	var groupStr = setGroupDefault(userStr)
 	if len(userAndGroup) > 1 {
 		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("resolving group %s", userAndGroup[1]))
 		}
 	}
 
@@ -65,4 +63,13 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 func (r *UserCommand) String() string {
 	return r.cmd.String()
+}
+
+func setGroupDefault(userStr string) string {
+	userObj, err := Lookup(userStr)
+	if err != nil {
+		logrus.Debugf("could not lookup user %s. Setting group empty", userStr)
+		return ""
+	}
+	return userObj.Gid
 }
