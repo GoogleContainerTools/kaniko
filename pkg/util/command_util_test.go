@@ -551,12 +551,12 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		fmt.Sprintf("%s:%s", currentUser.Uid, primaryGroup),
 		fmt.Sprintf("%s:%s", currentUser.Username, primaryGroup),
 	}
-	expectedUid, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
-	expectedGid, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
+	expectedU, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
+	expectedG, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
 	for _, tt := range testCases {
 		uid, gid, err := GetUIDAndGIDFromString(tt, false)
-		if uid != uint32(expectedUid) || gid != uint32(expectedGid) || err != nil {
-			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d", tt, expectedUid, expectedGid,
+		if uid != uint32(expectedU) || gid != uint32(expectedG) || err != nil {
+			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d", tt, expectedU, expectedG,
 				uid, gid)
 		}
 	}

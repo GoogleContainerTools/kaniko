@@ -377,7 +377,7 @@ func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (s
 	}
 
 	uid := userObj.Uid
-	gid := ""
+	gid := "0"
 	if fallbackToUID {
 		gid = userObj.Gid
 	}
