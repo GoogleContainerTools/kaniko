@@ -113,7 +113,7 @@ func TestUpdateUser(t *testing.T) {
 			if test.userObj != nil {
 				return test.userObj, nil
 			}
-			return nil, fmt.Errorf("error while looking up user.")
+			return nil, fmt.Errorf("error while looking up user")
 		}
 		defer func() { Lookup = util.Lookup }()
 		buildArgs := dockerfile.NewBuildArgs([]string{})
