@@ -46,10 +46,26 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
 		resolveSources = util.ResolveEnvAndWildcards
 	}
+	var uid, gid int64
+	uid = util.DoNotChangeUID
+	gid = util.DoNotChangeGID
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
 	srcs, dest, err := resolveSources(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	if c.cmd.Chown != "" {
+		chown, err := util.ResolveEnvironmentReplacement(c.cmd.Chown, replacementEnvs, false)
+		if err != nil {
+			return err
+		}
+		uid32, gid32, err := util.GetUIDAndGIDFromString(chown, true)
+		uid = int64(uid32)
+		gid = int64(gid32)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err != nil {
 		return err
 	}
@@ -82,7 +98,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, uid, gid)
 			if err != nil {
 				return err
 			}
@@ -99,7 +115,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext)
+			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return err
 			}
