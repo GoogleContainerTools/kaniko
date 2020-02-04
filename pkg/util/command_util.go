@@ -74,6 +74,25 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	return fp, nil
 }
 
+func ResolveEnvAndWildcardsWithIgnore(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
+	// First, resolve any environment replacement
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to resolve environment")
+	}
+	if len(resolvedEnvs) == 0 {
+		return nil, "", errors.New("resolved envs is empty")
+	}
+	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	// Resolve wildcards and get a list of resolved sources
+	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to resolve sources")
+	}
+	srcs, err = ValidateSources(sd, srcs, buildcontext, true)
+	return srcs, dest, err
+}
+
 func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
 	// First, resolve any environment replacement
 	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
@@ -89,7 +108,7 @@ func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string,
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve sources")
 	}
-	err = IsSrcsValid(sd, srcs, buildcontext)
+	_, err = ValidateSources(sd, srcs, buildcontext, false)
 	return srcs, dest, err
 }
 
@@ -206,39 +225,40 @@ func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, er
 	return destPath, nil
 }
 
-func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string) error {
+func ValidateSources(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string, respectIgnore bool) ([]string, error) {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	dest := srcsAndDest[len(srcsAndDest)-1]
 
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
 		for _, src := range srcs {
-			if ExcludeFile(src, root) {
+			if respectIgnore && ExcludeFile(src, root) {
 				continue
 			}
 			totalSrcs++
 		}
 		if totalSrcs > 1 && !IsDestDir(dest) {
-			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+			return nil, errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 		}
 	}
 
 	// If there is only one source and it's a directory, docker assumes the dest is a directory
 	if len(resolvedSources) == 1 {
 		if IsSrcRemoteFileURL(resolvedSources[0]) {
-			return nil
+			return nil, nil
 		}
 		path := filepath.Join(root, resolvedSources[0])
 		fi, err := os.Lstat(path)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to get fileinfo for %v", path))
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to get fileinfo for %v", path))
 		}
 		if fi.IsDir() {
-			return nil
+			return nil, nil
 		}
 	}
 
 	totalFiles := 0
+	unignored := make([]string, 0, len(resolvedSources))
 	for _, src := range resolvedSources {
 		if IsSrcRemoteFileURL(src) {
 			totalFiles++
@@ -247,24 +267,25 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		src = filepath.Clean(src)
 		files, err := RelativeFiles(src, root)
 		if err != nil {
-			return errors.Wrap(err, "failed to get relative files")
+			return nil, errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
-			if ExcludeFile(file, root) {
+			if respectIgnore && ExcludeFile(file, root) {
 				continue
 			}
+			unignored = append(unignored, file)
 			totalFiles++
 		}
 	}
 	if totalFiles == 0 {
-		return errors.New("copy failed: no source files specified")
+		return nil, errors.New("copy failed: no source files specified")
 	}
 	// If there are wildcards, and the destination is a file, there must be exactly one file to copy over,
 	// Otherwise, return an error
 	if !IsDestDir(dest) && totalFiles > 1 {
-		return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+		return nil, errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
 	}
-	return nil
+	return unignored, nil
 }
 
 func IsSrcRemoteFileURL(rawurl string) bool {

@@ -583,7 +583,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		// do not apply the dockerfile ignores after first stage.
-		util.ResetExcludedFiles()
+		//util.ResetExcludedFiles()
 	}
 
 	return nil, err

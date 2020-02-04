@@ -409,7 +409,7 @@ func Test_IsSrcsValid(t *testing.T) {
 			if err := GetExcludedFiles("", buildContextPath); err != nil {
 				t.Fatalf("error getting excluded files: %v", err)
 			}
-			err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
+			_, err := ValidateSources(test.srcsAndDest, test.resolvedSources, buildContextPath, true)
 			testutil.CheckError(t, test.shouldErr, err)
 		})
 	}

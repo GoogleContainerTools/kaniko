@@ -41,13 +41,15 @@ type CopyCommand struct {
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// Resolve from
+	resolveSources := util.ResolveEnvAndWildcardsWithIgnore
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
+		resolveSources = util.ResolveEnvAndWildcards
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	srcs, dest, err := resolveSources(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
 		return err
 	}
@@ -80,7 +82,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext)
+			copiedFiles, err := util.CopyDir(fullPath, destPath)
 			if err != nil {
 				return err
 			}
@@ -255,7 +257,7 @@ func copyCmdFilesUsedFromContext(
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, _, err := util.ResolveEnvAndWildcards(
+	srcs, _, err := util.ResolveEnvAndWildcardsWithIgnore(
 		cmd.SourcesAndDest, buildcontext, replacementEnvs,
 	)
 	if err != nil {

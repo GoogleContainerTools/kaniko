@@ -540,56 +540,25 @@ func DownloadFileToDest(rawurl, dest string) error {
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest, buildcontext string) ([]string, error) {
-	files, err := RelativeFiles("", src)
+func CopyDir(src, dest string) ([]string, error) {
+
+	fi, err := os.Lstat(src)
 	if err != nil {
 		return nil, err
 	}
-	var copiedFiles []string
-	for _, file := range files {
-		fullPath := filepath.Join(src, file)
-		fi, err := os.Lstat(fullPath)
-		if err != nil {
-			fmt.Println(" i am returning from here this", err)
-			return nil, err
-		}
-		if ExcludeFile(fullPath, buildcontext) {
-			logrus.Debugf("%s found in .dockerignore, ignoring", src)
-			continue
-		}
-		destPath := filepath.Join(dest, file)
-		if fi.IsDir() {
-			logrus.Tracef("Creating directory %s", destPath)
 
-			mode := fi.Mode()
-			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
-			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
+	mode := fi.Mode()
+	uid := int(fi.Sys().(*syscall.Stat_t).Uid)
+	gid := int(fi.Sys().(*syscall.Stat_t).Gid)
 
-			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
-				return nil, err
-			}
-		} else if IsSymlink(fi) {
-			// If file is a symlink, we want to create the same relative symlink
-			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
-				return nil, err
-			}
-		} else {
-			// ... Else, we want to copy over a file
-			if _, err := CopyFile(fullPath, destPath, buildcontext); err != nil {
-				return nil, err
-			}
-		}
-		copiedFiles = append(copiedFiles, destPath)
+	if err := mkdirAllWithPermissions(dest, mode, uid, gid); err != nil {
+		return nil, err
 	}
-	return copiedFiles, nil
+	return []string{dest}, nil
 }
 
 // CopySymlink copies the symlink at src to dest
 func CopySymlink(src, dest, buildcontext string) (bool, error) {
-	if ExcludeFile(src, buildcontext) {
-		logrus.Debugf("%s found in .dockerignore, ignoring", src)
-		return true, nil
-	}
 	link, err := os.Readlink(src)
 	if err != nil {
 		return false, err
@@ -607,10 +576,6 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 
 // CopyFile copies the file at src to dest
 func CopyFile(src, dest, buildcontext string) (bool, error) {
-	if ExcludeFile(src, buildcontext) {
-		logrus.Debugf("%s found in .dockerignore, ignoring", src)
-		return true, nil
-	}
 	if src == dest {
 		// This is a no-op. Move on, but don't list it as ignored.
 		// We have to make sure we do this so we don't overwrite our own file.
@@ -653,7 +618,7 @@ func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
 
 // ResetExcludedFiles gets a list of files to empty string
 func ResetExcludedFiles() {
-	excluded  = []string{}
+	excluded = []string{}
 }
 
 // ExcludeFile returns true if the .dockerignore specified this file should be ignored

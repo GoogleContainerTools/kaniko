@@ -131,12 +131,12 @@ func TestCopyExecuteCmd(t *testing.T) {
 
 			fi, err := os.Open(dest)
 			if err != nil {
-				t.Error()
+				t.Fatal(err)
 			}
 			defer fi.Close()
 			fstat, err := fi.Stat()
 			if err != nil {
-				t.Error()
+				t.Fatal(err)
 			}
 			if fstat.IsDir() {
 				files, err := ioutil.ReadDir(dest)
