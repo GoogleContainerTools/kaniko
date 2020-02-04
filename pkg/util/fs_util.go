@@ -817,7 +817,8 @@ func UpdateWhitelist(whitelistVarRun bool) {
 	if !whitelistVarRun {
 		return
 	}
-	whitelist = append(initialWhitelist, WhitelistEntry{
+	logrus.Trace("Adding /var/run to initialWhitelist ")
+	initialWhitelist = append(initialWhitelist, WhitelistEntry{
 		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
 		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 		// in the image with no way to tell if it came from the base image or not.

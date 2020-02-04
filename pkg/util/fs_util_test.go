@@ -1305,22 +1305,16 @@ func TestUpdateWhitelist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			whitelist = initialWhitelist
-			defer func() { whitelist = initialWhitelist }()
-			sort.Slice(tt.expected, func(i, j int) bool {
-				return tt.expected[i].Path < tt.expected[j].Path
-			})
-			sort.Slice(whitelist, func(i, j int) bool {
-				return whitelist[i].Path < whitelist[j].Path
-			})
+			original := initialWhitelist
+			defer func() { initialWhitelist = original }()
 			UpdateWhitelist(tt.whitelistVarRun)
 			sort.Slice(tt.expected, func(i, j int) bool {
 				return tt.expected[i].Path < tt.expected[j].Path
 			})
-			sort.Slice(whitelist, func(i, j int) bool {
-				return whitelist[i].Path < whitelist[j].Path
+			sort.Slice(initialWhitelist, func(i, j int) bool {
+				return initialWhitelist[i].Path < initialWhitelist[j].Path
 			})
-			testutil.CheckDeepEqual(t, tt.expected, whitelist)
+			testutil.CheckDeepEqual(t, tt.expected, initialWhitelist)
 		})
 	}
 }
