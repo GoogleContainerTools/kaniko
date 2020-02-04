@@ -1,3 +1,7 @@
+# v0.17.1 Release - 2020-02-04
+
+This is minor patch release to fix [#1002](https://github.com/GoogleContainerTools/kaniko/issues/1002)
+
 # v0.17.0 Release - 2020-02-03
 
 ## New Features
