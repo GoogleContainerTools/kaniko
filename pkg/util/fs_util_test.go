@@ -963,7 +963,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ignored, err := CopyFile(tempFile, tempFile, "")
+	ignored, err := CopyFile(tempFile, tempFile, "", DoNotChangeUID, DoNotChangeGID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1307,6 +1307,12 @@ func TestUpdateWhitelist(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			whitelist = initialWhitelist
 			defer func() { whitelist = initialWhitelist }()
+			sort.Slice(tt.expected, func(i, j int) bool {
+				return tt.expected[i].Path < tt.expected[j].Path
+			})
+			sort.Slice(whitelist, func(i, j int) bool {
+				return whitelist[i].Path < whitelist[j].Path
+			})
 			UpdateWhitelist(tt.whitelistVarRun)
 			sort.Slice(tt.expected, func(i, j int) bool {
 				return tt.expected[i].Path < tt.expected[j].Path

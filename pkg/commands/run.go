@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -72,31 +71,9 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	var userStr string
 	// If specified, run the command as a specific user
 	if config.User != "" {
-		userAndGroup := strings.Split(config.User, ":")
-		userStr = userAndGroup[0]
-		var groupStr string
-		if len(userAndGroup) > 1 {
-			groupStr = userAndGroup[1]
-		}
-
-		uidStr, gidStr, err := util.GetUserFromUsername(userStr, groupStr)
+		uid, gid, err := util.GetUIDAndGIDFromString(config.User, false)
 		if err != nil {
 			return err
-		}
-
-		// uid and gid need to be uint32
-		uid64, err := strconv.ParseUint(uidStr, 10, 32)
-		if err != nil {
-			return err
-		}
-		uid := uint32(uid64)
-		var gid uint32
-		if gidStr != "" {
-			gid64, err := strconv.ParseUint(gidStr, 10, 32)
-			if err != nil {
-				return err
-			}
-			gid = uint32(gid64)
 		}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}

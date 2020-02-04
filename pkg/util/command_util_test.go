@@ -17,8 +17,11 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
+	"os/user"
 	"reflect"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -524,5 +527,37 @@ func TestResolveEnvironmentReplacementList(t *testing.T) {
 				t.Errorf("ResolveEnvironmentReplacementList() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_GetUIDAndGIDFromString(t *testing.T) {
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Cannot get current user: %s", err)
+	}
+	groups, err := currentUser.GroupIds()
+	if err != nil || len(groups) == 0 {
+		t.Fatalf("Cannot get groups for current user: %s", err)
+	}
+	primaryGroupObj, err := user.LookupGroupId(groups[0])
+	if err != nil {
+		t.Fatalf("Could not lookup name of group %s: %s", groups[0], err)
+	}
+	primaryGroup := primaryGroupObj.Name
+
+	testCases := []string{
+		fmt.Sprintf("%s:%s", currentUser.Uid, currentUser.Gid),
+		fmt.Sprintf("%s:%s", currentUser.Username, currentUser.Gid),
+		fmt.Sprintf("%s:%s", currentUser.Uid, primaryGroup),
+		fmt.Sprintf("%s:%s", currentUser.Username, primaryGroup),
+	}
+	expectedU, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
+	expectedG, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
+	for _, tt := range testCases {
+		uid, gid, err := GetUIDAndGIDFromString(tt, false)
+		if uid != uint32(expectedU) || gid != uint32(expectedG) || err != nil {
+			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d", tt, expectedU, expectedG,
+				uid, gid)
+		}
 	}
 }
