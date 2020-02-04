@@ -651,6 +651,11 @@ func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
 	return err
 }
 
+// ResetExcludedFiles gets a list of files to empty string
+func ResetExcludedFiles() {
+	excluded  = []string{}
+}
+
 // ExcludeFile returns true if the .dockerignore specified this file should be ignored
 func ExcludeFile(path, buildcontext string) bool {
 	if HasFilepathPrefix(path, buildcontext, false) {

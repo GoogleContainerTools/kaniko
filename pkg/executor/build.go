@@ -582,6 +582,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := util.DeleteFilesystem(); err != nil {
 			return nil, err
 		}
+		// do not apply the dockerfile ignores after first stage.
+		util.ResetExcludedFiles()
 	}
 
 	return nil, err
