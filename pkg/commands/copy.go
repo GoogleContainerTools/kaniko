@@ -32,6 +32,11 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+// for testing
+var (
+	getUIDAndGID = util.GetUIDAndGIDFromString
+)
+
 type CopyCommand struct {
 	BaseCommand
 	cmd           *instructions.CopyCommand
@@ -44,23 +49,12 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
 	}
-	var uid, gid int64
-	uid = util.DoNotChangeUID
-	gid = util.DoNotChangeGID
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	if c.cmd.Chown != "" {
-		chown, err := util.ResolveEnvironmentReplacement(c.cmd.Chown, replacementEnvs, false)
-		if err != nil {
-			return err
-		}
-		uid32, gid32, err := util.GetUIDAndGIDFromString(chown, true)
-		uid = int64(uid32)
-		gid = int64(gid32)
-		if err != nil {
-			return err
-		}
+	uid, gid, err := getUserGroup(c.cmd.Chown, replacementEnvs)
+	if err != nil {
+		return err
 	}
 
 	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
@@ -124,6 +118,21 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 	}
 	return nil
+}
+
+func getUserGroup(chownStr string, env []string) (int64, int64, error) {
+	if chownStr == "" {
+		return util.DoNotChangeUID, util.DoNotChangeGID, nil
+	}
+	chown, err := util.ResolveEnvironmentReplacement(chownStr, env, false)
+	if err != nil {
+		return -1, -1, err
+	}
+	uid32, gid32, err := getUIDAndGID(chown, true)
+	if err != nil {
+		return -1, -1, err
+	}
+	return int64(uid32), int64(gid32), nil
 }
 
 // FilesToSnapshot should return an empty array if still nil; no files were changed
