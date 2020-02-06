@@ -322,7 +322,7 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 
 	filesInTars := [][]string{}
 
-	for i := 0; i<= 2; i++ {
+	for i := 0; i <= 2; i++ {
 		testDir, snapshotter, cleanup, err := setUpTest()
 		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 		defer cleanup()
@@ -366,7 +366,7 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 	}
 
 	// Check contents of all snapshots, make sure files appear in consistent order
-	for i := 1; i<len(filesInTars); i++ {
+	for i := 1; i < len(filesInTars); i++ {
 		testutil.CheckErrorAndDeepEqual(t, false, nil, filesInTars[0], filesInTars[i])
 	}
 }
