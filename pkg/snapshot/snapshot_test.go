@@ -323,7 +323,7 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 	filesInTars := [][]string{}
 
 	for i := 0; i<= 2; i++ {
-		testDir, snapshotter, cleanup, err := setUpTestDir()
+		testDir, snapshotter, cleanup, err := setUpTest()
 		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 		defer cleanup()
 
@@ -372,8 +372,8 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 }
 
 func TestSnapshotOmitsUnameGname(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
-	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+	_, snapshotter, cleanup, err := setUpTest()
+
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
