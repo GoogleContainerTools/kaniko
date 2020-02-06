@@ -28,6 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -38,13 +39,12 @@ import (
 )
 
 var (
-	opts     = &config.KanikoOptions{}
-	logLevel string
-	force    bool
+	opts  = &config.KanikoOptions{}
+	force bool
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	logging.AddFlags(RootCmd.PersistentFlags())
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
@@ -56,7 +56,7 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
-			if err := util.ConfigureLogging(logLevel); err != nil {
+			if err := logging.Configure(); err != nil {
 				return err
 			}
 			if !opts.NoPush && len(opts.Destinations) == 0 {
