@@ -102,8 +102,8 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if util.IsSymlink(fi) {
-			// If file is a symlink, we want to create the same relative symlink
-			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
+			// If file is a symlink, we want to copy the target file to destPath
+			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return err
 			}

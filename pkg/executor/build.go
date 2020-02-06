@@ -575,7 +575,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 		for _, p := range filesToSave {
 			logrus.Infof("Saving file %s for later use", p)
-			util.CopyFileOrSymlink(p, dstDir)
+			if err := util.CopyFileOrSymlink(p, dstDir); err != nil {
+				return nil, err
+			}
 		}
 
 		// Delete the filesystem

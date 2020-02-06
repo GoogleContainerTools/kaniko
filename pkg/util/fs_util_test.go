@@ -835,15 +835,11 @@ func TestCopySymlink(t *testing.T) {
 			if err := os.Symlink(tc.linkTarget, link); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := CopySymlink(link, dest, ""); err != nil {
+			if _, err := CopySymlink(link, dest, "", DoNotChangeUID, DoNotChangeGID); err != nil {
 				t.Fatal(err)
 			}
-			got, err := os.Readlink(dest)
-			if err != nil {
+			if _, err := os.Lstat(dest); err != nil {
 				t.Fatalf("error reading link %s: %s", link, err)
-			}
-			if got != tc.linkTarget {
-				t.Errorf("link target does not match: %s != %s", got, tc.linkTarget)
 			}
 		})
 	}

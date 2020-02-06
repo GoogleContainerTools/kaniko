@@ -2,5 +2,13 @@ FROM busybox as t
 RUN echo "hello" > /tmp/target
 RUN ln -s /tmp/target /tmp/link
 
+## Relative link
+RUN cd tmp && ln -s target relative_link
+
+## Relative link with paths
+RUN mkdir workdir && cd workdir && ln -s ../tmp/target relative_dir_link
+
 FROM scratch
-COPY --from=t /tmp/link /tmp
+COPY --from=t /tmp/link /tmp/
+COPY --from=t /tmp/relative_link /tmp/
+COPY --from=t /workdir/relative_dir_link /workdir/
