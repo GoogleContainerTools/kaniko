@@ -95,6 +95,12 @@ export GCS_BUCKET="gs://<your bucket>"
 export IMAGE_REPO="gcr.io/somerepo"
 ```
 
+Login for both user and application credentials
+```shell
+gcloud auth login
+gcloud auth application-default login
+```
+
 Then you can launch integration tests as follows:
 
 ```shell
