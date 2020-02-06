@@ -84,6 +84,11 @@ func (t *Tar) AddFileToTar(p string) error {
 		hdr.Name = p
 	}
 
+  // rootfs may not have been extracted when using cache, preventing uname/gname from resolving
+  // this makes this layer unnecessarily differ from a cached layer which does contain this information
+  hdr.Uname = ""
+  hdr.Gname = ""
+
 	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {
 		hdr.Linkname = linkDst

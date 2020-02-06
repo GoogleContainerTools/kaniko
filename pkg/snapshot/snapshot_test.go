@@ -371,6 +371,36 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 	}
 }
 
+func TestSnapshotOmitsUnameGname(t *testing.T) {
+	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tarPath, err := snapshotter.TakeSnapshotFS()
+
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := tar.NewReader(f)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hdr.Uname != "" || hdr.Gname != "" {
+			t.Fatalf("Expected Uname/Gname for %s to be empty: Uname = '%s', Gname = '%s'", hdr.Name, hdr.Uname, hdr.Gname)
+		}
+	}
+
+}
+
 func setupSymlink(dir string, link string, target string) error {
 	return os.Symlink(target, filepath.Join(dir, link))
 }
