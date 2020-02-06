@@ -28,24 +28,9 @@ import (
 	"syscall"
 
 	"github.com/minio/highwayhash"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
-
-// ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
-func ConfigureLogging(logLevel string) error {
-	lvl, err := logrus.ParseLevel(logLevel)
-	if err != nil {
-		return errors.Wrap(err, "parsing log level")
-	}
-	logrus.SetLevel(lvl)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		ForceColors: true,
-	})
-	return nil
-}
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
 func Hasher() func(string) (string, error) {

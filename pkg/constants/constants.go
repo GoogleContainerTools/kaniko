@@ -17,9 +17,6 @@ limitations under the License.
 package constants
 
 const (
-	// DefaultLogLevel is the default log level
-	DefaultLogLevel = "info"
-
 	// RootDir is the path to the root directory
 	RootDir = "/"
 
