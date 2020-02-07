@@ -380,6 +380,9 @@ func TestSnapshotOmitsUnameGname(t *testing.T) {
 	}
 
 	tarPath, err := snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	f, err := os.Open(tarPath)
 	if err != nil {
