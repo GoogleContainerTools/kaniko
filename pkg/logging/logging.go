@@ -21,7 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/pflag"
 )
 
 const (
@@ -36,27 +35,16 @@ const (
 	FormatJSON = "json"
 )
 
-var (
-	logLevel  string
-	logFormat string
-)
-
-// AddFlags injects logging-related flags into the given FlagSet
-func AddFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&logLevel, "verbosity", "v", DefaultLevel, "Log level (debug, info, warn, error, fatal, panic")
-	fs.StringVar(&logFormat, "log-format", FormatColor, "Log format (text, color, json)")
-}
-
 // Configure sets the logrus logging level and formatter
-func Configure() error {
-	lvl, err := logrus.ParseLevel(logLevel)
+func Configure(level, format string) error {
+	lvl, err := logrus.ParseLevel(level)
 	if err != nil {
 		return errors.Wrap(err, "parsing log level")
 	}
 	logrus.SetLevel(lvl)
 
 	var formatter logrus.Formatter
-	switch logFormat {
+	switch format {
 	case FormatText:
 		formatter = &logrus.TextFormatter{
 			DisableColors: true,
@@ -68,7 +56,7 @@ func Configure() error {
 	case FormatJSON:
 		formatter = &logrus.JSONFormatter{}
 	default:
-		return fmt.Errorf("not a valid log format: %q. Please specify one of (text, color, json)", logFormat)
+		return fmt.Errorf("not a valid log format: %q. Please specify one of (text, color, json)", format)
 	}
 	logrus.SetFormatter(formatter)
 
