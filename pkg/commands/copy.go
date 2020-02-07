@@ -169,6 +169,7 @@ func (c *CopyCommand) From() string {
 
 type CachingCopyCommand struct {
 	BaseCommand
+	caching
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.CopyCommand
@@ -188,6 +189,13 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	if err != nil {
 		return errors.Wrapf(err, "retrieve image layers")
 	}
+
+	if len(layers) != 1 {
+		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	}
+
+	cr.layer = layers[0]
+	cr.readSuccess = true
 
 	cr.extractedFiles, err = util.GetFSFromLayers(RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
