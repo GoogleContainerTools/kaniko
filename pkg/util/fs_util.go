@@ -32,6 +32,7 @@ import (
 	"time"
 
 	otiai10Cpy "github.com/otiai10/copy"
+	"github.com/syndtr/gocapability/capability"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/docker/docker/builder/dockerignore"
@@ -300,7 +301,8 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 
 		// We set AccessTime because its a required arg but we only care about
 		// ModTime. The file will get accessed again so AccessTime will change.
-		if err := os.Chtimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
+
+		if err := setAccessModTimeIfCapability(path, hdr); err != nil {
 			return err
 		}
 
@@ -829,4 +831,22 @@ func UpdateWhitelist(whitelistVarRun bool) {
 		Path:            "/var/run",
 		PrefixMatchOnly: false,
 	})
+}
+
+func setAccessModTimeIfCapability(path string, hdr *tar.Header) error {
+	if capable := checkCapabilities(); capable {
+		os.Chtimes(path, hdr.AccessTime, hdr.ModTime)
+	}
+	return nil
+}
+
+func checkCapabilities() bool {
+	caps, err := capability.NewPid2(os.Getpid())
+	if err != nil {
+		return false
+	}
+	if err := caps.Load(); err != nil {
+		return false
+	}
+	return caps.Get(capability.EFFECTIVE, capability.CAP_SETFCAP)
 }
