@@ -192,6 +192,27 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 	}
 }
 
+func Test_DoBuild_shouldLoadFileOnce(t *testing.T) {
+	dockerFileParserSave := dockerFileParser
+	numberCalled := 0
+	dockerFileParser = func(opts *config.KanikoOptions) (stages []config.KanikoStage, err error) {
+		numberCalled++
+		return []config.KanikoStage{}, nil
+	}
+	// restore at the end
+	defer func() {
+		dockerFileParser = dockerFileParserSave
+	}()
+
+	if _, err := DoBuild(&config.KanikoOptions{}); err != nil {
+		t.Errorf("got error: %s,", err)
+	}
+
+	if numberCalled != 1 {
+		t.Errorf("Dockerfile parsed %d times. Expected 1", numberCalled)
+	}
+}
+
 func TestCalculateDependencies(t *testing.T) {
 	type args struct {
 		dockerfile string
@@ -323,7 +344,12 @@ COPY --from=stage2 /bar /bat
 				DockerfilePath: f.Name(),
 			}
 
-			got, err := CalculateDependencies(opts)
+			stages, err := dockerfile.Stages(opts)
+			if err != nil {
+				t.Errorf("got error: %s,", err)
+			}
+
+			got, err := calculateDependencies(stages, opts)
 			if err != nil {
 				t.Errorf("got error: %s,", err)
 			}

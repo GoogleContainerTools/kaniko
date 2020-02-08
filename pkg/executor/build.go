@@ -462,14 +462,6 @@ func (s *stageBuilder) saveLayerToImage(layer v1.Layer, createdBy string) error 
 	return err
 }
 
-func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error) {
-	stages, err := dockerfile.Stages(opts)
-	if err != nil {
-		return nil, err
-	}
-	return calculateDependencies(stages, opts)
-}
-
 func calculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions) (map[int][]string, error) {
 	images := []v1.Image{}
 	depGraph := map[int][]string{}
@@ -528,6 +520,8 @@ func calculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 	return depGraph, nil
 }
 
+var dockerFileParser func(*config.KanikoOptions) ([]config.KanikoStage, error) = dockerfile.Stages
+
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
@@ -535,7 +529,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	stageIdxToDigest := make(map[string]string)
 
 	// Parse dockerfile
-	stages, err := dockerfile.Stages(opts)
+	stages, err := dockerFileParser(opts)
 	if err != nil {
 		return nil, err
 	}
