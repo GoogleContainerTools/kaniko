@@ -255,5 +255,10 @@ func filesWithLinks(path string) ([]string, error) {
 	if _, err := os.Stat(link); err != nil {
 		return []string{path}, nil
 	}
+
+	if util.CheckWhitelist(link) {
+		return []string{}, nil
+	}
+
 	return []string{path, link}, nil
 }
