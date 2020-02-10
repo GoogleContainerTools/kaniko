@@ -39,13 +39,18 @@ import (
 )
 
 var (
-	opts  = &config.KanikoOptions{}
-	force bool
+	opts      = &config.KanikoOptions{}
+	force     bool
+	logLevel  string
+	logFormat string
 )
 
 func init() {
-	logging.AddFlags(RootCmd.PersistentFlags())
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
+
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
+
 	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
 }
@@ -56,9 +61,11 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
-			if err := logging.Configure(); err != nil {
+
+			if err := logging.Configure(logLevel, logFormat); err != nil {
 				return err
 			}
+
 			if !opts.NoPush && len(opts.Destinations) == 0 {
 				return errors.New("You must provide --destination, or use --no-push")
 			}
