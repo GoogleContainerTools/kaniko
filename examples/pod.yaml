@@ -11,7 +11,7 @@ spec:
             "--destination=<user-name>/<repo>"] # replace with your dockerhub account
     volumeMounts:
       - name: kaniko-secret
-        mountPath: /root
+        mountPath: /kaniko/.docker
       - name: dockerfile-storage
         mountPath: /workspace
   restartPolicy: Never
@@ -21,7 +21,7 @@ spec:
         secretName: regcred
         items:
           - key: .dockerconfigjson
-            path: .docker/config.json
+            path: config.json
     - name: dockerfile-storage
       persistentVolumeClaim:
         claimName: dockerfile-claim
