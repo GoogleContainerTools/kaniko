@@ -42,9 +42,11 @@ import (
 
 var config *integrationTestConfig
 var imageBuilder *DockerFileBuilder
+var allDockerfiles []string
 
 const (
 	daemonPrefix       = "daemon://"
+	integrationPath    = "integration"
 	dockerfilesPath    = "dockerfiles"
 	emptyContainerDiff = `[
      {
@@ -82,7 +84,7 @@ func getDockerMajorVersion() int {
 	}
 	return ver
 }
-func launchTests(m *testing.M, dockerfiles []string) (int, error) {
+func launchTests(m *testing.M) (int, error) {
 
 	if config.isGcrRepository() {
 		contextFile, err := CreateIntegrationTarball()
@@ -104,7 +106,7 @@ func launchTests(m *testing.M, dockerfiles []string) (int, error) {
 	} else {
 		var err error
 		var migratedFiles []string
-		if migratedFiles, err = MigrateGCRRegistry(dockerfilesPath, dockerfiles, config.imageRepo); err != nil {
+		if migratedFiles, err = MigrateGCRRegistry(dockerfilesPath, allDockerfiles, config.imageRepo); err != nil {
 			RollbackMigratedFiles(dockerfilesPath, migratedFiles)
 			return 1, errors.Wrap(err, "Fail to migrate dockerfiles from gcs")
 		}
@@ -115,23 +117,24 @@ func launchTests(m *testing.M, dockerfiles []string) (int, error) {
 		return 1, errors.Wrap(err, "Error while building images")
 	}
 
-	imageBuilder = NewDockerFileBuilder(dockerfiles)
+	imageBuilder = NewDockerFileBuilder()
 
 	return m.Run(), nil
 }
 
 func TestMain(m *testing.M) {
+	var err error
 	if !meetsRequirements() {
 		fmt.Println("Missing required tools")
 		os.Exit(1)
 	}
 
-	if dockerfiles, err := FindDockerFiles(dockerfilesPath); err != nil {
+	if allDockerfiles, err = FindDockerFiles(dockerfilesPath); err != nil {
 		fmt.Println("Coudn't create map of dockerfiles", err)
 		os.Exit(1)
 	} else {
 		config = initIntegrationTestConfig()
-		exitCode, err := launchTests(m, dockerfiles)
+		exitCode, err := launchTests(m)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -155,7 +158,7 @@ func buildRequiredImages() error {
 		},
 		{
 			name:    "Building onbuild base image",
-			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", "."},
+			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
 		},
 		{
 			name:    "Pushing onbuild base image",
@@ -163,7 +166,7 @@ func buildRequiredImages() error {
 		},
 		{
 			name:    "Building hardlink base image",
-			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_hardlink_base", "."},
+			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
 		},
 		{
 			name:    "Pushing hardlink base image",
@@ -182,7 +185,7 @@ func buildRequiredImages() error {
 }
 
 func TestRun(t *testing.T) {
-	for dockerfile := range imageBuilder.FilesBuilt {
+	for _, dockerfile := range allDockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
 			t.Parallel()
@@ -194,7 +197,6 @@ func TestRun(t *testing.T) {
 			}
 
 			buildImage(t, dockerfile, imageBuilder)
-			imageBuilder.FilesBuilt[dockerfile] = true
 
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
@@ -238,7 +240,7 @@ func getGitRepo() string {
 
 func TestGitBuildcontext(t *testing.T) {
 	repo := getGitRepo()
-	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_run_2", integrationPath, dockerfilesPath)
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
@@ -285,7 +287,7 @@ func TestLayers(t *testing.T) {
 		"Dockerfile_test_add":     12,
 		"Dockerfile_test_scratch": 3,
 	}
-	for dockerfile := range imageBuilder.FilesBuilt {
+	for _, dockerfile := range allDockerfiles {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
 
@@ -295,7 +297,6 @@ func TestLayers(t *testing.T) {
 			}
 
 			buildImage(t, dockerfile, imageBuilder)
-			imageBuilder.FilesBuilt[dockerfile] = true
 
 			// Pull the kaniko image
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
@@ -313,15 +314,10 @@ func TestLayers(t *testing.T) {
 }
 
 func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
-	if imageBuilder.FilesBuilt[dockerfile] {
-		return
-	}
-
 	if err := imageBuilder.BuildImage(config, dockerfilesPath, dockerfile); err != nil {
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
 	}
-
 	return
 }
 

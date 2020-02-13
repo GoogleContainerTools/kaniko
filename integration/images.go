@@ -152,18 +152,15 @@ func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 // keeps track of which files have been built.
 type DockerFileBuilder struct {
 	// Holds all available docker files and whether or not they've been built
-	FilesBuilt           map[string]bool
+	filesBuilt           map[string]struct{}
 	DockerfilesToIgnore  map[string]struct{}
 	TestCacheDockerfiles map[string]struct{}
 }
 
 // NewDockerFileBuilder will create a DockerFileBuilder initialized with dockerfiles, which
 // it will assume are all as yet unbuilt.
-func NewDockerFileBuilder(dockerfiles []string) *DockerFileBuilder {
-	d := DockerFileBuilder{FilesBuilt: map[string]bool{}}
-	for _, f := range dockerfiles {
-		d.FilesBuilt[f] = false
-	}
+func NewDockerFileBuilder() *DockerFileBuilder {
+	d := DockerFileBuilder{filesBuilt: map[string]struct{}{}}
 	d.DockerfilesToIgnore = map[string]struct{}{
 		// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
 		"Dockerfile_test_user_run": {},
@@ -192,6 +189,9 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
 func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
+	if _, present := d.filesBuilt[dockerfile]; present {
+		return nil
+	}
 	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
@@ -291,7 +291,7 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 		}
 	}
 
-	d.FilesBuilt[dockerfile] = true
+	d.filesBuilt[dockerfile] = struct{}{}
 	return nil
 }
 
