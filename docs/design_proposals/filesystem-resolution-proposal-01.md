@@ -1,0 +1,110 @@
+# Filesystem Resolution 01
+
+* Author(s): cgwippern@google.com
+* Reviewers:
+* Date: 2020-02-12
+* Status: [Reviewed/Cancelled/Under implementation/Complete]
+
+Here is a brief explanation of the Statuses
+
+1. Reviewed: The proposal PR has been accepted, merged and ready for
+   implementation.
+2. Under implementation: An accepted proposal is being implemented by actual work.
+   Note: The design might change in this phase based on issues during
+   implementation.
+3. Cancelled: During or before implementation the proposal was cancelled.
+   It could be due to:
+   * other features added which made the current design proposal obsolete.
+   * No longer a priority.
+4. Complete: This feature/change is implemented.
+
+## Background
+
+Kaniko builds Docker image layers as overlay filesystem layers; specifically it
+creates a tar file which contains the entire content of a given layer in the
+overlay filesystem. Each overlay layer corresponds to one image layer.
+
+Overlay filesystems should only contain the objects changed in each layer;
+meaning that if only one file changes between some layer A and some B, layer B
+would only contain a single file (the one that changed).
+
+To accomplish this, Kaniko walks the entire filesystem to discover every object.
+Some of these objects may actually be a symlink to another object in the
+filesystem; in these cases we must consider both the link and the target object.
+
+Kaniko also maintains a set of whitelisted (aka ignored) filepaths. Any object
+which matches one of these filepaths should be ignored by kaniko.
+
+This results in a 3 dimensional search space
+
+* changed relative to previous layer
+* symlink
+* whitelisted
+
+Kaniko must also track which objects are referred to by multiple stages; this
+functionality is out of scope for this proposal.
+
+This search space is currently managed in an inconsistent and somewhat ad-hoc
+way; code that manages the various search dimensions is spread out and
+duplicated. There are also a number of poorly handled edge cases which continue
+to cause bugs.
+
+The search space dimensions cannot be reduced or substituted.
+
+Currently there are a number of bugs around symlinks incorrectly resolved,
+whitelists not respected, and unchanged files added to layers.
+
+## Design
+
+Resolution of the filesystem and the objects it contains should be handled
+consistently and with a single API.
+
+* Callers of this API should not be concerned with the type of object at a given filepath (e.g. symlink or not).
+* Callers of this API should not be concerned with whether a given path is whitelisted.
+* This API should return a set of filepaths which should be added to the layer
+  without further processing.
+
+The API should take a limited set of arguments
+* The root path in the filesystem
+* The whitelist
+
+The API should return only two arguments
+* A set of filepaths which should be added to the layer without further
+  processing
+* error
+
+### Open Issues/Questions
+
+\<Ignore symlinks targeting whitelisted paths?\>
+
+Resolution: Not Yet Resolved
+
+## Implementation plan
+
+* Write the new API
+* Write tests for the new API
+* Integrate the new API into existing code
+
+## Integration test plan
+
+Add integration tests to the existing suite which cover the known bugs
+
+## Notes
+
+Given some path `/usr/lib/foo` which is a link to `/etc/foo/`
+
+And `/etc/foo` contains `/etc/foo/bar.txt`
+
+Adding a link `/usr/lib/foo/bar.txt` => `/etc/foo/bar.txt` will break the image
+
+In a linux shell this raises an error
+```
+$ ls /usr/lib/bar
+=> /usr/lib/bar/foo.txt
+$ ln -s /usr/lib/bar barlink
+$ ln -s /usr/lib/bar/foo.txt barlink/foo.txt
+=> ERROR
+```
+
+Given some path `/usr/foo/bar` which is a link to `/dev/null`, and `/dev` is
+whitelisted `/dev/null` should not be added to the image.
