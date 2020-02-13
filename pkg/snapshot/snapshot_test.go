@@ -21,14 +21,171 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/snapshot/mock"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 )
+
+func Test_Snapshotter_SnapshotFiles(t *testing.T) {
+	type testcase struct {
+		desc                    string
+		files                   []string
+		expectErr               bool
+		expectedLayeredMap      *LayeredMap
+		expectedWriterFiles     []string
+		expectedWriterWhiteouts []string
+		expectedTarPath         string
+	}
+
+	testCases := []testcase{
+		{
+			desc:               "empty set of files",
+			files:              []string{},
+			expectedLayeredMap: &LayeredMap{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTW := mock.NewMockTarWriter(ctrl)
+
+			if len(tc.files) > 0 {
+				mockTW.EXPECT().WriteToTar(
+					tc.expectedWriterFiles,
+					tc.expectedWriterWhiteouts,
+				)
+			}
+
+			lm := &LayeredMap{}
+			snap := &Snapshotter{
+				tar: mockTW,
+				l:   lm,
+			}
+
+			tarPath, err := snap.SnapshotFiles(tc.files)
+
+			if tc.expectErr {
+			} else {
+				if err != nil {
+					t.Errorf("expected err to be nil but was %s", err)
+				}
+
+				if tarPath != tc.expectedTarPath {
+					t.Errorf("expected tar path to equal %s but was %s",
+						tc.expectedTarPath, tarPath,
+					)
+				}
+
+				if !layeredMapsMatch(snap.l, tc.expectedLayeredMap) {
+					t.Errorf("expected\n%+v\nto equal\n%+v",
+						snap.l, tc.expectedLayeredMap)
+				}
+			}
+		})
+	}
+}
+
+func layeredMapsMatch(a *LayeredMap, b *LayeredMap) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil && b != nil {
+		return false
+	}
+
+	if a != nil && b == nil {
+		return false
+	}
+
+	if a.layers == nil && b.layers != nil {
+		return false
+	}
+
+	if a.layers != nil && b.layers == nil {
+		return false
+	}
+
+	if a.whiteouts == nil && b.whiteouts != nil {
+		return false
+	}
+
+	if a.whiteouts != nil && b.whiteouts == nil {
+		return false
+	}
+
+	if len(a.layers) != len(b.layers) {
+		return false
+	}
+
+	if len(a.whiteouts) != len(b.whiteouts) {
+		return false
+	}
+
+	for i, layer := range a.layers {
+		tcLayer := b.layers[i]
+
+		if len(layer) != len(tcLayer) {
+			return false
+		}
+
+		for key := range layer {
+			if _, ok := tcLayer[key]; !ok {
+				return false
+			}
+		}
+
+		for key, files := range layer {
+			if len(files) != len(tcLayer[key]) {
+				return false
+			}
+
+			for j, file := range files {
+				if !reflect.DeepEqual(file, tcLayer[key][j]) {
+					return false
+				}
+			}
+		}
+	}
+
+	for i, whiteout := range a.whiteouts {
+		tcWhiteout := b.whiteouts[i]
+
+		if len(whiteout) != len(tcWhiteout) {
+			return false
+		}
+
+		for key := range whiteout {
+			if _, ok := tcWhiteout[key]; !ok {
+				return false
+			}
+		}
+
+		for key, files := range whiteout {
+			if len(files) != len(tcWhiteout[key]) {
+				return false
+			}
+
+			for j, file := range files {
+				if !reflect.DeepEqual(file, tcWhiteout[key][j]) {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
+}
 
 func TestSnapshotFSFileChange(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTest()
