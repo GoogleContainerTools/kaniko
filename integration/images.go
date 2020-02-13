@@ -247,6 +247,7 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	if err != nil {
 		return err
 	}
+
 	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
 		benchmarkEnv = "BENCHMARK_FILE=/kaniko/benchmarks/" + dockerfile
 		benchmarkFile := path.Join(benchmarkDir, dockerfile)
@@ -283,11 +284,11 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
-		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
+		return fmt.Errorf("failed to build image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 	if outputCheck := outputChecks[dockerfile]; outputCheck != nil {
 		if err := outputCheck(dockerfile, out); err != nil {
-			return fmt.Errorf("Output check failed for image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
+			return fmt.Errorf("output check failed for image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
 		}
 	}
 
@@ -310,7 +311,7 @@ func populateVolumeCache() error {
 	)
 
 	if _, err := RunCommandWithoutTest(warmerCmd); err != nil {
-		return fmt.Errorf("Failed to warm kaniko cache: %s", err)
+		return fmt.Errorf("failed to warm kaniko cache: %s", err)
 	}
 
 	return nil
@@ -349,7 +350,7 @@ func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cac
 		_, err := RunCommandWithoutTest(kanikoCmd)
 		timing.DefaultRun.Stop(timer)
 		if err != nil {
-			return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
+			return fmt.Errorf("failed to build cached image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
 		}
 	}
 	return nil
@@ -377,7 +378,7 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 	_, err := RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
 	if err != nil {
-		return fmt.Errorf("Failed to build relative path image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
+		return fmt.Errorf("failed to build relative path image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
 	}
 
 	return nil

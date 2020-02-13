@@ -18,9 +18,7 @@ package integration
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -69,19 +67,6 @@ const (
    ]`
 )
 
-func getDockerMajorVersion() int {
-	out, err := exec.Command("docker", "version", "--format", "{{.Server.Version}}").Output()
-	if err != nil {
-		log.Fatal("Error getting docker version of server:", err)
-	}
-	versionArr := strings.Split(string(out), ".")
-
-	ver, err := strconv.Atoi(versionArr[0])
-	if err != nil {
-		log.Fatal("Error getting docker version of server during parsing version string:", err)
-	}
-	return ver
-}
 func launchTests(m *testing.M, dockerfiles []string) (int, error) {
 
 	if config.isGcrRepository() {
@@ -213,27 +198,13 @@ func TestRun(t *testing.T) {
 		})
 	}
 
-	err := logBenchmarks("benchmark")
-	if err != nil {
+	if err := logBenchmarks("benchmark"); err != nil {
 		t.Logf("Failed to create benchmark file: %v", err)
 	}
 }
 
 func getGitRepo() string {
-	var branch, repoSlug string
-	if _, ok := os.LookupEnv("TRAVIS"); ok {
-		if os.Getenv("TRAVIS_PULL_REQUEST") != "false" {
-			branch = os.Getenv("TRAVIS_PULL_REQUEST_BRANCH")
-			repoSlug = os.Getenv("TRAVIS_PULL_REQUEST_SLUG")
-			log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
-		} else {
-			branch = os.Getenv("TRAVIS_BRANCH")
-			repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
-			log.Printf("Travis CI pepo: %s branch: %s\n", repoSlug, branch)
-		}
-		return "github.com/" + repoSlug + "#refs/heads/" + branch
-	}
-	return "github.com/GoogleContainerTools/kaniko"
+	return config.buildInfo.GitRepo()
 }
 
 func TestGitBuildcontext(t *testing.T) {
@@ -563,41 +534,6 @@ type imageDetails struct {
 
 func (i imageDetails) String() string {
 	return fmt.Sprintf("Image: [%s] Digest: [%s] Number of Layers: [%d]", i.name, i.digest, i.numLayers)
-}
-
-func initIntegrationTestConfig() *integrationTestConfig {
-	var c integrationTestConfig
-	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
-	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
-	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
-	flag.Parse()
-
-	if len(c.serviceAccount) > 0 {
-		absPath, err := filepath.Abs("../" + c.serviceAccount)
-		if err != nil {
-			log.Fatalf("Error getting absolute path for service account: %s\n", c.serviceAccount)
-		}
-		if _, err := os.Stat(absPath); os.IsNotExist(err) {
-			log.Fatalf("Service account does not exist: %s\n", absPath)
-		}
-		c.serviceAccount = absPath
-		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", absPath)
-	}
-
-	if c.imageRepo == "" {
-		log.Fatal("You must provide a image repository")
-	}
-
-	if c.isGcrRepository() && c.gcsBucket == "" {
-		log.Fatalf("You must provide a gcs bucket when using a Google Container Registry (\"%s\" was provided)", c.imageRepo)
-	}
-	if !strings.HasSuffix(c.imageRepo, "/") {
-		c.imageRepo = c.imageRepo + "/"
-	}
-	c.dockerMajorVersion = getDockerMajorVersion()
-	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
-	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
-	return &c
 }
 
 func meetsRequirements() bool {
