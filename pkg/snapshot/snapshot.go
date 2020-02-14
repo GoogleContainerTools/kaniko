@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate mockgen -destination ./mock/snapshot.go -package mock github.com/GoogleContainerTools/kaniko/pkg/snapshot TarWriter
-
 package snapshot
 
 import (
@@ -39,15 +37,10 @@ import (
 // For testing
 var snapshotPathPrefix = constants.KanikoDir
 
-type TarWriter interface {
-	WriteToTar(files []string, whiteouts []string) error
-}
-
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
 	l         *LayeredMap
 	directory string
-	tar       TarWriter
 	whitelist []util.WhitelistEntry
 }
 

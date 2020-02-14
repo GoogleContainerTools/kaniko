@@ -38,7 +38,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 		expectedFiles []string
 	}
 
-	validateResults := func(t *testing.T, tc testcase, snap *Snapshotter, files []string, err error) {
+	validateResults := func(t *testing.T, tc testcase, files []string, err error) {
 		if err != nil {
 			t.Errorf("expected err to be nil but was %s", err)
 		}
@@ -124,7 +124,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 
 				files, err := snap.SnapshotFiles(inputFiles)
 
-				validateResults(t, tc, snap, files, err)
+				validateResults(t, tc, files, err)
 			})
 
 			t.Run("some are whitelisted", func(t *testing.T) {
@@ -200,7 +200,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 
 				files, err := snap.SnapshotFiles(inputFiles)
 
-				validateResults(t, tc, snap, files, err)
+				validateResults(t, tc, files, err)
 			})
 		})
 	})
@@ -221,89 +221,9 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 
 			files, err := snap.SnapshotFiles(tc.files)
 
-			validateResults(t, tc, snap, files, err)
+			validateResults(t, tc, files, err)
 		})
 	}
-}
-
-func layeredMapsMatch(a *LayeredMap, b *LayeredMap) bool {
-	if a == nil && b == nil {
-		return true
-	}
-
-	if a == nil && b != nil {
-		return false
-	}
-
-	if a != nil && b == nil {
-		return false
-	}
-
-	if a.layers == nil && b.layers != nil {
-		return false
-	}
-
-	if a.layers != nil && b.layers == nil {
-		return false
-	}
-
-	if a.whiteouts == nil && b.whiteouts != nil {
-		return false
-	}
-
-	if a.whiteouts != nil && b.whiteouts == nil {
-		return false
-	}
-
-	if len(a.layers) != len(b.layers) {
-		return false
-	}
-
-	if len(a.whiteouts) != len(b.whiteouts) {
-		return false
-	}
-
-	for i, layer := range a.layers {
-		tcLayer := b.layers[i]
-
-		if len(layer) != len(tcLayer) {
-			return false
-		}
-
-		for key := range layer {
-			if _, ok := tcLayer[key]; !ok {
-				return false
-			}
-		}
-
-		for key, file := range layer {
-			if !reflect.DeepEqual(file, tcLayer[key]) {
-				return false
-			}
-		}
-	}
-
-	for i, whiteout := range a.whiteouts {
-		tcWhiteout := b.whiteouts[i]
-
-		if len(whiteout) != len(tcWhiteout) {
-			return false
-		}
-
-		for key := range whiteout {
-			if _, ok := tcWhiteout[key]; !ok {
-				return false
-			}
-		}
-
-		for key, file := range whiteout {
-			if !reflect.DeepEqual(file, tcWhiteout[key]) {
-				return false
-			}
-		}
-	}
-
-	return true
 }
 
 func TestSnapshotFSFileChange(t *testing.T) {
