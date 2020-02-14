@@ -46,7 +46,7 @@ functionality is out of scope for this proposal.
 
 This search space is currently managed in an inconsistent and somewhat ad-hoc
 way; code that manages the various search dimensions is spread out and
-duplicated. There are also a number of poorly handled edge cases which continue
+duplicated. There are also a number of edge cases which continue
 to cause bugs.
 
 The search space dimensions cannot be reduced or substituted.
@@ -56,8 +56,32 @@ whitelists not respected, and unchanged files added to layers.
 
 ## Design
 
-Resolution of the filesystem and the objects it contains should be handled
-consistently and with a single API.
+During snapshotting resolution of the filesystem and the objects it contains should be handled
+consistently and with a pair of APIs.
+
+### First API
+The first API will generate a list of filepaths to resolve
+
+The API should take a limited set of arguments
+* A filesystem root
+
+The API should return only two arguments
+* A set of filepaths to resolve
+* error
+
+The API will walk the filesystem similar to how Snapshotting of the full
+filesystem is currently handled.
+
+It will optimize the walk by skipping any whitelisted directories.
+
+It will not resolve symlinks.
+
+### Second API
+The second API will resolve filepaths to be added to the layer
+
+Callers of the first API can pass the output to the second API
+
+Some callers of the second API will not use the first API (e.g. Copy commands)
 
 * Callers of this API should not be concerned with the type of object at a given filepath (e.g. symlink or not).
 * Callers of this API should not be concerned with whether a given path is whitelisted.
@@ -65,7 +89,7 @@ consistently and with a single API.
   without further processing.
 
 The API should take a limited set of arguments
-* The root path in the filesystem
+* A list of absolute filepaths to scan
 * The whitelist
 
 The API should return only two arguments
@@ -73,9 +97,18 @@ The API should return only two arguments
   processing
 * error
 
+The API will iterate over the set of filepaths and for each item
+* check whether it is whitelisted; if it is, skip it
+* check whether it is a symlink; if it is, resolve the link ancestor and the
+  target, add the link ancestor to the output, check whether the target is whitelisted and if
+  not add the target to the output
+
 ### Open Issues/Questions
 
 \<Ignore symlinks targeting whitelisted paths?\>
+
+Given some link `/foo/link/bar` whose target is a whitelisted path such as
+`/var/run`, should `/foo/link/bar` be added to the layer?
 
 Resolution: Not Yet Resolved
 
