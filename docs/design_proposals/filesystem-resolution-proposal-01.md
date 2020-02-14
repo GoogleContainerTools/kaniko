@@ -112,6 +112,30 @@ Given some link `/foo/link/bar` whose target is a whitelisted path such as
 
 Resolution: Not Yet Resolved
 
+\<Adding ancestor directories\>
+
+According to [this comment](https://github.com/GoogleContainerTools/kaniko/blob/1e9f525509d4e6a066a6e07ab9afbef69b3a3b2c/pkg/snapshot/snapshot.go#L193)
+the ancestor directories (parent, grandparent, etc) must also be added to the
+layer to preserve the permissions on those directories. This brings into
+question whether any filtering needs to happen on these ancestors. IIUC the
+current whitelist logic it is possible for `/some/dir` to be whitelisted but not
+`/some/dir/containing-a-file.txt`. If filtering needs to be applied to these
+ancestors does it make most sense to handle this within the proposed filtering
+API?
+
+Resolution: Not Yet Resolved
+
+\<Should the API handle diff'ing files?\>
+
+The proposal currently states that the list of files returned from the API
+should be immediately added to the layer, but this would imply that diff'ing
+existing files, finding newly created files, and handling deleted files would
+have already been done. It may be advantageous to handle these outside of the
+API in order to reduce scope and complexity. If these are handled outside of the
+API how can we decouple and encapsulate these two functions?
+
+Resolution: Not Yet Resolved
+
 ## Implementation plan
 
 * Write the new API
