@@ -1,0 +1,12 @@
+FROM alpine:3.8 AS foo
+RUN mkdir /foo
+WORKDIR /foo
+RUN mkdir some_dir
+RUN touch some_file
+RUN chmod 777 some_dir
+RUN chmod 666 some_file
+RUN ls -l
+
+FROM alpine:3.8
+COPY --from=foo /foo /bar
+RUN ls -l /bar
