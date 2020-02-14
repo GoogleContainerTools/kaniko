@@ -37,12 +37,17 @@ type LayeredMap struct {
 	cacheHasher func(string) (string, error)
 }
 
-func NewLayeredMap(h func(string) (string, error), c func(string) (string, error)) *LayeredMap {
+func NewLayeredMap(
+	hasher func(string) (string, error),
+	cacheHasher func(string) (string, error),
+) *LayeredMap {
 	l := LayeredMap{
-		hasher:      h,
-		cacheHasher: c,
+		hasher:      hasher,
+		cacheHasher: cacheHasher,
 	}
+
 	l.layers = []map[string]string{}
+
 	return &l
 }
 

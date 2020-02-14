@@ -48,6 +48,7 @@ type Snapshotter struct {
 	l         *LayeredMap
 	directory string
 	tar       TarWriter
+	whitelist []util.WhitelistEntry
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
@@ -67,11 +68,60 @@ func (s *Snapshotter) Key() (string, error) {
 }
 
 func (s *Snapshotter) SnapshotFiles(files []string) (tarPath string, err error) {
-	//s.l.Snapshot()
+	s.l.Snapshot()
 
 	if len(files) == 0 {
 		logrus.Info("Nothing to snapshot")
 		return
+	}
+
+	logrus.Info("Taking snapshot of files...")
+	logrus.Debugf("Taking snapshot of files %v", files)
+
+	fileSet := make(map[string]bool)
+
+	for _, f := range files {
+		// If the given path is part of the whitelist ignore it
+		if util.CheckWhitelistEntries(s.whitelist, f) {
+			continue
+		}
+
+		link, e := util.ResolveSymlinkAncestor(f)
+		if err != nil {
+			err = e
+			return
+		}
+
+		fileSet[link] = true
+
+		// If the path is a symlink we need to also consider the target of that
+		// link
+		f, err = filepath.EvalSymlinks(f)
+
+		// If the given path is a symlink and the target is part of the whitelist
+		// ignore the target
+		if util.CheckWhitelistEntries(s.whitelist, f) {
+			continue
+		}
+
+		fileSet[f] = true
+	}
+
+	//// Also add parent directories to keep the permission of them correctly.
+	//filesToAdd := filesWithParentDirs(files)
+	filesToAdd := make([]string, 0, len(fileSet))
+
+	for file := range fileSet {
+		filesToAdd = append(filesToAdd, file)
+	}
+
+	//sort.Strings(filesToAdd)
+
+	// Add files to the layered map
+	for _, file := range filesToAdd {
+		if err := s.l.Add(file); err != nil {
+			return "", fmt.Errorf("unable to add file %s to layered map: %s", file, err)
+		}
 	}
 
 	return

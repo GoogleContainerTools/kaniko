@@ -239,42 +239,7 @@ func (cr *CachingCopyCommand) From() string {
 }
 
 func resolveIfSymlink(destPath string) (string, error) {
-	if !filepath.IsAbs(destPath) {
-		return "", errors.New("dest path must be abs")
-	}
-
-	var nonexistentPaths []string
-
-	newPath := destPath
-	for newPath != "/" {
-		_, err := os.Lstat(newPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				dir, file := filepath.Split(newPath)
-				newPath = filepath.Clean(dir)
-				nonexistentPaths = append(nonexistentPaths, file)
-				continue
-			} else {
-				return "", errors.Wrap(err, "failed to lstat")
-			}
-		}
-
-		newPath, err = filepath.EvalSymlinks(newPath)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to eval symlinks")
-		}
-		break
-	}
-
-	for i := len(nonexistentPaths) - 1; i >= 0; i-- {
-		newPath = filepath.Join(newPath, nonexistentPaths[i])
-	}
-
-	if destPath != newPath {
-		logrus.Tracef("Updating destination path from %v to %v due to symlink", destPath, newPath)
-	}
-
-	return filepath.Clean(newPath), nil
+	return util.ResolveSymlink(destPath)
 }
 
 func copyCmdFilesUsedFromContext(

@@ -366,6 +366,16 @@ func IsInWhitelist(path string) bool {
 	return false
 }
 
+func CheckWhitelistEntries(whitelist []WhitelistEntry, path string) bool {
+	for _, wl := range whitelist {
+		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func CheckWhitelist(path string) bool {
 	for _, wl := range whitelist {
 		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
@@ -829,4 +839,81 @@ func UpdateWhitelist(whitelistVarRun bool) {
 		Path:            "/var/run",
 		PrefixMatchOnly: false,
 	})
+}
+
+func ResolveSymlinkAncestor(path string) (string, error) {
+	if !filepath.IsAbs(path) {
+		return "", errors.New("dest path must be abs")
+	}
+	last := ""
+	newPath := path
+loop:
+	for newPath != "/" {
+		fi, err := os.Lstat(newPath)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to lstat")
+		}
+
+		switch mode := fi.Mode(); {
+		case mode&os.ModeSymlink != 0:
+			fmt.Printf("newPath %s\n", newPath)
+			last = filepath.Base(newPath)
+			newPath = filepath.Dir(newPath)
+		default:
+			fmt.Printf("NOT A LINK %s\n", newPath)
+			target, err := filepath.EvalSymlinks(newPath)
+			if err != nil {
+				return "", err
+			}
+
+			if target != newPath {
+				fmt.Printf("actually it is a link %s\n", newPath)
+				last = filepath.Base(newPath)
+				newPath = filepath.Dir(newPath)
+			} else {
+				break loop
+			}
+		}
+	}
+	fmt.Printf("last %s\n", last)
+	newPath = filepath.Join(newPath, last)
+	return filepath.Clean(newPath), nil
+}
+func ResolveSymlink(path string) (string, error) {
+	if !filepath.IsAbs(path) {
+		return "", errors.New("dest path must be abs")
+	}
+
+	var nonexistentPaths []string
+
+	newPath := path
+	for newPath != "/" {
+		_, err := os.Lstat(newPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				dir, file := filepath.Split(newPath)
+				newPath = filepath.Clean(dir)
+				nonexistentPaths = append(nonexistentPaths, file)
+				continue
+			} else {
+				return "", errors.Wrap(err, "failed to lstat")
+			}
+		}
+
+		newPath, err = filepath.EvalSymlinks(newPath)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to eval symlinks")
+		}
+		break
+	}
+
+	for i := len(nonexistentPaths) - 1; i >= 0; i-- {
+		newPath = filepath.Join(newPath, nonexistentPaths[i])
+	}
+
+	if path != newPath {
+		logrus.Tracef("Updating path from %v to %v due to symlink", path, newPath)
+	}
+
+	return filepath.Clean(newPath), nil
 }

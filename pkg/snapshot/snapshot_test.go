@@ -26,10 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/snapshot/mock"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 )
 
@@ -44,53 +42,223 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 		expectedTarPath         string
 	}
 
+	validateResults := func(t *testing.T, tc testcase, snap *Snapshotter, tarPath string, err error) {
+		if tc.expectErr {
+		} else {
+			if err != nil {
+				t.Errorf("expected err to be nil but was %s", err)
+			}
+
+			if tarPath != tc.expectedTarPath {
+				t.Errorf("expected tar path to equal %s but was %s",
+					tc.expectedTarPath, tarPath,
+				)
+			}
+
+			if !layeredMapsMatch(snap.l, tc.expectedLayeredMap) {
+				t.Errorf("expected\n%+v\nto equal\n%+v",
+					snap.l, tc.expectedLayeredMap)
+			}
+		}
+	}
+
+	t.Run("list of files", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "snapshot-test")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		defer os.RemoveAll(dir)
+
+		files := []string{
+			"/foo/bar.txt",
+			"/baz/boom.txt",
+		}
+
+		hasher := func(x string) (string, error) {
+			return x, nil
+		}
+
+		cacheHasher := func(x string) (string, error) {
+			return x, nil
+		}
+
+		t.Run("all are symlinks", func(t *testing.T) {
+			for _, f := range files {
+				fLink := filepath.Join(dir, "link", f)
+				fTarget := filepath.Join(dir, "target", f)
+
+				if err := os.MkdirAll(filepath.Dir(fTarget), 0777); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := ioutil.WriteFile(fTarget, []byte{}, 0777); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.MkdirAll(filepath.Dir(fLink), 0777); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.Symlink(fTarget, fLink); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			t.Run("none are whitelisted", func(t *testing.T) {
+				tc := testcase{
+					files: files,
+					expectedLayeredMap: &LayeredMap{
+						hasher:      hasher,
+						cacheHasher: cacheHasher,
+						layers:      []map[string]string{},
+						whiteouts: []map[string]string{
+							map[string]string{},
+						},
+					},
+				}
+
+				layer := make(map[string]string)
+				inputFiles := []string{}
+
+				for _, f := range files {
+					link := filepath.Join(dir, "link", f)
+					layer[link] = link
+					inputFiles = append(inputFiles, link)
+
+					target := filepath.Join(dir, "target", f)
+					layer[target] = target
+
+				}
+
+				tc.expectedLayeredMap.layers = append(tc.expectedLayeredMap.layers, layer)
+
+				lm := &LayeredMap{
+					hasher:      hasher,
+					cacheHasher: cacheHasher,
+				}
+
+				snap := &Snapshotter{
+					l: lm,
+				}
+
+				tarPath, err := snap.SnapshotFiles(inputFiles)
+
+				validateResults(t, tc, snap, tarPath, err)
+			})
+
+			t.Run("some are whitelisted", func(t *testing.T) {
+				tc := testcase{
+					expectedLayeredMap: &LayeredMap{
+						hasher:      hasher,
+						cacheHasher: cacheHasher,
+						layers:      []map[string]string{},
+						whiteouts: []map[string]string{
+							map[string]string{},
+						},
+					},
+				}
+
+				whitelist := []util.WhitelistEntry{
+					{
+						Path: filepath.Join(dir, "link", "baz"),
+					},
+					{
+						Path: filepath.Join(dir, "target", "foo"),
+					},
+				}
+
+				layer := make(map[string]string)
+				inputFiles := []string{}
+
+				for _, f := range files {
+					link := filepath.Join(dir, "link", f)
+					inputFiles = append(inputFiles, link)
+
+					if util.CheckWhitelistEntries(whitelist, link) {
+						t.Logf("skipping %s", link)
+						continue
+					}
+
+					layer[link] = link
+
+					target := filepath.Join(dir, "target", f)
+
+					if util.CheckWhitelistEntries(whitelist, target) {
+						t.Logf("skipping %s", target)
+						continue
+					}
+
+					layer[target] = target
+				}
+
+				link := filepath.Join(dir, "link", "zoom/")
+
+				target := filepath.Join(dir, "target", "zaam/")
+				if err := os.MkdirAll(target, 0777); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := ioutil.WriteFile(filepath.Join(target, "meow.txt"), []byte{}, 0777); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.Symlink(target, link); err != nil {
+					t.Fatal(err)
+				}
+
+				file := filepath.Join(link, "meow.txt")
+				inputFiles = append(inputFiles, file)
+
+				layer[link] = link
+
+				targetFile := filepath.Join(target, "meow.txt")
+				layer[targetFile] = targetFile
+
+				tc.expectedLayeredMap.layers = append(tc.expectedLayeredMap.layers, layer)
+
+				lm := &LayeredMap{
+					hasher:      hasher,
+					cacheHasher: cacheHasher,
+				}
+
+				snap := &Snapshotter{
+					l:         lm,
+					whitelist: whitelist,
+				}
+
+				tarPath, err := snap.SnapshotFiles(inputFiles)
+
+				validateResults(t, tc, snap, tarPath, err)
+			})
+		})
+	})
+
 	testCases := []testcase{
 		{
-			desc:               "empty set of files",
-			files:              []string{},
-			expectedLayeredMap: &LayeredMap{},
+			desc:  "empty set of files",
+			files: []string{},
+			expectedLayeredMap: &LayeredMap{
+				layers: []map[string]string{
+					map[string]string{},
+				},
+				whiteouts: []map[string]string{
+					map[string]string{},
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockTW := mock.NewMockTarWriter(ctrl)
-
-			if len(tc.files) > 0 {
-				mockTW.EXPECT().WriteToTar(
-					tc.expectedWriterFiles,
-					tc.expectedWriterWhiteouts,
-				)
-			}
-
 			lm := &LayeredMap{}
 			snap := &Snapshotter{
-				tar: mockTW,
-				l:   lm,
+				l: lm,
 			}
 
 			tarPath, err := snap.SnapshotFiles(tc.files)
 
-			if tc.expectErr {
-			} else {
-				if err != nil {
-					t.Errorf("expected err to be nil but was %s", err)
-				}
-
-				if tarPath != tc.expectedTarPath {
-					t.Errorf("expected tar path to equal %s but was %s",
-						tc.expectedTarPath, tarPath,
-					)
-				}
-
-				if !layeredMapsMatch(snap.l, tc.expectedLayeredMap) {
-					t.Errorf("expected\n%+v\nto equal\n%+v",
-						snap.l, tc.expectedLayeredMap)
-				}
-			}
+			validateResults(t, tc, snap, tarPath, err)
 		})
 	}
 }
@@ -145,15 +313,9 @@ func layeredMapsMatch(a *LayeredMap, b *LayeredMap) bool {
 			}
 		}
 
-		for key, files := range layer {
-			if len(files) != len(tcLayer[key]) {
+		for key, file := range layer {
+			if !reflect.DeepEqual(file, tcLayer[key]) {
 				return false
-			}
-
-			for j, file := range files {
-				if !reflect.DeepEqual(file, tcLayer[key][j]) {
-					return false
-				}
 			}
 		}
 	}
@@ -171,15 +333,9 @@ func layeredMapsMatch(a *LayeredMap, b *LayeredMap) bool {
 			}
 		}
 
-		for key, files := range whiteout {
-			if len(files) != len(tcWhiteout[key]) {
+		for key, file := range whiteout {
+			if !reflect.DeepEqual(file, tcWhiteout[key]) {
 				return false
-			}
-
-			for j, file := range files {
-				if !reflect.DeepEqual(file, tcWhiteout[key][j]) {
-					return false
-				}
 			}
 		}
 	}
