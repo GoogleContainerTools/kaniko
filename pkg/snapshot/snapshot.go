@@ -203,19 +203,36 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	)
 	timing.DefaultRun.Stop(timer)
 
+	filesToResolve := make([]string, 0, len(memFs))
+	for file := range memFs {
+		filesToResolve = append(filesToResolve, file)
+	}
+
+	resolvedFiles, err := s.SnapshotFiles(filesToResolve)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resolvedMemFs := make(map[string]bool)
+	for _, f := range resolvedFiles {
+		resolvedMemFs[f] = true
+	}
+
 	// First handle whiteouts
 	//   Get a list of all the files that existed before this layer
 	existingPaths := s.l.getFlattenedPathsForWhiteOut()
+
 	//   Find the delta by removing everything left in this layer.
-	for p := range memFs {
+	for p := range resolvedMemFs {
 		delete(existingPaths, p)
 	}
+
 	//   The paths left here are the ones that have been deleted in this layer.
 	filesToWhiteOut := []string{}
 	for path := range existingPaths {
 		// Only add the whiteout if the directory for the file still exists.
 		dir := filepath.Dir(path)
-		if _, ok := memFs[dir]; ok {
+		if _, ok := resolvedMemFs[dir]; ok {
 			if s.l.MaybeAddWhiteout(path) {
 				logrus.Debugf("Adding whiteout for %s", path)
 				filesToWhiteOut = append(filesToWhiteOut, path)
@@ -224,7 +241,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	}
 
 	filesToAdd := []string{}
-	for path := range memFs {
+	for path := range resolvedMemFs {
 		if util.CheckWhitelist(path) {
 			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
 			continue
@@ -235,13 +252,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
 		}
 		if fileChanged {
-			// Get target file for symlinks so the symlink is not a dead link.
-			files, err := filesWithLinks(path)
-			if err != nil {
-				return nil, nil, err
-			}
-			logrus.Tracef("Adding files %s to layer, because it was changed.", files)
-			filesToAdd = append(filesToAdd, files...)
+			logrus.Tracef("Adding file %s to layer, because it was changed.", path)
+			filesToAdd = append(filesToAdd, path)
 		}
 	}
 
