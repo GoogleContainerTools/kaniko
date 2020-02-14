@@ -1,0 +1,4 @@
+FROM ubuntu:16.04
+ARG TEST=undefined
+RUN echo $TEST > log.txt
+ENTRYPOINT ["echo"]
