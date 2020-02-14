@@ -33,32 +33,20 @@ import (
 
 func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 	type testcase struct {
-		desc                    string
-		files                   []string
-		expectErr               bool
-		expectedLayeredMap      *LayeredMap
-		expectedWriterFiles     []string
-		expectedWriterWhiteouts []string
-		expectedTarPath         string
+		desc          string
+		files         []string
+		expectedFiles []string
 	}
 
-	validateResults := func(t *testing.T, tc testcase, snap *Snapshotter, tarPath string, err error) {
-		if tc.expectErr {
-		} else {
-			if err != nil {
-				t.Errorf("expected err to be nil but was %s", err)
-			}
+	validateResults := func(t *testing.T, tc testcase, snap *Snapshotter, files []string, err error) {
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
 
-			if tarPath != tc.expectedTarPath {
-				t.Errorf("expected tar path to equal %s but was %s",
-					tc.expectedTarPath, tarPath,
-				)
-			}
-
-			if !layeredMapsMatch(snap.l, tc.expectedLayeredMap) {
-				t.Errorf("expected\n%+v\nto equal\n%+v",
-					snap.l, tc.expectedLayeredMap)
-			}
+		if !reflect.DeepEqual(files, tc.expectedFiles) {
+			t.Errorf("expected files to equal %s but was %s",
+				tc.expectedFiles, files,
+			)
 		}
 	}
 
@@ -108,30 +96,22 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 			t.Run("none are whitelisted", func(t *testing.T) {
 				tc := testcase{
 					files: files,
-					expectedLayeredMap: &LayeredMap{
-						hasher:      hasher,
-						cacheHasher: cacheHasher,
-						layers:      []map[string]string{},
-						whiteouts: []map[string]string{
-							map[string]string{},
-						},
-					},
 				}
 
-				layer := make(map[string]string)
 				inputFiles := []string{}
+				expectedFiles := []string{}
 
 				for _, f := range files {
 					link := filepath.Join(dir, "link", f)
-					layer[link] = link
+					expectedFiles = append(expectedFiles, link)
 					inputFiles = append(inputFiles, link)
 
 					target := filepath.Join(dir, "target", f)
-					layer[target] = target
+					expectedFiles = append(expectedFiles, target)
 
 				}
 
-				tc.expectedLayeredMap.layers = append(tc.expectedLayeredMap.layers, layer)
+				tc.expectedFiles = expectedFiles
 
 				lm := &LayeredMap{
 					hasher:      hasher,
@@ -142,22 +122,13 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 					l: lm,
 				}
 
-				tarPath, err := snap.SnapshotFiles(inputFiles)
+				files, err := snap.SnapshotFiles(inputFiles)
 
-				validateResults(t, tc, snap, tarPath, err)
+				validateResults(t, tc, snap, files, err)
 			})
 
 			t.Run("some are whitelisted", func(t *testing.T) {
-				tc := testcase{
-					expectedLayeredMap: &LayeredMap{
-						hasher:      hasher,
-						cacheHasher: cacheHasher,
-						layers:      []map[string]string{},
-						whiteouts: []map[string]string{
-							map[string]string{},
-						},
-					},
-				}
+				tc := testcase{}
 
 				whitelist := []util.WhitelistEntry{
 					{
@@ -168,7 +139,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 					},
 				}
 
-				layer := make(map[string]string)
+				expectedFiles := []string{}
 				inputFiles := []string{}
 
 				for _, f := range files {
@@ -180,7 +151,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 						continue
 					}
 
-					layer[link] = link
+					expectedFiles = append(expectedFiles, link)
 
 					target := filepath.Join(dir, "target", f)
 
@@ -189,7 +160,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 						continue
 					}
 
-					layer[target] = target
+					expectedFiles = append(expectedFiles, target)
 				}
 
 				link := filepath.Join(dir, "link", "zoom/")
@@ -210,12 +181,12 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 				file := filepath.Join(link, "meow.txt")
 				inputFiles = append(inputFiles, file)
 
-				layer[link] = link
+				expectedFiles = append(expectedFiles, link)
 
 				targetFile := filepath.Join(target, "meow.txt")
-				layer[targetFile] = targetFile
+				expectedFiles = append(expectedFiles, targetFile)
 
-				tc.expectedLayeredMap.layers = append(tc.expectedLayeredMap.layers, layer)
+				tc.expectedFiles = expectedFiles
 
 				lm := &LayeredMap{
 					hasher:      hasher,
@@ -227,9 +198,9 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 					whitelist: whitelist,
 				}
 
-				tarPath, err := snap.SnapshotFiles(inputFiles)
+				files, err := snap.SnapshotFiles(inputFiles)
 
-				validateResults(t, tc, snap, tarPath, err)
+				validateResults(t, tc, snap, files, err)
 			})
 		})
 	})
@@ -238,14 +209,6 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 		{
 			desc:  "empty set of files",
 			files: []string{},
-			expectedLayeredMap: &LayeredMap{
-				layers: []map[string]string{
-					map[string]string{},
-				},
-				whiteouts: []map[string]string{
-					map[string]string{},
-				},
-			},
 		},
 	}
 
@@ -256,9 +219,9 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 				l: lm,
 			}
 
-			tarPath, err := snap.SnapshotFiles(tc.files)
+			files, err := snap.SnapshotFiles(tc.files)
 
-			validateResults(t, tc, snap, tarPath, err)
+			validateResults(t, tc, snap, files, err)
 		})
 	}
 }

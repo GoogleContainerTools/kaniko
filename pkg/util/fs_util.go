@@ -83,6 +83,10 @@ type FSConfig struct {
 
 type FSOpt func(*FSConfig)
 
+func Whitelist() []WhitelistEntry {
+	return whitelist
+}
+
 func IncludeWhiteout() FSOpt {
 	return func(opts *FSConfig) {
 		opts.includeWhiteout = true
