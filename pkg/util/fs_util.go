@@ -860,18 +860,15 @@ loop:
 
 		switch mode := fi.Mode(); {
 		case mode&os.ModeSymlink != 0:
-			fmt.Printf("newPath %s\n", newPath)
 			last = filepath.Base(newPath)
 			newPath = filepath.Dir(newPath)
 		default:
-			fmt.Printf("NOT A LINK %s\n", newPath)
 			target, err := filepath.EvalSymlinks(newPath)
 			if err != nil {
 				return "", err
 			}
 
 			if target != newPath {
-				fmt.Printf("actually it is a link %s\n", newPath)
 				last = filepath.Base(newPath)
 				newPath = filepath.Dir(newPath)
 			} else {
@@ -879,7 +876,7 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("last %s\n", last)
+
 	newPath = filepath.Join(newPath, last)
 	return filepath.Clean(newPath), nil
 }

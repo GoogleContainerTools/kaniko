@@ -289,12 +289,14 @@ func (s *stageBuilder) build() error {
 
 	// Take initial snapshot
 	t := timing.Start("Initial FS snapshot")
+	logrus.Infof("Init snapshotter")
 	if err := s.snapshotter.Init(); err != nil {
 		return err
 	}
 
 	timing.DefaultRun.Stop(t)
 
+	logrus.Infof("processing commands")
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
 		if command == nil {

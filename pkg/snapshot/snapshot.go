@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
@@ -66,36 +67,51 @@ func (s *Snapshotter) SnapshotFiles(files []string) (filesToAdd []string, err er
 		return
 	}
 
-	logrus.Info("Taking snapshot of files...")
-	logrus.Debugf("Taking snapshot of files %v", files)
+	logrus.Info("Resolving files")
+	//logrus.Debugf("Taking snapshot of files %v", files)
 
 	fileSet := make(map[string]bool)
 
 	for _, f := range files {
 		// If the given path is part of the whitelist ignore it
 		if util.CheckWhitelistEntries(s.whitelist, f) {
+			logrus.Debugf("path %s is whitelisted, ignoring it", f)
 			continue
 		}
 
 		link, e := util.ResolveSymlinkAncestor(f)
 		if err != nil {
-			err = e
-			return
+			return nil, e
 		}
 
+		if f != link {
+			logrus.Tracef("updated link %s to %s", f, link)
+		}
+
+		//logrus.Tracef("add %s to file set", link)
 		fileSet[link] = true
 
 		// If the path is a symlink we need to also consider the target of that
 		// link
-		f, err = filepath.EvalSymlinks(f)
+		evaled, err := filepath.EvalSymlinks(f)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				logrus.Errorf("couldn't eval %s with link %s", f, link)
+				return nil, err
+			}
+
+			logrus.Warnf("path %s, does not exist", f)
+		}
 
 		// If the given path is a symlink and the target is part of the whitelist
 		// ignore the target
-		if util.CheckWhitelistEntries(s.whitelist, f) {
+		if util.CheckWhitelistEntries(s.whitelist, evaled) {
+			logrus.Debugf("path %s is whitelisted, ignoring it", evaled)
 			continue
 		}
 
-		fileSet[f] = true
+		//logrus.Tracef("add %s to file set", evaled)
+		fileSet[evaled] = true
 	}
 
 	filesToAdd = make([]string, 0, len(fileSet))
@@ -205,9 +221,13 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	filesToResolve := make([]string, 0, len(memFs))
 	for file := range memFs {
+		if strings.HasPrefix(file, "/tmp/dir") {
+			logrus.Infof("found %s", file)
+		}
 		filesToResolve = append(filesToResolve, file)
 	}
 
+	//resolvedFiles := filesToResolve
 	resolvedFiles, err := s.SnapshotFiles(filesToResolve)
 	if err != nil {
 		return nil, nil, err
@@ -215,6 +235,9 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	resolvedMemFs := make(map[string]bool)
 	for _, f := range resolvedFiles {
+		if strings.HasPrefix(f, "/tmp/dir") {
+			logrus.Infof("found again %s", f)
+		}
 		resolvedMemFs[f] = true
 	}
 
