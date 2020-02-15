@@ -43,6 +43,10 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 			t.Errorf("expected err to be nil but was %s", err)
 		}
 
+		// Sort so that comparison is against consistent order
+		sort.Strings(files)
+		sort.Strings(tc.expectedFiles)
+
 		if !reflect.DeepEqual(files, tc.expectedFiles) {
 			t.Errorf("expected files to equal %s but was %s",
 				tc.expectedFiles, files,
