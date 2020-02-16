@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -40,6 +41,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const DoNotChangeUID = -1
+const DoNotChangeGID = -1
+
 type WhitelistEntry struct {
 	Path            string
 	PrefixMatchOnly bool
@@ -55,6 +59,12 @@ var initialWhitelist = []WhitelistEntry{
 		// from the base image
 		Path:            "/etc/mtab",
 		PrefixMatchOnly: false,
+	},
+	{
+		// we whitelist /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
+		// from the base image
+		Path:            "/tmp/apt-key-gpghome",
+		PrefixMatchOnly: true,
 	},
 }
 
@@ -297,7 +307,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Tracef("creating dir %s", path)
-		if err := mkdirAllWithPermissions(path, mode, uid, gid); err != nil {
+		if err := mkdirAllWithPermissions(path, mode, int64(uid), int64(gid)); err != nil {
 			return err
 		}
 
@@ -532,9 +542,21 @@ func DownloadFileToDest(rawurl, dest string) error {
 	return os.Chtimes(dest, mTime, mTime)
 }
 
+// DetermineTargetFileOwnership returns the user provided uid/gid combination.
+// If they are set to -1, the uid/gid from the original file is used.
+func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64) {
+	if uid <= DoNotChangeUID {
+		uid = int64(fi.Sys().(*syscall.Stat_t).Uid)
+	}
+	if gid <= DoNotChangeGID {
+		gid = int64(fi.Sys().(*syscall.Stat_t).Gid)
+	}
+	return uid, gid
+}
+
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest, buildcontext string) ([]string, error) {
+func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, err
@@ -556,20 +578,18 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
-			uid := int(fi.Sys().(*syscall.Stat_t).Uid)
-			gid := int(fi.Sys().(*syscall.Stat_t).Gid)
-
+			uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
 		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
-			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext, uid, gid); err != nil {
 				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if _, err := CopyFile(fullPath, destPath, buildcontext); err != nil {
+			if _, err := CopyFile(fullPath, destPath, buildcontext, uid, gid); err != nil {
 				return nil, err
 			}
 		}
@@ -579,12 +599,12 @@ func CopyDir(src, dest, buildcontext string) ([]string, error) {
 }
 
 // CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest, buildcontext string) (bool, error) {
+func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
-	link, err := os.Readlink(src)
+	link, err := filepath.EvalSymlinks(src)
 	if err != nil {
 		return false, err
 	}
@@ -596,11 +616,11 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 	if err := createParentDirectory(dest); err != nil {
 		return false, err
 	}
-	return false, os.Symlink(link, dest)
+	return CopyFile(link, dest, buildcontext, uid, gid)
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest, buildcontext string) (bool, error) {
+func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
@@ -621,9 +641,8 @@ func CopyFile(src, dest, buildcontext string) (bool, error) {
 		return false, err
 	}
 	defer srcFile.Close()
-	uid := fi.Sys().(*syscall.Stat_t).Uid
-	gid := fi.Sys().(*syscall.Stat_t).Gid
-	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
+	uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
+	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
@@ -663,7 +682,7 @@ func ExcludeFile(path, buildcontext string) bool {
 	return match
 }
 
-// HasFilepathPrefix checks  if the given file path begins with prefix
+// HasFilepathPrefix checks if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	prefix = filepath.Clean(prefix)
 	prefixArray := strings.Split(prefix, "/")
@@ -676,11 +695,15 @@ func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
 	if prefixMatchOnly && len(pathArray) == len(prefixArray) {
 		return false
 	}
+
 	for index := range prefixArray {
-		if prefixArray[index] == pathArray[index] {
-			continue
+		m, err := filepath.Match(prefixArray[index], pathArray[index])
+		if err != nil {
+			return false
 		}
-		return false
+		if !m {
+			return false
+		}
 	}
 	return true
 }
@@ -689,12 +712,15 @@ func Volumes() []string {
 	return volumes
 }
 
-func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int) error {
+func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
 	if err := os.MkdirAll(path, mode); err != nil {
 		return err
 	}
-
-	if err := os.Chown(path, uid, gid); err != nil {
+	if uid > math.MaxUint32 || gid > math.MaxUint32 {
+		// due to https://github.com/golang/go/issues/8537
+		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", math.MaxUint32))
+	}
+	if err := os.Chown(path, int(uid), int(gid)); err != nil {
 		return err
 	}
 	// In some cases, MkdirAll doesn't change the permissions, so run Chmod
@@ -763,11 +789,15 @@ func getSymlink(path string) error {
 func CopyFileOrSymlink(src string, destDir string) error {
 	destFile := filepath.Join(destDir, src)
 	if fi, _ := os.Lstat(src); IsSymlink(fi) {
-		link, err := os.Readlink(src)
+		link, err := EvalSymLink(src)
 		if err != nil {
 			return err
 		}
-		return os.Symlink(link, destFile)
+		linkPath := filepath.Join(destDir, link)
+		if err := createParentDirectory(destFile); err != nil {
+			return err
+		}
+		return os.Symlink(linkPath, destFile)
 	}
 	return otiai10Cpy.Copy(src, destFile)
 }
@@ -791,7 +821,8 @@ func UpdateWhitelist(whitelistVarRun bool) {
 	if !whitelistVarRun {
 		return
 	}
-	whitelist = append(initialWhitelist, WhitelistEntry{
+	logrus.Trace("Adding /var/run to initialWhitelist ")
+	initialWhitelist = append(initialWhitelist, WhitelistEntry{
 		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
 		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 		// in the image with no way to tell if it came from the base image or not.

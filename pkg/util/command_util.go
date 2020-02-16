@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -326,18 +327,38 @@ Loop:
 	return nil
 }
 
-func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
-	// Lookup by username
-	userObj, err := user.Lookup(userStr)
+// Extract user and group id from a string formatted 'user:group'.
+// If fallbackToUID is set, the gid is equal to uid if the group is not specified
+// otherwise gid is set to zero.
+func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+	userAndGroup := strings.Split(userGroupString, ":")
+	userStr := userAndGroup[0]
+	var groupStr string
+	if len(userAndGroup) > 1 {
+		groupStr = userAndGroup[1]
+	}
+
+	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); !ok {
-			return "", "", err
-		}
-		// Lookup by id
-		userObj, err = user.LookupId(userStr)
-		if err != nil {
-			return "", "", err
-		}
+		return 0, 0, err
+	}
+	// uid and gid need to be fit into uint32
+	uid64, err := strconv.ParseUint(uidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+	gid64, err := strconv.ParseUint(gidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+	return uint32(uid64), uint32(gid64), nil
+}
+
+func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (string, string, error) {
+	// Lookup by username
+	userObj, err := Lookup(userStr)
+	if err != nil {
+		return "", "", err
 	}
 
 	// Same dance with groups
@@ -356,10 +377,28 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	}
 
 	uid := userObj.Uid
-	gid := ""
+	gid := "0"
+	if fallbackToUID {
+		gid = userObj.Gid
+	}
 	if group != nil {
 		gid = group.Gid
 	}
 
 	return uid, gid, nil
+}
+
+func Lookup(userStr string) (*user.User, error) {
+	userObj, err := user.Lookup(userStr)
+	if err != nil {
+		if _, ok := err.(user.UnknownUserError); !ok {
+			return nil, err
+		}
+		// Lookup by id
+		userObj, err = user.LookupId(userStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return userObj, nil
 }

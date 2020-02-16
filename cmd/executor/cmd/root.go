@@ -28,6 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -38,14 +39,18 @@ import (
 )
 
 var (
-	opts     = &config.KanikoOptions{}
-	logLevel string
-	force    bool
+	opts      = &config.KanikoOptions{}
+	force     bool
+	logLevel  string
+	logFormat string
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
+
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
+
 	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
 }
@@ -55,9 +60,12 @@ var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
-			if err := util.ConfigureLogging(logLevel); err != nil {
+			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
+
+			if err := logging.Configure(logLevel, logFormat); err != nil {
 				return err
 			}
+
 			if !opts.NoPush && len(opts.Destinations) == 0 {
 				return errors.New("You must provide --destination, or use --no-push")
 			}
@@ -201,10 +209,21 @@ func resolveDockerfilePath() error {
 	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
 }
 
+// resolveEnvironmentBuildArgs replace build args without value by the same named environment variable
+func resolveEnvironmentBuildArgs(arguments []string, resolver func(string) string) {
+	for index, argument := range arguments {
+		i := strings.Index(argument, "=")
+		if i < 0 {
+			value := resolver(argument)
+			arguments[index] = fmt.Sprintf("%s=%s", argument, value)
+		}
+	}
+}
+
 // copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
 // it won't be copied into the image
 func copyDockerfile() error {
-	if _, err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, ""); err != nil {
+	if _, err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, "", util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 		return errors.Wrap(err, "copying dockerfile")
 	}
 	opts.DockerfilePath = constants.DockerfilePath

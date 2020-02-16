@@ -65,6 +65,7 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/dev/pts", false},
 		{"/sys", false},
 		{"/etc/mtab", false},
+		{"/tmp/apt-key-gpghome", true},
 	}
 	actualWhitelist := whitelist
 	sort.Slice(actualWhitelist, func(i, j int) bool {
@@ -257,6 +258,14 @@ func Test_CheckWhitelist(t *testing.T) {
 				whitelist: []WhitelistEntry{{"/foo/bat", false}},
 			},
 			want: false,
+		},
+		{
+			name: "prefix match only ",
+			args: args{
+				path:      "/tmp/apt-key-gpghome.xft/gpg.key",
+				whitelist: []WhitelistEntry{{"/tmp/apt-key-gpghome.*", true}},
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
@@ -826,15 +835,11 @@ func TestCopySymlink(t *testing.T) {
 			if err := os.Symlink(tc.linkTarget, link); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := CopySymlink(link, dest, ""); err != nil {
+			if _, err := CopySymlink(link, dest, "", DoNotChangeUID, DoNotChangeGID); err != nil {
 				t.Fatal(err)
 			}
-			got, err := os.Readlink(dest)
-			if err != nil {
+			if _, err := os.Lstat(dest); err != nil {
 				t.Fatalf("error reading link %s: %s", link, err)
-			}
-			if got != tc.linkTarget {
-				t.Errorf("link target does not match: %s != %s", got, tc.linkTarget)
 			}
 		})
 	}
@@ -954,7 +959,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ignored, err := CopyFile(tempFile, tempFile, "")
+	ignored, err := CopyFile(tempFile, tempFile, "", DoNotChangeUID, DoNotChangeGID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1270,6 +1275,10 @@ func TestUpdateWhitelist(t *testing.T) {
 					Path:            "/var/run",
 					PrefixMatchOnly: false,
 				},
+				{
+					Path:            "/tmp/apt-key-gpghome",
+					PrefixMatchOnly: true,
+				},
 			},
 		},
 		{
@@ -1283,15 +1292,25 @@ func TestUpdateWhitelist(t *testing.T) {
 					Path:            "/etc/mtab",
 					PrefixMatchOnly: false,
 				},
+				{
+					Path:            "/tmp/apt-key-gpghome",
+					PrefixMatchOnly: true,
+				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			whitelist = initialWhitelist
-			defer func() { whitelist = initialWhitelist }()
+			original := initialWhitelist
+			defer func() { initialWhitelist = original }()
 			UpdateWhitelist(tt.whitelistVarRun)
-			testutil.CheckDeepEqual(t, tt.expected, whitelist)
+			sort.Slice(tt.expected, func(i, j int) bool {
+				return tt.expected[i].Path < tt.expected[j].Path
+			})
+			sort.Slice(initialWhitelist, func(i, j int) bool {
+				return initialWhitelist[i].Path < initialWhitelist[j].Path
+			})
+			testutil.CheckDeepEqual(t, tt.expected, initialWhitelist)
 		})
 	}
 }

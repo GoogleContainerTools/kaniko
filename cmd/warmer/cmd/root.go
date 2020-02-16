@@ -23,19 +23,21 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 var (
-	opts     = &config.WarmerOptions{}
-	logLevel string
+	opts      = &config.WarmerOptions{}
+	logLevel  string
+	logFormat string
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
+
 	addKanikoOptionsFlags()
 	addHiddenFlags()
 }
@@ -43,9 +45,10 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "cache warmer",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := util.ConfigureLogging(logLevel); err != nil {
+		if err := logging.Configure(logLevel, logFormat); err != nil {
 			return err
 		}
+
 		if len(opts.Images) == 0 {
 			return errors.New("You must select at least one image to cache")
 		}

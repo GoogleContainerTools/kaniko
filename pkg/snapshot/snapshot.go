@@ -79,6 +79,8 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	// Also add parent directories to keep the permission of them correctly.
 	filesToAdd := filesWithParentDirs(files)
 
+	sort.Strings(filesToAdd)
+
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
@@ -161,7 +163,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		dir := filepath.Dir(path)
 		if _, ok := memFs[dir]; ok {
 			if s.l.MaybeAddWhiteout(path) {
-				logrus.Infof("Adding whiteout for %s", path)
+				logrus.Debugf("Adding whiteout for %s", path)
 				filesToWhiteOut = append(filesToWhiteOut, path)
 			}
 		}

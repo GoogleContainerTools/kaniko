@@ -32,6 +32,11 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+// for testing
+var (
+	getUIDAndGID = util.GetUIDAndGIDFromString
+)
+
 type CopyCommand struct {
 	BaseCommand
 	cmd           *instructions.CopyCommand
@@ -46,6 +51,11 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+
+	uid, gid, err := getUserGroup(c.cmd.Chown, replacementEnvs)
+	if err != nil {
+		return err
+	}
 
 	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
@@ -80,14 +90,14 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return err
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if util.IsSymlink(fi) {
-			// If file is a symlink, we want to create the same relative symlink
-			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
+			// If file is a symlink, we want to copy the target file to destPath
+			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return err
 			}
@@ -97,7 +107,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext)
+			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return err
 			}
@@ -108,6 +118,21 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 	}
 	return nil
+}
+
+func getUserGroup(chownStr string, env []string) (int64, int64, error) {
+	if chownStr == "" {
+		return util.DoNotChangeUID, util.DoNotChangeGID, nil
+	}
+	chown, err := util.ResolveEnvironmentReplacement(chownStr, env, false)
+	if err != nil {
+		return -1, -1, err
+	}
+	uid32, gid32, err := getUIDAndGID(chown, true)
+	if err != nil {
+		return -1, -1, err
+	}
+	return int64(uid32), int64(gid32), nil
 }
 
 // FilesToSnapshot should return an empty array if still nil; no files were changed
@@ -153,6 +178,7 @@ func (c *CopyCommand) From() string {
 
 type CachingCopyCommand struct {
 	BaseCommand
+	caching
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.CopyCommand
@@ -172,6 +198,13 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	if err != nil {
 		return errors.Wrapf(err, "retrieve image layers")
 	}
+
+	if len(layers) != 1 {
+		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	}
+
+	cr.layer = layers[0]
+	cr.readSuccess = true
 
 	cr.extractedFiles, err = util.GetFSFromLayers(RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
