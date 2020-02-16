@@ -229,7 +229,7 @@ func getGitRepo() string {
 		} else {
 			branch = os.Getenv("TRAVIS_BRANCH")
 			repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
-			log.Printf("Travis CI pepo: %s branch: %s\n", repoSlug, branch)
+			log.Printf("Travis CI repo: %s branch: %s\n", repoSlug, branch)
 		}
 		return "github.com/" + repoSlug + "#refs/heads/" + branch
 	}
@@ -303,7 +303,7 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
-		"--registry-mirror", "gcr.io",
+		"--registry-mirror", "us-mirror.gcr.io",
 		"-c", fmt.Sprintf("git://%s", repo))
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
