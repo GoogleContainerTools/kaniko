@@ -72,6 +72,11 @@ The API should return only two arguments
 * A set of filepaths
 * error or nil
 
+The signature of the API should look similar to
+```
+  ResolveFilePaths(inputPaths []string, whitelist []WhitelistEntry) (resolvedPaths []string, err error)
+```
+
 The API will iterate over the set of filepaths and for each item
 * check whether it is whitelisted; if it is, skip it
 * check whether it is a symlink
