@@ -372,12 +372,19 @@ func IsInWhitelist(path string) bool {
 
 func CheckWhitelistEntries(whitelist []WhitelistEntry, path string) bool {
 	for _, wl := range whitelist {
-		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
+		if !wl.PrefixMatchOnly && path == wl.Path {
 			return true
 		}
 	}
-
 	return false
+	//for _, wl := range whitelist {
+	//        if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
+	//                logrus.Tracef("%s matches whitelist path %s: using PrefixMatchOnly %v", path, wl.Path, wl.PrefixMatchOnly)
+	//                return true
+	//        }
+	//}
+
+	//return false
 }
 
 func CheckWhitelist(path string) bool {
