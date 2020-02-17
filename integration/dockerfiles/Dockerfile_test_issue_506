@@ -1,2 +1,0 @@
-FROM ubuntu:18.04
-RUN mkdir -p /var/run/test-foobar
