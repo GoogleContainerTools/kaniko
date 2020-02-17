@@ -19,4 +19,4 @@ GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
 IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 
 echo "Running integration tests..."
-go test -mod=vendor ./integration/... --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 30m "$@"
+go test -v -mod=vendor ./integration/... --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 30m "$@"
