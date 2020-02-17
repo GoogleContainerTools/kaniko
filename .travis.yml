@@ -8,12 +8,11 @@ go:
 go_import_path: github.com/GoogleContainerTools/kaniko
 jobs:
   include:
-    - name: unit-test
+    - script:
+      - make test
+    - script:
+      - ./travis-integration-suite-setup.sh
+      - ./integration-test.sh -run TestRun
+    - stage: build-images
       script:
-        - make test
-    - name: integration-test
-      before_install:
-        - ./travis-integration-suite-setup.sh
-      script:
-        - ./integration-test.sh -run TestRun
         - make images
