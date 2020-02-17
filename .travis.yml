@@ -13,6 +13,18 @@ jobs:
     - script:
       - ./travis-integration-suite-setup.sh
       - ./integration-test.sh -run TestRun
+    - script:
+      - ./travis-integration-suite-setup.sh
+      - ./integration-test.sh -run TestGitBuildcontext
+    - script:
+      - ./travis-integration-suite-setup.sh
+      - ./integration-test.sh -run TestLayers
+    - script:
+      - ./travis-integration-suite-setup.sh
+      - ./integration-test.sh -run TestCache
+    - script:
+      - ./travis-integration-suite-setup.sh
+      - ./integration-test.sh -run TestRelativePaths
     - stage: build-images
       script:
         - make images
