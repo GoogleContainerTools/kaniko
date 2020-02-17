@@ -87,6 +87,11 @@ The API will iterate over the set of filepaths and for each item
     * check whether the target is whitelisted and if
       not add the target to the output
 
+All ancestors of each filepath will also be added to the list, but the previous
+checks will not be applied to the ancestors. This maintains the current behavior
+which we believe is needed to maintain correct permissions on the ancestor
+directories.
+
 ### Open Issues/Questions
 
 \<Ignore symlinks targeting whitelisted paths?\>
@@ -109,7 +114,9 @@ current whitelist logic it is possible for `/some/dir` to be whitelisted but not
 ancestors does it make most sense to handle this within the proposed filtering
 API?
 
-Resolution: Not Yet Resolved
+Resolution: Resolved
+
+Yes, this should be handled in the API
 
 \<Should the API handle diff'ing files?\>
 
