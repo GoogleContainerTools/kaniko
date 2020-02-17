@@ -355,17 +355,20 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPathWithoutLeadingSlash: "baz2",
 	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		snapshotFiles[dir] = ""
-	}
-	numFiles := 0
+
+	// The parents haven't changed so they shouldn't be in the tar
+	//for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
+	//        snapshotFiles[dir] = ""
+	//}
+
+	foundFiles := []string{}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		t.Logf("Info %s in tar", hdr.Name)
-		numFiles++
+		foundFiles = append(foundFiles, hdr.Name)
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
 		}
@@ -374,8 +377,11 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != len(snapshotFiles) {
-		t.Fatalf("Incorrect number of files were added, expected: 1, got: %v", numFiles)
+	if len(foundFiles) != len(snapshotFiles) {
+		t.Logf("expected\n%v\nto equal\n%v", foundFiles, snapshotFiles)
+		t.Fatalf("Incorrect number of files were added, expected: %d, got: %d",
+			len(snapshotFiles),
+			len(foundFiles))
 	}
 }
 
