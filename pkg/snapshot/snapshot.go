@@ -120,6 +120,9 @@ func (s *Snapshotter) SnapshotFiles(files []string) (filesToAdd []string, err er
 		filesToAdd = append(filesToAdd, file)
 	}
 
+	// Also add parent directories to keep the permission of them correctly.
+	filesToAdd = filesWithParentDirs(filesToAdd)
+
 	return
 }
 
@@ -138,7 +141,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 		return "", nil
 	}
 
-	files, err = s.SnapshotFiles(files)
+	filesToAdd, err := s.SnapshotFiles(files)
 	if err != nil {
 		return "", nil
 	}
@@ -146,8 +149,8 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	logrus.Info("Taking snapshot of files...")
 	logrus.Debugf("Taking snapshot of files %v", files)
 
-	// Also add parent directories to keep the permission of them correctly.
-	filesToAdd := filesWithParentDirs(files)
+	//// Also add parent directories to keep the permission of them correctly.
+	//filesToAdd := filesWithParentDirs(files)
 
 	sort.Strings(filesToAdd)
 
@@ -280,8 +283,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 
-	// Also add parent directories to keep their permissions correctly.
-	filesToAdd = filesWithParentDirs(filesToAdd)
+	//// Also add parent directories to keep their permissions correctly.
+	//filesToAdd = filesWithParentDirs(filesToAdd)
 
 	sort.Strings(filesToAdd)
 	// Add files to the layered map
