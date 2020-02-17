@@ -56,52 +56,31 @@ whitelists not respected, and unchanged files added to layers.
 
 ## Design
 
-During snapshotting resolution of the filesystem and the objects it contains should be handled
-consistently and with a pair of APIs.
-
-### First API
-The first API will generate a list of filepaths to resolve
-
-The API should take a limited set of arguments
-* A filesystem root
-
-The API should return only two arguments
-* A set of filepaths to resolve
-* error
-
-The API will walk the filesystem similar to how Snapshotting of the full
-filesystem is currently handled.
-
-It will optimize the walk by skipping any whitelisted directories.
-
-It will not resolve symlinks.
-
-### Second API
-The second API will resolve filepaths to be added to the layer
-
-Callers of the first API can pass the output to the second API
-
-Some callers of the second API will not use the first API (e.g. Copy commands)
+During snapshotting, filepaths should be resolved using a consitent API which
+takes into account both symlinks and whitelist.
 
 * Callers of this API should not be concerned with the type of object at a given filepath (e.g. symlink or not).
 * Callers of this API should not be concerned with whether a given path is whitelisted.
-* This API should return a set of filepaths which should be added to the layer
-  without further processing.
+* This API should return a set of filepaths which can be checked for changes
+  without further link resolution or whitelist checking.
 
 The API should take a limited set of arguments
 * A list of absolute filepaths to scan
 * The whitelist
 
 The API should return only two arguments
-* A set of filepaths which should be added to the layer without further
-  processing
-* error
+* A set of filepaths
+* error or nil
 
 The API will iterate over the set of filepaths and for each item
 * check whether it is whitelisted; if it is, skip it
-* check whether it is a symlink; if it is, resolve the link ancestor and the
-  target, add the link ancestor to the output, check whether the target is whitelisted and if
-  not add the target to the output
+* check whether it is a symlink
+  * if it is a symlink
+    * resolve the link ancestor (nearest ancestor which is a symlink) and the
+      target
+    * add the link ancestor to the output
+    * check whether the target is whitelisted and if
+      not add the target to the output
 
 ### Open Issues/Questions
 
@@ -110,7 +89,9 @@ The API will iterate over the set of filepaths and for each item
 Given some link `/foo/link/bar` whose target is a whitelisted path such as
 `/var/run`, should `/foo/link/bar` be added to the layer?
 
-Resolution: Not Yet Resolved
+Resolution: Resolved
+
+Yes, it should be added.
 
 \<Adding ancestor directories\>
 
@@ -134,7 +115,9 @@ have already been done. It may be advantageous to handle these outside of the
 API in order to reduce scope and complexity. If these are handled outside of the
 API how can we decouple and encapsulate these two functions?
 
-Resolution: Not Yet Resolved
+Resolution: Resolved
+
+The API will not handle file diffing or whiteouts.
 
 ## Implementation plan
 
