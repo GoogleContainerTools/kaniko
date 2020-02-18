@@ -89,6 +89,10 @@ func (s *Snapshotter) SnapshotFiles(files []string) (filesToAdd []string, err er
 		}
 
 		//logrus.Tracef("add %s to file set", link)
+		if !fileSet[link] {
+			filesToAdd = append(filesToAdd, link)
+		}
+
 		fileSet[link] = true
 
 		// If the path is a symlink we need to also consider the target of that
@@ -111,13 +115,10 @@ func (s *Snapshotter) SnapshotFiles(files []string) (filesToAdd []string, err er
 		}
 
 		//logrus.Tracef("add %s to file set", evaled)
+		if !fileSet[evaled] {
+			filesToAdd = append(filesToAdd, evaled)
+		}
 		fileSet[evaled] = true
-	}
-
-	filesToAdd = make([]string, 0, len(fileSet))
-
-	for file := range fileSet {
-		filesToAdd = append(filesToAdd, file)
 	}
 
 	// Also add parent directories to keep the permission of them correctly.
