@@ -1,0 +1,15 @@
+FROM botpress/server:v12_0_0
+RUN chmod -R gou+rw /botpress
+WORKDIR /botpress
+
+RUN apt-get update \
+&& apt-get -y install curl gnupg \
+&& curl -sL https://deb.nodesource.com/setup_11.x | bash \
+&& apt-get -y install nodejs \
+&& apt-get -y install rsync \
+&& apt-get upgrade -y
+
+RUN cd /botpress && npm install && npm install node-sp-auth --save-dev && npm install sp-request --save-dev && npm install activedirectory --save-dev
+
+EXPOSE 3000-55000
+CMD ["./bp"]

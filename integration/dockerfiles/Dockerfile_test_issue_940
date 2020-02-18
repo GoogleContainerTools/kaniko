@@ -1,0 +1,17 @@
+FROM continuumio/miniconda3:4.7.12
+ENTRYPOINT [ "/bin/bash", "-c" ]
+EXPOSE 5000
+RUN set -x && apt-get update && apt-get install --no-install-recommends --no-install-suggests -y libpq-dev build-essential && rm -rf /var/lib/apt/lists/*
+CMD [ "/bin/bash", "-c" ]
+
+#RUN set -x && \
+#        apt-get update
+
+#RUN set -x && \
+#        apt-get update && \
+#        apt-get install \
+#                --no-install-recommends \
+#                --no-install-suggests \
+#                -y libpq-dev build-essential && \
+#        rm -rf /var/lib/apt/lists/*
+

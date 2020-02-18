@@ -1,0 +1,8 @@
+FROM python:2.7-slim AS base
+
+# Make man page directories so that postgresql-client can install
+RUN apt-get update && apt-get install -y curl
+
+FROM base AS rocksdb-build
+
+RUN curl -o foo.tar.gz https://github.com/facebook/rocksdb/archive/v5.18.3.tar.gz

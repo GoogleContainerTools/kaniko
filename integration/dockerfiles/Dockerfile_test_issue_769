@@ -1,0 +1,5 @@
+FROM google/cloud-sdk:262.0.0-slim
+
+RUN echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/chrome.list && \
+    apt-get update && \
+    apt-get install --no-install-recommends -y --allow-unauthenticated google-chrome-stable
