@@ -112,8 +112,9 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 
 					target := filepath.Join(dir, "target", f)
 					expectedFiles = append(expectedFiles, target)
-
 				}
+
+				expectedFiles = filesWithParentDirs(expectedFiles)
 
 				tc.expectedFiles = expectedFiles
 
@@ -190,6 +191,7 @@ func Test_Snapshotter_SnapshotFiles(t *testing.T) {
 				targetFile := filepath.Join(target, "meow.txt")
 				expectedFiles = append(expectedFiles, targetFile)
 
+				expectedFiles = filesWithParentDirs(expectedFiles)
 				tc.expectedFiles = expectedFiles
 
 				lm := &LayeredMap{
@@ -263,19 +265,24 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(fooPath) {
-		snapshotFiles[dir] = ""
-	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		snapshotFiles[dir] = ""
-	}
-	numFiles := 0
+
+	// Their parents didn't change so they shouldn't be included
+	//for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(fooPath) {
+	//        snapshotFiles[dir] = ""
+	//}
+	//for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
+	//        snapshotFiles[dir] = ""
+	//}
+
+	actualFiles := []string{}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
-		numFiles++
+
+		actualFiles = append(actualFiles, hdr.Name)
+
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
 		}
@@ -284,8 +291,8 @@ func TestSnapshotFSFileChange(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != len(snapshotFiles) {
-		t.Fatalf("Incorrect number of files were added, expected: 2, actual: %v", numFiles)
+	if len(actualFiles) != len(snapshotFiles) {
+		t.Fatalf("Incorrect number of files were added, expected: %d, actual: %d", len(snapshotFiles), len(actualFiles))
 	}
 }
 
