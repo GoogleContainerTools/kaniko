@@ -61,6 +61,10 @@ test: out/executor
 integration-test:
 	@ ./integration-test.sh
 
+.PHONY: integration-test-gh-issues
+integration-test-gh-issues:
+	@ ./integration-test.sh --dockerfilesPath 'dockerfiles-from-gh-issues'
+
 .PHONY: integration-test-run
 integration-test-run:
 	@ ./integration-test.sh -run TestRun

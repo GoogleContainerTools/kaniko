@@ -141,7 +141,7 @@ func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 	var dockerfiles []string
 	for _, dockerfile := range allDockerfiles {
 		// Remove the leading directory from the path
-		dockerfile = dockerfile[len("dockerfiles/"):]
+		dockerfile = dockerfile[len(dockerfilesPath+"/"):]
 		dockerfiles = append(dockerfiles, dockerfile)
 
 	}
@@ -193,6 +193,8 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
 func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
 	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
+	dockerfilesPath = config.dockerfilesPath
+
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 

@@ -24,6 +24,7 @@ type integrationTestConfig struct {
 	onbuildBaseImage   string
 	hardlinkBaseImage  string
 	serviceAccount     string
+	dockerfilesPath    string
 	dockerMajorVersion int
 }
 

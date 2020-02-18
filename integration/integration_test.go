@@ -126,11 +126,12 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if dockerfiles, err := FindDockerFiles(dockerfilesPath); err != nil {
+	config = initIntegrationTestConfig()
+
+	if dockerfiles, err := FindDockerFiles(config.dockerfilesPath); err != nil {
 		fmt.Println("Coudn't create map of dockerfiles", err)
 		os.Exit(1)
 	} else {
-		config = initIntegrationTestConfig()
 		exitCode, err := launchTests(m, dockerfiles)
 		if err != nil {
 			fmt.Println(err)
@@ -570,6 +571,7 @@ func initIntegrationTestConfig() *integrationTestConfig {
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
+	flag.StringVar(&c.dockerfilesPath, "dockerfilesPath", dockerfilesPath, "The path to the dockerfiles to test.")
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {
