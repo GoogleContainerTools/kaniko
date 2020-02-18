@@ -61,6 +61,14 @@ test: out/executor
 integration-test:
 	@ ./integration-test.sh
 
+.PHONY: integration-test-run
+integration-test-run:
+	@ ./integration-test.sh -run TestRun
+
+.PHONY: integration-test-misc
+integration-test-misc:
+	@ ./integration-test.sh -run '(TestGitBuildcontext|TestLayers|TestCache|TestRelativePaths)'
+
 .PHONY: images
 images:
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
