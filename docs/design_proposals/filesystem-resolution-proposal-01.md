@@ -3,20 +3,7 @@
 * Author(s): cgwippern@google.com
 * Reviewers:
 * Date: 2020-02-12
-* Status: [Reviewed/Cancelled/Under implementation/Complete]
-
-Here is a brief explanation of the Statuses
-
-1. Reviewed: The proposal PR has been accepted, merged and ready for
-   implementation.
-2. Under implementation: An accepted proposal is being implemented by actual work.
-   Note: The design might change in this phase based on issues during
-   implementation.
-3. Cancelled: During or before implementation the proposal was cancelled.
-   It could be due to:
-   * other features added which made the current design proposal obsolete.
-   * No longer a priority.
-4. Complete: This feature/change is implemented.
+* Status: Reviewed
 
 ## Background
 
