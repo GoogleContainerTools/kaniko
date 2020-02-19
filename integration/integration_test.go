@@ -229,7 +229,7 @@ func getGitRepo() string {
 		} else {
 			branch = os.Getenv("TRAVIS_BRANCH")
 			repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
-			log.Printf("Travis CI pepo: %s branch: %s\n", repoSlug, branch)
+			log.Printf("Travis CI repo: %s branch: %s\n", repoSlug, branch)
 		}
 		return "github.com/" + repoSlug + "#refs/heads/" + branch
 	}
@@ -259,6 +259,51 @@ func TestGitBuildcontext(t *testing.T) {
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	out, err = RunCommandWithoutTest(kanikoCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+	}
+
+	// container-diff
+	daemonDockerImage := daemonPrefix + dockerImage
+	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
+		daemonDockerImage, kanikoImage,
+		"-q", "--type=file", "--type=metadata", "--json")
+	diff := RunCommand(containerdiffCmd, t)
+	t.Logf("diff = %s", string(diff))
+
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	checkContainerDiffOutput(t, diff, expected)
+}
+
+func TestBuildViaRegistryMirror(t *testing.T) {
+	repo := getGitRepo()
+	dockerfile := "integration/dockerfiles/Dockerfile_registry_mirror"
+
+	// Build with docker
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerCmd := exec.Command("docker",
+		append([]string{"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			repo})...)
+	out, err := RunCommandWithoutTest(dockerCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	}
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"--registry-mirror", "us-mirror.gcr.io",
 		"-c", fmt.Sprintf("git://%s", repo))
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)

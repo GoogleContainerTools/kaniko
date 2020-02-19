@@ -107,11 +107,30 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	}
 
 	registryName := ref.Context().RegistryStr()
-	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
-		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+	var newReg name.Registry
+	toSet := false
+
+	if opts.RegistryMirror != "" && registryName == name.DefaultRegistry {
+		registryName = opts.RegistryMirror
+
+		newReg, err = name.NewRegistry(opts.RegistryMirror, name.StrictValidation)
 		if err != nil {
 			return nil, err
 		}
+
+		toSet = true
+	}
+
+	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
+		newReg, err = name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+		if err != nil {
+			return nil, err
+		}
+
+		toSet = true
+	}
+
+	if toSet {
 		if tag, ok := ref.(name.Tag); ok {
 			tag.Repository.Registry = newReg
 			ref = tag
