@@ -31,11 +31,6 @@ Describe any changes here so maintainer can include it in the release notes, or 
 
 ```
 Examples of user facing changes:
-- Skaffold config changes like
-  e.g. "Add buildArgs to `Kustomize` deployer skaffold config."
-- Bug fixes
-  e.g. "Improve skaffold init behaviour when tags are used in manifests"
-- Any changes in skaffold behavior
-  e.g. "Artiface cachine is turned on by default."
+- kaniko adds a new flag `--registry-repo` to override registry
 
 ```
