@@ -183,3 +183,196 @@ func Test_ResolvePaths(t *testing.T) {
 		validateResults(t, files, expectedFiles, err)
 	})
 }
+
+func Test_resolveSymlinkAncestor(t *testing.T) {
+	setupDirs := func(t *testing.T) (string, string) {
+		testDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		targetDir := filepath.Join(testDir, "bar", "baz")
+
+		if err := os.MkdirAll(targetDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		targetPath := filepath.Join(targetDir, "bam.txt")
+
+		if err := ioutil.WriteFile(targetPath, []byte("meow"), 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		return testDir, targetPath
+	}
+
+	t.Run("path is a symlink", func(t *testing.T) {
+		testDir, targetPath := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		linkDir := filepath.Join(testDir, "foo", "buzz")
+
+		if err := os.MkdirAll(linkDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		linkPath := filepath.Join(linkDir, "zoom.txt")
+
+		if err := os.Symlink(targetPath, linkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		expected := linkPath
+
+		actual, err := resolveSymlinkAncestor(linkPath)
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
+
+		if actual != expected {
+			t.Errorf("expected result to be %s not %s", expected, actual)
+		}
+	})
+
+	t.Run("path is a dead symlink", func(t *testing.T) {
+		testDir, targetPath := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		linkDir := filepath.Join(testDir, "foo", "buzz")
+
+		if err := os.MkdirAll(linkDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		linkPath := filepath.Join(linkDir, "zoom.txt")
+
+		if err := os.Symlink(targetPath, linkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.Remove(targetPath); err != nil {
+			t.Fatal(err)
+		}
+
+		expected := linkPath
+
+		actual, err := resolveSymlinkAncestor(linkPath)
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
+
+		if actual != expected {
+			t.Errorf("expected result to be %s not %s", expected, actual)
+		}
+	})
+
+	t.Run("path is not a symlink", func(t *testing.T) {
+		testDir, targetPath := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		expected := targetPath
+
+		actual, err := resolveSymlinkAncestor(targetPath)
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
+
+		if actual != expected {
+			t.Errorf("expected result to be %s not %s", expected, actual)
+		}
+	})
+
+	t.Run("parent of path is a symlink", func(t *testing.T) {
+		testDir, targetPath := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		targetDir := filepath.Dir(targetPath)
+
+		linkDir := filepath.Join(testDir, "foo")
+
+		if err := os.MkdirAll(linkDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		linkDir = filepath.Join(linkDir, "gaz")
+
+		if err := os.Symlink(targetDir, linkDir); err != nil {
+			t.Fatal(err)
+		}
+
+		linkPath := filepath.Join(linkDir, filepath.Base(targetPath))
+
+		expected := linkDir
+
+		actual, err := resolveSymlinkAncestor(linkPath)
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
+
+		if actual != expected {
+			t.Errorf("expected result to be %s not %s", expected, actual)
+		}
+	})
+
+	t.Run("parent of path is a dead symlink", func(t *testing.T) {
+		testDir, targetPath := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		targetDir := filepath.Dir(targetPath)
+
+		linkDir := filepath.Join(testDir, "foo")
+
+		if err := os.MkdirAll(linkDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		linkDir = filepath.Join(linkDir, "gaz")
+
+		if err := os.Symlink(targetDir, linkDir); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.RemoveAll(targetDir); err != nil {
+			t.Fatal(err)
+		}
+
+		linkPath := filepath.Join(linkDir, filepath.Base(targetPath))
+
+		_, err := resolveSymlinkAncestor(linkPath)
+		if err == nil {
+			t.Error("expected err to not be nil")
+		}
+	})
+
+	t.Run("great grandparent of path is a symlink", func(t *testing.T) {
+		testDir, targetPath := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		targetDir := filepath.Dir(targetPath)
+
+		linkDir := filepath.Join(testDir, "foo")
+
+		if err := os.Symlink(filepath.Dir(targetDir), linkDir); err != nil {
+			t.Fatal(err)
+		}
+
+		linkPath := filepath.Join(
+			linkDir,
+			filepath.Join(
+				filepath.Base(targetDir),
+				filepath.Base(targetPath),
+			),
+		)
+
+		expected := linkDir
+
+		actual, err := resolveSymlinkAncestor(linkPath)
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
+
+		if actual != expected {
+			t.Errorf("expected result to be %s not %s", expected, actual)
+		}
+	})
+}

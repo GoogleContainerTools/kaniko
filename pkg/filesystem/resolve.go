@@ -125,8 +125,10 @@ func resolveSymlinkAncestor(path string) (string, error) {
 	if !filepath.IsAbs(path) {
 		return "", errors.New("dest path must be abs")
 	}
+
 	last := ""
 	newPath := path
+
 loop:
 	for newPath != "/" {
 		fi, err := os.Lstat(newPath)
@@ -134,11 +136,15 @@ loop:
 			return "", errors.Wrap(err, "failed to lstat")
 		}
 
-		switch mode := fi.Mode(); {
-		case mode&os.ModeSymlink != 0:
+		if util.IsSymlink(fi) {
 			last = filepath.Base(newPath)
 			newPath = filepath.Dir(newPath)
-		default:
+		} else {
+			// Even if the filenode pointed to by newPath is a regular file,
+			// one of its ancestors could be a symlink. We call filepath.EvalSymlinks
+			// to test whether there are any links in the path. If the output of
+			// EvalSymlinks is different than the input we know one of the nodes in the
+			// the path is a link.
 			target, err := filepath.EvalSymlinks(newPath)
 			if err != nil {
 				return "", err
