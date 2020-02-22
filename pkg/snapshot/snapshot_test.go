@@ -64,14 +64,6 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		batPath: "baz",
 	}
 
-	// Their parents didn't change so they shouldn't be included
-	//for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(fooPath) {
-	//        snapshotFiles[dir] = ""
-	//}
-	//for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-	//        snapshotFiles[dir] = ""
-	//}
-
 	actualFiles := []string{}
 	for {
 		hdr, err := tr.Next()
@@ -160,11 +152,6 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPathWithoutLeadingSlash: "baz2",
 	}
-
-	// The parents haven't changed so they shouldn't be in the tar
-	//for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-	//        snapshotFiles[dir] = ""
-	//}
 
 	foundFiles := []string{}
 	for {

@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"syscall"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/filesystem"
@@ -136,18 +135,23 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	s.l.Snapshot()
 
 	timer := timing.Start("Walking filesystem")
-	// Save the fs state in a map to iterate over later.
-	memFs := map[string]*godirwalk.Dirent{}
+
+	foundPaths := make([]string, 0)
+
 	godirwalk.Walk(s.directory, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
 			if util.IsInWhitelist(path) {
 				if util.IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a whitelisted directory", path)
+
 					return filepath.SkipDir
 				}
+
 				return nil
 			}
-			memFs[path] = ent
+
+			foundPaths = append(foundPaths, path)
+
 			return nil
 		},
 		Unsorted: true,
@@ -155,24 +159,13 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	)
 	timing.DefaultRun.Stop(timer)
 
-	filesToResolve := make([]string, 0, len(memFs))
-	for file := range memFs {
-		if strings.HasPrefix(file, "/tmp/dir") {
-			logrus.Infof("found %s", file)
-		}
-		filesToResolve = append(filesToResolve, file)
-	}
-
-	resolvedFiles, err := filesystem.ResolvePaths(filesToResolve, s.whitelist)
+	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.whitelist)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	resolvedMemFs := make(map[string]bool)
 	for _, f := range resolvedFiles {
-		if strings.HasPrefix(f, "/tmp/dir") {
-			logrus.Infof("found again %s", f)
-		}
 		resolvedMemFs[f] = true
 	}
 
