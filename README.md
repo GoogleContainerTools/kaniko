@@ -68,6 +68,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--tarPath](#--tarpath)
     - [--verbosity](#--verbosity)
     - [--whitelist-var-run](#--whitelist-var-run)
+    - [--label](#--label)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -520,6 +521,10 @@ Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the lo
 #### --whitelist-var-run
 
 Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
+
+#### --label
+
+Set this flag as `--label key=value` to set some metadata to the final image. This is equivalent as using the `LABEL` within the Dockerfile.
 
 ### Debug Image
 
