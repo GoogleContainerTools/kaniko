@@ -1314,3 +1314,57 @@ func TestUpdateWhitelist(t *testing.T) {
 		})
 	}
 }
+
+func Test_setFileTimes(t *testing.T) {
+	testDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(testDir)
+
+	p := filepath.Join(testDir, "foo.txt")
+
+	if err := ioutil.WriteFile(p, []byte("meow"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	type testcase struct {
+		desc  string
+		path  string
+		aTime time.Time
+		mTime time.Time
+	}
+
+	testCases := []testcase{
+		{
+			desc: "zero for mod and access",
+			path: p,
+		},
+		{
+			desc:  "zero for mod",
+			path:  p,
+			aTime: time.Now(),
+		},
+		{
+			desc:  "zero for access",
+			path:  p,
+			mTime: time.Now(),
+		},
+		{
+			desc:  "both non-zero",
+			path:  p,
+			mTime: time.Now(),
+			aTime: time.Now(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			err := setFileTimes(tc.path, tc.aTime, tc.mTime)
+			if err != nil {
+				t.Errorf("expected err to be nil not %s", err)
+			}
+		})
+	}
+}

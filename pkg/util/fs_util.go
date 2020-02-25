@@ -298,9 +298,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 
-		// We set AccessTime because its a required arg but we only care about
-		// ModTime. The file will get accessed again so AccessTime will change.
-		if err := os.Chtimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
+		if err = setFileTimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
 			return err
 		}
 
@@ -735,6 +733,34 @@ func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
 	// manually set permissions on file, since the default umask (022) will interfere
 	// Must chmod after chown because chown resets the file mode.
 	return os.Chmod(path, mode)
+}
+
+func setFileTimes(path string, aTime, mTime time.Time) error {
+	// The zero value of time.Time is not a valid argument to os.Chtimes as it cannot be
+	// converted into a valid argument to the syscall that os.Chtimes uses. If mTime or
+	// aTime are zero we convert them to the zero value for Unix Epoch.
+	if mTime.IsZero() {
+		logrus.Tracef("mod time for %s is zero, converting to zero for epoch", path)
+		mTime = time.Unix(0, 0)
+	}
+
+	if aTime.IsZero() {
+		logrus.Tracef("access time for %s is zero, converting to zero for epoch", path)
+		aTime = time.Unix(0, 0)
+	}
+
+	// We set AccessTime because its a required arg but we only care about
+	// ModTime. The file will get accessed again so AccessTime will change.
+	if err := os.Chtimes(path, aTime, mTime); err != nil {
+		return errors.Wrapf(
+			err,
+			"couldn't modify times: atime %v mtime %v",
+			aTime,
+			mTime,
+		)
+	}
+
+	return nil
 }
 
 // CreateTargetTarfile creates target tar file for downloading the context file.
