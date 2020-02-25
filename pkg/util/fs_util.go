@@ -83,6 +83,10 @@ type FSConfig struct {
 
 type FSOpt func(*FSConfig)
 
+func Whitelist() []WhitelistEntry {
+	return whitelist
+}
+
 func IncludeWhiteout() FSOpt {
 	return func(opts *FSConfig) {
 		opts.includeWhiteout = true
@@ -356,8 +360,12 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 }
 
 func IsInWhitelist(path string) bool {
-	for _, wl := range whitelist {
-		if !wl.PrefixMatchOnly && path == wl.Path {
+	return IsInProvidedWhitelist(path, whitelist)
+}
+
+func IsInProvidedWhitelist(path string, wl []WhitelistEntry) bool {
+	for _, entry := range wl {
+		if !entry.PrefixMatchOnly && path == entry.Path {
 			return true
 		}
 	}

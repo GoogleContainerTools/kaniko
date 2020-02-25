@@ -1,0 +1,10 @@
+FROM registry.access.redhat.com/ubi7/ubi:7.7-214
+
+# Install GCC, GCC-C++ and make libraries for build environment
+# Then clean caches
+RUN yum --disableplugin=subscription-manager update -y \
+    && yum --disableplugin=subscription-manager install -y \
+        gcc-4.8.5-39.el7 \
+        gcc-c++-4.8.5-39.el7 \
+        make-3.82-24.el7 \
+    && yum --disableplugin=subscription-manager clean all

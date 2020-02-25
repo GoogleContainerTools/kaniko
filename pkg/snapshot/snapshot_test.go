@@ -63,19 +63,16 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(fooPath) {
-		snapshotFiles[dir] = ""
-	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		snapshotFiles[dir] = ""
-	}
-	numFiles := 0
+
+	actualFiles := []string{}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
-		numFiles++
+
+		actualFiles = append(actualFiles, hdr.Name)
+
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
 		}
@@ -84,8 +81,8 @@ func TestSnapshotFSFileChange(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != len(snapshotFiles) {
-		t.Fatalf("Incorrect number of files were added, expected: 2, actual: %v", numFiles)
+	if len(actualFiles) != len(snapshotFiles) {
+		t.Fatalf("Incorrect number of files were added, expected: %d, actual: %d", len(snapshotFiles), len(actualFiles))
 	}
 }
 
@@ -155,17 +152,15 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPathWithoutLeadingSlash: "baz2",
 	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		snapshotFiles[dir] = ""
-	}
-	numFiles := 0
+
+	foundFiles := []string{}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		t.Logf("Info %s in tar", hdr.Name)
-		numFiles++
+		foundFiles = append(foundFiles, hdr.Name)
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
 		}
@@ -174,8 +169,11 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != len(snapshotFiles) {
-		t.Fatalf("Incorrect number of files were added, expected: 1, got: %v", numFiles)
+	if len(foundFiles) != len(snapshotFiles) {
+		t.Logf("expected\n%v\nto equal\n%v", foundFiles, snapshotFiles)
+		t.Fatalf("Incorrect number of files were added, expected: %d, got: %d",
+			len(snapshotFiles),
+			len(foundFiles))
 	}
 }
 
