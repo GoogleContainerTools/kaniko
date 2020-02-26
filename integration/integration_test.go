@@ -630,10 +630,11 @@ func meetsRequirements() bool {
 
 // containerDiff compares the container images image1 and image2.
 func containerDiff(t *testing.T, image1, image2 string, flags ...string) []byte {
+	flags = append([]string{"diff"}, flags...)
 	flags = append(flags, image1, image2,
 		"-q", "--type=file", "--type=metadata", "--json")
 
-	containerdiffCmd := exec.Command("container-diff", "diff", flags...)
+	containerdiffCmd := exec.Command("container-diff", flags...)
 	diff := RunCommand(containerdiffCmd, t)
 	t.Logf("diff = %s", string(diff))
 
