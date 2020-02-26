@@ -42,5 +42,8 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		options.ReferenceName = plumbing.ReferenceName(parts[1])
 	}
 	_, err := git.PlainClone(directory, false, &options)
+	if len(parts) > 2 {
+		directory = directory + parts[2])
+	}
 	return directory, err
 }
