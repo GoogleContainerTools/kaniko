@@ -189,12 +189,17 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
 func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	return d.BuildImageWithContext(config, dockerfilesPath, dockerfile, cwd)
+}
+
+func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig, dockerfilesPath, dockerfile, contextDir string) error {
 	if _, present := d.filesBuilt[dockerfile]; present {
 		return nil
 	}
 	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
-	_, ex, _, _ := runtime.Caller(0)
-	cwd := filepath.Dir(ex)
 
 	fmt.Printf("Building images for Dockerfile %s\n", dockerfile)
 
@@ -210,7 +215,7 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 		append([]string{"build",
 			"-t", dockerImage,
 			"-f", path.Join(dockerfilesPath, dockerfile),
-			"."},
+			contextDir},
 			additionalFlags...)...,
 	)
 	if env, ok := envsMap[dockerfile]; ok {
@@ -261,7 +266,7 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
 	dockerRunFlags := []string{"run", "--net=host",
 		"-e", benchmarkEnv,
-		"-v", cwd + ":/workspace",
+		"-v", contextDir + ":/workspace",
 		"-v", benchmarkDir + ":/kaniko/benchmarks",
 	}
 	if env, ok := envsMap[dockerfile]; ok {
@@ -271,8 +276,14 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
 
+	kanikoDockerfilePath := path.Join(buildContextPath, dockerfilesPath, dockerfile)
+	//if contextDir == dockerfilesPath {
+	//        kanikoDockerfilePath = filepath.Join(buildContextPath, dockerfile)
+	//}
+	kanikoDockerfilePath = dockerfile
+
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
-		"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+		"-f", kanikoDockerfilePath,
 		"-d", kanikoImage, reproducibleFlag,
 		contextFlag, contextPath)
 	dockerRunFlags = append(dockerRunFlags, additionalFlags...)
