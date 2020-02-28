@@ -201,13 +201,7 @@ func TestRun(t *testing.T) {
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 
-			// container-diff
-			daemonDockerImage := daemonPrefix + dockerImage
-			containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-				daemonDockerImage, kanikoImage,
-				"-q", "--type=file", "--type=metadata", "--json")
-			diff := RunCommand(containerdiffCmd, t)
-			t.Logf("diff = %s", string(diff))
+			diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 			checkContainerDiffOutput(t, diff, expected)
@@ -251,7 +245,7 @@ func TestGitBuildcontext(t *testing.T) {
 			repo})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 
 	// Build with kaniko
@@ -267,16 +261,10 @@ func TestGitBuildcontext(t *testing.T) {
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 
-	// container-diff
-	daemonDockerImage := daemonPrefix + dockerImage
-	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-		daemonDockerImage, kanikoImage,
-		"-q", "--type=file", "--type=metadata", "--json")
-	diff := RunCommand(containerdiffCmd, t)
-	t.Logf("diff = %s", string(diff))
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
@@ -295,7 +283,7 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 			repo})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 
 	// Build with kaniko
@@ -312,16 +300,10 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 
-	// container-diff
-	daemonDockerImage := daemonPrefix + dockerImage
-	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-		daemonDockerImage, kanikoImage,
-		"-q", "--type=file", "--type=metadata", "--json")
-	diff := RunCommand(containerdiffCmd, t)
-	t.Logf("diff = %s", string(diff))
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
@@ -387,13 +369,7 @@ func TestCache(t *testing.T) {
 			kanikoVersion0 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 0)
 			kanikoVersion1 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 1)
 
-			// container-diff
-			containerdiffCmd := exec.Command("container-diff", "diff",
-				kanikoVersion0, kanikoVersion1,
-				"-q", "--type=file", "--type=metadata", "--json")
-
-			diff := RunCommand(containerdiffCmd, t)
-			t.Logf("diff = %s", diff)
+			diff := containerDiff(t, kanikoVersion0, kanikoVersion1)
 
 			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
 			checkContainerDiffOutput(t, diff, expected)
@@ -416,13 +392,7 @@ func TestRelativePaths(t *testing.T) {
 		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 
-		// container-diff
-		daemonDockerImage := daemonPrefix + dockerImage
-		containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-			daemonDockerImage, kanikoImage,
-			"-q", "--type=file", "--type=metadata", "--json")
-		diff := RunCommand(containerdiffCmd, t)
-		t.Logf("diff = %s", string(diff))
+		diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 		checkContainerDiffOutput(t, diff, expected)
@@ -652,4 +622,17 @@ func meetsRequirements() bool {
 		}
 	}
 	return hasRequirements
+}
+
+// containerDiff compares the container images image1 and image2.
+func containerDiff(t *testing.T, image1, image2 string, flags ...string) []byte {
+	flags = append([]string{"diff"}, flags...)
+	flags = append(flags, image1, image2,
+		"-q", "--type=file", "--type=metadata", "--json")
+
+	containerdiffCmd := exec.Command("container-diff", flags...)
+	diff := RunCommand(containerdiffCmd, t)
+	t.Logf("diff = %s", string(diff))
+
+	return diff
 }
