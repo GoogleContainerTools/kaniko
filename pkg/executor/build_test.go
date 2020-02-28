@@ -669,6 +669,7 @@ func Test_stageBuilder_build(t *testing.T) {
 				t.Errorf("couldn't create hash %v", err)
 			}
 			command := MockDockerCommand{
+				command:      "meow",
 				contextFiles: []string{filePath},
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{filePath},
@@ -701,6 +702,7 @@ func Test_stageBuilder_build(t *testing.T) {
 				t.Errorf("couldn't create hash %v", err)
 			}
 			command := MockDockerCommand{
+				command:      "meow",
 				contextFiles: []string{filePath},
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{filePath},
