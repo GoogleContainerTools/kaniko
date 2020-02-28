@@ -190,7 +190,8 @@ func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("walking path %s", path))
+			// ignore errors when deleting.
+			return nil
 		}
 
 		if CheckWhitelist(path) {
