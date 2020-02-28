@@ -36,7 +36,8 @@ func (r *ArgCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	buildArgs.AddArg(key, val)
-	return nil
+	newEnvs := []instructions.KeyValuePair{{Key: key, Value: *val}}
+	return util.UpdateConfigEnv(newEnvs, config, config.Env)
 }
 
 func ParseArg(key string, val *string, env []string, ba *dockerfile.BuildArgs) (string, *string, error) {

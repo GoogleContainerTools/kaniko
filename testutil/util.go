@@ -77,3 +77,7 @@ func checkErr(shouldErr bool, err error) error {
 	}
 	return nil
 }
+
+func StringPtr(s string) *string {
+	return &s
+}
