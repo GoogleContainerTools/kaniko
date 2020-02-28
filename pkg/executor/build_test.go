@@ -497,7 +497,8 @@ func Test_stageBuilder_optimize(t *testing.T) {
 			cf := &v1.ConfigFile{}
 			snap := fakeSnapShotter{}
 			lc := &fakeLayerCache{retrieve: tc.retrieve}
-			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc}
+			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc,
+				args: dockerfile.NewBuildArgs([]string{})}
 			ck := CompositeCache{}
 			file, err := ioutil.TempFile("", "foo")
 			if err != nil {
