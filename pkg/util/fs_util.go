@@ -188,7 +188,11 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 // DeleteFilesystem deletes the extracted image file system
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
-	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, _ error) error {
+	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("walking path %s", path))
+		}
+
 		if CheckWhitelist(path) {
 			if !isExist(path) {
 				logrus.Debugf("Path %s whitelisted, but not exists", path)
