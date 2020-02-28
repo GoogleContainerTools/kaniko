@@ -77,6 +77,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
+
 	cmd.Env = addDefaultHOME(userStr, replacementEnvs)
 
 	if err := cmd.Start(); err != nil {
