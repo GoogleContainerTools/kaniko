@@ -517,6 +517,130 @@ func Test_stageBuilder_optimize(t *testing.T) {
 	}
 }
 
+type stageContext struct {
+	command fmt.Stringer
+	args    *dockerfile.BuildArgs
+	env     []string
+}
+
+func newStageContext(command string, args map[string]string, env []string) stageContext {
+	dockerArgs := dockerfile.NewBuildArgs([]string{})
+	for k, v := range args {
+		dockerArgs.AddArg(k, &v)
+	}
+	return stageContext{MockDockerCommand{command: command}, dockerArgs, env}
+}
+
+func Test_stageBuilder_populateCompositeKey(t *testing.T) {
+	testCases := []struct {
+		description string
+		cmd1        stageContext
+		cmd2        stageContext
+		shdEqual    bool
+	}{
+		{
+			description: "cache key for same command, different buildargs, args not used in command",
+			cmd1: newStageContext(
+				"RUN echo const > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=foo1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo const > test",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=bar1"},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with same build args",
+			cmd1: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with same env",
+			cmd1: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=same"},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=same"},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with a build arg values",
+			cmd1: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "bar"},
+				[]string{},
+			),
+		},
+		{
+			description: "cache key for same command with different env values",
+			cmd1: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=2"},
+			),
+		},
+		{
+			description: "cache key for different command same context",
+			cmd1: newStageContext(
+				"RUN echo other > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo another > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			sb := &stageBuilder{opts: &config.KanikoOptions{SrcContext: "workspace"}}
+			ck := CompositeCache{}
+
+			ck1, err := sb.populateCompositeKey(tc.cmd1.command, []string{}, ck, tc.cmd1.args, tc.cmd1.env)
+			if err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+			ck2, err := sb.populateCompositeKey(tc.cmd2.command, []string{}, ck, tc.cmd2.args, tc.cmd2.env)
+			if err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+			key1, key2 := hashCompositeKeys(t, ck1, ck2)
+			if b := key1 == key2; b != tc.shdEqual {
+				t.Errorf("expected keys to be equal as %t but found %t", tc.shdEqual, !tc.shdEqual)
+			}
+		})
+	}
+}
+
 func Test_stageBuilder_build(t *testing.T) {
 	type testcase struct {
 		description       string
@@ -881,7 +1005,7 @@ COPY %s bar.txt
 				cf:          cf,
 				snapshotter: snap,
 				layerCache:  lc,
-				pushCache: func(_ *config.KanikoOptions, cacheKey, _, _ string) error {
+				pushLayerToCache: func(_ *config.KanikoOptions, cacheKey, _, _ string) error {
 					keys = append(keys, cacheKey)
 					return nil
 				},
@@ -992,4 +1116,16 @@ func generateTar(t *testing.T, dir string, fileNames ...string) []byte {
 		}
 	}
 	return buf.Bytes()
+}
+
+func hashCompositeKeys(t *testing.T, ck1 CompositeCache, ck2 CompositeCache) (string, string) {
+	key1, err := ck1.Hash()
+	if err != nil {
+		t.Errorf("could not hash composite key due to %s", err)
+	}
+	key2, err := ck2.Hash()
+	if err != nil {
+		t.Errorf("could not hash composite key due to %s", err)
+	}
+	return key1, key2
 }
