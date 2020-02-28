@@ -450,7 +450,7 @@ For example, to surface the image digest built in a
 this flag should be set to match the image resource `outputImageDir`.
 
 _Note: Depending on the built image, the media type of the image manifest might be either
-`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json``._
+`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json`._
 
 #### --insecure-registry
 
