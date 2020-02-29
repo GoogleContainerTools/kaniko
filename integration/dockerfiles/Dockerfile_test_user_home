@@ -21,7 +21,7 @@ RUN touch $HOME/hello
 
 RUN groupadd testgroup && \
     useradd --create-home --gid testgroup alice \
-    useradd --create-home --home john --gid testgroup bob
+    useradd --create-home --home /home/john --gid testgroup bob
 
 USER alice:testgroup
 
