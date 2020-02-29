@@ -20,13 +20,8 @@ RUN touch $HOME/hello
 # testuser1 with the default home created by useradd.
 
 RUN groupadd testgroup && \
-    useradd --create-home --gid testgroup alice \
-    useradd --create-home --home /home/john --gid testgroup bob
+    useradd --create-home --gid testgroup alice
 
 USER alice:testgroup
-
-RUN touch $HOME/hello
-
-USER bob:testgroup
 
 RUN touch $HOME/hello
