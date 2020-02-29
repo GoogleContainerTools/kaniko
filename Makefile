@@ -53,6 +53,10 @@ out/executor: $(GO_FILES)
 out/warmer: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(WARMER_PACKAGE)
 
+.PHONY: travis-setup
+travis-setup:
+	@ ./travis-setup.sh
+
 .PHONY: test
 test: out/executor
 	@ ./test.sh
@@ -60,6 +64,19 @@ test: out/executor
 .PHONY: integration-test
 integration-test:
 	@ ./integration-test.sh
+
+.PHONY: integration-test-run
+integration-test-run:
+	@ ./integration-test.sh -run "TestRun"
+
+.PHONY: integration-test-layers
+integration-test-layers:
+	@ ./integration-test.sh -run "TestLayers"
+
+.PHONY: integration-test-misc
+integration-test-misc:
+	$(eval RUN_ARG=$(shell ./misc-integration-test.sh))
+	@ ./integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:
