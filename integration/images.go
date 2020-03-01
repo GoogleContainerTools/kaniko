@@ -356,28 +356,45 @@ func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cac
 }
 
 // buildRelativePathsImage builds the images for testing passing relatives paths to Kaniko
-func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, serviceAccount string) error {
+func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, serviceAccount, buildContextPath string) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
-	buildContextPath := "./relative-subdirectory"
-	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
+	dockerImage := GetDockerImage(imageRepo, "test_relative_"+dockerfile)
+	kanikoImage := GetKanikoImage(imageRepo, "test_relative_"+dockerfile)
+
+	dockerCmd := exec.Command("docker",
+		append([]string{"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			"./context"},
+		)...,
+	)
+
+	timer := timing.Start(dockerfile + "_docker")
+	out, err := RunCommandWithoutTest(dockerCmd)
+	timing.DefaultRun.Stop(timer)
+	if err != nil {
+		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	}
 
 	dockerRunFlags := []string{"run", "--net=host", "-v", cwd + ":/workspace"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
-		"--digest-file", "./digest",
 		"-c", buildContextPath)
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
-	timer := timing.Start(dockerfile + "_kaniko_relative_paths")
-	_, err := RunCommandWithoutTest(kanikoCmd)
+	timer = timing.Start(dockerfile + "_kaniko_relative_paths")
+	out, err = RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
+
 	if err != nil {
-		return fmt.Errorf("Failed to build relative path image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
+		return fmt.Errorf(
+			"Failed to build relative path image %s with kaniko command \"%s\": %s\n%s",
+			kanikoImage, kanikoCmd.Args, err, string(out))
 	}
 
 	return nil
