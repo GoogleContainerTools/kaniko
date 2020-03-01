@@ -374,11 +374,17 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	timer := timing.Start(dockerfile + "_kaniko_relative_paths")
-	_, err := RunCommandWithoutTest(kanikoCmd)
+	out, err := RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
+
 	if err != nil {
-		return fmt.Errorf("Failed to build relative path image %s with kaniko command \"%s\": %s", kanikoImage, kanikoCmd.Args, err)
+		return fmt.Errorf(
+			"Failed to build relative path image %s with kaniko command \"%s\": %s\n%s",
+			kanikoImage, kanikoCmd.Args, err, out,
+		)
 	}
+
+	fmt.Println(out)
 
 	return nil
 }

@@ -387,7 +387,11 @@ func TestRelativePaths(t *testing.T) {
 
 	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
 		t.Parallel()
-		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile, config.serviceAccount)
+
+		err := imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile, config.serviceAccount)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
