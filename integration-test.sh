@@ -37,4 +37,4 @@ fi
 echo "Running integration tests..."
 make out/executor
 make out/warmer
-go test ./integration/... -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 30m "$@"
+go test ./integration/... -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 50m "$@"

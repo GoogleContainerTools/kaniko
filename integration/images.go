@@ -189,12 +189,17 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 // The resulting image will be tagged with imageRepo. If the dockerfile will be built with
 // context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
 func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	return d.BuildImageWithContext(config, dockerfilesPath, dockerfile, cwd)
+}
+
+func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig, dockerfilesPath, dockerfile, contextDir string) error {
 	if _, present := d.filesBuilt[dockerfile]; present {
 		return nil
 	}
 	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
-	_, ex, _, _ := runtime.Caller(0)
-	cwd := filepath.Dir(ex)
 
 	fmt.Printf("Building images for Dockerfile %s\n", dockerfile)
 
@@ -203,16 +208,24 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	for _, arg := range argsMap[dockerfile] {
 		buildArgs = append(buildArgs, buildArgFlag, arg)
 	}
+
 	// build docker image
 	additionalFlags := append(buildArgs, additionalDockerFlagsMap[dockerfile]...)
 	dockerImage := strings.ToLower(imageRepo + dockerPrefix + dockerfile)
-	dockerCmd := exec.Command("docker",
-		append([]string{"build",
-			"-t", dockerImage,
-			"-f", path.Join(dockerfilesPath, dockerfile),
-			"."},
-			additionalFlags...)...,
-	)
+
+	dockerArgs := []string{
+		"build",
+		"-t", dockerImage,
+	}
+
+	if dockerfilesPath != "" {
+		dockerArgs = append(dockerArgs, "-f", path.Join(dockerfilesPath, dockerfile))
+	}
+
+	dockerArgs = append(dockerArgs, contextDir)
+	dockerArgs = append(dockerArgs, additionalFlags...)
+
+	dockerCmd := exec.Command("docker", dockerArgs...)
 	if env, ok := envsMap[dockerfile]; ok {
 		dockerCmd.Env = append(dockerCmd.Env, env...)
 	}
@@ -259,20 +272,28 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
+
 	dockerRunFlags := []string{"run", "--net=host",
 		"-e", benchmarkEnv,
-		"-v", cwd + ":/workspace",
+		"-v", contextDir + ":/workspace",
 		"-v", benchmarkDir + ":/kaniko/benchmarks",
 	}
+
 	if env, ok := envsMap[dockerfile]; ok {
 		for _, envVariable := range env {
 			dockerRunFlags = append(dockerRunFlags, "-e", envVariable)
 		}
 	}
+
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
 
+	kanikoDockerfilePath := path.Join(buildContextPath, dockerfilesPath, dockerfile)
+	if dockerfilesPath == "" {
+		kanikoDockerfilePath = path.Join(buildContextPath, "Dockerfile")
+	}
+
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
-		"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+		"-f", kanikoDockerfilePath,
 		"-d", kanikoImage, reproducibleFlag,
 		contextFlag, contextPath)
 	dockerRunFlags = append(dockerRunFlags, additionalFlags...)
@@ -282,9 +303,11 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	timer = timing.Start(dockerfile + "_kaniko")
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
+
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
+
 	if outputCheck := outputChecks[dockerfile]; outputCheck != nil {
 		if err := outputCheck(dockerfile, out); err != nil {
 			return fmt.Errorf("Output check failed for image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
@@ -292,6 +315,7 @@ func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfile
 	}
 
 	d.filesBuilt[dockerfile] = struct{}{}
+
 	return nil
 }
 
