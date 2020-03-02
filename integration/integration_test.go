@@ -383,14 +383,27 @@ func TestCache(t *testing.T) {
 
 func TestRelativePaths(t *testing.T) {
 
-	dockerfile := "Dockerfile_test_copy"
+	dockerfile := "Dockerfile_relative_copy"
 
 	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
 		t.Parallel()
-		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile, config.serviceAccount)
 
-		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
-		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
+		dockerfile = filepath.Join("./dockerfiles", dockerfile)
+
+		contextPath := "./context"
+
+		err := imageBuilder.buildRelativePathsImage(
+			config.imageRepo,
+			dockerfile,
+			config.serviceAccount,
+			contextPath,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dockerImage := GetDockerImage(config.imageRepo, "test_relative_"+dockerfile)
+		kanikoImage := GetKanikoImage(config.imageRepo, "test_relative_"+dockerfile)
 
 		diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
