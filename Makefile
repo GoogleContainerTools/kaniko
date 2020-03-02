@@ -59,7 +59,7 @@ test: out/executor
 
 .PHONY: integration-test
 integration-test:
-	@ ./integration-test.sh
+	@ ./integration-test.sh -parallel 8
 
 .PHONY: images
 images:
