@@ -62,6 +62,9 @@ func setupTestTemp() string {
 	}
 	cperr := filepath.Walk(srcPath,
 		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if path != srcPath {
 				if err != nil {
 					return err
