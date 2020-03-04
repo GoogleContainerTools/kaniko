@@ -47,15 +47,14 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("resolving user %s", userAndGroup[0]))
 	}
-	var groupStr = setGroupDefault(userStr)
+
 	if len(userAndGroup) > 1 {
-		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
+		groupStr, err := util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("resolving group %s", userAndGroup[1]))
 		}
+		userStr = userStr + ":" + groupStr
 	}
-
-	userStr = userStr + ":" + groupStr
 
 	config.User = userStr
 	return nil
@@ -63,13 +62,4 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 func (r *UserCommand) String() string {
 	return r.cmd.String()
-}
-
-func setGroupDefault(userStr string) string {
-	userObj, err := Lookup(userStr)
-	if err != nil {
-		logrus.Debugf("could not lookup user %s. Setting group empty", userStr)
-		return ""
-	}
-	return userObj.Gid
 }
