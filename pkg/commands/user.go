@@ -55,9 +55,8 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 		userStr = userStr + ":" + groupStr
 	}
-	
-	config.User = userStr
 
+	config.User = userStr
 	return nil
 }
 
