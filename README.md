@@ -340,7 +340,7 @@ Create a `config.json` file with your Docker registry url and the previous gener
 
 Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 
-    docker run -ti --rm -v `pwd`:/workspace -v config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
+    docker run -ti --rm -v `pwd`:/workspace -v `pwd`/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
 
 #### Pushing to Amazon ECR
 
