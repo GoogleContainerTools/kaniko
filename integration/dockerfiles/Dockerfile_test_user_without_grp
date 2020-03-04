@@ -17,4 +17,3 @@ RUN groupadd testgroup && \
     useradd --create-home --gid testgroup alice
 
 USER alice
-RUN touch ~/hello
