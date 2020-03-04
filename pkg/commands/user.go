@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -58,16 +57,6 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	}
 	
 	config.User = userStr
-
-	// Remove any HOME environment variable previously set.
-	env := make([]string, 0, len(config.Env))
-	for _, v := range config.Env {
-		if strings.HasPrefix(v, constants.HOME+"=") {
-			continue
-		}
-		env = append(env, v)
-	}
-	config.Env = env
 
 	return nil
 }
