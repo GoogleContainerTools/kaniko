@@ -57,23 +57,23 @@ var userTests = []struct {
 	{
 		user:        "root:root",
 		userObj:     &user.User{Uid: "root", Gid: "some"},
-		expectedUID: "root:root",
+		expectedUID: "root",
 	},
 	{
 		user:        "0:root",
 		userObj:     &user.User{Uid: "0"},
-		expectedUID: "0:root",
+		expectedUID: "0",
 	},
 	{
 		user:        "root:0",
 		userObj:     &user.User{Uid: "root"},
-		expectedUID: "root:0",
+		expectedUID: "root",
 		expectedGID: "f0",
 	},
 	{
 		user:        "0:0",
 		userObj:     &user.User{Uid: "0"},
-		expectedUID: "0:0",
+		expectedUID: "0",
 	},
 	{
 		user:        "$envuser",
@@ -83,12 +83,12 @@ var userTests = []struct {
 	{
 		user:        "root:$envgroup",
 		userObj:     &user.User{Uid: "root"},
-		expectedUID: "root:grp",
+		expectedUID: "root",
 	},
 	{
 		user:        "some:grp",
 		userObj:     &user.User{Uid: "some"},
-		expectedUID: "some:grp",
+		expectedUID: "some",
 	},
 	{
 		user:        "some",
