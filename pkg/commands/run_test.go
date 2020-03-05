@@ -38,7 +38,7 @@ func Test_addDefaultHOME(t *testing.T) {
 		user        string
 		mockUser    *user.User
 		lookupError error
-		mockUserId  *user.User
+		mockUserID  *user.User
 		initial     []string
 		expected    []string
 	}{
@@ -84,7 +84,7 @@ func Test_addDefaultHOME(t *testing.T) {
 			name:        "USER is set using the UID",
 			user:        "newuser",
 			lookupError: errors.New("User not found"),
-			mockUserId: &user.User{
+			mockUserID: &user.User{
 				Username: "user",
 				HomeDir:  "/home/user",
 			},
@@ -114,7 +114,7 @@ func Test_addDefaultHOME(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			userLookup = func(username string) (*user.User, error) { return test.mockUser, test.lookupError }
-			userLookupID = func(username string) (*user.User, error) { return test.mockUserId, nil }
+			userLookupID = func(username string) (*user.User, error) { return test.mockUserID, nil }
 			defer func() {
 				userLookup = user.Lookup
 				userLookupID = user.LookupId
