@@ -41,7 +41,7 @@ type RunCommand struct {
 // for testing
 var (
 	userLookup   = user.Lookup
-	userLookupId = user.LookupId
+	userLookupID = user.LookupId
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -131,7 +131,7 @@ func addDefaultHOME(u string, envs []string) ([]string, error) {
 	// Otherwise the user is set to uid and HOME is /
 	userObj, err := userLookup(u)
 	if err != nil {
-		if uo, e := userLookupId(u); e == nil {
+		if uo, e := userLookupID(u); e == nil {
 			userObj = uo
 		} else {
 			return nil, err

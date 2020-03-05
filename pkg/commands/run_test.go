@@ -114,10 +114,10 @@ func Test_addDefaultHOME(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			userLookup = func(username string) (*user.User, error) { return test.mockUser, test.lookupError }
-			userLookupId = func(username string) (*user.User, error) { return test.mockUserId, nil }
+			userLookupID = func(username string) (*user.User, error) { return test.mockUserId, nil }
 			defer func() {
 				userLookup = user.Lookup
-				userLookupId = user.LookupId
+				userLookupID = user.LookupId
 			}()
 			actual, err := addDefaultHOME(test.user, test.initial)
 			testutil.CheckErrorAndDeepEqual(t, false, err, test.expected, actual)
