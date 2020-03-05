@@ -40,7 +40,8 @@ type RunCommand struct {
 
 // for testing
 var (
-	userLookup = user.Lookup
+	userLookup   = user.Lookup
+	userLookupId = user.LookupId
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -68,18 +69,29 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	var userStr string
+
+	u := config.User
+	userAndGroup := strings.Split(u, ":")
+	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
+	if err != nil {
+		return errors.Wrapf(err, "resolving user %s", userAndGroup[0])
+	}
+
 	// If specified, run the command as a specific user
-	if config.User != "" {
-		userStr = config.User
-		uid, gid, err := util.GetUIDAndGIDFromString(config.User, true)
+	if userStr != "" {
+		uid, gid, err := util.GetUIDAndGIDFromString(userStr, true)
 		if err != nil {
 			return err
 		}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
 
-	cmd.Env = addDefaultHOME(userStr, replacementEnvs)
+	env, err := addDefaultHOME(userStr, replacementEnvs)
+	if err != nil {
+		return errors.Wrap(err, "adding default HOME variable")
+	}
+
+	cmd.Env = env
 
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "starting command")
@@ -102,32 +114,31 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
-func addDefaultHOME(u string, envs []string) []string {
+func addDefaultHOME(u string, envs []string) ([]string, error) {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
-			return envs
+			return envs, nil
 		}
 	}
 
 	// If user isn't set, set default value of HOME
 	if u == "" || u == constants.RootUser {
-		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
+		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue)), nil
 	}
 
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
-	home := "/"
 	userObj, err := userLookup(u)
 	if err == nil {
-		if userObj.HomeDir != "" {
-			home = userObj.HomeDir
+		if uo, e := userLookupId(u); e == nil {
+			userObj = uo
 		} else {
-			home = fmt.Sprintf("/home/%s", userObj.Username)
+			return nil, err
 		}
 	}
 
-	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, home))
+	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, userObj.HomeDir)), nil
 }
 
 // String returns some information about the command for the image config

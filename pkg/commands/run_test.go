@@ -18,6 +18,7 @@ package commands
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -33,11 +34,13 @@ import (
 
 func Test_addDefaultHOME(t *testing.T) {
 	tests := []struct {
-		name     string
-		user     string
-		mockUser *user.User
-		initial  []string
-		expected []string
+		name        string
+		user        string
+		mockUser    *user.User
+		lookupError error
+		mockUserId  *user.User
+		initial     []string
+		expected    []string
 	}{
 		{
 			name: "HOME already set",
@@ -78,31 +81,19 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME not set and user set",
-			user: "www-add",
-			mockUser: &user.User{
-				Username: "www-add",
+			name:        "USER is set using the UID",
+			user:        "newuser",
+			lookupError: errors.New("User not found"),
+			mockUserId: &user.User{
+				Username: "user",
+				HomeDir:  "/home/user",
 			},
 			initial: []string{
 				"PATH=/something/else",
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/home/www-add",
-			},
-		},
-		{
-			name: "HOME not set and user is set",
-			user: "newuser",
-			mockUser: &user.User{
-				Username: "newuser",
-			},
-			initial: []string{
-				"PATH=/something/else",
-			},
-			expected: []string{
-				"PATH=/something/else",
-				"HOME=/home/newuser",
+				"HOME=/home/user",
 			},
 		},
 		{
@@ -122,10 +113,14 @@ func Test_addDefaultHOME(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			userLookup = func(username string) (*user.User, error) { return test.mockUser, nil }
-			defer func() { userLookup = user.Lookup }()
-			actual := addDefaultHOME(test.user, test.initial)
-			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
+			userLookup = func(username string) (*user.User, error) { return test.mockUser, test.lookupError }
+			userLookupId = func(username string) (*user.User, error) { return test.mockUserId, nil }
+			defer func() {
+				userLookup = user.Lookup
+				userLookupId = user.LookupId
+			}()
+			actual, err := addDefaultHOME(test.user, test.initial)
+			testutil.CheckErrorAndDeepEqual(t, false, err, test.expected, actual)
 		})
 	}
 }
