@@ -1004,12 +1004,53 @@ COPY %s bar.txt
 			dir, _ := tempDirAndFile(t)
 
 			ch := NewCompositeCache("")
-			ch.AddKey("RUN anotherValue")
+			ch.AddKey("RUN value")
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
 
+			command := MockDockerCommand{
+				command:      "RUN $arg",
+				contextFiles: []string{},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{},
+				},
+			}
+
+			return testcase{
+				description: "cached run command with same build arg does not push layer",
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: dir}},
+				opts:        &config.KanikoOptions{Cache: true},
+				args: map[string]string{
+					"arg": "value",
+				},
+				// layer key that exists
+				layerCache: &fakeLayerCache{
+					img:         &fakeImage{ImageLayers: []v1.Layer{fakeLayer{}}},
+					keySequence: []string{hash},
+				},
+				expectedCacheKeys: []string{hash},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
+		func() testcase {
+			dir, _ := tempDirAndFile(t)
+
+			ch1 := NewCompositeCache("")
+			ch1.AddKey("RUN value")
+			hash1, err := ch1.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+
+			ch2 := NewCompositeCache("")
+			ch2.AddKey("RUN anotherValue")
+			hash2, err := ch2.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
 			command := MockDockerCommand{
 				command:      "RUN $arg",
 				contextFiles: []string{},
@@ -1025,8 +1066,13 @@ COPY %s bar.txt
 				args: map[string]string{
 					"arg": "anotherValue",
 				},
-				expectedCacheKeys: []string{hash},
-				pushedCacheKeys:   []string{hash},
+				// layer for arg=value already exists
+				layerCache: &fakeLayerCache{
+					img:         &fakeImage{ImageLayers: []v1.Layer{fakeLayer{}}},
+					keySequence: []string{hash1},
+				},
+				expectedCacheKeys: []string{hash2},
+				pushedCacheKeys:   []string{hash2},
 				commands:          []commands.DockerCommand{command},
 				rootDir:           dir,
 			}
