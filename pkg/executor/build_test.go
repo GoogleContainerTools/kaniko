@@ -646,6 +646,7 @@ func Test_stageBuilder_build(t *testing.T) {
 	type testcase struct {
 		description       string
 		opts              *config.KanikoOptions
+		args              map[string]string
 		layerCache        *fakeLayerCache
 		expectedCacheKeys []string
 		pushedCacheKeys   []string
@@ -965,6 +966,71 @@ COPY %s bar.txt
 				commands:          getCommands(dir, cmds),
 			}
 		}(),
+		func() testcase {
+			dir, _ := tempDirAndFile(t)
+			ch := NewCompositeCache("")
+			ch.AddKey("RUN foobar")
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+
+			command := MockDockerCommand{
+				command:      "RUN foobar",
+				contextFiles: []string{},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{},
+				},
+			}
+
+			return testcase{
+				description: "cached run command with no build arg value used uses cached layer and does not push anything",
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: dir}},
+				opts:        &config.KanikoOptions{Cache: true},
+				args: map[string]string{
+					"test": "value",
+				},
+				expectedCacheKeys: []string{hash},
+				commands:          []commands.DockerCommand{command},
+				// layer key needs to be read.
+				layerCache: &fakeLayerCache{
+					img:         &fakeImage{ImageLayers: []v1.Layer{fakeLayer{}}},
+					keySequence: []string{hash},
+				},
+				rootDir: dir,
+			}
+		}(),
+		func() testcase {
+			dir, _ := tempDirAndFile(t)
+
+			ch := NewCompositeCache("")
+			ch.AddKey("RUN anotherValue")
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+
+			command := MockDockerCommand{
+				command:      "RUN $arg",
+				contextFiles: []string{},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{},
+				},
+			}
+
+			return testcase{
+				description: "cached run command with another build arg pushes layer",
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: dir}},
+				opts:        &config.KanikoOptions{Cache: true},
+				args: map[string]string{
+					"arg": "anotherValue",
+				},
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{hash},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
@@ -1002,7 +1068,7 @@ COPY %s bar.txt
 			}
 			keys := []string{}
 			sb := &stageBuilder{
-				args:        &dockerfile.BuildArgs{}, //required or code will panic
+				args:        dockerfile.NewBuildArgs([]string{}), //required or code will panic
 				image:       tc.image,
 				opts:        tc.opts,
 				cf:          cf,
@@ -1014,6 +1080,9 @@ COPY %s bar.txt
 				},
 			}
 			sb.cmds = tc.commands
+			for key, value := range tc.args {
+				sb.args.AddArg(key, &value)
+			}
 			tmp := commands.RootDir
 			if tc.rootDir != "" {
 				commands.RootDir = tc.rootDir
