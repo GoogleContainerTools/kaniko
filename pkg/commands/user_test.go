@@ -55,23 +55,23 @@ var userTests = []struct {
 		expectedUID: "fakeUser",
 	},
 	{
-		user:        "root:root",
+		user:        "root",
 		userObj:     &user.User{Uid: "root", Gid: "some"},
 		expectedUID: "root",
 	},
 	{
-		user:        "0:root",
+		user:        "0",
 		userObj:     &user.User{Uid: "0"},
 		expectedUID: "0",
 	},
 	{
-		user:        "root:0",
+		user:        "root",
 		userObj:     &user.User{Uid: "root"},
 		expectedUID: "root",
 		expectedGID: "f0",
 	},
 	{
-		user:        "0:0",
+		user:        "0",
 		userObj:     &user.User{Uid: "0"},
 		expectedUID: "0",
 	},
@@ -81,12 +81,12 @@ var userTests = []struct {
 		expectedUID: "root",
 	},
 	{
-		user:        "root:$envgroup",
+		user:        "root",
 		userObj:     &user.User{Uid: "root"},
 		expectedUID: "root",
 	},
 	{
-		user:        "some:grp",
+		user:        "some",
 		userObj:     &user.User{Uid: "some"},
 		expectedUID: "some",
 	},

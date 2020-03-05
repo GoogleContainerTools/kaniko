@@ -130,7 +130,7 @@ func addDefaultHOME(u string, envs []string) ([]string, error) {
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
 	userObj, err := userLookup(u)
-	if err == nil {
+	if err != nil {
 		if uo, e := userLookupId(u); e == nil {
 			userObj = uo
 		} else {
