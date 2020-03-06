@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/pkg/errors"
 )
 
 // NewCompositeCache returns an initialized composite cache object.
@@ -58,7 +59,7 @@ func (s *CompositeCache) AddPath(p, context string) error {
 	sha := sha256.New()
 	fi, err := os.Lstat(p)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not add path")
 	}
 
 	if fi.Mode().IsDir() {

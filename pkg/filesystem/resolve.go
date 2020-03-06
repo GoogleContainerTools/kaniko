@@ -127,7 +127,7 @@ func resolveSymlinkAncestor(path string) (string, error) {
 	}
 
 	last := ""
-	newPath := path
+	newPath := filepath.Clean(path)
 
 loop:
 	for newPath != "/" {
@@ -149,7 +149,6 @@ loop:
 			if err != nil {
 				return "", err
 			}
-
 			if target != newPath {
 				last = filepath.Base(newPath)
 				newPath = filepath.Dir(newPath)
@@ -158,7 +157,6 @@ loop:
 			}
 		}
 	}
-
 	newPath = filepath.Join(newPath, last)
 	return filepath.Clean(newPath), nil
 }
