@@ -171,12 +171,12 @@ func DestinationFilepath(src, dest, cwd string) (string, error) {
 	_, srcFileName := filepath.Split(src)
 	newDest := dest
 
-	if IsDestDir(newDest) {
-		newDest = filepath.Join(newDest, srcFileName)
-	}
-
 	if !filepath.IsAbs(newDest) {
 		newDest = filepath.Join(cwd, newDest)
+	}
+
+	if IsDestDir(newDest) {
+		newDest = filepath.Join(newDest, srcFileName)
 	}
 
 	if len(srcFileName) <= 0 && !strings.HasSuffix(newDest, "/") {

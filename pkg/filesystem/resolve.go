@@ -17,6 +17,7 @@ limitations under the License.
 package filesystem
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -126,6 +127,7 @@ func resolveSymlinkAncestor(path string) (string, error) {
 		return "", errors.New("dest path must be abs")
 	}
 
+	fmt.Println(path)
 	last := ""
 	newPath := filepath.Clean(path)
 
@@ -133,7 +135,7 @@ loop:
 	for newPath != "/" {
 		fi, err := os.Lstat(newPath)
 		if err != nil {
-			return "", errors.Wrap(err, "failed to lstat")
+			return "", errors.Wrap(err, "resolvePaths: failed to lstat")
 		}
 
 		if util.IsSymlink(fi) {

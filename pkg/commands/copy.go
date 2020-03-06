@@ -82,14 +82,13 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			return err
 		}
 
-		// If the destination dir is a symlink we need to resolve the path and use
-		// that instead of the symlink path
-		destPath, err = resolveIfSymlink(destPath)
-		if err != nil {
-			return err
-		}
-
 		if fi.IsDir() {
+			// If the destination dir is a symlink we need to resolve the path and use
+			// that instead of the symlink path
+			destPath, err = resolveIfSymlink(destPath)
+			if err != nil {
+				return err
+			}
 			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return err

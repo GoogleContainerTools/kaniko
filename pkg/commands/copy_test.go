@@ -442,3 +442,139 @@ func TestGetUserGroup(t *testing.T) {
 		})
 	}
 }
+
+func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
+		setupDirs := func(t *testing.T) (string, string) {
+			testDir, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			targetDir := filepath.Join(testDir, "bar")
+
+			if err := os.MkdirAll(targetDir, 0777); err != nil {
+				t.Fatal(err)
+			}
+
+			targetPath := filepath.Join(targetDir, "bam.txt")
+
+			if err := ioutil.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
+				t.Fatal(err)
+			}
+
+			return testDir, filepath.Base(targetDir)
+		}
+
+		t.Run("copy dir to another dir", func(t *testing.T) {
+			testDir, targetDir := setupDirs(t)
+			defer os.RemoveAll(testDir)
+
+			cmd := CopyCommand{
+				cmd: &instructions.CopyCommand{
+					SourcesAndDest: []string{targetDir, "dest"},
+				},
+				buildcontext: testDir,
+			}
+
+			cfg := &v1.Config{
+				Cmd:        nil,
+				Env:        []string{},
+				WorkingDir: testDir,
+			}
+
+			err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+			testutil.CheckNoError(t, err)
+		})
+
+	  t.Run("copy file to a dir", func(t *testing.T) {
+		testDir, targetDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{filepath.Join(targetDir, "bam.txt"), "dest/"},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+	})
+
+	t.Run("copy file to a filepath", func(t *testing.T) {
+		testDir, targetDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{filepath.Join(targetDir, "bam.txt"), "dest"},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+	})
+	t.Run("copy file to a dir without trailing /", func(t *testing.T) {
+		testDir, targetDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		destDir := filepath.Join(testDir, "dest")
+		if err := os.MkdirAll(destDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{filepath.Join(targetDir, "bam.txt"), "dest"},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+	})
+	t.Run("copy symlink file to a dir", func(t *testing.T) {
+		testDir, targetDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		another := filepath.Join(testDir, "another")
+		if err := os.MkdirAll(another, 0777); err != nil {
+			t.Fatal(err)
+		}
+		symlink := filepath.Join(another, "sym.link")
+		os.Symlink(filepath.Join(targetDir, "bam.txt"), symlink)
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{symlink, "dest"},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+	})
+}

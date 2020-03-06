@@ -505,15 +505,16 @@ func FilepathExists(path string) bool {
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
 	if err := createParentDirectory(path); err != nil {
-		return err
+		return errors.Wrap(err, "creating parent dir")
 	}
+
 	dest, err := os.Create(path)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "creating file")
 	}
 	defer dest.Close()
 	if _, err := io.Copy(dest, reader); err != nil {
-		return err
+		return errors.Wrap(err, "copying file")
 	}
 	return setFilePermissions(path, perm, int(uid), int(gid))
 }
@@ -614,9 +615,9 @@ func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, er
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
-	link, err := filepath.EvalSymlinks(src)
+	link, err := os.Readlink(src)
 	if err != nil {
-		return false, err
+		logrus.Debugf("could not evaluate %s, probably a dead link", src)
 	}
 	if FilepathExists(dest) {
 		if err := os.RemoveAll(dest); err != nil {
@@ -626,7 +627,7 @@ func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, er
 	if err := createParentDirectory(dest); err != nil {
 		return false, err
 	}
-	return CopyFile(link, dest, buildcontext, uid, gid)
+	return true, os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest
