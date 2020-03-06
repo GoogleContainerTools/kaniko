@@ -17,6 +17,7 @@ limitations under the License.
 package filesystem
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -225,6 +226,27 @@ func Test_resolveSymlinkAncestor(t *testing.T) {
 		expected := linkPath
 
 		actual, err := resolveSymlinkAncestor(linkPath)
+		if err != nil {
+			t.Errorf("expected err to be nil but was %s", err)
+		}
+
+		if actual != expected {
+			t.Errorf("expected result to be %s not %s", expected, actual)
+		}
+	})
+
+	t.Run("dir ends with / is not a symlink", func(t *testing.T) {
+		testDir, _ := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		linkDir := filepath.Join(testDir, "var", "www")
+		if err := os.MkdirAll(linkDir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		expected := linkDir
+
+		actual, err := resolveSymlinkAncestor(fmt.Sprintf("%s/", linkDir))
 		if err != nil {
 			t.Errorf("expected err to be nil but was %s", err)
 		}

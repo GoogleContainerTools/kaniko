@@ -577,8 +577,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 		fullPath := filepath.Join(src, file)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
-			fmt.Println(" i am returning from here this", err)
-			return nil, err
+			return nil, errors.Wrap(err, "copying dir")
 		}
 		if ExcludeFile(fullPath, buildcontext) {
 			logrus.Debugf("%s found in .dockerignore, ignoring", src)

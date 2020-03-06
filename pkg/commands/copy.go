@@ -67,7 +67,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		fullPath := filepath.Join(c.buildcontext, src)
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not copy source")
 		}
 		if fi.IsDir() && !strings.HasSuffix(fullPath, string(os.PathSeparator)) {
 			fullPath += "/"
