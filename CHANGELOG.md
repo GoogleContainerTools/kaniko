@@ -1,3 +1,69 @@
+# v0.8.0 Release -2020-03-05
+This release fixes all the regression bugs associated with v0.17.0 and v0.17.1.
+This release, the team did a lot of work improving our test infrastructure, more tests cases
+and refactored filesystem walking.
+
+Thank you all for your patience and supporting us throughout!
+
+# Bug Fixes
+* fix home being reset to root [#1072](https://github.com/GoogleContainerTools/kaniko/pull/1072)
+* fix user metadata set to USER:GROUP if group string is not set [#1105](https://github.com/GoogleContainerTools/kaniko/pull/1105)
+* check for filepath.Walk error everywhere [#1086](https://github.com/GoogleContainerTools/kaniko/pull/1086)
+* fix #1092 TestRelativePaths [#1093](https://github.com/GoogleContainerTools/kaniko/pull/1093)
+* Resolve filepaths before scanning for changes [#1069](https://github.com/GoogleContainerTools/kaniko/pull/1069)
+* Fix #1020 os.Chtimes invalid arg [#1074](https://github.com/GoogleContainerTools/kaniko/pull/1074)
+* Fix #1067 - image no longer available [#1068](https://github.com/GoogleContainerTools/kaniko/pull/1068)
+* Ensure image SHA stays consistent when layer contents haven't changed [#1032](https://github.com/GoogleContainerTools/kaniko/pull/1032)
+* fix flake TestRun/Dockerfile_test_copy_symlink [#1030](https://github.com/GoogleContainerTools/kaniko/pull/1030)
+
+# New Features
+* root: add --registry-mirror flag [#836](https://github.com/GoogleContainerTools/kaniko/pull/836)
+* set log format using a flag [#1031](https://github.com/GoogleContainerTools/kaniko/pull/1031)
+* Do not recompute layers retrieved from cache [#882](https://github.com/GoogleContainerTools/kaniko/pull/882)
+* More idiomatic logging config [#1040](https://github.com/GoogleContainerTools/kaniko/pull/1040)
+
+
+# Test Refactors and Updates
+* Split travis integration tests [#1090](https://github.com/GoogleContainerTools/kaniko/pull/1090)
+* Add integration tests from Issues [#1054](https://github.com/GoogleContainerTools/kaniko/pull/1054)
+* add integration tests with their own context [#1088](https://github.com/GoogleContainerTools/kaniko/pull/1088)
+* Fixed typo in README.md [#1060](https://github.com/GoogleContainerTools/kaniko/pull/1060)
+* test: refactor container-diff call [#1077](https://github.com/GoogleContainerTools/kaniko/pull/1077)
+* Refactor integration image built [#1049](https://github.com/GoogleContainerTools/kaniko/pull/1049)
+* separate travis into multiple jobs for parallelization [#1055](https://github.com/GoogleContainerTools/kaniko/pull/1055)
+* refactor copy.chown code and add more tests [#1027](https://github.com/GoogleContainerTools/kaniko/pull/1027)
+* Allow contributors to launch integration tests against local registry [#1014](https://github.com/GoogleContainerTools/kaniko/pull/1014)
+
+# Documentation
+* add design proposal template [#1046](https://github.com/GoogleContainerTools/kaniko/pull/1046)
+* Update filesystem proposal status to Reviewed [#1066](https://github.com/GoogleContainerTools/kaniko/pull/1066)
+* update instructions for running integration tests [#1034](https://github.com/GoogleContainerTools/kaniko/pull/1034)
+* design proposal 01: filesystem resolution [#1048](https://github.com/GoogleContainerTools/kaniko/pull/1048)
+* Document that this tool is not officially supported by Google [#1044](https://github.com/GoogleContainerTools/kaniko/pull/1044)
+* Fix example pod.yml to not mount to root [#1043](https://github.com/GoogleContainerTools/kaniko/pull/1043)
+* fixing docker run command in README.md [#1103](https://github.com/GoogleContainerTools/kaniko/pull/1103)
+
+Huge thank you for this release towards our contributors: 
+- Anthony Davies
+- Batuhan Apaydın
+- Ben Einaudi
+- Cole Wippern
+- cvgw
+- DracoBlue
+- James Ravn
+- Logan.Price
+- Moritz Wanzenböck
+- ohchang-kwon
+- Or Sela
+- Sam Stoelinga
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Strömberg
+- tinkerborg
+- Wietse Muizelaar
+- xanonid
+- Yoan Blanc
+
 # v0.17.1 Release - 2020-02-04
 
 This is minor patch release to fix [#1002](https://github.com/GoogleContainerTools/kaniko/issues/1002)
