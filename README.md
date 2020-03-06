@@ -4,7 +4,7 @@
 
 ![kaniko logo](logo/Kaniko-Logo.png)
 
-kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster. 
+kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster.
 
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster.
@@ -15,7 +15,7 @@ We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kuber
 
 :mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
 
-Kaniko is not an officially supported Google project. 
+Kaniko is not an officially supported Google project.
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
@@ -148,7 +148,7 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 | GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
 | S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
 | Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
-| Git Repository    | git://[repository url][#reference]                              | `git://github.com/acme/myproject.git#refs/heads/mybranch`     |
+| Git Repository    | git://[repository url][#reference][#dockercontext]              | `git://github.com/acme/myproject.git#refs/heads/mybranch#subproject`     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
@@ -275,7 +275,7 @@ We can run the kaniko executor image locally in a Docker daemon to build and pus
   ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
   ```
 
-_NOTE: `run_in_docker.sh` expects a path to a 
+_NOTE: `run_in_docker.sh` expects a path to a
 Dockerfile relative to the absolute path of the build context._
 
 An example run, specifying the Dockerfile in the container directory `/workspace`, the build

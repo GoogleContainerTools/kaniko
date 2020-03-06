@@ -43,7 +43,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	}
 	_, err := git.PlainClone(directory, false, &options)
 	if len(parts) > 2 {
-		directory = directory + parts[2])
+		directory := directory + parts[2]
 	}
 	return directory, err
 }
