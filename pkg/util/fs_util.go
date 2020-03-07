@@ -442,7 +442,7 @@ func DetectFilesystemWhitelist(path string) error {
 func RelativeFiles(fp string, root string) ([]string, error) {
 	var files []string
 	fullPath := filepath.Join(root, fp)
-	logrus.Debugf("Getting files and contents at root %s", fullPath)
+	logrus.Debugf("Getting files and contents at root %s for %s", root, fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -609,14 +609,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	return copiedFiles, nil
 }
 
-// CopySymlink copies the symlink at src to dest
-// if asSymlink is true, then the file is copied as symlink. This is done for a symlink file in the directory is copied
-// COPY src/ dest/
-// where src/ contains a symlink file.
-// if asSymlink is false, then target file of the symlink is copied as a regular file.
-// This done when copying a single file via
-// COPY sym.link dest
-// where sym.link is a link to target file.
+// CopySymlink copies the symlink at src to dest along with the regular file.
 func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, string, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
@@ -842,15 +835,14 @@ func getSymlink(path string) error {
 func CopyFileOrSymlink(src string, destDir string) error {
 	destFile := filepath.Join(destDir, src)
 	if fi, _ := os.Lstat(src); IsSymlink(fi) {
-		link, err := EvalSymLink(src)
+		link, err := os.Readlink(src)
 		if err != nil {
 			return err
 		}
-		linkPath := filepath.Join(destDir, link)
 		if err := createParentDirectory(destFile); err != nil {
 			return err
 		}
-		return os.Symlink(linkPath, destFile)
+		return os.Symlink(link, destFile)
 	}
 	return otiai10Cpy.Copy(src, destFile)
 }
