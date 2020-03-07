@@ -619,6 +619,9 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		testutil.CheckDeepEqual(t, files[0].Name(), "sym.link")
 		testutil.CheckDeepEqual(t, false, files[0].Mode()&os.ModeSymlink != 0)
 		c, err := ioutil.ReadFile(filepath.Join(testDir, "dest", "sym.link"))
+		if err != nil {
+			t.Fatal(err)
+		}
 		testutil.CheckDeepEqual(t, "woof", string(c))
 	})
 
@@ -626,6 +629,9 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
 		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		another := filepath.Join(testDir, "another")
 		os.Symlink(filepath.Join(testDir, srcDir), another)
@@ -711,6 +717,9 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
 		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		another := filepath.Join(testDir, "another")
 		os.Symlink(filepath.Join(testDir, srcDir), another)
