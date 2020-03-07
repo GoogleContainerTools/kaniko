@@ -145,6 +145,7 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 |  Source | Prefix  | Example |
 |---------|---------|---------|
 | Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
+| Local Tar Gz      | tar://[path to a .tar.gz in the kaniko container]               | `tar://path/to/context.tar.gz`                                            |
 | GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
 | S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
 | Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |

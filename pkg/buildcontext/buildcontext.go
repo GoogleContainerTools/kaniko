@@ -24,6 +24,10 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
+const (
+	TarBuildContextPrefix = "tar://"
+)
+
 // BuildContext unifies calls to download and unpack the build context.
 type BuildContext interface {
 	// Unpacks a build context and returns the directory where it resides
@@ -51,6 +55,8 @@ func GetBuildContext(srcContext string) (BuildContext, error) {
 			return &AzureBlob{context: srcContext}, nil
 		}
 		return nil, errors.New("url provided for https context is not in a supported format, please use the https url for Azure Blob Storage")
+	case TarBuildContextPrefix:
+		return &Tar{context: context}, nil
 	}
-	return nil, errors.New("unknown build context prefix provided, please use one of the following: gs://, dir://, s3://, git://, https://")
+	return nil, errors.New("unknown build context prefix provided, please use one of the following: gs://, dir://, tar://, s3://, git://, https://")
 }
