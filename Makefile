@@ -57,6 +57,10 @@ out/warmer: $(GO_FILES)
 travis-setup:
 	@ ./scripts/travis-setup.sh
 
+.PHONY: minikube-setup
+minikube-setup:
+	@ ./scripts/minikube-setup.sh
+
 .PHONY: test
 test: out/executor
 	@ ./scripts/test.sh
@@ -73,6 +77,10 @@ integration-test-run:
 integration-test-layers:
 	@ ./scripts/integration-test.sh -run "TestLayers"
 
+.PHONY: integration-test-k8s
+integration-test-k8s:
+	@ ./scripts/integration-test.sh -run "TestK8s"
+
 .PHONY: integration-test-misc
 integration-test-misc:
 	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
@@ -86,6 +94,6 @@ images:
 
 .PHONY: push
 push:
-    docker push $(REGISTRY)/executor:latest
-    docker push $(REGISTRY)/executor:debug
-    docker push $(REGISTRY)/warmer:latest
+	docker push $(REGISTRY)/executor:latest
+	docker push $(REGISTRY)/executor:debug
+	docker push $(REGISTRY)/warmer:latest

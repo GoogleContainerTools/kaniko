@@ -13,23 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs all integration tests except for
-# TestRun and TestLayers
-set -e
+set -ex
 
-TESTS=$(./scripts/integration-test.sh -list=Test -mod=vendor)
+curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+kubectl version --client
 
-TESTS=$(echo $TESTS | tr ' ' '\n' | grep 'Test'| grep -v 'TestRun' | grep -v 'TestLayers' | grep -v 'TestK8s')
+curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+chmod +x minikube
+sudo mv minikube /usr/local/bin/
 
-RUN_ARG=''
-count=0
-for i in $TESTS; do
-  if [ "$count" -gt "0" ]; then
-    RUN_ARG="$RUN_ARG|$i"
-  else
-    RUN_ARG="$RUN_ARG$i"
-  fi
-  count=$((count+1))
-done
+sudo apt-get update
+sudo apt-get install -y liblz4-tool
 
-echo $RUN_ARG
+sudo minikube start --vm-driver=none
+sudo minikube status
+sudo chown -R $USER $HOME/.kube $HOME/.minikube
+kubectl cluster-info
