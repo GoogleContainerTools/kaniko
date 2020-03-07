@@ -55,28 +55,28 @@ out/warmer: $(GO_FILES)
 
 .PHONY: travis-setup
 travis-setup:
-	@ ./travis-setup.sh
+	@ ./scripts/travis-setup.sh
 
 .PHONY: test
 test: out/executor
-	@ ./test.sh
+	@ ./scripts/test.sh
 
 .PHONY: integration-test
 integration-test:
-	@ ./integration-test.sh
+	@ ./scripts/integration-test.sh
 
 .PHONY: integration-test-run
 integration-test-run:
-	@ ./integration-test.sh -run "TestRun"
+	@ ./scripts/integration-test.sh -run "TestRun"
 
 .PHONY: integration-test-layers
 integration-test-layers:
-	@ ./integration-test.sh -run "TestLayers"
+	@ ./scripts/integration-test.sh -run "TestLayers"
 
 .PHONY: integration-test-misc
 integration-test-misc:
-	$(eval RUN_ARG=$(shell ./misc-integration-test.sh))
-	@ ./integration-test.sh -run "$(RUN_ARG)"
+	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
+	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:
