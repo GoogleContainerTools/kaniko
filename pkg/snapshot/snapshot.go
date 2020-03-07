@@ -26,7 +26,6 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/filesystem"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
-
 	"github.com/karrick/godirwalk"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"

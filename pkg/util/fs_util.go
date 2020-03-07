@@ -571,7 +571,7 @@ func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64)
 func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "copying dir")
 	}
 	var copiedFiles []string
 	for _, file := range files {
@@ -595,7 +595,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 			}
 		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
-			if _, err := CopySymlink(fullPath, destPath, buildcontext, uid, gid); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext, uid, gid, true); err != nil {
 				return nil, err
 			}
 		} else {
@@ -610,7 +610,14 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 }
 
 // CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, error) {
+// if asSymlink is true, then the file is copied as symlink. This is done for a symlink file in the directory is copied
+// COPY src/ dest/
+// where src/ contains a symlink file.
+// if asSymlink is false, then target file of the symlink is copied as a regular file.
+// This done when copying a single file via
+// COPY sym.link dest
+// where sym.link is a link to target file.
+func CopySymlink(src, dest, buildcontext string, uid int64, gid int64, asSymlink bool) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
@@ -627,7 +634,10 @@ func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, er
 	if err := createParentDirectory(dest); err != nil {
 		return false, err
 	}
-	return true, os.Symlink(link, dest)
+	if asSymlink {
+		return true, os.Symlink(link, dest)
+	}
+	return CopyFile(src, dest, buildcontext, uid, gid)
 }
 
 // CopyFile copies the file at src to dest

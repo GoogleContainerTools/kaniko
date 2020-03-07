@@ -17,7 +17,6 @@ limitations under the License.
 package filesystem
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -48,7 +47,7 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 
 		link, e := resolveSymlinkAncestor(f)
 		if e != nil {
-			err = e
+			err = errors.Wrap(e, "resolving symlinks")
 			return
 		}
 
@@ -65,9 +64,9 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 
 		// If the path is a symlink we need to also consider the target of that
 		// link
-		evaled, err = filepath.EvalSymlinks(f)
-		if err != nil {
-			if !os.IsNotExist(err) {
+		evaled, e = filepath.EvalSymlinks(f)
+		if e != nil {
+			if !os.IsNotExist(e) {
 				logrus.Errorf("couldn't eval %s with link %s", f, link)
 				return
 			}
@@ -127,7 +126,6 @@ func resolveSymlinkAncestor(path string) (string, error) {
 		return "", errors.New("dest path must be abs")
 	}
 
-	fmt.Println(path)
 	last := ""
 	newPath := filepath.Clean(path)
 
