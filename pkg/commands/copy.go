@@ -65,12 +65,8 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	// For each source, iterate through and copy it over
 	for _, src := range srcs {
 		fullPath := filepath.Join(c.buildcontext, src)
-		srcPath, err := resolveIfSymlink(fullPath)
-		if err != nil {
-			return errors.Wrap(err, "resolving src symlink")
-		}
 
-		fi, err := os.Lstat(srcPath)
+		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return errors.Wrap(err, "could not copy source")
 		}
@@ -102,7 +98,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if util.IsSymlink(fi) {
 			// If file is a symlink, we want to copy the target file to destPath
-			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext, uid, gid, false)
+			exclude, target, err := util.CopySymlink(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
 				return errors.Wrap(err, "copying symlink")
 			}
@@ -110,6 +106,9 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 				continue
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
+			if target != "" {
+				c.snapshotFiles = append(c.snapshotFiles, target)
+			}
 		} else {
 			// ... Else, we want to copy over a file
 			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)

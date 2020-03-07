@@ -47,8 +47,7 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 
 		link, e := resolveSymlinkAncestor(f)
 		if e != nil {
-			err = errors.Wrap(e, "resolving symlinks")
-			return
+			continue
 		}
 
 		if f != link {

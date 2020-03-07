@@ -835,7 +835,7 @@ func TestCopySymlink(t *testing.T) {
 			if err := os.Symlink(tc.linkTarget, link); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := CopySymlink(link, dest, "", DoNotChangeUID, DoNotChangeGID, true); err != nil {
+			if _, _, err := CopySymlink(link, dest, "", DoNotChangeUID, DoNotChangeGID); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := os.Lstat(dest); err != nil {

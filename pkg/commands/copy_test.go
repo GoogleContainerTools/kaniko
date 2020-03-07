@@ -465,8 +465,9 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		if err := ioutil.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
 			t.Fatal(err)
 		}
-		os.Symlink(targetPath, filepath.Join(dir, "sym.link"))
-
+		if err := os.Symlink("dam.txt", filepath.Join(dir, "sym.link")); err != nil {
+			t.Fatal(err)
+		}
 		return testDir, filepath.Base(dir)
 	}
 
@@ -614,15 +615,59 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// sym.link should be present as a Regular file with contents of target "woof"
-		testutil.CheckDeepEqual(t, 1, len(files))
-		testutil.CheckDeepEqual(t, files[0].Name(), "sym.link")
-		testutil.CheckDeepEqual(t, false, files[0].Mode()&os.ModeSymlink != 0)
-		c, err := ioutil.ReadFile(filepath.Join(testDir, "dest", "sym.link"))
+		// bam.txt and sym.link should be present
+		testutil.CheckDeepEqual(t, 2, len(files))
+		testutil.CheckDeepEqual(t, files[0].Name(), "dam.txt")
+		testutil.CheckDeepEqual(t, files[1].Name(), "sym.link")
+		testutil.CheckDeepEqual(t, true, files[1].Mode()&os.ModeSymlink != 0)
+		linkName, err := os.Readlink(filepath.Join(testDir, "dest", "sym.link"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		testutil.CheckDeepEqual(t, "woof", string(c))
+		testutil.CheckDeepEqual(t, linkName, "dam.txt")
+	})
+	t.Run("copy deadlink symlink file to a dir", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+		doesNotExists := filepath.Join(testDir, "dead.txt")
+		if err := ioutil.WriteFile(doesNotExists, []byte("remove me"), 0777); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink("../dead.txt", filepath.Join(testDir, srcDir, "dead.link")); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(doesNotExists); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{filepath.Join(srcDir, "dead.link"), "dest/"},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+		// Check if "dest" dir exists with link dead.link
+		files, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, 1, len(files))
+		testutil.CheckDeepEqual(t, files[0].Name(), "dead.link")
+		testutil.CheckDeepEqual(t, true, files[0].Mode()&os.ModeSymlink != 0)
+		linkName, err := os.Readlink(filepath.Join(testDir, "dest", "dead.link"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, linkName, "../dead.txt")
 	})
 
 	t.Run("copy src symlink dir to a dir", func(t *testing.T) {
