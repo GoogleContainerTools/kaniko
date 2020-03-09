@@ -595,7 +595,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 			}
 		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
-			if _, _, err := CopySymlink(fullPath, destPath, buildcontext, uid, gid); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		} else {
@@ -609,32 +609,25 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	return copiedFiles, nil
 }
 
-// CopySymlink copies the symlink at src to dest along with the regular file.
-func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, string, error) {
+// CopySymlink copies the symlink at src to dest.
+func CopySymlink(src, dest, buildcontext string) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
-		return true, "", nil
+		return true, nil
 	}
 	if FilepathExists(dest) {
 		if err := os.RemoveAll(dest); err != nil {
-			return false, "", err
+			return false, err
 		}
 	}
 	if err := createParentDirectory(dest); err != nil {
-		return false, "", err
+		return false, err
 	}
-	target := ""
 	link, err := os.Readlink(src)
 	if err != nil {
 		logrus.Debugf("could not read link for %s", src)
-	} else {
-		cpDest := filepath.Clean(filepath.Join(filepath.Dir(dest), link))
-		srcLink := filepath.Clean(filepath.Join(filepath.Dir(src), link))
-		if t, err := CopyFile(srcLink, cpDest, buildcontext, uid, gid); !t && err != nil {
-			target = link
-		}
 	}
-	return false, target, os.Symlink(link, dest)
+	return false, os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest

@@ -616,10 +616,9 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			t.Fatal(err)
 		}
 		// bam.txt and sym.link should be present
-		testutil.CheckDeepEqual(t, 2, len(files))
-		testutil.CheckDeepEqual(t, files[0].Name(), "dam.txt")
-		testutil.CheckDeepEqual(t, files[1].Name(), "sym.link")
-		testutil.CheckDeepEqual(t, true, files[1].Mode()&os.ModeSymlink != 0)
+		testutil.CheckDeepEqual(t, 1, len(files))
+		testutil.CheckDeepEqual(t, files[0].Name(), "sym.link")
+		testutil.CheckDeepEqual(t, true, files[0].Mode()&os.ModeSymlink != 0)
 		linkName, err := os.Readlink(filepath.Join(testDir, "dest", "sym.link"))
 		if err != nil {
 			t.Fatal(err)
@@ -741,7 +740,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		err = cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
-		// Check if "dest" dir exists contests of srcDir and an extra zSym.link created
+		// Check if "dest" dir exists contents of srcDir and an extra zSym.link created
 		// in this test
 		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
@@ -794,9 +793,9 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
 		}
 	})
-	t.Run("copy file to a dest which is a symlink", func(t *testing.T) {
+	t.Run("copy src dir to a dest dir which is a symlink", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
-		//defer os.RemoveAll(testDir)
+		defer os.RemoveAll(testDir)
 		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
@@ -835,6 +834,52 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			testutil.CheckDeepEqual(t, f.Name(), actual[i].Name())
 			testutil.CheckDeepEqual(t, f.Mode(), actual[i].Mode())
 		}
+		// Check if linkDest -> dest
+		linkName, err := os.Readlink(filepath.Join(testDir, "linkDest"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, linkName, dest)
+	})
+	t.Run("copy src file to a dest dir which is a symlink", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		dest := filepath.Join(testDir, "dest")
+		if err := os.MkdirAll(dest, 0777); err != nil {
+			t.Fatal(err)
+		}
+		linkedDest := filepath.Join(testDir, "linkDest")
+		if err := os.Symlink(dest, linkedDest); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), linkedDest},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+		// Check if "linkDest" link is same.
+		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, "bam.txt", actual[0].Name())
+		c, err := ioutil.ReadFile(filepath.Join(testDir, "dest", "bam.txt"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, "meow", string(c))
 		// Check if linkDest -> dest
 		linkName, err := os.Readlink(filepath.Join(testDir, "linkDest"))
 		if err != nil {
