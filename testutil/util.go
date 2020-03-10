@@ -68,6 +68,12 @@ func CheckError(t *testing.T, shouldErr bool, err error) {
 	}
 }
 
+func CheckNoError(t *testing.T, err error) {
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func checkErr(shouldErr bool, err error) error {
 	if err == nil && shouldErr {
 		return fmt.Errorf("Expected error, but returned none")

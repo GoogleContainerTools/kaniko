@@ -35,6 +35,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	pathSeparator = "/"
+)
+
 // ResolveEnvironmentReplacementList resolves a list of values by calling resolveEnvironmentReplacement
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
@@ -114,13 +118,14 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 	logrus.Infof("Resolving srcs %v...", srcs)
 	files, err := RelativeFiles("", root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "resolving sources")
 	}
 	resolved, err := matchSources(srcs, files)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "matching sources")
 	}
 	logrus.Debugf("Resolved sources to %v", resolved)
+	fmt.Println("end of resolve sources")
 	return resolved, nil
 }
 
@@ -154,7 +159,7 @@ func IsDestDir(path string) bool {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		// fall back to string-based determination
-		return strings.HasSuffix(path, "/") || path == "."
+		return strings.HasSuffix(path, pathSeparator) || path == "."
 	}
 	// if it's a real path, check the fs response
 	return fileInfo.IsDir()
@@ -171,16 +176,19 @@ func DestinationFilepath(src, dest, cwd string) (string, error) {
 	_, srcFileName := filepath.Split(src)
 	newDest := dest
 
+	if !filepath.IsAbs(newDest) {
+		newDest = filepath.Join(cwd, newDest)
+		// join call clean on all results.
+		if strings.HasSuffix(dest, pathSeparator) || strings.HasSuffix(dest, ".") {
+			newDest += pathSeparator
+		}
+	}
 	if IsDestDir(newDest) {
 		newDest = filepath.Join(newDest, srcFileName)
 	}
 
-	if !filepath.IsAbs(newDest) {
-		newDest = filepath.Join(cwd, newDest)
-	}
-
-	if len(srcFileName) <= 0 && !strings.HasSuffix(newDest, "/") {
-		newDest += "/"
+	if len(srcFileName) <= 0 && !strings.HasSuffix(newDest, pathSeparator) {
+		newDest += pathSeparator
 	}
 
 	return newDest, nil

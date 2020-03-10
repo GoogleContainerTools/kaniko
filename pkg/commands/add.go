@@ -21,6 +21,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
@@ -66,18 +67,18 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			}
 			logrus.Infof("Adding remote URL %s to %s", src, urlDest)
 			if err := util.DownloadFileToDest(src, urlDest); err != nil {
-				return err
+				return errors.Wrap(err, "downloading remote source file")
 			}
 			a.snapshotFiles = append(a.snapshotFiles, urlDest)
 		} else if util.IsFileLocalTarArchive(fullPath) {
 			tarDest, err := util.DestinationFilepath("", dest, config.WorkingDir)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "determining dest for tar")
 			}
 			logrus.Infof("Unpacking local tar archive %s to %s", src, tarDest)
 			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, tarDest)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "unpacking local tar")
 			}
 			logrus.Debugf("Added %v from local tar archive %s", extractedFiles, src)
 			a.snapshotFiles = append(a.snapshotFiles, extractedFiles...)
@@ -98,7 +99,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	if err := copyCmd.ExecuteCommand(config, buildArgs); err != nil {
-		return err
+		return errors.Wrap(err, "executing copy command")
 	}
 	a.snapshotFiles = append(a.snapshotFiles, copyCmd.snapshotFiles...)
 	return nil

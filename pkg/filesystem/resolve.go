@@ -35,6 +35,7 @@ import (
 // * Add all ancestors of each path to the output set.
 func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string, err error) {
 	logrus.Info("Resolving paths")
+	logrus.Debugf("Resolving paths %s", paths)
 
 	fileSet := make(map[string]bool)
 
@@ -47,8 +48,7 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 
 		link, e := resolveSymlinkAncestor(f)
 		if e != nil {
-			err = e
-			return
+			continue
 		}
 
 		if f != link {
@@ -64,9 +64,9 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 
 		// If the path is a symlink we need to also consider the target of that
 		// link
-		evaled, err = filepath.EvalSymlinks(f)
-		if err != nil {
-			if !os.IsNotExist(err) {
+		evaled, e = filepath.EvalSymlinks(f)
+		if e != nil {
+			if !os.IsNotExist(e) {
 				logrus.Errorf("couldn't eval %s with link %s", f, link)
 				return
 			}
@@ -133,7 +133,7 @@ loop:
 	for newPath != "/" {
 		fi, err := os.Lstat(newPath)
 		if err != nil {
-			return "", errors.Wrap(err, "failed to lstat")
+			return "", errors.Wrap(err, "resolvePaths: failed to lstat")
 		}
 
 		if util.IsSymlink(fi) {

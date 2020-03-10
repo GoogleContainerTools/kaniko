@@ -442,7 +442,7 @@ func DetectFilesystemWhitelist(path string) error {
 func RelativeFiles(fp string, root string) ([]string, error) {
 	var files []string
 	fullPath := filepath.Join(root, fp)
-	logrus.Debugf("Getting files and contents at root %s", fullPath)
+	logrus.Debugf("Getting files and contents at root %s for %s", root, fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -505,15 +505,16 @@ func FilepathExists(path string) bool {
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
 	if err := createParentDirectory(path); err != nil {
-		return err
+		return errors.Wrap(err, "creating parent dir")
 	}
+
 	dest, err := os.Create(path)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "creating file")
 	}
 	defer dest.Close()
 	if _, err := io.Copy(dest, reader); err != nil {
-		return err
+		return errors.Wrap(err, "copying file")
 	}
 	return setFilePermissions(path, perm, int(uid), int(gid))
 }
@@ -570,7 +571,7 @@ func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64)
 func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "copying dir")
 	}
 	var copiedFiles []string
 	for _, file := range files {
@@ -594,7 +595,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 			}
 		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
-			if _, err := CopySymlink(fullPath, destPath, buildcontext, uid, gid); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
 				return nil, err
 			}
 		} else {
@@ -608,15 +609,11 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 	return copiedFiles, nil
 }
 
-// CopySymlink copies the symlink at src to dest
-func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, error) {
+// CopySymlink copies the symlink at src to dest.
+func CopySymlink(src, dest, buildcontext string) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
-	}
-	link, err := filepath.EvalSymlinks(src)
-	if err != nil {
-		return false, err
 	}
 	if FilepathExists(dest) {
 		if err := os.RemoveAll(dest); err != nil {
@@ -626,7 +623,11 @@ func CopySymlink(src, dest, buildcontext string, uid int64, gid int64) (bool, er
 	if err := createParentDirectory(dest); err != nil {
 		return false, err
 	}
-	return CopyFile(link, dest, buildcontext, uid, gid)
+	link, err := os.Readlink(src)
+	if err != nil {
+		logrus.Debugf("could not read link for %s", src)
+	}
+	return false, os.Symlink(link, dest)
 }
 
 // CopyFile copies the file at src to dest
@@ -827,15 +828,14 @@ func getSymlink(path string) error {
 func CopyFileOrSymlink(src string, destDir string) error {
 	destFile := filepath.Join(destDir, src)
 	if fi, _ := os.Lstat(src); IsSymlink(fi) {
-		link, err := EvalSymLink(src)
+		link, err := os.Readlink(src)
 		if err != nil {
 			return err
 		}
-		linkPath := filepath.Join(destDir, link)
 		if err := createParentDirectory(destFile); err != nil {
 			return err
 		}
-		return os.Symlink(linkPath, destFile)
+		return os.Symlink(link, destFile)
 	}
 	return otiai10Cpy.Copy(src, destFile)
 }

@@ -54,17 +54,18 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 	uid, gid, err := getUserGroup(c.cmd.Chown, replacementEnvs)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "getting user group from chowm")
 	}
 
 	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "resolving src")
 	}
 
 	// For each source, iterate through and copy it over
 	for _, src := range srcs {
 		fullPath := filepath.Join(c.buildcontext, src)
+
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
 			return errors.Wrap(err, "could not copy source")
@@ -79,27 +80,27 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 		destPath, err := util.DestinationFilepath(fullPath, dest, cwd)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "find destination path")
 		}
 
 		// If the destination dir is a symlink we need to resolve the path and use
 		// that instead of the symlink path
 		destPath, err = resolveIfSymlink(destPath)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "resolving dest symlink")
 		}
 
 		if fi.IsDir() {
 			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "copying dir")
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if util.IsSymlink(fi) {
 			// If file is a symlink, we want to copy the target file to destPath
-			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext, uid, gid)
+			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "copying symlink")
 			}
 			if exclude {
 				continue
@@ -109,7 +110,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			// ... Else, we want to copy over a file
 			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "copying file")
 			}
 			if exclude {
 				continue

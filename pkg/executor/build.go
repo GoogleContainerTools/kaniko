@@ -339,7 +339,7 @@ func (s *stageBuilder) build() error {
 			v := command.(commands.Cached)
 			layer := v.Layer()
 			if err := s.saveLayerToImage(layer, command.String()); err != nil {
-				return err
+				return errors.Wrap(err, "failed to save layer")
 			}
 		} else {
 			tarPath, err := s.takeSnapshot(files)
