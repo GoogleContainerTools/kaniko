@@ -87,6 +87,25 @@ func Whitelist() []WhitelistEntry {
 	return whitelist
 }
 
+// DeleteWorkdirFromWhitelist deletes the given dir from whitelist.
+// It return true if workdir is set to path matching whitelist dir or any volumes.
+func DeleteWorkdirFromWhitelist(dir string) (bool, error) {
+	updated := []WhitelistEntry{}
+	didUpdate := false
+	for _, d := range whitelist{
+		if dir == d.Path{
+			logrus.Infof("removing %s from whitelist", dir)
+			didUpdate = true
+			continue
+		} else if HasFilepathPrefix(d.Path, dir, d.PrefixMatchOnly) {
+			return true, errors.New("does not support workdir in a whitelist path.")
+		}
+		updated = append(updated, d)
+	}
+	whitelist = updated
+	return didUpdate, nil
+}
+
 func IncludeWhiteout() FSOpt {
 	return func(opts *FSConfig) {
 		opts.includeWhiteout = true
@@ -167,12 +186,10 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
 					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
 				}
-
 				if !cfg.includeWhiteout {
 					logrus.Debug("not including whiteout files")
 					continue
 				}
-
 			}
 
 			if err := cfg.extractFunc(root, hdr, tr); err != nil {

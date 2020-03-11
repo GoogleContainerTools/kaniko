@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -52,8 +51,16 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 	}
 	logrus.Infof("Changed working directory to %s", config.WorkingDir)
 
-	// Only create and snapshot the dir if it didn't exist already
 	w.snapshotFiles = []string{}
+	updated, err := util.DeleteWorkdirFromWhitelist(config.WorkingDir)
+	if err != nil{
+		return err
+	}
+	if updated {
+		w.snapshotFiles = append(w.snapshotFiles, config.WorkingDir)
+	}
+
+	// Only create and snapshot the dir if it didn't exist already
 	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
 		logrus.Infof("Creating directory %s", config.WorkingDir)
 		w.snapshotFiles = append(w.snapshotFiles, config.WorkingDir)
