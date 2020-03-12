@@ -34,7 +34,11 @@ type WorkdirCommand struct {
 }
 
 // For testing
-var mkdir = os.MkdirAll
+var (
+	mkdir           = os.MkdirAll
+	stat            = os.Stat
+	updateWhitelist = util.DeleteWorkdirFromWhitelist
+)
 
 func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("cmd: workdir")
@@ -44,24 +48,25 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 	if err != nil {
 		return err
 	}
-	if filepath.IsAbs(resolvedWorkingDir) {
-		config.WorkingDir = resolvedWorkingDir
-	} else {
-		config.WorkingDir = filepath.Join(config.WorkingDir, resolvedWorkingDir)
-	}
-	logrus.Infof("Changed working directory to %s", config.WorkingDir)
 
-	w.snapshotFiles = []string{}
-	updated, err := util.DeleteWorkdirFromWhitelist(config.WorkingDir)
+	if !filepath.IsAbs(resolvedWorkingDir) {
+		resolvedWorkingDir = filepath.Join(config.WorkingDir, resolvedWorkingDir)
+	}
+	updated, err := updateWhitelist(resolvedWorkingDir)
 	if err != nil {
 		return err
 	}
+
+	config.WorkingDir = resolvedWorkingDir
+	logrus.Infof("Changed working directory to %s", config.WorkingDir)
+
+	w.snapshotFiles = []string{}
 	if updated {
 		w.snapshotFiles = append(w.snapshotFiles, config.WorkingDir)
 	}
 
 	// Only create and snapshot the dir if it didn't exist already
-	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
+	if _, err := stat(config.WorkingDir); os.IsNotExist(err) {
 		logrus.Infof("Creating directory %s", config.WorkingDir)
 		w.snapshotFiles = append(w.snapshotFiles, config.WorkingDir)
 		return mkdir(config.WorkingDir, 0755)

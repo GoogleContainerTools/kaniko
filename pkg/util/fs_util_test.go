@@ -358,6 +358,53 @@ func TestHasFilepathPrefix(t *testing.T) {
 	}
 }
 
+func TestDeleteWorkdirFromWhitelist(t *testing.T) {
+	tests := []struct {
+		description string
+		workdir     string
+		whitelist   []WhitelistEntry
+		expected    []WhitelistEntry
+		updated     bool
+		shdErr      bool
+	}{
+		{
+			description: "workdir in whitelist",
+			workdir:     "/volume",
+			whitelist: []WhitelistEntry{
+				{Path: "/kaniko"},
+				{Path: "/volume", PrefixMatchOnly: true},
+			},
+			updated: true,
+			expected: []WhitelistEntry{
+				{Path: "/kaniko"},
+			},
+		},
+		{
+			description: "workdir in not in whitelist",
+			workdir:     "/volume",
+			whitelist:   []WhitelistEntry{{Path: "/kaniko"}},
+			expected:    []WhitelistEntry{{Path: "/kaniko"}},
+		},
+		{
+			description: "workdir as subdir in whitelist",
+			workdir:     "/volume/subdir",
+			whitelist:   []WhitelistEntry{{Path: "/volume/", PrefixMatchOnly: true}},
+			expected:    []WhitelistEntry{{Path: "/volume/", PrefixMatchOnly: true}},
+			shdErr:      true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			originalWhitelist := whitelist
+			defer func() { whitelist = originalWhitelist }()
+			whitelist = tt.whitelist
+			ok, err := DeleteWorkdirFromWhitelist(tt.workdir)
+			testutil.CheckErrorAndDeepEqual(t, tt.shdErr, err, tt.expected, whitelist)
+			testutil.CheckDeepEqual(t, tt.updated, ok)
+		})
+	}
+}
+
 func BenchmarkHasFilepathPrefix(b *testing.B) {
 	tests := []struct {
 		path            string

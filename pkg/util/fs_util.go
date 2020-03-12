@@ -97,8 +97,8 @@ func DeleteWorkdirFromWhitelist(dir string) (bool, error) {
 			logrus.Infof("removing %s from whitelist", dir)
 			didUpdate = true
 			continue
-		} else if HasFilepathPrefix(d.Path, dir, d.PrefixMatchOnly) {
-			return true, errors.New("does not support workdir in a whitelist path.")
+		} else if HasFilepathPrefix(dir, d.Path, d.PrefixMatchOnly) {
+			return false, errors.New("does not support workdir in a whitelist path")
 		}
 		updated = append(updated, d)
 	}
