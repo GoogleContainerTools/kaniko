@@ -17,5 +17,5 @@ package k8schain
 
 import (
 	// aws credential provider
-	_ "k8s.io/kubernetes/pkg/credentialprovider/aws"
+	_ "github.com/vdemeester/k8s-pkg-credentialprovider/aws"
 )

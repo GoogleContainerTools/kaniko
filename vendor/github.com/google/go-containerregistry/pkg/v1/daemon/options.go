@@ -14,6 +14,13 @@
 
 package daemon
 
+import (
+	"context"
+	"io"
+
+	"github.com/docker/docker/api/types"
+)
+
 // WithBufferedOpener buffers the image.
 func WithBufferedOpener() ImageOption {
 	return func(i *imageOpener) error {
@@ -31,4 +38,23 @@ func WithUnbufferedOpener() ImageOption {
 func (i *imageOpener) setBuffered(buffer bool) error {
 	i.buffered = buffer
 	return nil
+}
+
+// WithClient is a functional option to allow injecting a docker client.
+//
+// By default, github.com/docker/docker/client.FromEnv is used.
+func WithClient(client Client) ImageOption {
+	return func(i *imageOpener) error {
+		i.client = client
+		return nil
+	}
+}
+
+// Client represents the subset of a docker client that the daemon
+// package uses.
+type Client interface {
+	NegotiateAPIVersion(ctx context.Context)
+	ImageSave(context.Context, []string) (io.ReadCloser, error)
+	ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)
+	ImageTag(context.Context, string, string) error
 }

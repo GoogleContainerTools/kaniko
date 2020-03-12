@@ -17,12 +17,12 @@ package k8schain
 import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	credentialprovider "github.com/vdemeester/k8s-pkg-credentialprovider"
+	credentialprovidersecrets "github.com/vdemeester/k8s-pkg-credentialprovider/secrets"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/credentialprovider"
-	credentialprovidersecrets "k8s.io/kubernetes/pkg/credentialprovider/secrets"
 )
 
 // Options holds configuration data for guiding credential resolution.
@@ -37,9 +37,6 @@ type Options struct {
 	// Namespace) containing credential data to use for the image pull.
 	ImagePullSecrets []string
 }
-
-// origKeyRing is a variable so that testing can adjust it.
-var origKeyRing = credentialprovider.NewDockerKeyring()
 
 // New returns a new authn.Keychain suitable for resolving image references as
 // scoped by the provided Options.  It speaks to Kubernetes through the provided
@@ -85,7 +82,7 @@ func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 	}
 
 	// Third, extend the default keyring with the pull secrets.
-	kr, err := credentialprovidersecrets.MakeDockerKeyring(pullSecrets, origKeyRing)
+	kr, err := credentialprovidersecrets.MakeDockerKeyring(pullSecrets, credentialprovider.NewDockerKeyring())
 	if err != nil {
 		return nil, err
 	}
