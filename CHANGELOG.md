@@ -1,4 +1,4 @@
-# v0.8.0 Release -2020-03-05
+# v0.18.0 Release -2020-03-05
 This release fixes all the regression bugs associated with v0.17.0 and v0.17.1.
 This release, the team did a lot of work improving our test infrastructure, more tests cases
 and refactored filesystem walking.
