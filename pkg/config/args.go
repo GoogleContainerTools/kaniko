@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -39,6 +40,7 @@ func (b *multiArg) Set(value string) error {
 	return nil
 }
 
+// The third is Type() string
 func (b *multiArg) Type() string {
 	return "multi-arg type"
 }
@@ -50,4 +52,33 @@ func (b *multiArg) Contains(v string) bool {
 		}
 	}
 	return false
+}
+
+// This type is used to supported passing in multiple key=value flags
+type keyValueArg map[string]string
+
+// Now, for our new type, implement the two methods of
+// the flag.Value interface...
+// The first method is String() string
+func (a *keyValueArg) String() string {
+	var result []string
+	for key := range *a {
+		result = append(result, fmt.Sprintf("%s=%s", key, (*a)[key]))
+	}
+	return strings.Join(result, ",")
+}
+
+// The second method is Set(value string) error
+func (a *keyValueArg) Set(value string) error {
+	valueSplit := strings.SplitN(value, "=", 2)
+	if len(valueSplit) < 2 {
+		return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
+	}
+	(*a)[valueSplit[0]] = valueSplit[1]
+	return nil
+}
+
+// The third is Type() string
+func (a *keyValueArg) Type() string {
+	return "key-value-arg type"
 }
