@@ -92,8 +92,8 @@ func Whitelist() []WhitelistEntry {
 func DeleteWorkdirFromWhitelist(dir string) (bool, error) {
 	updated := []WhitelistEntry{}
 	didUpdate := false
-	for _, d := range whitelist{
-		if dir == d.Path{
+	for _, d := range whitelist {
+		if dir == d.Path {
 			logrus.Infof("removing %s from whitelist", dir)
 			didUpdate = true
 			continue

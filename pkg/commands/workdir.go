@@ -53,7 +53,7 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 
 	w.snapshotFiles = []string{}
 	updated, err := util.DeleteWorkdirFromWhitelist(config.WorkingDir)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if updated {
