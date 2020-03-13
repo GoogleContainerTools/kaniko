@@ -5,7 +5,6 @@ go 1.13
 replace (
 	github.com/containerd/containerd v1.4.0-0.20191014053712-acdcf13d5eaf => github.com/containerd/containerd v0.0.0-20191014053712-acdcf13d5eaf
 	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c => github.com/docker/docker v0.0.0-20190319215453-e7b5f7dbe98c
-	github.com/google/go-containerregistry v0.0.0-20191218175032-34fb8ff33bed => github.com/Vlatombe/go-containerregistry v0.0.0-20200312085422-51fac941f6b0 // https://github.com/google/go-containerregistry/pull/693
 	github.com/tonistiigi/fsutil v0.0.0-20190819224149-3d2716dd0a4d => github.com/tonistiigi/fsutil v0.0.0-20191018213012-0f039a052ca1
 )
 
@@ -25,7 +24,7 @@ require (
 	github.com/gliderlabs/ssh v0.2.2 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/google/go-cmp v0.3.0
-	github.com/google/go-containerregistry v0.0.0-20191218175032-34fb8ff33bed
+	github.com/google/go-containerregistry v0.0.0-20200312164537-d47c18fa2769
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/martian v2.1.0+incompatible // indirect

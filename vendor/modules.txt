@@ -252,7 +252,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.0.0-20191218175032-34fb8ff33bed => github.com/Vlatombe/go-containerregistry v0.0.0-20200312085422-51fac941f6b0
+# github.com/google/go-containerregistry v0.0.0-20200312164537-d47c18fa2769
 github.com/google/go-containerregistry/pkg/authn
 github.com/google/go-containerregistry/pkg/authn/k8schain
 github.com/google/go-containerregistry/pkg/internal/retry
