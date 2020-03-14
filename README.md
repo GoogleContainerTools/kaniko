@@ -120,10 +120,17 @@ Right now, kaniko supports these storage solutions:
 - S3 Bucket
 - Azure Blob Storage
 - Local Directory
+- Local Tar
+- Standard Input
 - Git Repository
 
-_Note: the local directory option refers to a directory within the kaniko container.
+_Note about Local Directory: this option refers to a directory within the kaniko container.
 If you wish to use this option, you will need to mount in your build context into the container as a directory._
+
+_Note about Local Tar: this option refers to a tar gz  file within the kaniko container.
+If you wish to use this option, you will need to mount in your build context into the container as a file._
+
+_Note about Standard Input: the only Standard Input allowed by kaniko is in `.tar.gz` format._
 
 If using a GCS or S3 bucket, you will first need to create a compressed tar of your build context and upload it to your bucket.
 Once running, kaniko will then download and unpack the compressed tar of the build context before starting the image build.
@@ -146,6 +153,7 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 |---------|---------|---------|
 | Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
 | Local Tar Gz      | tar://[path to a .tar.gz in the kaniko container]               | `tar://path/to/context.tar.gz`                                            |
+| Standard Input    | tar://[stdin]                                                   | `tar://stdin`                                                 |
 | GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
 | S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
 | Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
@@ -159,6 +167,20 @@ If you are using Azure Blob Storage for context file, you will need to pass [Azu
 
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
+
+### Using Standard Input
+If running kaniko and using Standard Input build context, you will need to add the docker or kubernetes `-i, --interactive` flag.
+Once running, kaniko will then get the data from `STDIN` and create the build context as a compressed tar.
+It will then unpack the compressed tar of the build context before starting the image build.
+If no data is piped during the interactive run, you will need to send the EOF signal by yourself by pressing `Ctrl+D`.
+
+Complete example of how to interactively run kaniko with `.tar.gz` Standard Input data, using docker:
+```shell
+echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | docker run \
+  --interactive -v $(pwd):/workspace gcr.io/kaniko-project/executor:latest \
+  --context tar://stdin \
+  --destination=<gcr.io/$project/$image:$tag>
+```
 
 ### Running kaniko
 

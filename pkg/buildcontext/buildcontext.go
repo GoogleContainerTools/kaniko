@@ -38,25 +38,27 @@ type BuildContext interface {
 // parser
 func GetBuildContext(srcContext string) (BuildContext, error) {
 	split := strings.SplitAfter(srcContext, "://")
-	prefix := split[0]
-	context := split[1]
+	if len(split) > 1 {
+		prefix := split[0]
+		context := split[1]
 
-	switch prefix {
-	case constants.GCSBuildContextPrefix:
-		return &GCS{context: context}, nil
-	case constants.S3BuildContextPrefix:
-		return &S3{context: context}, nil
-	case constants.LocalDirBuildContextPrefix:
-		return &Dir{context: context}, nil
-	case constants.GitBuildContextPrefix:
-		return &Git{context: context}, nil
-	case constants.HTTPSBuildContextPrefix:
-		if util.ValidAzureBlobStorageHost(srcContext) {
-			return &AzureBlob{context: srcContext}, nil
+		switch prefix {
+		case constants.GCSBuildContextPrefix:
+			return &GCS{context: context}, nil
+		case constants.S3BuildContextPrefix:
+			return &S3{context: context}, nil
+		case constants.LocalDirBuildContextPrefix:
+			return &Dir{context: context}, nil
+		case constants.GitBuildContextPrefix:
+			return &Git{context: context}, nil
+		case constants.HTTPSBuildContextPrefix:
+			if util.ValidAzureBlobStorageHost(srcContext) {
+				return &AzureBlob{context: srcContext}, nil
+			}
+			return nil, errors.New("url provided for https context is not in a supported format, please use the https url for Azure Blob Storage")
+		case TarBuildContextPrefix:
+			return &Tar{context: context}, nil
 		}
-		return nil, errors.New("url provided for https context is not in a supported format, please use the https url for Azure Blob Storage")
-	case TarBuildContextPrefix:
-		return &Tar{context: context}, nil
 	}
 	return nil, errors.New("unknown build context prefix provided, please use one of the following: gs://, dir://, tar://, s3://, git://, https://")
 }
