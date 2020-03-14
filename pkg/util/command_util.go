@@ -35,6 +35,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// for testing
+var (
+	getUIDAndGID = GetUIDAndGIDFromString
+)
+
 const (
 	pathSeparator = "/"
 )
@@ -333,6 +338,21 @@ Loop:
 	}
 	config.Env = envArray
 	return nil
+}
+
+func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
+	if chownStr == "" {
+		return DoNotChangeUID, DoNotChangeGID, nil
+	}
+	chown, err := ResolveEnvironmentReplacement(chownStr, env, false)
+	if err != nil {
+		return -1, -1, err
+	}
+	uid32, gid32, err := getUIDAndGID(chown, true)
+	if err != nil {
+		return -1, -1, err
+	}
+	return int64(uid32), int64(gid32), nil
 }
 
 // Extract user and group id from a string formatted 'user:group'.
