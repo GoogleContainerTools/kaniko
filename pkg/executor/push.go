@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -114,7 +115,15 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if checked[destRef.Context().RepositoryStr()] {
 			continue
 		}
+		if strings.Contains(destRef.RegistryStr(), "gcr.io") {
+			if _, err := os.Stat("/kaniko/.docker/config.json"); os.IsNotExist(err) {
+				cmd := exec.Command("docker-credential-gcr", "configure-docker")
+				if err := cmd.Run(); err != nil {
+					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
+				}
+			}
 
+		}
 		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
 			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
