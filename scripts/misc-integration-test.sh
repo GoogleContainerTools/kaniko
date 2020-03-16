@@ -17,9 +17,9 @@
 # TestRun and TestLayers
 set -e
 
-TESTS=$(./integration-test.sh -list=Test -mod=vendor)
+TESTS=$(./scripts/integration-test.sh -list=Test -mod=vendor)
 
-TESTS=$(echo $TESTS | tr ' ' '\n' | grep 'Test'| grep -v 'TestRun' | grep -v 'TestLayers')
+TESTS=$(echo $TESTS | tr ' ' '\n' | grep 'Test'| grep -v 'TestRun' | grep -v 'TestLayers' | grep -v 'TestK8s')
 
 RUN_ARG=''
 count=0
