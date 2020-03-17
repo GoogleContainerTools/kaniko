@@ -5,7 +5,7 @@ env:
   global:
     - IMAGE_REPO=localhost:5000 REGISTRY=localhost:5000
 go:
-  - "1.13.3"
+  - "1.14"
 go_import_path: github.com/GoogleContainerTools/kaniko
 jobs:
   include:
