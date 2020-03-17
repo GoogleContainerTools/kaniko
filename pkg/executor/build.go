@@ -73,7 +73,7 @@ type stageBuilder struct {
 	stageIdxToDigest map[string]string
 	snapshotter      snapShotter
 	layerCache       cache.LayerCache
-	pushCache        cachePusher
+	pushLayerToCache cachePusher
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -116,7 +116,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		layerCache: &cache.RegistryCache{
 			Opts: opts,
 		},
-		pushCache: pushLayerToCache,
+		pushLayerToCache: pushLayerToCache,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -166,9 +166,15 @@ func initializeConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*
 	return imageConfig, nil
 }
 
-func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache) (CompositeCache, error) {
+func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache, args *dockerfile.BuildArgs, env []string) (CompositeCache, error) {
+	// First replace all the environment variables or args in the command
+	replacementEnvs := args.ReplacementEnvs(env)
+	resolvedCmd, err := util.ResolveEnvironmentReplacement(command.String(), replacementEnvs, false)
+	if err != nil {
+		return compositeKey, err
+	}
 	// Add the next command to the cache key.
-	compositeKey.AddKey(command.String())
+	compositeKey.AddKey(resolvedCmd)
 	switch v := command.(type) {
 	case *commands.CopyCommand:
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
@@ -221,7 +227,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		compositeKey, err = s.populateCompositeKey(command, files, compositeKey)
+		compositeKey, err = s.populateCompositeKey(command, files, compositeKey, s.args, cfg.Env)
 		if err != nil {
 			return err
 		}
@@ -270,8 +276,6 @@ func (s *stageBuilder) build() error {
 	} else {
 		compositeKey = NewCompositeCache(s.baseImageDigest)
 	}
-
-	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
@@ -329,7 +333,7 @@ func (s *stageBuilder) build() error {
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey)
+		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey, s.args, s.cf.Config.Env)
 		if err != nil {
 			return err
 		}
@@ -378,7 +382,7 @@ func (s *stageBuilder) build() error {
 			// Push layer to cache (in parallel) now along with new config file
 			if s.opts.Cache && command.ShouldCacheOutput() {
 				cacheGroup.Go(func() error {
-					return s.pushCache(s.opts, ck, tarPath, command.String())
+					return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
 				})
 			}
 			if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {

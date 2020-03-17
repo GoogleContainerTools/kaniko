@@ -43,13 +43,14 @@ func (f fakeSnapShotter) TakeSnapshot(_ []string) (string, error) {
 }
 
 type MockDockerCommand struct {
+	command      string
 	contextFiles []string
 	cacheCommand commands.DockerCommand
 }
 
 func (m MockDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error { return nil }
 func (m MockDockerCommand) String() string {
-	return "meow"
+	return m.command
 }
 func (m MockDockerCommand) FilesToSnapshot() []string {
 	return []string{"meow-snapshot-no-cache"}
