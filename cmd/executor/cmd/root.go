@@ -233,7 +233,7 @@ func copyDockerfile() error {
 	return nil
 }
 
-// resolveSourceContext unpacks the source context if it is a tar in a bucket
+// resolveSourceContext unpacks the source context if it is a tar in a bucket or in kaniko container
 // it resets srcContext to be the path to the unpacked build context within the image
 func resolveSourceContext() error {
 	if opts.SrcContext == "" && opts.Bucket == "" {
