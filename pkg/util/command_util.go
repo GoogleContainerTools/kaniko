@@ -344,14 +344,17 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 	if chownStr == "" {
 		return DoNotChangeUID, DoNotChangeGID, nil
 	}
+
 	chown, err := ResolveEnvironmentReplacement(chownStr, env, false)
 	if err != nil {
 		return -1, -1, err
 	}
+
 	uid32, gid32, err := getUIDAndGID(chown, true)
 	if err != nil {
 		return -1, -1, err
 	}
+
 	return int64(uid32), int64(gid32), nil
 }
 
@@ -370,15 +373,18 @@ func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32,
 	if err != nil {
 		return 0, 0, err
 	}
+
 	// uid and gid need to be fit into uint32
 	uid64, err := strconv.ParseUint(uidStr, 10, 32)
 	if err != nil {
 		return 0, 0, err
 	}
+
 	gid64, err := strconv.ParseUint(gidStr, 10, 32)
 	if err != nil {
 		return 0, 0, err
 	}
+
 	return uint32(uid64), uint32(gid64), nil
 }
 
@@ -422,11 +428,15 @@ func Lookup(userStr string) (*user.User, error) {
 		if _, ok := err.(user.UnknownUserError); !ok {
 			return nil, err
 		}
+
 		// Lookup by id
-		userObj, err = user.LookupId(userStr)
-		if err != nil {
+		u, e := user.LookupId(userStr)
+		if e != nil {
 			return nil, err
 		}
+
+		userObj = u
 	}
+
 	return userObj, nil
 }

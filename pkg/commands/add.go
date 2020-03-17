@@ -49,7 +49,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	uid, gid, err := util.GetUserGroup(a.cmd.Chown, replacementEnvs)
 	if err != nil {
-		return errors.Wrap(err, "getting user group from chowm")
+		return errors.Wrap(err, "getting user group from chown")
 	}
 
 	srcs, dest, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)

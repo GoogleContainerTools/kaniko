@@ -46,7 +46,7 @@ require (
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/otiai10/copy v1.0.2
 	github.com/pelletier/go-buffruneio v0.2.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v0.9.0-pre1.0.20180210140205-a40133b69fbd // indirect
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect
 	github.com/prometheus/common v0.0.0-20180518154759-7600349dcfe1 // indirect

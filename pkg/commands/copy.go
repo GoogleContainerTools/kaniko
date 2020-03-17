@@ -32,6 +32,11 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+// for testing
+var (
+	getUserGroup = util.GetUserGroup
+)
+
 type CopyCommand struct {
 	BaseCommand
 	cmd           *instructions.CopyCommand
@@ -46,9 +51,9 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	uid, gid, err := util.GetUserGroup(c.cmd.Chown, replacementEnvs)
+	uid, gid, err := getUserGroup(c.cmd.Chown, replacementEnvs)
 	if err != nil {
-		return errors.Wrap(err, "getting user group from chowm")
+		return errors.Wrap(err, "getting user group from chown")
 	}
 
 	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
