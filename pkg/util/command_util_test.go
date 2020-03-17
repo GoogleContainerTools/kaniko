@@ -475,6 +475,58 @@ func Test_RemoteUrls(t *testing.T) {
 
 }
 
+func TestGetUserGroup(t *testing.T) {
+	tests := []struct {
+		description string
+		chown       string
+		env         []string
+		mock        func(string, bool) (uint32, uint32, error)
+		expectedU   int64
+		expectedG   int64
+		shdErr      bool
+	}{
+		{
+			description: "non empty chown",
+			chown:       "some:some",
+			env:         []string{},
+			mock:        func(string, bool) (uint32, uint32, error) { return 100, 1000, nil },
+			expectedU:   100,
+			expectedG:   1000,
+		},
+		{
+			description: "non empty chown with env replacement",
+			chown:       "some:$foo",
+			env:         []string{"foo=key"},
+			mock: func(c string, t bool) (uint32, uint32, error) {
+				if c == "some:key" {
+					return 10, 100, nil
+				}
+				return 0, 0, fmt.Errorf("did not resolve environment variable")
+			},
+			expectedU: 10,
+			expectedG: 100,
+		},
+		{
+			description: "empty chown string",
+			mock: func(c string, t bool) (uint32, uint32, error) {
+				return 0, 0, fmt.Errorf("should not be called")
+			},
+			expectedU: -1,
+			expectedG: -1,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			original := getUIDAndGID
+			defer func() { getUIDAndGID = original }()
+			getUIDAndGID = tc.mock
+			uid, gid, err := GetUserGroup(tc.chown, tc.env)
+			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, uid, tc.expectedU)
+			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, gid, tc.expectedG)
+		})
+	}
+}
+
 func TestResolveEnvironmentReplacementList(t *testing.T) {
 	type args struct {
 		values     []string
