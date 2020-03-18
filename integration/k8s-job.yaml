@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kaniko-test-{{.Name}}
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      containers:
+      - name: kaniko
+        image: localhost:5000/executor:debug
+        args: [ "--context=dir:///workspace",
+                "--destination={{.KanikoImage}}"]
+        volumeMounts:
+          - name: context
+            mountPath: /workspace
+      restartPolicy: Never
+      volumes:
+      - name: context
+        hostPath:
+          path: {{.Context}}
+  backoffLimit: 1
