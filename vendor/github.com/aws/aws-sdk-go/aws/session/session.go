@@ -555,7 +555,20 @@ func mergeConfigSrcs(cfg, userCfg *aws.Config,
 	}
 
 	// Regional Endpoint flag for STS endpoint resolving
-	mergeSTSRegionalEndpointConfig(cfg, envCfg, sharedCfg)
+	mergeSTSRegionalEndpointConfig(cfg, []endpoints.STSRegionalEndpoint{
+		userCfg.STSRegionalEndpoint,
+		envCfg.STSRegionalEndpoint,
+		sharedCfg.STSRegionalEndpoint,
+		endpoints.LegacySTSEndpoint,
+	})
+
+	// Regional Endpoint flag for S3 endpoint resolving
+	mergeS3UsEast1RegionalEndpointConfig(cfg, []endpoints.S3UsEast1RegionalEndpoint{
+		userCfg.S3UsEast1RegionalEndpoint,
+		envCfg.S3UsEast1RegionalEndpoint,
+		sharedCfg.S3UsEast1RegionalEndpoint,
+		endpoints.LegacyS3UsEast1Endpoint,
+	})
 
 	// Configure credentials if not already set by the user when creating the
 	// Session.
@@ -567,23 +580,33 @@ func mergeConfigSrcs(cfg, userCfg *aws.Config,
 		cfg.Credentials = creds
 	}
 
+	cfg.S3UseARNRegion = userCfg.S3UseARNRegion
+	if cfg.S3UseARNRegion == nil {
+		cfg.S3UseARNRegion = &envCfg.S3UseARNRegion
+	}
+	if cfg.S3UseARNRegion == nil {
+		cfg.S3UseARNRegion = &sharedCfg.S3UseARNRegion
+	}
+
 	return nil
 }
 
-// mergeSTSRegionalEndpointConfig function merges the STSRegionalEndpoint into cfg from
-// envConfig and SharedConfig with envConfig being given precedence over SharedConfig
-func mergeSTSRegionalEndpointConfig(cfg *aws.Config, envCfg envConfig, sharedCfg sharedConfig) error {
-
-	cfg.STSRegionalEndpoint = envCfg.STSRegionalEndpoint
-
-	if cfg.STSRegionalEndpoint == endpoints.UnsetSTSEndpoint {
-		cfg.STSRegionalEndpoint = sharedCfg.STSRegionalEndpoint
+func mergeSTSRegionalEndpointConfig(cfg *aws.Config, values []endpoints.STSRegionalEndpoint) {
+	for _, v := range values {
+		if v != endpoints.UnsetSTSEndpoint {
+			cfg.STSRegionalEndpoint = v
+			break
+		}
 	}
+}
 
-	if cfg.STSRegionalEndpoint == endpoints.UnsetSTSEndpoint {
-		cfg.STSRegionalEndpoint = endpoints.LegacySTSEndpoint
+func mergeS3UsEast1RegionalEndpointConfig(cfg *aws.Config, values []endpoints.S3UsEast1RegionalEndpoint) {
+	for _, v := range values {
+		if v != endpoints.UnsetS3UsEast1Endpoint {
+			cfg.S3UsEast1RegionalEndpoint = v
+			break
+		}
 	}
-	return nil
 }
 
 func initHandlers(s *Session) {
@@ -614,50 +637,67 @@ func (s *Session) Copy(cfgs ...*aws.Config) *Session {
 // ClientConfig satisfies the client.ConfigProvider interface and is used to
 // configure the service client instances. Passing the Session to the service
 // client's constructor (New) will use this method to configure the client.
-func (s *Session) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
-	// Backwards compatibility, the error will be eaten if user calls ClientConfig
-	// directly. All SDK services will use ClientconfigWithError.
-	cfg, _ := s.clientConfigWithErr(serviceName, cfgs...)
-
-	return cfg
-}
-
-func (s *Session) clientConfigWithErr(serviceName string, cfgs ...*aws.Config) (client.Config, error) {
+func (s *Session) ClientConfig(service string, cfgs ...*aws.Config) client.Config {
 	s = s.Copy(cfgs...)
 
-	var resolved endpoints.ResolvedEndpoint
-	var err error
-
 	region := aws.StringValue(s.Config.Region)
-
-	if endpoint := aws.StringValue(s.Config.Endpoint); len(endpoint) != 0 {
-		resolved.URL = endpoints.AddScheme(endpoint, aws.BoolValue(s.Config.DisableSSL))
-		resolved.SigningRegion = region
-	} else {
-		resolved, err = s.Config.EndpointResolver.EndpointFor(
-			serviceName, region,
-			func(opt *endpoints.Options) {
-				opt.DisableSSL = aws.BoolValue(s.Config.DisableSSL)
-				opt.UseDualStack = aws.BoolValue(s.Config.UseDualStack)
-				// Support for STSRegionalEndpoint where the STSRegionalEndpoint is
-				// provided in envconfig or sharedconfig with envconfig getting precedence.
-				opt.STSRegionalEndpoint = s.Config.STSRegionalEndpoint
-
-				// Support the condition where the service is modeled but its
-				// endpoint metadata is not available.
-				opt.ResolveUnknownService = true
-			},
-		)
+	resolved, err := s.resolveEndpoint(service, region, s.Config)
+	if err != nil {
+		s.Handlers.Validate.PushBack(func(r *request.Request) {
+			if len(r.ClientInfo.Endpoint) != 0 {
+				// Error occurred while resolving endpoint, but the request
+				// being invoked has had an endpoint specified after the client
+				// was created.
+				return
+			}
+			r.Error = err
+		})
 	}
 
 	return client.Config{
 		Config:             s.Config,
 		Handlers:           s.Handlers,
+		PartitionID:        resolved.PartitionID,
 		Endpoint:           resolved.URL,
 		SigningRegion:      resolved.SigningRegion,
 		SigningNameDerived: resolved.SigningNameDerived,
 		SigningName:        resolved.SigningName,
-	}, err
+	}
+}
+
+func (s *Session) resolveEndpoint(service, region string, cfg *aws.Config) (endpoints.ResolvedEndpoint, error) {
+
+	if ep := aws.StringValue(cfg.Endpoint); len(ep) != 0 {
+		return endpoints.ResolvedEndpoint{
+			URL:           endpoints.AddScheme(ep, aws.BoolValue(cfg.DisableSSL)),
+			SigningRegion: region,
+		}, nil
+	}
+
+	resolved, err := cfg.EndpointResolver.EndpointFor(service, region,
+		func(opt *endpoints.Options) {
+			opt.DisableSSL = aws.BoolValue(cfg.DisableSSL)
+			opt.UseDualStack = aws.BoolValue(cfg.UseDualStack)
+			// Support for STSRegionalEndpoint where the STSRegionalEndpoint is
+			// provided in envConfig or sharedConfig with envConfig getting
+			// precedence.
+			opt.STSRegionalEndpoint = cfg.STSRegionalEndpoint
+
+			// Support for S3UsEast1RegionalEndpoint where the S3UsEast1RegionalEndpoint is
+			// provided in envConfig or sharedConfig with envConfig getting
+			// precedence.
+			opt.S3UsEast1RegionalEndpoint = cfg.S3UsEast1RegionalEndpoint
+
+			// Support the condition where the service is modeled but its
+			// endpoint metadata is not available.
+			opt.ResolveUnknownService = true
+		},
+	)
+	if err != nil {
+		return endpoints.ResolvedEndpoint{}, err
+	}
+
+	return resolved, nil
 }
 
 // ClientConfigNoResolveEndpoint is the same as ClientConfig with the exception
@@ -667,12 +707,9 @@ func (s *Session) ClientConfigNoResolveEndpoint(cfgs ...*aws.Config) client.Conf
 	s = s.Copy(cfgs...)
 
 	var resolved endpoints.ResolvedEndpoint
-
-	region := aws.StringValue(s.Config.Region)
-
 	if ep := aws.StringValue(s.Config.Endpoint); len(ep) > 0 {
 		resolved.URL = endpoints.AddScheme(ep, aws.BoolValue(s.Config.DisableSSL))
-		resolved.SigningRegion = region
+		resolved.SigningRegion = aws.StringValue(s.Config.Region)
 	}
 
 	return client.Config{
