@@ -1129,9 +1129,9 @@ COPY %s bar.txt
 			for key, value := range tc.args {
 				sb.args.AddArg(key, &value)
 			}
-			tmp := commands.RootDir
+			tmp := config.RootDir
 			if tc.rootDir != "" {
-				commands.RootDir = tc.rootDir
+				config.RootDir = tc.rootDir
 			}
 			err := sb.build()
 			if err != nil {
@@ -1141,7 +1141,7 @@ COPY %s bar.txt
 			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
 			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
 
-			commands.RootDir = tmp
+			config.RootDir = tmp
 
 		})
 	}

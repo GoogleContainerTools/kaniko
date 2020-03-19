@@ -97,7 +97,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 	l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
-	snapshotter := snapshot.NewSnapshotter(l, constants.RootDir)
+	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
 
 	digest, err := sourceImage.Digest()
 	if err != nil {
@@ -298,7 +298,7 @@ func (s *stageBuilder) build() error {
 	if shouldUnpack {
 		t := timing.Start("FS Unpacking")
 
-		if _, err := util.GetFSFromImage(constants.RootDir, s.image, util.ExtractFile); err != nil {
+		if _, err := util.GetFSFromImage(config.RootDir, s.image, util.ExtractFile); err != nil {
 			return errors.Wrap(err, "failed to get filesystem from image")
 		}
 
@@ -307,7 +307,7 @@ func (s *stageBuilder) build() error {
 		logrus.Info("Skipping unpacking as no commands require it.")
 	}
 
-	if err := util.DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
+	if err := util.DetectFilesystemWhitelist(config.WhitelistPath); err != nil {
 		return errors.Wrap(err, "failed to check filesystem whitelist")
 	}
 
@@ -524,7 +524,6 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 					if err != nil {
 						return nil, err
 					}
-
 					depGraph[i] = append(depGraph[i], resolved[0:len(resolved)-1]...)
 				}
 			case *instructions.EnvCommand:
@@ -629,20 +628,23 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, err
 		}
-		dstDir := filepath.Join(constants.KanikoDir, strconv.Itoa(index))
+		dstDir := filepath.Join(config.KanikoDir, strconv.Itoa(index))
 		if err := os.MkdirAll(dstDir, 0644); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err,
+				fmt.Sprintf("to create workspace for stage %s",
+					stageIdxToDigest[strconv.Itoa(index)],
+				))
 		}
 		for _, p := range filesToSave {
 			logrus.Infof("Saving file %s for later use", p)
-			if err := util.CopyFileOrSymlink(p, dstDir); err != nil {
-				return nil, err
+			if err := util.CopyFileOrSymlink(p, dstDir, config.RootDir); err != nil {
+				return nil, errors.Wrap(err, "could not save file")
 			}
 		}
 
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after satge %d", index))
 		}
 	}
 
@@ -653,17 +655,15 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 // If a file is a symlink, it also returns the target file.
 func filesToSave(deps []string) ([]string, error) {
 	srcFiles := []string{}
-	for _, src := range deps {
-		srcs, err := filepath.Glob(src)
-		if err != nil {
-			return nil, err
+	srcs, err := util.ResolveSources(deps, config.RootDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "resolving sources to save")
+	}
+	for _, f := range srcs {
+		if link, err := util.EvalSymLink(f); err == nil {
+			srcFiles = append(srcFiles, link)
 		}
-		for _, f := range srcs {
-			if link, err := util.EvalSymLink(f); err == nil {
-				srcFiles = append(srcFiles, link)
-			}
-			srcFiles = append(srcFiles, f)
-		}
+		srcFiles = append(srcFiles, f)
 	}
 	return srcFiles, nil
 }
@@ -717,7 +717,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 func extractImageToDependencyDir(name string, image v1.Image) error {
 	t := timing.Start("Extracting Image to Dependency Dir")
 	defer timing.DefaultRun.Stop(t)
-	dependencyDir := filepath.Join(constants.KanikoDir, name)
+	dependencyDir := filepath.Join(config.KanikoDir, name)
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}

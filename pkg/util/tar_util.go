@@ -28,6 +28,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -76,14 +77,14 @@ func (t *Tar) AddFileToTar(p string) error {
 		return err
 	}
 
-	if p != "/" {
-		// Docker uses no leading / in the tarball
-		hdr.Name = strings.TrimLeft(p, "/")
-	} else {
+	if p == config.RootDir {
 		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
-		hdr.Name = p
+		hdr.Name = "/"
+	} else {
+		// Docker uses no leading / in the tarball
+		hdr.Name = strings.TrimPrefix(p, config.RootDir)
+		hdr.Name = strings.TrimLeft(hdr.Name, "/")
 	}
-
 	// rootfs may not have been extracted when using cache, preventing uname/gname from resolving
 	// this makes this layer unnecessarily differ from a cached layer which does contain this information
 	hdr.Uname = ""
