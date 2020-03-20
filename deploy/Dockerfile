@@ -27,12 +27,20 @@ RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64
 # ACR docker credential helper
 ADD https://aadacr.blob.core.windows.net/acr-docker-credential-helper/docker-credential-acr-linux-amd64.tar.gz /usr/local/bin
 RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-acr-linux-amd64.tar.gz
+# Get dockerfile linter hadolint
+ARG HADOLINT_VERSION=1.17.5
+ENV HADOLINT_CHECKSUM=20dd38bc0602040f19268adc14c3d1aae11af27b463af43f3122076baf827a35
+ENV HADOLINT_PATH=/usr/local/bin/hadolint
+RUN curl -sL -o ${HADOLINT_PATH} "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-$(uname -s)-$(uname -m)" \
+    && echo "${HADOLINT_CHECKSUM} ${HADOLINT_PATH}" | sha256sum --check \
+    && chmod +x ${HADOLINT_PATH}
 
 COPY . .
 RUN make GOARCH=${GOARCH}
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY --from=0 /usr/local/bin/hadolint /kaniko/hadolint
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr

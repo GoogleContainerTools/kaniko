@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
@@ -51,6 +53,18 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
+	}
+
+	if opts.DockerfileLint {
+		if _, err := os.Stat(constants.DockerfilePath); os.IsNotExist(err) {
+			if err := ioutil.WriteFile(constants.DockerfilePath, d, 0644); err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("writing dockerfile to prepare lint at path %s", constants.DockerfilePath))
+			}
+		}
+		output, err := lintDockerfile(constants.DockerfilePath, opts.DockerLintIgnoredRules, opts.DockerLintTrustedRegistries)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("linting dockerfile:\n%s", string(output)))
+		}
 	}
 
 	stages, metaArgs, err := Parse(d)

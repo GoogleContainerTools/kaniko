@@ -644,6 +644,7 @@ gopkg.in/src-d/go-git.v4/utils/merkletrie/noder
 ## explicit
 gopkg.in/warnings.v0
 # gopkg.in/yaml.v2 v2.2.4
+## explicit
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20180904230853-4e7be11eab3f
 k8s.io/api/admissionregistration/v1alpha1

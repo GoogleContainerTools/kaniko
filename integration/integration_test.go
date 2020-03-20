@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -452,6 +454,94 @@ func TestRelativePaths(t *testing.T) {
 		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 		checkContainerDiffOutput(t, diff, expected)
 	})
+}
+
+func TestLintDockerfile(t *testing.T) {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	testDir := "test_dir"
+	testDirLongPath := filepath.Join(cwd, testDir)
+
+	if err := os.MkdirAll(testDirLongPath, 0750); err != nil {
+		t.Errorf("Failed to create dir_where_to_extract: %v", err)
+	}
+
+	lintOKDockerfile := "Dockerfile_hadolint_OK"
+	lintDL3006Dockerfile := "Dockerfile_hadolint_DL3006"
+
+	files := map[string]string{
+		lintOKDockerfile:     "FROM debian:9.11\nRUN echo \"hey\"",
+		lintDL3006Dockerfile: "FROM debian\nRUN echo \"hey\"",
+	}
+
+	if err := testutil.SetupFiles(testDir, files); err != nil {
+		t.Errorf("Failed to setup files %v on %s: %v", files, testDir, err)
+	}
+
+	tests := []struct {
+		description       string
+		dockerfile        string
+		shouldErr         bool
+		ignoredRules      []string
+		trustedRegistries []string
+	}{
+		{
+			description:       "Fail_Because_Not_Allowed_Registry",
+			dockerfile:        lintOKDockerfile,
+			shouldErr:         true,
+			ignoredRules:      []string{},
+			trustedRegistries: []string{"my-registry.com"},
+		},
+		{
+			description:       "Fail_Because_DL3006",
+			dockerfile:        lintDL3006Dockerfile,
+			shouldErr:         true,
+			ignoredRules:      []string{},
+			trustedRegistries: []string{},
+		},
+		{
+			description:       "Succeed_Because_OK",
+			dockerfile:        lintOKDockerfile,
+			shouldErr:         false,
+			ignoredRules:      []string{},
+			trustedRegistries: []string{},
+		},
+		{
+			description:       "Succeed_Because_DL3006_Ignored",
+			dockerfile:        lintDL3006Dockerfile,
+			shouldErr:         false,
+			ignoredRules:      []string{"DL3006"},
+			trustedRegistries: []string{},
+		},
+	}
+
+	srcContext := "/build"
+
+	dockerRunGlobalFlags := []string{"run", "-v", fmt.Sprintf("%s:%s", testDirLongPath, srcContext), ExecutorImage}
+	dockerRunGlobalFlags = append(dockerRunGlobalFlags, "-c", srcContext, "--no-push", "--dockerlint")
+
+	for _, tt := range tests {
+		dockerRunFlags := append(dockerRunGlobalFlags, "--dockerfile", tt.dockerfile)
+		for _, r := range tt.ignoredRules {
+			dockerRunFlags = append(dockerRunFlags, "--dockerlint-ignore", r)
+		}
+		for _, r := range tt.trustedRegistries {
+			dockerRunFlags = append(dockerRunFlags, "--dockerlint-trust", r)
+		}
+		t.Run(tt.description, func(t *testing.T) {
+			dockerCmd := exec.Command("docker", dockerRunFlags...)
+			output, err := RunCommandWithoutTest(dockerCmd)
+			testutil.CheckError(t, tt.shouldErr, err)
+			if err != nil {
+				logrus.Errorf("%v: '%s'", err, output)
+			}
+		})
+	}
+
+	if err := os.RemoveAll(testDirLongPath); err != nil {
+		t.Errorf("Failed to remove %s: %v", testDirLongPath, err)
+	}
 }
 
 type fileDiff struct {
