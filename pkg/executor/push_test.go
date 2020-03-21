@@ -334,7 +334,6 @@ func TestCheckPushPermissionsGCR(t *testing.T) {
 		Destinations: []string{"gcr.io/test-image"},
 	}
 	fs = afero.NewMemMapFs()
-	//afero.WriteFile(fs, "/kaniko/.docker/config.json", []byte(""), os.FileMode(0644))
 	CheckPushPermissions(&opts)
 	if called != true {
 		t.Error("execCommand should have been called")
@@ -350,7 +349,7 @@ func TestCheckPushPermissionsGCRExistingDockerConf(t *testing.T) {
 		Destinations: []string{"gcr.io/test-image"},
 	}
 	fs = afero.NewMemMapFs()
-	afero.WriteFile(fs, "/kaniko/.docker/config.json", []byte(""), os.FileMode(0644))
+	afero.WriteFile(fs, DockerConfLocation, []byte(""), os.FileMode(0644))
 	CheckPushPermissions(&opts)
 	if called != false {
 		t.Error("execCommand should not have been called")
