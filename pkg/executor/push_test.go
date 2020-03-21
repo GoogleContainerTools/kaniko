@@ -24,11 +24,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
@@ -306,4 +308,74 @@ func Test_makeTransport(t *testing.T) {
 			tt.check(transport.(*http.Transport).TLSClientConfig, &certPool)
 		})
 	}
+}
+
+var called = false
+
+func fakeExecCommand(command string, args ...string) *exec.Cmd {
+	called = true
+	cs := []string{"-test.run=TestHelperProcess", "--", command}
+	cs = append(cs, args...)
+	cmd := exec.Command(os.Args[0], cs...)
+	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	return cmd
+}
+
+func fakeCheckPushPermission(ref name.Reference, kc authn.Keychain, t http.RoundTripper) error {
+	return nil
+}
+
+func TestCheckPushPermissionsGCR(t *testing.T) {
+	execCommand = fakeExecCommand
+	checkRemotePushPermission = fakeCheckPushPermission
+	defer func() { called = false }()
+
+	opts := config.KanikoOptions{
+		Destinations: []string{"gcr.io/test-image"},
+	}
+	fs = afero.NewMemMapFs()
+	//afero.WriteFile(fs, "/kaniko/.docker/config.json", []byte(""), os.FileMode(0644))
+	CheckPushPermissions(&opts)
+	if called != true {
+		t.Error("execCommand should have been called")
+	}
+}
+
+func TestCheckPushPermissionsGCRExistingDockerConf(t *testing.T) {
+	execCommand = fakeExecCommand
+	checkRemotePushPermission = fakeCheckPushPermission
+	defer func() { called = false }()
+
+	opts := config.KanikoOptions{
+		Destinations: []string{"gcr.io/test-image"},
+	}
+	fs = afero.NewMemMapFs()
+	afero.WriteFile(fs, "/kaniko/.docker/config.json", []byte(""), os.FileMode(0644))
+	CheckPushPermissions(&opts)
+	if called != false {
+		t.Error("execCommand should not have been called")
+	}
+}
+
+func TestCheckPushPermissionsLocalRegistry(t *testing.T) {
+	execCommand = fakeExecCommand
+	checkRemotePushPermission = fakeCheckPushPermission
+	defer func() { called = false }()
+
+	opts := config.KanikoOptions{
+		Destinations: []string{"localhost:5000/test-image"},
+	}
+	fs = afero.NewMemMapFs()
+	CheckPushPermissions(&opts)
+	if called != false {
+		t.Error("execCommand should not have been called")
+	}
+}
+
+func TestHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	fmt.Fprintf(os.Stdout, "fake result")
+	os.Exit(0)
 }

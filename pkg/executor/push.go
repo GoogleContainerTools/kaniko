@@ -99,6 +99,13 @@ var defaultX509Handler systemCertLoader = func() CertPool {
 	}
 }
 
+// for testing
+var (
+	fs                        = afero.NewOsFs()
+	execCommand               = exec.Command
+	checkRemotePushPermission = remote.CheckPushPermission
+)
+
 // CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
@@ -122,9 +129,8 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if strings.Contains(destRef.RegistryStr(), "gcr.io") {
 			// Checking for existence of docker.config as it's normally required for
 			// authenticated registries and prevent overwriting user provided docker conf
-			if _, err := os.Stat("/kaniko/.docker/config.json"); os.IsNotExist(err) {
-				cmd := exec.Command("docker-credential-gcr", "configure-docker")
-				if err := cmd.Run(); err != nil {
+			if _, err := fs.Stat("/kaniko/.docker/config.json"); os.IsNotExist(err) {
+				if err := execCommand("docker-credential-gcr", "configure-docker").Run(); err != nil {
 					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
 				}
 			}
@@ -138,7 +144,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			destRef.Repository.Registry = newReg
 		}
 		tr := makeTransport(opts, registryName, defaultX509Handler)
-		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
+		if err := checkRemotePushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
@@ -244,8 +250,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	timing.DefaultRun.Stop(t)
 	return writeImageOutputs(image, destRefs)
 }
-
-var fs = afero.NewOsFs()
 
 func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	dir := os.Getenv("BUILDER_OUTPUT")
