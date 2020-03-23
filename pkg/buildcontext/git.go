@@ -41,6 +41,28 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	if len(parts) > 1 {
 		options.ReferenceName = plumbing.ReferenceName(parts[1])
 	}
-	_, err := git.PlainClone(directory, false, &options)
+	r, err := git.PlainClone(directory, false, &options)
+
+	if err == nil && len(parts) > 2 {
+		// ... retrieving the commit being pointed by HEAD
+		_, err := r.Head()
+		if err != nil {
+			return directory, err
+		}
+
+		w, err := r.Worktree()
+		if err != nil {
+			return directory, err
+		}
+
+		// ... checking out to desired commit
+		err = w.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(parts[2]),
+		})
+		if err != nil {
+			return directory, err
+		}
+	}
+
 	return directory, err
 }
