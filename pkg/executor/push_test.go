@@ -355,6 +355,7 @@ func TestCheckPushPermissions(t *testing.T) {
 			}
 			if test.ExistingConfig {
 				afero.WriteFile(fs, DockerConfLocation, []byte(""), os.FileMode(0644))
+				defer fs.Remove(DockerConfLocation)
 			}
 			CheckPushPermissions(&opts)
 			if test.ShouldCallExecCommand != calledExecCommand {
