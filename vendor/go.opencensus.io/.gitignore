@@ -4,4 +4,6 @@
 /exporter/aws/
 
 # Exclude vendor, use dep ensure after checkout:
-/vendor/
+/vendor/github.com/
+/vendor/golang.org/
+/vendor/google.golang.org/
