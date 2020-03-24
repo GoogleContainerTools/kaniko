@@ -21,7 +21,7 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -46,18 +46,30 @@ func (in *ExternalMetricSource) DeepCopyInto(out *ExternalMetricSource) {
 	*out = *in
 	if in.MetricSelector != nil {
 		in, out := &in.MetricSelector, &out.MetricSelector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(meta_v1.LabelSelector)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.TargetValue != nil {
 		in, out := &in.TargetValue, &out.TargetValue
-		x := (*in).DeepCopy()
-		*out = &x
+		if *in == nil {
+			*out = nil
+		} else {
+			x := (*in).DeepCopy()
+			*out = &x
+		}
 	}
 	if in.TargetAverageValue != nil {
 		in, out := &in.TargetAverageValue, &out.TargetAverageValue
-		x := (*in).DeepCopy()
-		*out = &x
+		if *in == nil {
+			*out = nil
+		} else {
+			x := (*in).DeepCopy()
+			*out = &x
+		}
 	}
 	return
 }
@@ -77,14 +89,22 @@ func (in *ExternalMetricStatus) DeepCopyInto(out *ExternalMetricStatus) {
 	*out = *in
 	if in.MetricSelector != nil {
 		in, out := &in.MetricSelector, &out.MetricSelector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(meta_v1.LabelSelector)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	out.CurrentValue = in.CurrentValue.DeepCopy()
 	if in.CurrentAverageValue != nil {
 		in, out := &in.CurrentAverageValue, &out.CurrentAverageValue
-		x := (*in).DeepCopy()
-		*out = &x
+		if *in == nil {
+			*out = nil
+		} else {
+			x := (*in).DeepCopy()
+			*out = &x
+		}
 	}
 	return
 }
@@ -148,7 +168,7 @@ func (in *HorizontalPodAutoscalerCondition) DeepCopy() *HorizontalPodAutoscalerC
 func (in *HorizontalPodAutoscalerList) DeepCopyInto(out *HorizontalPodAutoscalerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]HorizontalPodAutoscaler, len(*in))
@@ -183,13 +203,21 @@ func (in *HorizontalPodAutoscalerSpec) DeepCopyInto(out *HorizontalPodAutoscaler
 	out.ScaleTargetRef = in.ScaleTargetRef
 	if in.MinReplicas != nil {
 		in, out := &in.MinReplicas, &out.MinReplicas
-		*out = new(int32)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int32)
+			**out = **in
+		}
 	}
 	if in.TargetCPUUtilizationPercentage != nil {
 		in, out := &in.TargetCPUUtilizationPercentage, &out.TargetCPUUtilizationPercentage
-		*out = new(int32)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int32)
+			**out = **in
+		}
 	}
 	return
 }
@@ -209,17 +237,29 @@ func (in *HorizontalPodAutoscalerStatus) DeepCopyInto(out *HorizontalPodAutoscal
 	*out = *in
 	if in.ObservedGeneration != nil {
 		in, out := &in.ObservedGeneration, &out.ObservedGeneration
-		*out = new(int64)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int64)
+			**out = **in
+		}
 	}
 	if in.LastScaleTime != nil {
 		in, out := &in.LastScaleTime, &out.LastScaleTime
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.CurrentCPUUtilizationPercentage != nil {
 		in, out := &in.CurrentCPUUtilizationPercentage, &out.CurrentCPUUtilizationPercentage
-		*out = new(int32)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int32)
+			**out = **in
+		}
 	}
 	return
 }
@@ -239,23 +279,39 @@ func (in *MetricSpec) DeepCopyInto(out *MetricSpec) {
 	*out = *in
 	if in.Object != nil {
 		in, out := &in.Object, &out.Object
-		*out = new(ObjectMetricSource)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ObjectMetricSource)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Pods != nil {
 		in, out := &in.Pods, &out.Pods
-		*out = new(PodsMetricSource)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(PodsMetricSource)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Resource != nil {
 		in, out := &in.Resource, &out.Resource
-		*out = new(ResourceMetricSource)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ResourceMetricSource)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.External != nil {
 		in, out := &in.External, &out.External
-		*out = new(ExternalMetricSource)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ExternalMetricSource)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -275,23 +331,39 @@ func (in *MetricStatus) DeepCopyInto(out *MetricStatus) {
 	*out = *in
 	if in.Object != nil {
 		in, out := &in.Object, &out.Object
-		*out = new(ObjectMetricStatus)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ObjectMetricStatus)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Pods != nil {
 		in, out := &in.Pods, &out.Pods
-		*out = new(PodsMetricStatus)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(PodsMetricStatus)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Resource != nil {
 		in, out := &in.Resource, &out.Resource
-		*out = new(ResourceMetricStatus)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ResourceMetricStatus)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.External != nil {
 		in, out := &in.External, &out.External
-		*out = new(ExternalMetricStatus)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ExternalMetricStatus)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -311,16 +383,6 @@ func (in *ObjectMetricSource) DeepCopyInto(out *ObjectMetricSource) {
 	*out = *in
 	out.Target = in.Target
 	out.TargetValue = in.TargetValue.DeepCopy()
-	if in.Selector != nil {
-		in, out := &in.Selector, &out.Selector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.AverageValue != nil {
-		in, out := &in.AverageValue, &out.AverageValue
-		x := (*in).DeepCopy()
-		*out = &x
-	}
 	return
 }
 
@@ -339,16 +401,6 @@ func (in *ObjectMetricStatus) DeepCopyInto(out *ObjectMetricStatus) {
 	*out = *in
 	out.Target = in.Target
 	out.CurrentValue = in.CurrentValue.DeepCopy()
-	if in.Selector != nil {
-		in, out := &in.Selector, &out.Selector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.AverageValue != nil {
-		in, out := &in.AverageValue, &out.AverageValue
-		x := (*in).DeepCopy()
-		*out = &x
-	}
 	return
 }
 
@@ -366,11 +418,6 @@ func (in *ObjectMetricStatus) DeepCopy() *ObjectMetricStatus {
 func (in *PodsMetricSource) DeepCopyInto(out *PodsMetricSource) {
 	*out = *in
 	out.TargetAverageValue = in.TargetAverageValue.DeepCopy()
-	if in.Selector != nil {
-		in, out := &in.Selector, &out.Selector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 
@@ -388,11 +435,6 @@ func (in *PodsMetricSource) DeepCopy() *PodsMetricSource {
 func (in *PodsMetricStatus) DeepCopyInto(out *PodsMetricStatus) {
 	*out = *in
 	out.CurrentAverageValue = in.CurrentAverageValue.DeepCopy()
-	if in.Selector != nil {
-		in, out := &in.Selector, &out.Selector
-		*out = new(metav1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 
@@ -411,13 +453,21 @@ func (in *ResourceMetricSource) DeepCopyInto(out *ResourceMetricSource) {
 	*out = *in
 	if in.TargetAverageUtilization != nil {
 		in, out := &in.TargetAverageUtilization, &out.TargetAverageUtilization
-		*out = new(int32)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int32)
+			**out = **in
+		}
 	}
 	if in.TargetAverageValue != nil {
 		in, out := &in.TargetAverageValue, &out.TargetAverageValue
-		x := (*in).DeepCopy()
-		*out = &x
+		if *in == nil {
+			*out = nil
+		} else {
+			x := (*in).DeepCopy()
+			*out = &x
+		}
 	}
 	return
 }
@@ -437,8 +487,12 @@ func (in *ResourceMetricStatus) DeepCopyInto(out *ResourceMetricStatus) {
 	*out = *in
 	if in.CurrentAverageUtilization != nil {
 		in, out := &in.CurrentAverageUtilization, &out.CurrentAverageUtilization
-		*out = new(int32)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int32)
+			**out = **in
+		}
 	}
 	out.CurrentAverageValue = in.CurrentAverageValue.DeepCopy()
 	return

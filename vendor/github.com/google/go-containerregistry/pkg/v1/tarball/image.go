@@ -79,17 +79,15 @@ func Image(opener Opener, tag *name.Tag) (v1.Image, error) {
 	}
 
 	// Peek at the first layer and see if it's compressed.
-	if len(img.imgDescriptor.Layers) > 0 {
-		compressed, err := img.areLayersCompressed()
-		if err != nil {
-			return nil, err
+	compressed, err := img.areLayersCompressed()
+	if err != nil {
+		return nil, err
+	}
+	if compressed {
+		c := compressedImage{
+			image: img,
 		}
-		if compressed {
-			c := compressedImage{
-				image: img,
-			}
-			return partial.CompressedToImage(&c)
-		}
+		return partial.CompressedToImage(&c)
 	}
 
 	uc := uncompressedImage{

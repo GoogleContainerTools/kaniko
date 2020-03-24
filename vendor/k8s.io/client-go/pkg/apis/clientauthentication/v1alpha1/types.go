@@ -22,7 +22,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ExecCredential is used by exec-based plugins to communicate credentials to
+// ExecCredentials is used by exec-based plugins to communicate credentials to
 // HTTP transports.
 type ExecCredential struct {
 	metav1.TypeMeta `json:",inline"`

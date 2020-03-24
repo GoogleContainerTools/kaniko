@@ -56,12 +56,6 @@ type registerViewReq struct {
 }
 
 func (cmd *registerViewReq) handleCommand(w *worker) {
-	for _, v := range cmd.views {
-		if err := v.canonicalize(); err != nil {
-			cmd.err <- err
-			return
-		}
-	}
 	var errstr []string
 	for _, view := range cmd.views {
 		vi, err := w.tryRegisterView(view)
@@ -94,16 +88,13 @@ func (cmd *unregisterFromViewReq) handleCommand(w *worker) {
 			continue
 		}
 
-		// Report pending data for this view before removing it.
-		w.reportView(vi, time.Now())
-
 		vi.unsubscribe()
 		if !vi.isSubscribed() {
 			// this was the last subscription and view is not collecting anymore.
 			// The collected data can be cleared.
 			vi.clearRows()
 		}
-		w.unregisterView(name)
+		delete(w.views, name)
 	}
 	cmd.done <- struct{}{}
 }
@@ -121,8 +112,6 @@ type retrieveDataResp struct {
 }
 
 func (cmd *retrieveDataReq) handleCommand(w *worker) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
 	vi, ok := w.views[cmd.v]
 	if !ok {
 		cmd.c <- &retrieveDataResp{
@@ -148,22 +137,18 @@ func (cmd *retrieveDataReq) handleCommand(w *worker) {
 // recordReq is the command to record data related to multiple measures
 // at once.
 type recordReq struct {
-	tm          *tag.Map
-	ms          []stats.Measurement
-	attachments map[string]interface{}
-	t           time.Time
+	tm *tag.Map
+	ms []stats.Measurement
 }
 
 func (cmd *recordReq) handleCommand(w *worker) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
 	for _, m := range cmd.ms {
 		if (m == stats.Measurement{}) { // not registered
 			continue
 		}
 		ref := w.getMeasureRef(m.Measure().Name())
 		for v := range ref.views {
-			v.addSample(cmd.tm, m.Value(), cmd.attachments, time.Now())
+			v.addSample(cmd.tm, m.Value())
 		}
 	}
 }

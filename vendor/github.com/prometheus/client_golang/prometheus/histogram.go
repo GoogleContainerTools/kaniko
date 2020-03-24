@@ -16,9 +16,7 @@ package prometheus
 import (
 	"fmt"
 	"math"
-	"runtime"
 	"sort"
-	"sync"
 	"sync/atomic"
 
 	"github.com/golang/protobuf/proto"
@@ -110,9 +108,8 @@ func ExponentialBuckets(start, factor float64, count int) []float64 {
 }
 
 // HistogramOpts bundles the options for creating a Histogram metric. It is
-// mandatory to set Name to a non-empty string. All other fields are optional
-// and can safely be left at their zero value, although it is strongly
-// encouraged to set a Help string.
+// mandatory to set Name and Help to a non-empty string. All other fields are
+// optional and can safely be left at their zero value.
 type HistogramOpts struct {
 	// Namespace, Subsystem, and Name are components of the fully-qualified
 	// name of the Histogram (created by joining these components with
@@ -123,7 +120,7 @@ type HistogramOpts struct {
 	Subsystem string
 	Name      string
 
-	// Help provides information about this Histogram.
+	// Help provides information about this Histogram. Mandatory!
 	//
 	// Metrics with the same fully-qualified name must have the same Help
 	// string.
@@ -165,7 +162,7 @@ func NewHistogram(opts HistogramOpts) Histogram {
 
 func newHistogram(desc *Desc, opts HistogramOpts, labelValues ...string) Histogram {
 	if len(desc.variableLabels) != len(labelValues) {
-		panic(makeInconsistentCardinalityError(desc.fqName, desc.variableLabels, labelValues))
+		panic(errInconsistentCardinality)
 	}
 
 	for _, n := range desc.variableLabels {
@@ -187,7 +184,6 @@ func newHistogram(desc *Desc, opts HistogramOpts, labelValues ...string) Histogr
 		desc:        desc,
 		upperBounds: opts.Buckets,
 		labelPairs:  makeLabelPairs(desc, labelValues),
-		counts:      [2]*histogramCounts{&histogramCounts{}, &histogramCounts{}},
 	}
 	for i, upperBound := range h.upperBounds {
 		if i < len(h.upperBounds)-1 {
@@ -204,56 +200,30 @@ func newHistogram(desc *Desc, opts HistogramOpts, labelValues ...string) Histogr
 			}
 		}
 	}
-	// Finally we know the final length of h.upperBounds and can make buckets
-	// for both counts:
-	h.counts[0].buckets = make([]uint64, len(h.upperBounds))
-	h.counts[1].buckets = make([]uint64, len(h.upperBounds))
+	// Finally we know the final length of h.upperBounds and can make counts.
+	h.counts = make([]uint64, len(h.upperBounds))
 
 	h.init(h) // Init self-collection.
 	return h
 }
 
-type histogramCounts struct {
+type histogram struct {
 	// sumBits contains the bits of the float64 representing the sum of all
 	// observations. sumBits and count have to go first in the struct to
 	// guarantee alignment for atomic operations.
 	// http://golang.org/pkg/sync/atomic/#pkg-note-BUG
 	sumBits uint64
 	count   uint64
-	buckets []uint64
-}
-
-type histogram struct {
-	// countAndHotIdx enables lock-free writes with use of atomic updates.
-	// The most significant bit is the hot index [0 or 1] of the count field
-	// below. Observe calls update the hot one. All remaining bits count the
-	// number of Observe calls. Observe starts by incrementing this counter,
-	// and finish by incrementing the count field in the respective
-	// histogramCounts, as a marker for completion.
-	//
-	// Calls of the Write method (which are non-mutating reads from the
-	// perspective of the histogram) swap the hot–cold under the writeMtx
-	// lock. A cooldown is awaited (while locked) by comparing the number of
-	// observations with the initiation count. Once they match, then the
-	// last observation on the now cool one has completed. All cool fields must
-	// be merged into the new hot before releasing writeMtx.
-	//
-	// Fields with atomic access first! See alignment constraint:
-	// http://golang.org/pkg/sync/atomic/#pkg-note-BUG
-	countAndHotIdx uint64
 
 	selfCollector
-	desc     *Desc
-	writeMtx sync.Mutex // Only used in the Write method.
+	// Note that there is no mutex required.
 
-	// Two counts, one is "hot" for lock-free observations, the other is
-	// "cold" for writing out a dto.Metric. It has to be an array of
-	// pointers to guarantee 64bit alignment of the histogramCounts, see
-	// http://golang.org/pkg/sync/atomic/#pkg-note-BUG.
-	counts [2]*histogramCounts
+	desc *Desc
 
 	upperBounds []float64
-	labelPairs  []*dto.LabelPair
+	counts      []uint64
+
+	labelPairs []*dto.LabelPair
 }
 
 func (h *histogram) Desc() *Desc {
@@ -271,84 +241,36 @@ func (h *histogram) Observe(v float64) {
 	// 100 buckets: 78.1 ns/op linear - binary 54.9 ns/op
 	// 300 buckets: 154 ns/op linear - binary 61.6 ns/op
 	i := sort.SearchFloat64s(h.upperBounds, v)
-
-	// We increment h.countAndHotIdx so that the counter in the lower
-	// 63 bits gets incremented. At the same time, we get the new value
-	// back, which we can use to find the currently-hot counts.
-	n := atomic.AddUint64(&h.countAndHotIdx, 1)
-	hotCounts := h.counts[n>>63]
-
-	if i < len(h.upperBounds) {
-		atomic.AddUint64(&hotCounts.buckets[i], 1)
+	if i < len(h.counts) {
+		atomic.AddUint64(&h.counts[i], 1)
 	}
+	atomic.AddUint64(&h.count, 1)
 	for {
-		oldBits := atomic.LoadUint64(&hotCounts.sumBits)
+		oldBits := atomic.LoadUint64(&h.sumBits)
 		newBits := math.Float64bits(math.Float64frombits(oldBits) + v)
-		if atomic.CompareAndSwapUint64(&hotCounts.sumBits, oldBits, newBits) {
+		if atomic.CompareAndSwapUint64(&h.sumBits, oldBits, newBits) {
 			break
 		}
 	}
-	// Increment count last as we take it as a signal that the observation
-	// is complete.
-	atomic.AddUint64(&hotCounts.count, 1)
 }
 
 func (h *histogram) Write(out *dto.Metric) error {
-	// For simplicity, we protect this whole method by a mutex. It is not in
-	// the hot path, i.e. Observe is called much more often than Write. The
-	// complication of making Write lock-free isn't worth it, if possible at
-	// all.
-	h.writeMtx.Lock()
-	defer h.writeMtx.Unlock()
+	his := &dto.Histogram{}
+	buckets := make([]*dto.Bucket, len(h.upperBounds))
 
-	// Adding 1<<63 switches the hot index (from 0 to 1 or from 1 to 0)
-	// without touching the count bits. See the struct comments for a full
-	// description of the algorithm.
-	n := atomic.AddUint64(&h.countAndHotIdx, 1<<63)
-	// count is contained unchanged in the lower 63 bits.
-	count := n & ((1 << 63) - 1)
-	// The most significant bit tells us which counts is hot. The complement
-	// is thus the cold one.
-	hotCounts := h.counts[n>>63]
-	coldCounts := h.counts[(^n)>>63]
-
-	// Await cooldown.
-	for count != atomic.LoadUint64(&coldCounts.count) {
-		runtime.Gosched() // Let observations get work done.
-	}
-
-	his := &dto.Histogram{
-		Bucket:      make([]*dto.Bucket, len(h.upperBounds)),
-		SampleCount: proto.Uint64(count),
-		SampleSum:   proto.Float64(math.Float64frombits(atomic.LoadUint64(&coldCounts.sumBits))),
-	}
-	var cumCount uint64
+	his.SampleSum = proto.Float64(math.Float64frombits(atomic.LoadUint64(&h.sumBits)))
+	his.SampleCount = proto.Uint64(atomic.LoadUint64(&h.count))
+	var count uint64
 	for i, upperBound := range h.upperBounds {
-		cumCount += atomic.LoadUint64(&coldCounts.buckets[i])
-		his.Bucket[i] = &dto.Bucket{
-			CumulativeCount: proto.Uint64(cumCount),
+		count += atomic.LoadUint64(&h.counts[i])
+		buckets[i] = &dto.Bucket{
+			CumulativeCount: proto.Uint64(count),
 			UpperBound:      proto.Float64(upperBound),
 		}
 	}
-
+	his.Bucket = buckets
 	out.Histogram = his
 	out.Label = h.labelPairs
-
-	// Finally add all the cold counts to the new hot counts and reset the cold counts.
-	atomic.AddUint64(&hotCounts.count, count)
-	atomic.StoreUint64(&coldCounts.count, 0)
-	for {
-		oldBits := atomic.LoadUint64(&hotCounts.sumBits)
-		newBits := math.Float64bits(math.Float64frombits(oldBits) + his.GetSampleSum())
-		if atomic.CompareAndSwapUint64(&hotCounts.sumBits, oldBits, newBits) {
-			atomic.StoreUint64(&coldCounts.sumBits, 0)
-			break
-		}
-	}
-	for i := range h.upperBounds {
-		atomic.AddUint64(&hotCounts.buckets[i], atomic.LoadUint64(&coldCounts.buckets[i]))
-		atomic.StoreUint64(&coldCounts.buckets[i], 0)
-	}
 	return nil
 }
 
@@ -532,7 +454,7 @@ func (h *constHistogram) Write(out *dto.Metric) error {
 // bucket.
 //
 // NewConstHistogram returns an error if the length of labelValues is not
-// consistent with the variable labels in Desc or if Desc is invalid.
+// consistent with the variable labels in Desc.
 func NewConstHistogram(
 	desc *Desc,
 	count uint64,
@@ -540,9 +462,6 @@ func NewConstHistogram(
 	buckets map[float64]uint64,
 	labelValues ...string,
 ) (Metric, error) {
-	if desc.err != nil {
-		return nil, desc.err
-	}
 	if err := validateLabelValues(labelValues, len(desc.variableLabels)); err != nil {
 		return nil, err
 	}

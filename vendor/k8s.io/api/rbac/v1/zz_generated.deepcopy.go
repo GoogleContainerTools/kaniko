@@ -21,7 +21,7 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,7 +30,7 @@ func (in *AggregationRule) DeepCopyInto(out *AggregationRule) {
 	*out = *in
 	if in.ClusterRoleSelectors != nil {
 		in, out := &in.ClusterRoleSelectors, &out.ClusterRoleSelectors
-		*out = make([]metav1.LabelSelector, len(*in))
+		*out = make([]meta_v1.LabelSelector, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -62,8 +62,12 @@ func (in *ClusterRole) DeepCopyInto(out *ClusterRole) {
 	}
 	if in.AggregationRule != nil {
 		in, out := &in.AggregationRule, &out.AggregationRule
-		*out = new(AggregationRule)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(AggregationRule)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -122,7 +126,7 @@ func (in *ClusterRoleBinding) DeepCopyObject() runtime.Object {
 func (in *ClusterRoleBindingList) DeepCopyInto(out *ClusterRoleBindingList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterRoleBinding, len(*in))
@@ -155,7 +159,7 @@ func (in *ClusterRoleBindingList) DeepCopyObject() runtime.Object {
 func (in *ClusterRoleList) DeepCopyInto(out *ClusterRoleList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterRole, len(*in))
@@ -294,7 +298,7 @@ func (in *RoleBinding) DeepCopyObject() runtime.Object {
 func (in *RoleBindingList) DeepCopyInto(out *RoleBindingList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]RoleBinding, len(*in))
@@ -327,7 +331,7 @@ func (in *RoleBindingList) DeepCopyObject() runtime.Object {
 func (in *RoleList) DeepCopyInto(out *RoleList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Role, len(*in))

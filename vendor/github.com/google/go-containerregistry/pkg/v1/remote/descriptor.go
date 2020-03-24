@@ -77,12 +77,14 @@ func (d *Descriptor) RawManifest() ([]byte, error) {
 // querying what kind of artifact a reference represents.
 func Get(ref name.Reference, options ...Option) (*Descriptor, error) {
 	acceptable := []types.MediaType{
+		types.DockerManifestSchema2,
+		types.OCIManifestSchema1,
+		types.DockerManifestList,
+		types.OCIImageIndex,
 		// Just to look at them.
 		types.DockerManifestSchema1,
 		types.DockerManifestSchema1Signed,
 	}
-	acceptable = append(acceptable, acceptableImageMediaTypes...)
-	acceptable = append(acceptable, acceptableIndexMediaTypes...)
 	return get(ref, acceptable, options...)
 }
 
@@ -172,9 +174,8 @@ func (d *Descriptor) remoteImage() *remoteImage {
 			Ref:    d.Ref,
 			Client: d.Client,
 		},
-		manifest:   d.Manifest,
-		mediaType:  d.MediaType,
-		descriptor: &d.Descriptor,
+		manifest:  d.Manifest,
+		mediaType: d.MediaType,
 	}
 }
 
@@ -184,9 +185,8 @@ func (d *Descriptor) remoteIndex() *remoteIndex {
 			Ref:    d.Ref,
 			Client: d.Client,
 		},
-		manifest:   d.Manifest,
-		mediaType:  d.MediaType,
-		descriptor: &d.Descriptor,
+		manifest:  d.Manifest,
+		mediaType: d.MediaType,
 	}
 }
 

@@ -35,47 +35,16 @@ type Retryer interface {
 }
 
 // WithRetryer sets a Retryer value to the given Config returning the Config
-// value for chaining. The value must not be nil.
+// value for chaining.
 func WithRetryer(cfg *aws.Config, retryer Retryer) *aws.Config {
-	if retryer == nil {
-		if cfg.Logger != nil {
-			cfg.Logger.Log("ERROR: Request.WithRetryer called with nil retryer. Replacing with retry disabled Retryer.")
-		}
-		retryer = noOpRetryer{}
-	}
 	cfg.Retryer = retryer
 	return cfg
-
-}
-
-// noOpRetryer is a internal no op retryer used when a request is created
-// without a retryer.
-//
-// Provides a retryer that performs no retries.
-// It should be used when we do not want retries to be performed.
-type noOpRetryer struct{}
-
-// MaxRetries returns the number of maximum returns the service will use to make
-// an individual API; For NoOpRetryer the MaxRetries will always be zero.
-func (d noOpRetryer) MaxRetries() int {
-	return 0
-}
-
-// ShouldRetry will always return false for NoOpRetryer, as it should never retry.
-func (d noOpRetryer) ShouldRetry(_ *Request) bool {
-	return false
-}
-
-// RetryRules returns the delay duration before retrying this request again;
-// since NoOpRetryer does not retry, RetryRules always returns 0.
-func (d noOpRetryer) RetryRules(_ *Request) time.Duration {
-	return 0
 }
 
 // retryableCodes is a collection of service response codes which are retry-able
 // without any further action.
 var retryableCodes = map[string]struct{}{
-	ErrCodeRequestError:       {},
+	"RequestError":            {},
 	"RequestTimeout":          {},
 	ErrCodeResponseTimeout:    {},
 	"RequestTimeoutException": {}, // Glacier's flavor of RequestTimeout
@@ -83,7 +52,6 @@ var retryableCodes = map[string]struct{}{
 
 var throttleCodes = map[string]struct{}{
 	"ProvisionedThroughputExceededException": {},
-	"ThrottledException":                     {}, // SNS, XRay, ResourceGroupsTagging API
 	"Throttling":                             {},
 	"ThrottlingException":                    {},
 	"RequestLimitExceeded":                   {},
@@ -177,8 +145,8 @@ func shouldRetryError(origErr error) bool {
 		origErr := err.OrigErr()
 		var shouldRetry bool
 		if origErr != nil {
-			shouldRetry = shouldRetryError(origErr)
-			if err.Code() == ErrCodeRequestError && !shouldRetry {
+			shouldRetry := shouldRetryError(origErr)
+			if err.Code() == "RequestError" && !shouldRetry {
 				return false
 			}
 		}

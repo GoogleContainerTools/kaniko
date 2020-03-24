@@ -1,4 +1,4 @@
-// Copyright 2017 Google LLC
+// Copyright 2017 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
 package gensupport
 
 import (
-	"context"
 	"io"
 	"net"
 	"net/http"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 // Retry invokes the given function, retrying it multiple times if the connection failed or

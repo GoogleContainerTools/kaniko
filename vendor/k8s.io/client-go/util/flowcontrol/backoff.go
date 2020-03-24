@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/utils/integer"
+	"k8s.io/client-go/util/integer"
 )
 
 type backoffEntry struct {
@@ -30,7 +30,7 @@ type backoffEntry struct {
 }
 
 type Backoff struct {
-	sync.RWMutex
+	sync.Mutex
 	Clock           clock.Clock
 	defaultDuration time.Duration
 	maxDuration     time.Duration
@@ -57,8 +57,8 @@ func NewBackOff(initial, max time.Duration) *Backoff {
 
 // Get the current backoff Duration
 func (p *Backoff) Get(id string) time.Duration {
-	p.RLock()
-	defer p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
 	var delay time.Duration
 	entry, ok := p.perItemBackoff[id]
 	if ok {
@@ -90,8 +90,8 @@ func (p *Backoff) Reset(id string) {
 
 // Returns True if the elapsed time since eventTime is smaller than the current backoff window
 func (p *Backoff) IsInBackOffSince(id string, eventTime time.Time) bool {
-	p.RLock()
-	defer p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
 	entry, ok := p.perItemBackoff[id]
 	if !ok {
 		return false
@@ -99,13 +99,13 @@ func (p *Backoff) IsInBackOffSince(id string, eventTime time.Time) bool {
 	if hasExpired(eventTime, entry.lastUpdate, p.maxDuration) {
 		return false
 	}
-	return p.Clock.Since(eventTime) < entry.backoff
+	return p.Clock.Now().Sub(eventTime) < entry.backoff
 }
 
 // Returns True if time since lastupdate is less than the current backoff window.
 func (p *Backoff) IsInBackOffSinceUpdate(id string, eventTime time.Time) bool {
-	p.RLock()
-	defer p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
 	entry, ok := p.perItemBackoff[id]
 	if !ok {
 		return false

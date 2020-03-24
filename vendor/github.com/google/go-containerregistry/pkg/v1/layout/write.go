@@ -124,19 +124,15 @@ func (l Path) AppendDescriptor(desc v1.Descriptor) error {
 		return err
 	}
 
-	return l.WriteFile("index.json", rawIndex, os.ModePerm)
+	return l.writeFile("index.json", rawIndex)
 }
 
-// WriteFile write a file with arbitrary data at an arbitrary location in a v1
-// layout. Used mostly internally to write files like "oci-layout" and
-// "index.json", also can be used to write other arbitrary files. Do *not* use
-// this to write blobs. Use only WriteBlob() for that.
-func (l Path) WriteFile(name string, data []byte, perm os.FileMode) error {
+func (l Path) writeFile(name string, data []byte) error {
 	if err := os.MkdirAll(l.path(), os.ModePerm); err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	return ioutil.WriteFile(l.path(name), data, perm)
+	return ioutil.WriteFile(l.path(name), data, os.ModePerm)
 
 }
 
@@ -263,12 +259,12 @@ func (l Path) writeIndexToFile(indexFile string, ii v1.ImageIndex) error {
 		return err
 	}
 
-	return l.WriteFile(indexFile, rawIndex, os.ModePerm)
+	return l.writeFile(indexFile, rawIndex)
 }
 
 func (l Path) writeIndex(ii v1.ImageIndex) error {
 	// Always just write oci-layout file, since it's small.
-	if err := l.WriteFile("oci-layout", []byte(layoutFile), os.ModePerm); err != nil {
+	if err := l.writeFile("oci-layout", []byte(layoutFile)); err != nil {
 		return err
 	}
 
@@ -295,7 +291,7 @@ func (l Path) writeIndex(ii v1.ImageIndex) error {
 func Write(path string, ii v1.ImageIndex) (Path, error) {
 	lp := Path(path)
 	// Always just write oci-layout file, since it's small.
-	if err := lp.WriteFile("oci-layout", []byte(layoutFile), os.ModePerm); err != nil {
+	if err := lp.writeFile("oci-layout", []byte(layoutFile)); err != nil {
 		return "", err
 	}
 

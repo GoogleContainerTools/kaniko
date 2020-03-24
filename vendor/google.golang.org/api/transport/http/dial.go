@@ -1,4 +1,4 @@
-// Copyright 2015 Google LLC
+// Copyright 2015 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package http supports network connections to HTTP servers.
+// Package transport/http supports network connections to HTTP servers.
 // This package is not intended for use by end developers. Use the
 // google.golang.org/api/option package to configure API clients.
 package http
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
-	"go.opencensus.io/plugin/ochttp"
+	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/internal"
 	"google.golang.org/api/option"
-	"google.golang.org/api/transport/http/internal/propagation"
 )
 
 // NewClient returns an HTTP client for use communicating with a Google cloud
@@ -64,11 +62,9 @@ func NewTransport(ctx context.Context, base http.RoundTripper, opts ...option.Cl
 
 func newTransport(ctx context.Context, base http.RoundTripper, settings *internal.DialSettings) (http.RoundTripper, error) {
 	trans := base
-	trans = parameterTransport{
-		base:          trans,
-		userAgent:     settings.UserAgent,
-		quotaProject:  settings.QuotaProject,
-		requestReason: settings.RequestReason,
+	trans = userAgentTransport{
+		base:      trans,
+		userAgent: settings.UserAgent,
 	}
 	trans = addOCTransport(trans)
 	switch {
@@ -106,15 +102,12 @@ func newSettings(opts []option.ClientOption) (*internal.DialSettings, error) {
 	return &o, nil
 }
 
-type parameterTransport struct {
-	userAgent     string
-	quotaProject  string
-	requestReason string
-
-	base http.RoundTripper
+type userAgentTransport struct {
+	userAgent string
+	base      http.RoundTripper
 }
 
-func (t parameterTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	rt := t.base
 	if rt == nil {
 		return nil, errors.New("transport: no Transport specified")
@@ -128,16 +121,7 @@ func (t parameterTransport) RoundTrip(req *http.Request) (*http.Response, error)
 		newReq.Header[k] = vv
 	}
 	// TODO(cbro): append to existing User-Agent header?
-	newReq.Header.Set("User-Agent", t.userAgent)
-
-	// Attach system parameters into the header
-	if t.quotaProject != "" {
-		newReq.Header.Set("X-Goog-User-Project", t.quotaProject)
-	}
-	if t.requestReason != "" {
-		newReq.Header.Set("X-Goog-Request-Reason", t.requestReason)
-	}
-
+	newReq.Header["User-Agent"] = []string{t.userAgent}
 	return rt.RoundTrip(&newReq)
 }
 
@@ -151,11 +135,4 @@ func defaultBaseTransport(ctx context.Context) http.RoundTripper {
 		return appengineUrlfetchHook(ctx)
 	}
 	return http.DefaultTransport
-}
-
-func addOCTransport(trans http.RoundTripper) http.RoundTripper {
-	return &ochttp.Transport{
-		Base:        trans,
-		Propagation: &propagation.HTTPFormat{},
-	}
 }

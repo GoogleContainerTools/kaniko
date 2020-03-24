@@ -194,9 +194,9 @@ func negativeScaleInt64(base int64, scale Scale) (result int64, exact bool) {
 	}
 	if fraction {
 		if base > 0 {
-			value++
+			value += 1
 		} else {
-			value--
+			value += -1
 		}
 	}
 	return value, !fraction

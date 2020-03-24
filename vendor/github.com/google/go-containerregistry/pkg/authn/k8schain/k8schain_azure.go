@@ -17,5 +17,5 @@ package k8schain
 
 import (
 	// azure credential provider
-	_ "github.com/vdemeester/k8s-pkg-credentialprovider/azure"
+	_ "k8s.io/kubernetes/pkg/credentialprovider/azure"
 )

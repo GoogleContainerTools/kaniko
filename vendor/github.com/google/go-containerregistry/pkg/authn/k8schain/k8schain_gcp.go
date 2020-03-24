@@ -17,5 +17,5 @@ package k8schain
 
 import (
 	// gcp credential provider
-	_ "github.com/vdemeester/k8s-pkg-credentialprovider/gcp"
+	_ "k8s.io/kubernetes/pkg/credentialprovider/gcp"
 )

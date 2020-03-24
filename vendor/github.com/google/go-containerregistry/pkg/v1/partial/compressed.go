@@ -44,22 +44,22 @@ type compressedLayerExtender struct {
 }
 
 // Uncompressed implements v1.Layer
-func (cle *compressedLayerExtender) Uncompressed() (io.ReadCloser, error) {
-	r, err := cle.Compressed()
+func (ule *compressedLayerExtender) Uncompressed() (io.ReadCloser, error) {
+	u, err := ule.Compressed()
 	if err != nil {
 		return nil, err
 	}
-	return v1util.GunzipReadCloser(r)
+	return v1util.GunzipReadCloser(u)
 }
 
 // DiffID implements v1.Layer
-func (cle *compressedLayerExtender) DiffID() (v1.Hash, error) {
+func (ule *compressedLayerExtender) DiffID() (v1.Hash, error) {
 	// If our nested CompressedLayer implements DiffID,
 	// then delegate to it instead.
-	if wdi, ok := cle.CompressedLayer.(WithDiffID); ok {
+	if wdi, ok := ule.CompressedLayer.(WithDiffID); ok {
 		return wdi.DiffID()
 	}
-	r, err := cle.Uncompressed()
+	r, err := ule.Uncompressed()
 	if err != nil {
 		return v1.Hash{}, err
 	}
@@ -76,7 +76,7 @@ func CompressedToLayer(ul CompressedLayer) (v1.Layer, error) {
 // CompressedImageCore represents the base minimum interface a natively
 // compressed image must implement for us to produce a v1.Image.
 type CompressedImageCore interface {
-	ImageCore
+	imageCore
 
 	// RawManifest returns the serialized bytes of the manifest.
 	RawManifest() ([]byte, error)

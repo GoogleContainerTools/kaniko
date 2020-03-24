@@ -33,7 +33,7 @@ type bearerTransport struct {
 	// Basic credentials that we exchange for bearer tokens.
 	basic authn.Authenticator
 	// Holds the bearer response from the token service.
-	bearer authn.AuthConfig
+	bearer *authn.Bearer
 	// Registry to which we send bearer tokens.
 	registry name.Registry
 	// See https://tools.ietf.org/html/rfc6750#section-3
@@ -61,7 +61,11 @@ func (bt *bearerTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 		// the registry with which we are interacting.
 		// In case of redirect http.Client can use an empty Host, check URL too.
 		if matchesHost(bt.registry, in, bt.scheme) {
-			hdr := fmt.Sprintf("Bearer %s", bt.bearer.RegistryToken)
+			auth, err := bt.bearer.Authorization()
+			if err != nil {
+				return nil, err
+			}
+			hdr := fmt.Sprintf("Bearer %s", auth.RegistryToken)
 			in.Header.Set("Authorization", hdr)
 		}
 		return bt.inner.RoundTrip(in)
@@ -130,8 +134,9 @@ func (bt *bearerTransport) refresh() error {
 	}
 
 	// Find a token to turn into a Bearer authenticator
+	var bearer authn.Bearer
 	if response.Token != "" {
-		bt.bearer.RegistryToken = response.Token
+		bearer = authn.Bearer{Token: response.Token}
 	} else {
 		return fmt.Errorf("no token in bearer response:\n%s", content)
 	}
@@ -143,6 +148,8 @@ func (bt *bearerTransport) refresh() error {
 		})
 	}
 
+	// Replace our old bearer authenticator (if we had one) with our newly refreshed authenticator.
+	bt.bearer = &bearer
 	return nil
 }
 

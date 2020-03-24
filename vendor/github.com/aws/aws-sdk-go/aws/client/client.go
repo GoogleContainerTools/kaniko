@@ -12,7 +12,6 @@ import (
 type Config struct {
 	Config        *aws.Config
 	Handlers      request.Handlers
-	PartitionID   string
 	Endpoint      string
 	SigningRegion string
 	SigningName   string

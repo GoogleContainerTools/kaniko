@@ -20,6 +20,7 @@ package v1beta2
 
 import (
 	v1beta2 "k8s.io/api/apps/v1beta2"
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
 	rest "k8s.io/client-go/rest"
 )
@@ -30,6 +31,7 @@ type AppsV1beta2Interface interface {
 	DaemonSetsGetter
 	DeploymentsGetter
 	ReplicaSetsGetter
+	ScalesGetter
 	StatefulSetsGetter
 }
 
@@ -52,6 +54,10 @@ func (c *AppsV1beta2Client) Deployments(namespace string) DeploymentInterface {
 
 func (c *AppsV1beta2Client) ReplicaSets(namespace string) ReplicaSetInterface {
 	return newReplicaSets(c, namespace)
+}
+
+func (c *AppsV1beta2Client) Scales(namespace string) ScaleInterface {
+	return newScales(c, namespace)
 }
 
 func (c *AppsV1beta2Client) StatefulSets(namespace string) StatefulSetInterface {
@@ -90,7 +96,7 @@ func setConfigDefaults(config *rest.Config) error {
 	gv := v1beta2.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

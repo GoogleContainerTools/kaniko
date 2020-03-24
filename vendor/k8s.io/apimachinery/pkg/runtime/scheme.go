@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+
 	"strings"
 
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/naming"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -63,14 +62,14 @@ type Scheme struct {
 
 	// Map from version and resource to the corresponding func to convert
 	// resource field labels in that version to internal version.
-	fieldLabelConversionFuncs map[schema.GroupVersionKind]FieldLabelConversionFunc
+	fieldLabelConversionFuncs map[string]map[string]FieldLabelConversionFunc
 
 	// defaulterFuncs is an array of interfaces to be called with an object to provide defaulting
 	// the provided object must be a pointer.
 	defaulterFuncs map[reflect.Type]func(interface{})
 
 	// converter stores all registered conversion functions. It also has
-	// default converting behavior.
+	// default coverting behavior.
 	converter *conversion.Converter
 
 	// versionPriority is a map of groups to ordered lists of versions for those groups indicating the
@@ -79,13 +78,9 @@ type Scheme struct {
 
 	// observedVersions keeps track of the order we've seen versions during type registration
 	observedVersions []schema.GroupVersion
-
-	// schemeName is the name of this scheme.  If you don't specify a name, the stack of the NewScheme caller will be used.
-	// This is useful for error reporting to indicate the origin of the scheme.
-	schemeName string
 }
 
-// FieldLabelConversionFunc converts a field selector to internal representation.
+// Function to convert a field selector to internal representation.
 type FieldLabelConversionFunc func(label, value string) (internalLabel, internalValue string, err error)
 
 // NewScheme creates a new Scheme. This scheme is pluggable by default.
@@ -95,19 +90,24 @@ func NewScheme() *Scheme {
 		typeToGVK:                 map[reflect.Type][]schema.GroupVersionKind{},
 		unversionedTypes:          map[reflect.Type]schema.GroupVersionKind{},
 		unversionedKinds:          map[string]reflect.Type{},
-		fieldLabelConversionFuncs: map[schema.GroupVersionKind]FieldLabelConversionFunc{},
+		fieldLabelConversionFuncs: map[string]map[string]FieldLabelConversionFunc{},
 		defaulterFuncs:            map[reflect.Type]func(interface{}){},
 		versionPriority:           map[string][]string{},
-		schemeName:                naming.GetNameFromCallsite(internalPackages...),
 	}
 	s.converter = conversion.NewConverter(s.nameFunc)
 
-	utilruntime.Must(s.AddConversionFuncs(DefaultEmbeddedConversions()...))
+	s.AddConversionFuncs(DefaultEmbeddedConversions()...)
 
 	// Enable map[string][]string conversions by default
-	utilruntime.Must(s.AddConversionFuncs(DefaultStringConversions...))
-	utilruntime.Must(s.RegisterInputDefaults(&map[string][]string{}, JSONKeyMapper, conversion.AllowDifferentFieldTypeNames|conversion.IgnoreMissingFields))
-	utilruntime.Must(s.RegisterInputDefaults(&url.Values{}, JSONKeyMapper, conversion.AllowDifferentFieldTypeNames|conversion.IgnoreMissingFields))
+	if err := s.AddConversionFuncs(DefaultStringConversions...); err != nil {
+		panic(err)
+	}
+	if err := s.RegisterInputDefaults(&map[string][]string{}, JSONKeyMapper, conversion.AllowDifferentFieldTypeNames|conversion.IgnoreMissingFields); err != nil {
+		panic(err)
+	}
+	if err := s.RegisterInputDefaults(&url.Values{}, JSONKeyMapper, conversion.AllowDifferentFieldTypeNames|conversion.IgnoreMissingFields); err != nil {
+		panic(err)
+	}
 	return s
 }
 
@@ -159,7 +159,7 @@ func (s *Scheme) AddUnversionedTypes(version schema.GroupVersion, types ...Objec
 		gvk := version.WithKind(t.Name())
 		s.unversionedTypes[t] = gvk
 		if old, ok := s.unversionedKinds[gvk.Kind]; ok && t != old {
-			panic(fmt.Sprintf("%v.%v has already been registered as unversioned kind %q - kind name must be unique in scheme %q", old.PkgPath(), old.Name(), gvk, s.schemeName))
+			panic(fmt.Sprintf("%v.%v has already been registered as unversioned kind %q - kind name must be unique", old.PkgPath(), old.Name(), gvk))
 		}
 		s.unversionedKinds[gvk.Kind] = t
 	}
@@ -200,7 +200,7 @@ func (s *Scheme) AddKnownTypeWithName(gvk schema.GroupVersionKind, obj Object) {
 	}
 
 	if oldT, found := s.gvkToType[gvk]; found && oldT != t {
-		panic(fmt.Sprintf("Double registration of different types for %v: old=%v.%v, new=%v.%v in scheme %q", gvk, oldT.PkgPath(), oldT.Name(), t.PkgPath(), t.Name(), s.schemeName))
+		panic(fmt.Sprintf("Double registration of different types for %v: old=%v.%v, new=%v.%v", gvk, oldT.PkgPath(), oldT.Name(), t.PkgPath(), t.Name()))
 	}
 
 	s.gvkToType[gvk] = t
@@ -255,7 +255,7 @@ func (s *Scheme) ObjectKinds(obj Object) ([]schema.GroupVersionKind, bool, error
 
 	gvks, ok := s.typeToGVK[t]
 	if !ok {
-		return nil, false, NewNotRegisteredErrForType(s.schemeName, t)
+		return nil, false, NewNotRegisteredErrForType(t)
 	}
 	_, unversionedType := s.unversionedTypes[t]
 
@@ -293,7 +293,15 @@ func (s *Scheme) New(kind schema.GroupVersionKind) (Object, error) {
 	if t, exists := s.unversionedKinds[kind.Kind]; exists {
 		return reflect.New(t).Interface().(Object), nil
 	}
-	return nil, NewNotRegisteredErrForKind(s.schemeName, kind)
+	return nil, NewNotRegisteredErrForKind(kind)
+}
+
+// AddGenericConversionFunc adds a function that accepts the ConversionFunc call pattern
+// (for two conversion types) to the converter. These functions are checked first during
+// a normal conversion, but are otherwise not called. Use AddConversionFuncs when registering
+// typed conversions.
+func (s *Scheme) AddGenericConversionFunc(fn conversion.GenericConversionFunc) {
+	s.converter.AddGenericConversionFunc(fn)
 }
 
 // Log sets a logger on the scheme. For test purposes only
@@ -347,25 +355,34 @@ func (s *Scheme) AddConversionFuncs(conversionFuncs ...interface{}) error {
 	return nil
 }
 
-// AddConversionFunc registers a function that converts between a and b by passing objects of those
-// types to the provided function. The function *must* accept objects of a and b - this machinery will not enforce
-// any other guarantee.
-func (s *Scheme) AddConversionFunc(a, b interface{}, fn conversion.ConversionFunc) error {
-	return s.converter.RegisterUntypedConversionFunc(a, b, fn)
-}
-
-// AddGeneratedConversionFunc registers a function that converts between a and b by passing objects of those
-// types to the provided function. The function *must* accept objects of a and b - this machinery will not enforce
-// any other guarantee.
-func (s *Scheme) AddGeneratedConversionFunc(a, b interface{}, fn conversion.ConversionFunc) error {
-	return s.converter.RegisterGeneratedUntypedConversionFunc(a, b, fn)
+// AddGeneratedConversionFuncs registers conversion functions that were
+// automatically generated.
+func (s *Scheme) AddGeneratedConversionFuncs(conversionFuncs ...interface{}) error {
+	for _, f := range conversionFuncs {
+		if err := s.converter.RegisterGeneratedConversionFunc(f); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // AddFieldLabelConversionFunc adds a conversion function to convert field selectors
 // of the given kind from the given version to internal version representation.
-func (s *Scheme) AddFieldLabelConversionFunc(gvk schema.GroupVersionKind, conversionFunc FieldLabelConversionFunc) error {
-	s.fieldLabelConversionFuncs[gvk] = conversionFunc
+func (s *Scheme) AddFieldLabelConversionFunc(version, kind string, conversionFunc FieldLabelConversionFunc) error {
+	if s.fieldLabelConversionFuncs[version] == nil {
+		s.fieldLabelConversionFuncs[version] = map[string]FieldLabelConversionFunc{}
+	}
+
+	s.fieldLabelConversionFuncs[version][kind] = conversionFunc
 	return nil
+}
+
+// AddStructFieldConversion allows you to specify a mechanical copy for a moved
+// or renamed struct field without writing an entire conversion function. See
+// the comment in conversion.Converter.SetStructFieldCopy for parameter details.
+// Call as many times as needed, even on the same fields.
+func (s *Scheme) AddStructFieldConversion(srcFieldType interface{}, srcFieldName string, destFieldType interface{}, destFieldName string) error {
+	return s.converter.SetStructFieldCopy(srcFieldType, srcFieldName, destFieldType, destFieldName)
 }
 
 // RegisterInputDefaults sets the provided field mapping function and field matching
@@ -376,7 +393,7 @@ func (s *Scheme) RegisterInputDefaults(in interface{}, fn conversion.FieldMappin
 	return s.converter.RegisterInputDefaults(in, fn, defaultFlags)
 }
 
-// AddTypeDefaultingFunc registers a function that is passed a pointer to an
+// AddTypeDefaultingFuncs registers a function that is passed a pointer to an
 // object and can default fields on the object. These functions will be invoked
 // when Default() is called. The function will never be called unless the
 // defaulted object matches srcType. If this function is invoked twice with the
@@ -469,8 +486,11 @@ func (s *Scheme) Convert(in, out interface{}, context interface{}) error {
 
 // ConvertFieldLabel alters the given field label and value for an kind field selector from
 // versioned representation to an unversioned one or returns an error.
-func (s *Scheme) ConvertFieldLabel(gvk schema.GroupVersionKind, label, value string) (string, string, error) {
-	conversionFunc, ok := s.fieldLabelConversionFuncs[gvk]
+func (s *Scheme) ConvertFieldLabel(version, kind, label, value string) (string, string, error) {
+	if s.fieldLabelConversionFuncs[version] == nil {
+		return DefaultMetaV1FieldSelectorConversion(label, value)
+	}
+	conversionFunc, ok := s.fieldLabelConversionFuncs[version][kind]
 	if !ok {
 		return DefaultMetaV1FieldSelectorConversion(label, value)
 	}
@@ -521,7 +541,7 @@ func (s *Scheme) convertToVersion(copy bool, in Object, target GroupVersioner) (
 
 	kinds, ok := s.typeToGVK[t]
 	if !ok || len(kinds) == 0 {
-		return nil, NewNotRegisteredErrForType(s.schemeName, t)
+		return nil, NewNotRegisteredErrForType(t)
 	}
 
 	gvk, ok := target.KindForGroupVersionKinds(kinds)
@@ -534,7 +554,7 @@ func (s *Scheme) convertToVersion(copy bool, in Object, target GroupVersioner) (
 			}
 			return copyAndSetTargetKind(copy, in, unversionedKind)
 		}
-		return nil, NewNotRegisteredErrForTarget(s.schemeName, t, target)
+		return nil, NewNotRegisteredErrForTarget(t, target)
 	}
 
 	// target wants to use the existing type, set kind and return (no conversion necessary)
@@ -744,11 +764,3 @@ func (s *Scheme) addObservedVersion(version schema.GroupVersion) {
 
 	s.observedVersions = append(s.observedVersions, version)
 }
-
-func (s *Scheme) Name() string {
-	return s.schemeName
-}
-
-// internalPackages are packages that ignored when creating a default reflector name. These packages are in the common
-// call chains to NewReflector, so they'd be low entropy names for reflectors
-var internalPackages = []string{"k8s.io/apimachinery/pkg/runtime/scheme.go"}

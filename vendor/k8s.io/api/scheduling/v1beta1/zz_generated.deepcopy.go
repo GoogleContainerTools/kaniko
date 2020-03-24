@@ -21,7 +21,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,11 +29,6 @@ func (in *PriorityClass) DeepCopyInto(out *PriorityClass) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.PreemptionPolicy != nil {
-		in, out := &in.PreemptionPolicy, &out.PreemptionPolicy
-		*out = new(v1.PreemptionPolicy)
-		**out = **in
-	}
 	return
 }
 
@@ -60,7 +54,7 @@ func (in *PriorityClass) DeepCopyObject() runtime.Object {
 func (in *PriorityClassList) DeepCopyInto(out *PriorityClassList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]PriorityClass, len(*in))

@@ -5,28 +5,26 @@
 package google
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
+	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/jwt"
 )
 
 // Endpoint is Google's OAuth 2.0 endpoint.
 var Endpoint = oauth2.Endpoint{
-	AuthURL:   "https://accounts.google.com/o/oauth2/auth",
-	TokenURL:  "https://oauth2.googleapis.com/token",
-	AuthStyle: oauth2.AuthStyleInParams,
+	AuthURL:  "https://accounts.google.com/o/oauth2/auth",
+	TokenURL: "https://accounts.google.com/o/oauth2/token",
 }
 
 // JWTTokenURL is Google's OAuth 2.0 token URL to use with the JWT flow.
-const JWTTokenURL = "https://oauth2.googleapis.com/token"
+const JWTTokenURL = "https://accounts.google.com/o/oauth2/token"
 
 // ConfigFromJSON uses a Google Developers Console client_credentials.json
 // file to construct a config.
@@ -152,16 +150,14 @@ func (f *credentialsFile) tokenSource(ctx context.Context, scopes []string) (oau
 // from Google Compute Engine (GCE)'s metadata server. It's only valid to use
 // this token source if your program is running on a GCE instance.
 // If no account is specified, "default" is used.
-// If no scopes are specified, a set of default scopes are automatically granted.
 // Further information about retrieving access tokens from the GCE metadata
 // server can be found at https://cloud.google.com/compute/docs/authentication.
-func ComputeTokenSource(account string, scope ...string) oauth2.TokenSource {
-	return oauth2.ReuseTokenSource(nil, computeSource{account: account, scopes: scope})
+func ComputeTokenSource(account string) oauth2.TokenSource {
+	return oauth2.ReuseTokenSource(nil, computeSource{account: account})
 }
 
 type computeSource struct {
 	account string
-	scopes  []string
 }
 
 func (cs computeSource) Token() (*oauth2.Token, error) {
@@ -172,13 +168,7 @@ func (cs computeSource) Token() (*oauth2.Token, error) {
 	if acct == "" {
 		acct = "default"
 	}
-	tokenURI := "instance/service-accounts/" + acct + "/token"
-	if len(cs.scopes) > 0 {
-		v := url.Values{}
-		v.Set("scopes", strings.Join(cs.scopes, ","))
-		tokenURI = tokenURI + "?" + v.Encode()
-	}
-	tokenJSON, err := metadata.Get(tokenURI)
+	tokenJSON, err := metadata.Get("instance/service-accounts/" + acct + "/token")
 	if err != nil {
 		return nil, err
 	}
@@ -194,16 +184,9 @@ func (cs computeSource) Token() (*oauth2.Token, error) {
 	if res.ExpiresInSec == 0 || res.AccessToken == "" {
 		return nil, fmt.Errorf("oauth2/google: incomplete token received from metadata")
 	}
-	tok := &oauth2.Token{
+	return &oauth2.Token{
 		AccessToken: res.AccessToken,
 		TokenType:   res.TokenType,
 		Expiry:      time.Now().Add(time.Duration(res.ExpiresInSec) * time.Second),
-	}
-	// NOTE(cbro): add hidden metadata about where the token is from.
-	// This is needed for detection by client libraries to know that credentials come from the metadata server.
-	// This may be removed in a future version of this library.
-	return tok.WithExtra(map[string]interface{}{
-		"oauth2.google.tokenSource":    "compute-metadata",
-		"oauth2.google.serviceAccount": acct,
-	}), nil
+	}, nil
 }

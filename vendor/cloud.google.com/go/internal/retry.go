@@ -15,10 +15,11 @@
 package internal
 
 import (
-	"context"
 	"time"
 
-	gax "github.com/googleapis/gax-go/v2"
+	gax "github.com/googleapis/gax-go"
+
+	"golang.org/x/net/context"
 )
 
 // Retry calls the supplied function f repeatedly according to the provided

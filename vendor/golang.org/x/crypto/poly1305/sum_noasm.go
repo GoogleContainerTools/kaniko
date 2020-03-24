@@ -6,7 +6,10 @@
 
 package poly1305
 
-func sum(out *[TagSize]byte, msg []byte, key *[32]byte) {
+// Sum generates an authenticator for msg using a one-time key and puts the
+// 16-byte result into out. Authenticating two different messages with the same
+// key allows an attacker to forge messages at will.
+func Sum(out *[TagSize]byte, msg []byte, key *[32]byte) {
 	h := newMAC(key)
 	h.Write(msg)
 	h.Sum(out)

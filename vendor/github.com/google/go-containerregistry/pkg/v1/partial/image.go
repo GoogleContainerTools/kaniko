@@ -18,8 +18,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
-// ImageCore is the core set of properties without which we cannot build a v1.Image
-type ImageCore interface {
+// imageCore is the core set of properties without which we cannot build a v1.Image
+type imageCore interface {
 	// RawConfigFile returns the serialized bytes of this image's config file.
 	RawConfigFile() ([]byte, error)
 

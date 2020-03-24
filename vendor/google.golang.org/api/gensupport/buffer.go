@@ -11,8 +11,7 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-// MediaBuffer buffers data from an io.Reader to support uploading media in
-// retryable chunks. It should be created with NewMediaBuffer.
+// MediaBuffer buffers data from an io.Reader to support uploading media in retryable chunks.
 type MediaBuffer struct {
 	media io.Reader
 
@@ -23,7 +22,6 @@ type MediaBuffer struct {
 	off int64
 }
 
-// NewMediaBuffer initializes a MediaBuffer.
 func NewMediaBuffer(media io.Reader, chunkSize int) *MediaBuffer {
 	return &MediaBuffer{media: media, chunk: make([]byte, 0, chunkSize)}
 }

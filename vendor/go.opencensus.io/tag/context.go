@@ -15,9 +15,7 @@
 
 package tag
 
-import (
-	"context"
-)
+import "context"
 
 // FromContext returns the tag map stored in the context.
 func FromContext(ctx context.Context) *Map {

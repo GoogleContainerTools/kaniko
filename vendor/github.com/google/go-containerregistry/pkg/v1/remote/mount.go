@@ -17,7 +17,6 @@ package remote
 import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // MountableLayer wraps a v1.Layer in a shim that enables the layer to be
@@ -26,12 +25,6 @@ type MountableLayer struct {
 	v1.Layer
 
 	Reference name.Reference
-}
-
-// Descriptor retains the original descriptor from an image manifest.
-// See partial.Descriptor.
-func (ml *MountableLayer) Descriptor() (*v1.Descriptor, error) {
-	return partial.Descriptor(ml.Layer)
 }
 
 // mountableImage wraps the v1.Layer references returned by the embedded v1.Image
@@ -81,10 +74,4 @@ func (mi *mountableImage) LayerByDiffID(d v1.Hash) (v1.Layer, error) {
 		Layer:     l,
 		Reference: mi.Reference,
 	}, nil
-}
-
-// Descriptor retains the original descriptor from an index manifest.
-// See partial.Descriptor.
-func (mi *mountableImage) Descriptor() (*v1.Descriptor, error) {
-	return partial.Descriptor(mi.Image)
 }

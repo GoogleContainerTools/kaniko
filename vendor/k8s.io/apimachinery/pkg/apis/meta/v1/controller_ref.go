@@ -22,7 +22,7 @@ import (
 
 // IsControlledBy checks if the  object has a controllerRef set to the given owner
 func IsControlledBy(obj Object, owner Object) bool {
-	ref := GetControllerOfNoCopy(obj)
+	ref := GetControllerOf(obj)
 	if ref == nil {
 		return false
 	}
@@ -31,20 +31,9 @@ func IsControlledBy(obj Object, owner Object) bool {
 
 // GetControllerOf returns a pointer to a copy of the controllerRef if controllee has a controller
 func GetControllerOf(controllee Object) *OwnerReference {
-	ref := GetControllerOfNoCopy(controllee)
-	if ref == nil {
-		return nil
-	}
-	cp := *ref
-	return &cp
-}
-
-// GetControllerOf returns a pointer to the controllerRef if controllee has a controller
-func GetControllerOfNoCopy(controllee Object) *OwnerReference {
-	refs := controllee.GetOwnerReferences()
-	for i := range refs {
-		if refs[i].Controller != nil && *refs[i].Controller {
-			return &refs[i]
+	for _, ref := range controllee.GetOwnerReferences() {
+		if ref.Controller != nil && *ref.Controller {
+			return &ref
 		}
 	}
 	return nil

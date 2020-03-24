@@ -19,7 +19,6 @@ package json
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 )
 
@@ -35,9 +34,6 @@ func Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// limit recursive depth to prevent stack overflow errors
-const maxDepth = 10000
-
 // Unmarshal unmarshals the given data
 // If v is a *map[string]interface{}, numbers are converted to int64 or float64
 func Unmarshal(data []byte, v interface{}) error {
@@ -52,7 +48,7 @@ func Unmarshal(data []byte, v interface{}) error {
 			return err
 		}
 		// If the decode succeeds, post-process the map to convert json.Number objects to int64 or float64
-		return convertMapNumbers(*v, 0)
+		return convertMapNumbers(*v)
 
 	case *[]interface{}:
 		// Build a decoder from the given data
@@ -64,7 +60,7 @@ func Unmarshal(data []byte, v interface{}) error {
 			return err
 		}
 		// If the decode succeeds, post-process the map to convert json.Number objects to int64 or float64
-		return convertSliceNumbers(*v, 0)
+		return convertSliceNumbers(*v)
 
 	default:
 		return json.Unmarshal(data, v)
@@ -73,20 +69,16 @@ func Unmarshal(data []byte, v interface{}) error {
 
 // convertMapNumbers traverses the map, converting any json.Number values to int64 or float64.
 // values which are map[string]interface{} or []interface{} are recursively visited
-func convertMapNumbers(m map[string]interface{}, depth int) error {
-	if depth > maxDepth {
-		return fmt.Errorf("exceeded max depth of %d", maxDepth)
-	}
-
+func convertMapNumbers(m map[string]interface{}) error {
 	var err error
 	for k, v := range m {
 		switch v := v.(type) {
 		case json.Number:
 			m[k], err = convertNumber(v)
 		case map[string]interface{}:
-			err = convertMapNumbers(v, depth+1)
+			err = convertMapNumbers(v)
 		case []interface{}:
-			err = convertSliceNumbers(v, depth+1)
+			err = convertSliceNumbers(v)
 		}
 		if err != nil {
 			return err
@@ -97,20 +89,16 @@ func convertMapNumbers(m map[string]interface{}, depth int) error {
 
 // convertSliceNumbers traverses the slice, converting any json.Number values to int64 or float64.
 // values which are map[string]interface{} or []interface{} are recursively visited
-func convertSliceNumbers(s []interface{}, depth int) error {
-	if depth > maxDepth {
-		return fmt.Errorf("exceeded max depth of %d", maxDepth)
-	}
-
+func convertSliceNumbers(s []interface{}) error {
 	var err error
 	for i, v := range s {
 		switch v := v.(type) {
 		case json.Number:
 			s[i], err = convertNumber(v)
 		case map[string]interface{}:
-			err = convertMapNumbers(v, depth+1)
+			err = convertMapNumbers(v)
 		case []interface{}:
-			err = convertSliceNumbers(v, depth+1)
+			err = convertSliceNumbers(v)
 		}
 		if err != nil {
 			return err

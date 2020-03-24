@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -116,15 +115,11 @@ type multipartReader struct {
 	pipeOpen bool
 }
 
-// boundary optionally specifies the MIME boundary
-func newMultipartReader(parts []typeReader, boundary string) *multipartReader {
+func newMultipartReader(parts []typeReader) *multipartReader {
 	mp := &multipartReader{pipeOpen: true}
 	var pw *io.PipeWriter
 	mp.pr, pw = io.Pipe()
 	mpw := multipart.NewWriter(pw)
-	if boundary != "" {
-		mpw.SetBoundary(boundary)
-	}
 	mp.ctype = "multipart/related; boundary=" + mpw.Boundary()
 	go func() {
 		for _, part := range parts {
@@ -168,15 +163,10 @@ func (mp *multipartReader) Close() error {
 //
 // The caller must call Close on the returned ReadCloser if reads are abandoned before reaching EOF.
 func CombineBodyMedia(body io.Reader, bodyContentType string, media io.Reader, mediaContentType string) (io.ReadCloser, string) {
-	return combineBodyMedia(body, bodyContentType, media, mediaContentType, "")
-}
-
-// combineBodyMedia is CombineBodyMedia but with an optional mimeBoundary field.
-func combineBodyMedia(body io.Reader, bodyContentType string, media io.Reader, mediaContentType, mimeBoundary string) (io.ReadCloser, string) {
 	mp := newMultipartReader([]typeReader{
 		{body, bodyContentType},
 		{media, mediaContentType},
-	}, mimeBoundary)
+	})
 	return mp, mp.ctype
 }
 
@@ -252,7 +242,6 @@ func NewInfoFromResumableMedia(r io.ReaderAt, size int64, mediaType string) *Med
 	}
 }
 
-// SetProgressUpdater sets the progress updater for the media info.
 func (mi *MediaInfo) SetProgressUpdater(pu googleapi.ProgressUpdater) {
 	if mi != nil {
 		mi.progressUpdater = pu
@@ -294,11 +283,7 @@ func (mi *MediaInfo) UploadRequest(reqHeaders http.Header, body io.Reader) (newB
 			getBody = func() (io.ReadCloser, error) {
 				rb := ioutil.NopCloser(fb())
 				rm := ioutil.NopCloser(fm())
-				var mimeBoundary string
-				if _, params, err := mime.ParseMediaType(ctype); err == nil {
-					mimeBoundary = params["boundary"]
-				}
-				r, _ := combineBodyMedia(rb, "application/json", rm, mi.mType, mimeBoundary)
+				r, _ := CombineBodyMedia(rb, "application/json", rm, mi.mType)
 				return r, nil
 			}
 		}
@@ -348,16 +333,4 @@ func (mi *MediaInfo) ResumableUpload(locURI string) *ResumableUpload {
 			}
 		},
 	}
-}
-
-// SetGetBody sets the GetBody field of req to f. This was once needed
-// to gracefully support Go 1.7 and earlier which didn't have that
-// field.
-//
-// Deprecated: the code generator no longer uses this as of
-// 2019-02-19. Nothing else should be calling this anyway, but we
-// won't delete this immediately; it will be deleted in as early as 6
-// months.
-func SetGetBody(req *http.Request, f func() (io.ReadCloser, error)) {
-	req.GetBody = f
 }

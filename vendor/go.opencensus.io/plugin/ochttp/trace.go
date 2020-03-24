@@ -17,7 +17,6 @@ package ochttp
 import (
 	"io"
 	"net/http"
-	"net/http/httptrace"
 
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
@@ -34,7 +33,6 @@ const (
 	HostAttribute       = "http.host"
 	MethodAttribute     = "http.method"
 	PathAttribute       = "http.path"
-	URLAttribute        = "http.url"
 	UserAgentAttribute  = "http.user_agent"
 	StatusCodeAttribute = "http.status_code"
 )
@@ -44,7 +42,6 @@ type traceTransport struct {
 	startOptions   trace.StartOptions
 	format         propagation.HTTPFormat
 	formatSpanName func(*http.Request) string
-	newClientTrace func(*http.Request, *trace.Span) *httptrace.ClientTrace
 }
 
 // TODO(jbd): Add message events for request and response size.
@@ -56,27 +53,12 @@ func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	name := t.formatSpanName(req)
 	// TODO(jbd): Discuss whether we want to prefix
 	// outgoing requests with Sent.
-	ctx, span := trace.StartSpan(req.Context(), name,
+	_, span := trace.StartSpan(req.Context(), name,
 		trace.WithSampler(t.startOptions.Sampler),
 		trace.WithSpanKind(trace.SpanKindClient))
 
-	if t.newClientTrace != nil {
-		req = req.WithContext(httptrace.WithClientTrace(ctx, t.newClientTrace(req, span)))
-	} else {
-		req = req.WithContext(ctx)
-	}
-
+	req = req.WithContext(trace.WithSpan(req.Context(), span))
 	if t.format != nil {
-		// SpanContextToRequest will modify its Request argument, which is
-		// contrary to the contract for http.RoundTripper, so we need to
-		// pass it a copy of the Request.
-		// However, the Request struct itself was already copied by
-		// the WithContext calls above and so we just need to copy the header.
-		header := make(http.Header)
-		for k, v := range req.Header {
-			header[k] = v
-		}
-		req.Header = header
 		t.format.SpanContextToRequest(span.SpanContext(), req)
 	}
 
@@ -94,8 +76,7 @@ func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// span.End() will be invoked after
 	// a read from resp.Body returns io.EOF or when
 	// resp.Body.Close() is invoked.
-	bt := &bodyTracker{rc: resp.Body, span: span}
-	resp.Body = wrappedBody(bt, resp.Body)
+	resp.Body = &bodyTracker{rc: resp.Body, span: span}
 	return resp, err
 }
 
@@ -151,21 +132,12 @@ func spanNameFromURL(req *http.Request) string {
 }
 
 func requestAttrs(r *http.Request) []trace.Attribute {
-	userAgent := r.UserAgent()
-
-	attrs := make([]trace.Attribute, 0, 5)
-	attrs = append(attrs,
+	return []trace.Attribute{
 		trace.StringAttribute(PathAttribute, r.URL.Path),
-		trace.StringAttribute(URLAttribute, r.URL.String()),
-		trace.StringAttribute(HostAttribute, r.Host),
+		trace.StringAttribute(HostAttribute, r.URL.Host),
 		trace.StringAttribute(MethodAttribute, r.Method),
-	)
-
-	if userAgent != "" {
-		attrs = append(attrs, trace.StringAttribute(UserAgentAttribute, userAgent))
+		trace.StringAttribute(UserAgentAttribute, r.UserAgent()),
 	}
-
-	return attrs
 }
 
 func responseAttrs(resp *http.Response) []trace.Attribute {
@@ -207,33 +179,21 @@ func TraceStatus(httpStatusCode int, statusLine string) trace.Status {
 }
 
 var codeToStr = map[int32]string{
-	trace.StatusCodeOK:                 `OK`,
-	trace.StatusCodeCancelled:          `CANCELLED`,
-	trace.StatusCodeUnknown:            `UNKNOWN`,
-	trace.StatusCodeInvalidArgument:    `INVALID_ARGUMENT`,
-	trace.StatusCodeDeadlineExceeded:   `DEADLINE_EXCEEDED`,
-	trace.StatusCodeNotFound:           `NOT_FOUND`,
-	trace.StatusCodeAlreadyExists:      `ALREADY_EXISTS`,
-	trace.StatusCodePermissionDenied:   `PERMISSION_DENIED`,
-	trace.StatusCodeResourceExhausted:  `RESOURCE_EXHAUSTED`,
-	trace.StatusCodeFailedPrecondition: `FAILED_PRECONDITION`,
-	trace.StatusCodeAborted:            `ABORTED`,
-	trace.StatusCodeOutOfRange:         `OUT_OF_RANGE`,
-	trace.StatusCodeUnimplemented:      `UNIMPLEMENTED`,
-	trace.StatusCodeInternal:           `INTERNAL`,
-	trace.StatusCodeUnavailable:        `UNAVAILABLE`,
-	trace.StatusCodeDataLoss:           `DATA_LOSS`,
-	trace.StatusCodeUnauthenticated:    `UNAUTHENTICATED`,
-}
-
-func isHealthEndpoint(path string) bool {
-	// Health checking is pretty frequent and
-	// traces collected for health endpoints
-	// can be extremely noisy and expensive.
-	// Disable canonical health checking endpoints
-	// like /healthz and /_ah/health for now.
-	if path == "/healthz" || path == "/_ah/health" {
-		return true
-	}
-	return false
+	trace.StatusCodeOK:                 `"OK"`,
+	trace.StatusCodeCancelled:          `"CANCELLED"`,
+	trace.StatusCodeUnknown:            `"UNKNOWN"`,
+	trace.StatusCodeInvalidArgument:    `"INVALID_ARGUMENT"`,
+	trace.StatusCodeDeadlineExceeded:   `"DEADLINE_EXCEEDED"`,
+	trace.StatusCodeNotFound:           `"NOT_FOUND"`,
+	trace.StatusCodeAlreadyExists:      `"ALREADY_EXISTS"`,
+	trace.StatusCodePermissionDenied:   `"PERMISSION_DENIED"`,
+	trace.StatusCodeResourceExhausted:  `"RESOURCE_EXHAUSTED"`,
+	trace.StatusCodeFailedPrecondition: `"FAILED_PRECONDITION"`,
+	trace.StatusCodeAborted:            `"ABORTED"`,
+	trace.StatusCodeOutOfRange:         `"OUT_OF_RANGE"`,
+	trace.StatusCodeUnimplemented:      `"UNIMPLEMENTED"`,
+	trace.StatusCodeInternal:           `"INTERNAL"`,
+	trace.StatusCodeUnavailable:        `"UNAVAILABLE"`,
+	trace.StatusCodeDataLoss:           `"DATA_LOSS"`,
+	trace.StatusCodeUnauthenticated:    `"UNAUTHENTICATED"`,
 }
