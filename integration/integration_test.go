@@ -102,15 +102,6 @@ func launchTests(m *testing.M) (int, error) {
 
 		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
 		defer DeleteFromBucket(fileInBucket)
-	} else {
-		var err error
-		var migratedFiles []string
-		if migratedFiles, err = MigrateGCRRegistry(dockerfilesPath, allDockerfiles, config.imageRepo); err != nil {
-			RollbackMigratedFiles(dockerfilesPath, migratedFiles)
-			return 1, errors.Wrap(err, "Fail to migrate dockerfiles from gcs")
-		}
-		RunOnInterrupt(func() { RollbackMigratedFiles(dockerfilesPath, migratedFiles) })
-		defer RollbackMigratedFiles(dockerfilesPath, migratedFiles)
 	}
 	if err := buildRequiredImages(); err != nil {
 		return 1, errors.Wrap(err, "Error while building images")

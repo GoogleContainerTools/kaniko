@@ -21,7 +21,6 @@ WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.5.0/docker-credential-gcr_linux_amd64-1.5.0.tar.gz /usr/local/bin/
 RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-1.5.0.tar.gz
-RUN docker-credential-gcr configure-docker
 # Get Amazon ECR credential helper
 RUN go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login
 RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64 
@@ -48,7 +47,6 @@ COPY --from=1 /distroless/bazel-bin/experimental/busybox/busybox/ /busybox/
 # Declare /busybox as a volume to get it automatically whitelisted
 VOLUME /busybox
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY --from=0 /root/.docker/config.json /kaniko/.docker/config.json
 ENV HOME /root
 ENV USER /root
 ENV PATH /usr/local/bin:/kaniko:/busybox
