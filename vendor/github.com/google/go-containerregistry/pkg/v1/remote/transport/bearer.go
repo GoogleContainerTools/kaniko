@@ -92,12 +92,6 @@ func (bt *bearerTransport) refresh() error {
 	if err != nil {
 		return err
 	}
-
-	if auth.RegistryToken != "" {
-		bt.bearer.RegistryToken = auth.RegistryToken
-		return nil
-	}
-
 	var content []byte
 	if auth.IdentityToken != "" {
 		// If the secret being stored is an identity token,
