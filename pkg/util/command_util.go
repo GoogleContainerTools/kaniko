@@ -131,7 +131,6 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 		return nil, errors.Wrap(err, "matching sources")
 	}
 	logrus.Debugf("Resolved sources to %v", resolved)
-	fmt.Println("end of resolve sources")
 	return resolved, nil
 }
 

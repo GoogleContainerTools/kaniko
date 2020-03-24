@@ -371,10 +371,15 @@ func Test_filesToSave(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir, err := ioutil.TempDir("", "")
+			original := config.RootDir
+			config.RootDir = tmpDir
 			if err != nil {
 				t.Errorf("error creating tmpdir: %s", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer func () {
+				config.RootDir  = original
+				os.RemoveAll(tmpDir)
+			}()
 
 			for _, f := range tt.files {
 				p := filepath.Join(tmpDir, f)
