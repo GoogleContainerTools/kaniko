@@ -23,12 +23,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -391,58 +393,6 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 	}
 }
 
-func TestGetUserGroup(t *testing.T) {
-	tests := []struct {
-		description string
-		chown       string
-		env         []string
-		mock        func(string, bool) (uint32, uint32, error)
-		expectedU   int64
-		expectedG   int64
-		shdErr      bool
-	}{
-		{
-			description: "non empty chown",
-			chown:       "some:some",
-			env:         []string{},
-			mock:        func(string, bool) (uint32, uint32, error) { return 100, 1000, nil },
-			expectedU:   100,
-			expectedG:   1000,
-		},
-		{
-			description: "non empty chown with env replacement",
-			chown:       "some:$foo",
-			env:         []string{"foo=key"},
-			mock: func(c string, t bool) (uint32, uint32, error) {
-				if c == "some:key" {
-					return 10, 100, nil
-				}
-				return 0, 0, fmt.Errorf("did not resolve environment variable")
-			},
-			expectedU: 10,
-			expectedG: 100,
-		},
-		{
-			description: "empty chown string",
-			mock: func(c string, t bool) (uint32, uint32, error) {
-				return 0, 0, fmt.Errorf("should not be called")
-			},
-			expectedU: -1,
-			expectedG: -1,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.description, func(t *testing.T) {
-			original := getUIDAndGID
-			defer func() { getUIDAndGID = original }()
-			getUIDAndGID = tc.mock
-			uid, gid, err := getUserGroup(tc.chown, tc.env)
-			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, uid, tc.expectedU)
-			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, gid, tc.expectedG)
-		})
-	}
-}
-
 func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	setupDirs := func(t *testing.T) (string, string) {
 		testDir, err := ioutil.TempDir("", "")
@@ -591,6 +541,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		testutil.CheckDeepEqual(t, files[0].Name(), "bam.txt")
 
 	})
+
 	t.Run("copy symlink file to a dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
@@ -625,6 +576,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		}
 		testutil.CheckDeepEqual(t, linkName, "dam.txt")
 	})
+
 	t.Run("copy deadlink symlink file to a dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
@@ -705,6 +657,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
 		}
 	})
+
 	t.Run("copy dir with a symlink to a file outside of current src dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
@@ -757,6 +710,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		}
 		testutil.CheckDeepEqual(t, linkName, targetPath)
 	})
+
 	t.Run("copy src symlink dir to a dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
@@ -793,6 +747,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
 		}
 	})
+
 	t.Run("copy src dir to a dest dir which is a symlink", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
@@ -841,6 +796,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		}
 		testutil.CheckDeepEqual(t, linkName, dest)
 	})
+
 	t.Run("copy src file to a dest dir which is a symlink", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
@@ -886,5 +842,84 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			t.Fatal(err)
 		}
 		testutil.CheckDeepEqual(t, linkName, dest)
+	})
+
+	t.Run("copy src file to a dest dir with chown", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		original := getUserGroup
+		defer func() { getUserGroup = original }()
+
+		uid := os.Getuid()
+		gid := os.Getgid()
+
+		getUserGroup = func(userStr string, _ []string) (int64, int64, error) {
+			return int64(uid), int64(gid), nil
+		}
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), testDir},
+				Chown:          "alice:group",
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+
+		actual, err := ioutil.ReadDir(filepath.Join(testDir))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testutil.CheckDeepEqual(t, "bam.txt", actual[0].Name())
+
+		if stat, ok := actual[0].Sys().(*syscall.Stat_t); ok {
+			if int(stat.Uid) != uid {
+				t.Errorf("uid don't match, got %d, expected %d", stat.Uid, uid)
+			}
+			if int(stat.Gid) != gid {
+				t.Errorf("gid don't match, got %d, expected %d", stat.Gid, gid)
+			}
+		}
+	})
+
+	t.Run("copy src file to a dest dir with chown and random user", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		original := getUserGroup
+		defer func() { getUserGroup = original }()
+
+		getUserGroup = func(userStr string, _ []string) (int64, int64, error) {
+			return 12345, 12345, nil
+		}
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), testDir},
+				Chown:          "missing:missing",
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		if !errors.Is(err, os.ErrPermission) {
+			testutil.CheckNoError(t, err)
+		}
 	})
 }

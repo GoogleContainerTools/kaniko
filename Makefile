@@ -14,7 +14,7 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 18
+VERSION_MINOR ?= 19
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
@@ -55,28 +55,36 @@ out/warmer: $(GO_FILES)
 
 .PHONY: travis-setup
 travis-setup:
-	@ ./travis-setup.sh
+	@ ./scripts/travis-setup.sh
+
+.PHONY: minikube-setup
+minikube-setup:
+	@ ./scripts/minikube-setup.sh
 
 .PHONY: test
 test: out/executor
-	@ ./test.sh
+	@ ./scripts/test.sh
 
 .PHONY: integration-test
 integration-test:
-	@ ./integration-test.sh
+	@ ./scripts/integration-test.sh
 
 .PHONY: integration-test-run
 integration-test-run:
-	@ ./integration-test.sh -run "TestRun"
+	@ ./scripts/integration-test.sh -run "TestRun"
 
 .PHONY: integration-test-layers
 integration-test-layers:
-	@ ./integration-test.sh -run "TestLayers"
+	@ ./scripts/integration-test.sh -run "TestLayers"
+
+.PHONY: integration-test-k8s
+integration-test-k8s:
+	@ ./scripts/integration-test.sh -run "TestK8s"
 
 .PHONY: integration-test-misc
 integration-test-misc:
-	$(eval RUN_ARG=$(shell ./misc-integration-test.sh))
-	@ ./integration-test.sh -run "$(RUN_ARG)"
+	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
+	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:
@@ -86,6 +94,6 @@ images:
 
 .PHONY: push
 push:
-    docker push $(REGISTRY)/executor:latest
-    docker push $(REGISTRY)/executor:debug
-    docker push $(REGISTRY)/warmer:latest
+	docker push $(REGISTRY)/executor:latest
+	docker push $(REGISTRY)/executor:debug
+	docker push $(REGISTRY)/warmer:latest

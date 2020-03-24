@@ -185,23 +185,8 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 	return flags
 }
 
-// BuildImage will build dockerfile (located at dockerfilesPath) using both kaniko and docker.
-// The resulting image will be tagged with imageRepo. If the dockerfile will be built with
-// context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
-func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
-	_, ex, _, _ := runtime.Caller(0)
-	cwd := filepath.Dir(ex)
-
-	return d.BuildImageWithContext(config, dockerfilesPath, dockerfile, cwd)
-}
-
-func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig, dockerfilesPath, dockerfile, contextDir string) error {
-	if _, present := d.filesBuilt[dockerfile]; present {
-		return nil
-	}
-	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
-
-	fmt.Printf("Building images for Dockerfile %s\n", dockerfile)
+func (d *DockerFileBuilder) BuildDockerImage(imageRepo, dockerfilesPath, dockerfile, contextDir string) error {
+	fmt.Printf("Building image for Dockerfile %s\n", dockerfile)
 
 	var buildArgs []string
 	buildArgFlag := "--build-arg"
@@ -230,13 +215,39 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 		dockerCmd.Env = append(dockerCmd.Env, env...)
 	}
 
-	timer := timing.Start(dockerfile + "_docker")
 	out, err := RunCommandWithoutTest(dockerCmd)
-	timing.DefaultRun.Stop(timer)
 	if err != nil {
 		return fmt.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 	fmt.Printf("Build image for Dockerfile %s as %s. docker build output: %s \n", dockerfile, dockerImage, out)
+	return nil
+}
+
+// BuildImage will build dockerfile (located at dockerfilesPath) using both kaniko and docker.
+// The resulting image will be tagged with imageRepo. If the dockerfile will be built with
+// context (i.e. it is in `buildContextTests`) the context will be pulled from gcsBucket.
+func (d *DockerFileBuilder) BuildImage(config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex)
+
+	return d.BuildImageWithContext(config, dockerfilesPath, dockerfile, cwd)
+}
+
+func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig, dockerfilesPath, dockerfile, contextDir string) error {
+	if _, present := d.filesBuilt[dockerfile]; present {
+		return nil
+	}
+	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
+
+	var buildArgs []string
+	buildArgFlag := "--build-arg"
+	for _, arg := range argsMap[dockerfile] {
+		buildArgs = append(buildArgs, buildArgFlag, arg)
+	}
+
+	timer := timing.Start(dockerfile + "_docker")
+	d.BuildDockerImage(imageRepo, dockerfilesPath, dockerfile, contextDir)
+	timing.DefaultRun.Stop(timer)
 
 	contextFlag := "-c"
 	contextPath := buildContextPath
@@ -269,7 +280,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 	}
 
 	// build kaniko image
-	additionalFlags = append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
+	additionalFlags := append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
 
@@ -301,16 +312,16 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	timer = timing.Start(dockerfile + "_kaniko")
-	out, err = RunCommandWithoutTest(kanikoCmd)
+	out, err := RunCommandWithoutTest(kanikoCmd)
 	timing.DefaultRun.Stop(timer)
 
 	if err != nil {
-		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
+		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
 	}
 
 	if outputCheck := outputChecks[dockerfile]; outputCheck != nil {
 		if err := outputCheck(dockerfile, out); err != nil {
-			return fmt.Errorf("Output check failed for image %s with kaniko command \"%s\": %s %s", dockerImage, kanikoCmd.Args, err, string(out))
+			return fmt.Errorf("Output check failed for image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
 		}
 	}
 

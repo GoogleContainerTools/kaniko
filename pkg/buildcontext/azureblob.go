@@ -43,12 +43,12 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 		return "", errors.New("AZURE_STORAGE_ACCESS_KEY environment variable is not set")
 	}
 
-	// Get storage accoutname for Azure Blob Storage
+	// Get storage accountName for Azure Blob Storage
 	u, _ := url.Parse(b.context)
 	parts := azblob.NewBlobURLParts(*u)
 	accountName := strings.Split(parts.Host, ".")[0]
 
-	// Generate credentail with accountname and accountkey
+	// Generate credential with accountName and accountKey
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		return parts.Host, err
@@ -62,7 +62,7 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 		return tarPath, err
 	}
 
-	// Downloading contextfile from Azure Blob Storage
+	// Downloading context file from Azure Blob Storage
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 	blobURL := azblob.NewBlobURL(*u, p)
 	ctx := context.Background()

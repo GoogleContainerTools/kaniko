@@ -43,7 +43,9 @@ type KanikoOptions struct {
 	Destinations            multiArg
 	BuildArgs               multiArg
 	InsecureRegistries      multiArg
+	Labels                  multiArg
 	SkipTLSVerifyRegistries multiArg
+	RegistriesCertificates  keyValueArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool

@@ -70,7 +70,7 @@ func CheckError(t *testing.T, shouldErr bool, err error) {
 
 func CheckNoError(t *testing.T, err error) {
 	if err != nil {
-		t.Error(err)
+		t.Errorf("%+v", err)
 	}
 }
 

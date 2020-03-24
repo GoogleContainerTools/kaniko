@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -73,7 +74,7 @@ type stageBuilder struct {
 	stageIdxToDigest map[string]string
 	snapshotter      snapShotter
 	layerCache       cache.LayerCache
-	pushCache        cachePusher
+	pushLayerToCache cachePusher
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -83,7 +84,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 
-	imageConfig, err := initializeConfig(sourceImage)
+	imageConfig, err := initializeConfig(sourceImage, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		layerCache: &cache.RegistryCache{
 			Opts: opts,
 		},
-		pushCache: pushLayerToCache,
+		pushLayerToCache: pushLayerToCache,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -135,7 +136,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	return s, nil
 }
 
-func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
+func initializeConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.ConfigFile, error) {
 	imageConfig, err := img.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -144,12 +145,37 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 	if imageConfig.Config.Env == nil {
 		imageConfig.Config.Env = constants.ScratchEnvVars
 	}
+
+	if opts == nil {
+		return imageConfig, nil
+	}
+
+	if l := len(opts.Labels); l > 0 {
+		if imageConfig.Config.Labels == nil {
+			imageConfig.Config.Labels = make(map[string]string)
+		}
+		for _, label := range opts.Labels {
+			parts := strings.SplitN(label, "=", 2)
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("labels must be of the form key=value, got %s", label)
+			}
+
+			imageConfig.Config.Labels[parts[0]] = parts[1]
+		}
+	}
+
 	return imageConfig, nil
 }
 
-func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache) (CompositeCache, error) {
+func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache, args *dockerfile.BuildArgs, env []string) (CompositeCache, error) {
+	// First replace all the environment variables or args in the command
+	replacementEnvs := args.ReplacementEnvs(env)
+	resolvedCmd, err := util.ResolveEnvironmentReplacement(command.String(), replacementEnvs, false)
+	if err != nil {
+		return compositeKey, err
+	}
 	// Add the next command to the cache key.
-	compositeKey.AddKey(command.String())
+	compositeKey.AddKey(resolvedCmd)
 	switch v := command.(type) {
 	case *commands.CopyCommand:
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
@@ -202,7 +228,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		compositeKey, err = s.populateCompositeKey(command, files, compositeKey)
+		compositeKey, err = s.populateCompositeKey(command, files, compositeKey, s.args, cfg.Env)
 		if err != nil {
 			return err
 		}
@@ -251,8 +277,6 @@ func (s *stageBuilder) build() error {
 	} else {
 		compositeKey = NewCompositeCache(s.baseImageDigest)
 	}
-
-	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
@@ -310,7 +334,7 @@ func (s *stageBuilder) build() error {
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey)
+		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey, s.args, s.cf.Config.Env)
 		if err != nil {
 			return err
 		}
@@ -359,7 +383,7 @@ func (s *stageBuilder) build() error {
 			// Push layer to cache (in parallel) now along with new config file
 			if s.opts.Cache && command.ShouldCacheOutput() {
 				cacheGroup.Go(func() error {
-					return s.pushCache(s.opts, ck, tarPath, command.String())
+					return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
 				})
 			}
 			if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
@@ -485,7 +509,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 				return nil, err
 			}
 		}
-		cfg, err := initializeConfig(image)
+		cfg, err := initializeConfig(image, opts)
 		if err != nil {
 			return nil, err
 		}

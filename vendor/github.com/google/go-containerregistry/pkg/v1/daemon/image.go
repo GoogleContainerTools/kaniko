@@ -36,6 +36,7 @@ var _ v1.Image = (*image)(nil)
 type imageOpener struct {
 	ref      name.Reference
 	buffered bool
+	client   Client
 }
 
 // ImageOption is a functional option for Image.
@@ -45,13 +46,15 @@ func (i *imageOpener) Open() (v1.Image, error) {
 	var opener tarball.Opener
 	var err error
 	if i.buffered {
-		opener, err = bufferedOpener(i.ref)
+		opener, err = i.bufferedOpener(i.ref)
 	} else {
-		opener, err = unbufferedOpener(i.ref)
+		opener, err = i.unbufferedOpener(i.ref)
 	}
 	if err != nil {
 		return nil, err
 	}
+
+	i.client.NegotiateAPIVersion(context.Background())
 
 	tb, err := tarball.Image(opener, nil)
 	if err != nil {
@@ -63,33 +66,13 @@ func (i *imageOpener) Open() (v1.Image, error) {
 	return img, nil
 }
 
-// ImageSaver is an interface for testing.
-type ImageSaver interface {
-	ImageSave(context.Context, []string) (io.ReadCloser, error)
+func (i *imageOpener) saveImage(ref name.Reference) (io.ReadCloser, error) {
+	return i.client.ImageSave(context.Background(), []string{ref.Name()})
 }
 
-// This is a variable so we can override in tests.
-var getImageSaver = func() (ImageSaver, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return nil, err
-	}
-	cli.NegotiateAPIVersion(context.Background())
-	return cli, nil
-}
-
-func saveImage(ref name.Reference) (io.ReadCloser, error) {
-	cli, err := getImageSaver()
-	if err != nil {
-		return nil, err
-	}
-
-	return cli.ImageSave(context.Background(), []string{ref.Name()})
-}
-
-func bufferedOpener(ref name.Reference) (tarball.Opener, error) {
+func (i *imageOpener) bufferedOpener(ref name.Reference) (tarball.Opener, error) {
 	// Store the tarball in memory and return a new reader into the bytes each time we need to access something.
-	rc, err := saveImage(ref)
+	rc, err := i.saveImage(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -106,10 +89,10 @@ func bufferedOpener(ref name.Reference) (tarball.Opener, error) {
 	}, nil
 }
 
-func unbufferedOpener(ref name.Reference) (tarball.Opener, error) {
+func (i *imageOpener) unbufferedOpener(ref name.Reference) (tarball.Opener, error) {
 	// To avoid storing the tarball in memory, do a save every time we need to access something.
 	return func() (io.ReadCloser, error) {
-		return saveImage(ref)
+		return i.saveImage(ref)
 	}, nil
 }
 
@@ -126,5 +109,14 @@ func Image(ref name.Reference, options ...ImageOption) (v1.Image, error) {
 			return nil, err
 		}
 	}
+
+	if i.client == nil {
+		var err error
+		i.client, err = client.NewClientWithOpts(client.FromEnv)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return i.Open()
 }

@@ -161,18 +161,15 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 			dir := filepath.Dir(path)
 
 			if strings.HasPrefix(base, ".wh.") {
-				logrus.Debugf("Whiting out %s", path)
-
-				name := strings.TrimPrefix(base, ".wh.")
-				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
-					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
-				}
-
 				if !cfg.includeWhiteout {
 					logrus.Debug("not including whiteout files")
 					continue
 				}
-
+				logrus.Debugf("Whiting out %s", path)
+				name := strings.TrimPrefix(base, ".wh.")
+				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
+					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
+				}
 			}
 
 			if err := cfg.extractFunc(root, hdr, tr); err != nil {
@@ -534,14 +531,13 @@ func AddVolumePathToWhitelist(path string) {
 // 	1. If <src> is a remote file URL:
 // 		- destination will have permissions of 0600
 // 		- If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
-func DownloadFileToDest(rawurl, dest string) error {
+func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
 	resp, err := http.Get(rawurl)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	// TODO: set uid and gid according to current user
-	if err := CreateFile(dest, resp.Body, 0600, 0, 0); err != nil {
+	if err := CreateFile(dest, resp.Body, 0600, uint32(uid), uint32(gid)); err != nil {
 		return err
 	}
 	mTime := time.Time{}
