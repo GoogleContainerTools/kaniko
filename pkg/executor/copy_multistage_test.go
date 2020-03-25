@@ -73,6 +73,7 @@ COPY --from=first copied/bam.txt output/`)
 			SnapshotMode:   constants.SnapshotModeFull,
 		}
 		_, err := DoBuild(opts)
+		testutil.CheckNoError(t, err)
 		files, err := ioutil.ReadDir(filepath.Join(testDir, "output"))
 		if err != nil {
 			t.Fatal(err)
