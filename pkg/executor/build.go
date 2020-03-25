@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -585,6 +586,17 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		reviewConfig(stage, &sb.cf.Config)
 
 		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
+		if err != nil {
+			return nil, err
+		}
+
+		configFile, err := sourceImage.ConfigFile()
+		if err != nil {
+			return nil, err
+		}
+		configFile.OS = runtime.GOOS
+		configFile.Architecture = runtime.GOARCH
+		sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
 		if err != nil {
 			return nil, err
 		}
