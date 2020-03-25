@@ -655,15 +655,25 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 // If a file is a symlink, it also returns the target file.
 func filesToSave(deps []string) ([]string, error) {
 	srcFiles := []string{}
-	srcs, err := util.ResolveSources(deps, config.RootDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "resolving sources to save")
-	}
-	for _, f := range srcs {
-		if link, err := util.EvalSymLink(f); err == nil {
-			srcFiles = append(srcFiles, link)
+	for _, src := range deps {
+		srcs, err := filepath.Glob(filepath.Join(config.RootDir, src))
+		if err != nil {
+			return nil, err
 		}
-		srcFiles = append(srcFiles, f)
+		for _, f := range srcs {
+			if link, err := util.EvalSymLink(f); err == nil {
+				link, err = filepath.Rel(config.RootDir, link)
+				if err != nil {
+					return nil, errors.Wrap(err, fmt.Sprintf("could not find relative path to %s", config.RootDir))
+				}
+				srcFiles = append(srcFiles, link)
+			}
+			f, err = filepath.Rel(config.RootDir, f)
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("could not find relative path to %s", config.RootDir))
+			}
+			srcFiles = append(srcFiles, f)
+		}
 	}
 	return srcFiles, nil
 }

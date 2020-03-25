@@ -376,8 +376,8 @@ func Test_filesToSave(t *testing.T) {
 			if err != nil {
 				t.Errorf("error creating tmpdir: %s", err)
 			}
-			defer func () {
-				config.RootDir  = original
+			defer func() {
+				config.RootDir = original
 				os.RemoveAll(tmpDir)
 			}()
 
@@ -396,11 +396,7 @@ func Test_filesToSave(t *testing.T) {
 				fp.Close()
 			}
 
-			args := []string{}
-			for _, arg := range tt.args {
-				args = append(args, filepath.Join(tmpDir, arg))
-			}
-			got, err := filesToSave(args)
+			got, err := filesToSave(tt.args)
 			if err != nil {
 				t.Errorf("got err: %s", err)
 			}
