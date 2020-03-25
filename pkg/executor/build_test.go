@@ -400,14 +400,10 @@ func Test_filesToSave(t *testing.T) {
 			if err != nil {
 				t.Errorf("got err: %s", err)
 			}
-			want := []string{}
-			for _, w := range tt.want {
-				want = append(want, filepath.Join(tmpDir, w))
-			}
-			sort.Strings(want)
+			sort.Strings(tt.want)
 			sort.Strings(got)
-			if !reflect.DeepEqual(got, want) {
-				t.Errorf("filesToSave() = %v, want %v", got, want)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("filesToSave() = %v, want %v", got, tt.want)
 			}
 		})
 	}
