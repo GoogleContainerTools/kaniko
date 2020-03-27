@@ -20,6 +20,13 @@ chmod +x kubectl
 sudo mv kubectl /usr/local/bin/
 kubectl version --client
 
+# conntrack is required for minikube 1.19 and higher for none driver
+if ! conntrack --version &>/dev/null; then
+  echo "WARNING: No contrack is not installed"
+  sudo apt-get update -qq
+  sudo apt-get -qq -y install conntrack
+fi
+
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 chmod +x minikube
 sudo mv minikube /usr/local/bin/
