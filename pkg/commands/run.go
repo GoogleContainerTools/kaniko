@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -79,11 +80,10 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	// If specified, run the command as a specific user
 	if userStr != "" {
-		uid, gid, err := util.GetUIDAndGIDFromString(userStr, true)
+		cmd.SysProcAttr.Credential, err = impersonate(userStr)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "impersonate")
 		}
-		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
 
 	env, err := addDefaultHOME(userStr, replacementEnvs)
@@ -111,6 +111,38 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	return nil
+}
+
+func impersonate(userStr string) (*syscall.Credential, error) {
+	uid, gid, err := util.GetUIDAndGIDFromString(userStr, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "get uid/gid")
+	}
+
+	u, err := util.Lookup(userStr)
+	if err != nil {
+		return nil, errors.Wrap(err, "lookup")
+	}
+	logrus.Infof("user: %+v", u)
+
+	// Handle the case of secondary groups
+	groups := []uint32{41}
+	gidStr, err := u.GroupIds()
+	logrus.Infof("groupstr: %s", gidStr)
+
+	for _, g := range gidStr {
+		i, err := strconv.ParseUint(g, 10, 32)
+		if err != nil {
+			return nil, errors.Wrap(err, "parseuint")
+		}
+		groups = append(groups, uint32(i))
+	}
+
+	return &syscall.Credential{
+		Uid:    uid,
+		Gid:    gid,
+		Groups: groups,
+	}, nil
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
