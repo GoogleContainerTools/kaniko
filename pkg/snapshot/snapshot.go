@@ -226,10 +226,28 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 			return err
 		}
 	}
+
+	addedPaths := make(map[string]bool)
 	for _, path := range files {
+		if _, fileExists := addedPaths[path]; fileExists {
+			continue
+		}
+		for _, parentPath := range util.ParentDirectories(path) {
+			if parentPath == "/" {
+				continue
+			}
+			if _, dirExists := addedPaths[parentPath]; dirExists {
+				continue
+			}
+			if err := t.AddFileToTar(parentPath); err != nil {
+				return err
+			}
+			addedPaths[parentPath] = true
+		}
 		if err := t.AddFileToTar(path); err != nil {
 			return err
 		}
+		addedPaths[path] = true
 	}
 	return nil
 }
