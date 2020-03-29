@@ -456,3 +456,193 @@ func Test_ResolveStagesArgs(t *testing.T) {
 		}
 	}
 }
+
+func Test_SkipingUnusedStages(t *testing.T) {
+	tests := []struct {
+		description                   string
+		dockerfile                    string
+		targets                       []string
+		expectedSourceCodes           map[string][]string
+		expectedTargetIndexBeforeSkip map[string]int
+		expectedTargetIndexAfterSkip  map[string]int
+	}{
+		{
+			description: "dockerfile_without_copyFrom",
+			dockerfile: `
+			FROM alpine:3.11 AS base-dev
+			RUN echo dev > /hi
+			FROM alpine:3.11 AS base-prod
+			RUN echo prod > /hi
+			FROM base-dev as final-stage
+			RUN cat /hi
+			`,
+			targets: []string{"base-dev", "base-prod", ""},
+			expectedSourceCodes: map[string][]string{
+				"base-dev":  {"FROM alpine:3.11 AS base-dev"},
+				"base-prod": {"FROM alpine:3.11 AS base-prod"},
+				"":          {"FROM alpine:3.11 AS base-dev", "FROM base-dev as final-stage"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 1,
+				"":          2,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 0,
+				"":          1,
+			},
+		},
+		{
+			description: "dockerfile_with_copyFrom",
+			dockerfile: `
+			FROM alpine:3.11 AS base-dev
+			RUN echo dev > /hi
+			FROM alpine:3.11 AS base-prod
+			RUN echo prod > /hi
+			FROM alpine:3.11
+			COPY --from=base-prod /hi /finalhi
+			RUN cat /finalhi
+			`,
+			targets: []string{"base-dev", "base-prod", ""},
+			expectedSourceCodes: map[string][]string{
+				"base-dev":  {"FROM alpine:3.11 AS base-dev"},
+				"base-prod": {"FROM alpine:3.11 AS base-prod"},
+				"":          {"FROM alpine:3.11 AS base-prod", "FROM alpine:3.11"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 1,
+				"":          2,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 0,
+				"":          1,
+			},
+		},
+		{
+			description: "dockerfile_with_two_copyFrom",
+			dockerfile: `
+			FROM alpine:3.11 AS base-dev
+			RUN echo dev > /hi
+			FROM alpine:3.11 AS base-prod
+			RUN echo prod > /hi
+			FROM alpine:3.11
+			COPY --from=base-dev /hi /finalhidev
+			COPY --from=base-prod /hi /finalhiprod
+			RUN cat /finalhidev
+			RUN cat /finalhiprod
+			`,
+			targets: []string{"base-dev", "base-prod", ""},
+			expectedSourceCodes: map[string][]string{
+				"base-dev":  {"FROM alpine:3.11 AS base-dev"},
+				"base-prod": {"FROM alpine:3.11 AS base-prod"},
+				"":          {"FROM alpine:3.11 AS base-dev", "FROM alpine:3.11 AS base-prod", "FROM alpine:3.11"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 1,
+				"":          2,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 0,
+				"":          2,
+			},
+		},
+		{
+			description: "dockerfile_with_two_copyFrom_and_arg",
+			dockerfile: `
+			FROM debian:9.11 as base
+			COPY . .
+			FROM scratch as second
+			ENV foopath context/foo
+			COPY --from=0 $foopath context/b* /foo/
+			FROM second as third
+			COPY --from=base /context/foo /new/foo
+			FROM base as fourth
+			# Make sure that we snapshot intermediate images correctly
+			RUN date > /date
+			ENV foo bar
+			# This base image contains symlinks with relative paths to whitelisted directories
+			# We need to test they're extracted correctly
+			FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5aa48
+			FROM fourth
+			ARG file=/foo2
+			COPY --from=second /foo ${file}
+			COPY --from=debian:9.11 /etc/os-release /new
+			`,
+			targets: []string{"base", ""},
+			expectedSourceCodes: map[string][]string{
+				"base":   {"FROM debian:9.11 as base"},
+				"second": {"FROM debian:9.11 as base", "FROM scratch as second"},
+				"":       {"FROM debian:9.11 as base", "FROM scratch as second", "FROM base as fourth", "FROM fourth"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base":   0,
+				"second": 1,
+				"":       5,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base":   0,
+				"second": 1,
+				"":       3,
+			},
+		},
+		{
+			description: "dockerfile_without_final_dependencies",
+			dockerfile: `
+			FROM alpine:3.11
+			FROM debian:9.11 as base
+			RUN echo foo > /foo
+			FROM debian:9.11 as fizz
+			RUN echo fizz >> /fizz
+			COPY --from=base /foo /fizz
+			FROM alpine:3.11 as buzz
+			RUN echo buzz > /buzz
+			FROM alpine:3.11 as final
+			RUN echo bar > /bar
+			`,
+			targets: []string{"final", "buzz", "fizz", ""},
+			expectedSourceCodes: map[string][]string{
+				"final": {"FROM alpine:3.11 as final"},
+				"buzz":  {"FROM alpine:3.11 as buzz"},
+				"fizz":  {"FROM debian:9.11 as base", "FROM debian:9.11 as fizz"},
+				"":      {"FROM alpine:3.11", "FROM debian:9.11 as base", "FROM debian:9.11 as fizz", "FROM alpine:3.11 as buzz", "FROM alpine:3.11 as final"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"final": 4,
+				"buzz":  3,
+				"fizz":  2,
+				"":      4,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"final": 0,
+				"buzz":  0,
+				"fizz":  1,
+				"":      4,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		stages, _, err := Parse([]byte(test.dockerfile))
+		testutil.CheckError(t, false, err)
+		actualSourceCodes := make(map[string][]string)
+		for _, target := range test.targets {
+			targetIndex, err := targetStage(stages, target)
+			testutil.CheckError(t, false, err)
+			targetIndexBeforeSkip := targetIndex
+			onlyUsedStages := skipUnusedStages(stages, &targetIndex, target)
+			for _, s := range onlyUsedStages {
+				actualSourceCodes[target] = append(actualSourceCodes[target], s.SourceCode)
+			}
+			t.Run(test.description, func(t *testing.T) {
+				testutil.CheckDeepEqual(t, test.expectedSourceCodes[target], actualSourceCodes[target])
+				testutil.CheckDeepEqual(t, test.expectedTargetIndexBeforeSkip[target], targetIndexBeforeSkip)
+				testutil.CheckDeepEqual(t, test.expectedTargetIndexAfterSkip[target], targetIndex)
+			})
+		}
+	}
+}
