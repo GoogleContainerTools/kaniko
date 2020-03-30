@@ -24,6 +24,7 @@ import (
 	"strings"
 	"syscall"
 
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -202,7 +203,7 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	cr.readSuccess = true
 
 	cr.extractedFiles, err = util.GetFSFromLayers(
-		constants.RootDir,
+		kConfig.RootDir,
 		layers,
 		util.ExtractFunc(cr.extractFn),
 		util.IncludeWhiteout(),

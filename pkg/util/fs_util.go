@@ -33,7 +33,7 @@ import (
 
 	otiai10Cpy "github.com/otiai10/copy"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -51,7 +51,7 @@ type WhitelistEntry struct {
 
 var initialWhitelist = []WhitelistEntry{
 	{
-		Path:            "/kaniko",
+		Path:            config.KanikoDir,
 		PrefixMatchOnly: false,
 	},
 	{
@@ -125,7 +125,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 		return nil, errors.New("must supply an extract function")
 	}
 
-	if err := DetectFilesystemWhitelist(constants.WhitelistPath); err != nil {
+	if err := DetectFilesystemWhitelist(config.WhitelistPath); err != nil {
 		return nil, err
 	}
 
@@ -185,7 +185,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 // DeleteFilesystem deletes the extracted image file system
 func DeleteFilesystem() error {
 	logrus.Info("Deleting filesystem...")
-	return filepath.Walk(constants.RootDir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(config.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// ignore errors when deleting.
 			return nil
@@ -206,7 +206,7 @@ func DeleteFilesystem() error {
 			logrus.Debugf("Not deleting %s, as it contains a whitelisted path", path)
 			return nil
 		}
-		if path == constants.RootDir {
+		if path == config.RootDir {
 			return nil
 		}
 		return os.RemoveAll(path)
@@ -385,7 +385,7 @@ func CheckWhitelist(path string) bool {
 }
 
 func checkWhitelistRoot(root string) bool {
-	if root == constants.RootDir {
+	if root == config.RootDir {
 		return false
 	}
 	return CheckWhitelist(root)
@@ -420,7 +420,7 @@ func DetectFilesystemWhitelist(path string) error {
 			}
 			continue
 		}
-		if lineArr[4] != constants.RootDir {
+		if lineArr[4] != config.RootDir {
 			logrus.Tracef("Appending %s from line: %s", lineArr[4], line)
 			whitelist = append(whitelist, WhitelistEntry{
 				Path:            lineArr[4],
@@ -460,16 +460,18 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 // ParentDirectories returns a list of paths to all parent directories
 // Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
 func ParentDirectories(path string) []string {
-	path = filepath.Clean(path)
-	dirs := strings.Split(path, "/")
-	dirPath := constants.RootDir
-	paths := []string{constants.RootDir}
-	for index, dir := range dirs {
-		if dir == "" || index == (len(dirs)-1) {
-			continue
+	dir := filepath.Clean(path)
+	var paths []string
+	for {
+		if dir == filepath.Clean(config.RootDir) || dir == "" || dir == "." {
+			break
 		}
-		dirPath = filepath.Join(dirPath, dir)
-		paths = append(paths, dirPath)
+		dir, _ = filepath.Split(dir)
+		dir = filepath.Clean(dir)
+		paths = append(paths, dir)
+	}
+	if len(paths) == 0 {
+		paths = append(paths, config.RootDir)
 	}
 	return paths
 }
@@ -481,7 +483,7 @@ func ParentDirectoriesWithoutLeadingSlash(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
 	dirPath := ""
-	paths := []string{constants.RootDir}
+	paths := []string{config.RootDir}
 	for index, dir := range dirs {
 		if dir == "" || index == (len(dirs)-1) {
 			continue
@@ -821,12 +823,13 @@ func getSymlink(path string) error {
 // For cross stage dependencies kaniko must persist the referenced path so that it can be used in
 // the dependent stage. For symlinks we copy the target path because copying the symlink would
 // result in a dead link
-func CopyFileOrSymlink(src string, destDir string) error {
+func CopyFileOrSymlink(src string, destDir string, root string) error {
 	destFile := filepath.Join(destDir, src)
+	src = filepath.Join(root, src)
 	if fi, _ := os.Lstat(src); IsSymlink(fi) {
 		link, err := os.Readlink(src)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "copying file or symlink")
 		}
 		if err := createParentDirectory(destFile); err != nil {
 			return err

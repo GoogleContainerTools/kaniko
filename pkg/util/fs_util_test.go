@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/golang/mock/gomock"
@@ -157,11 +158,13 @@ func Test_ParentDirectories(t *testing.T) {
 	tests := []struct {
 		name     string
 		path     string
+		rootDir  string
 		expected []string
 	}{
 		{
-			name: "regular path",
-			path: "/path/to/dir",
+			name:    "regular path",
+			path:    "/path/to/dir",
+			rootDir: "/",
 			expected: []string{
 				"/",
 				"/path",
@@ -169,17 +172,50 @@ func Test_ParentDirectories(t *testing.T) {
 			},
 		},
 		{
-			name: "current directory",
-			path: ".",
+			name:    "current directory",
+			path:    ".",
+			rootDir: "/",
 			expected: []string{
 				"/",
+			},
+		},
+		{
+			name:    "non / root directory",
+			path:    "/tmp/kaniko/test/another/dir",
+			rootDir: "/tmp/kaniko/",
+			expected: []string{
+				"/tmp/kaniko",
+				"/tmp/kaniko/test",
+				"/tmp/kaniko/test/another",
+			},
+		},
+		{
+			name:    "non / root director same path",
+			path:    "/tmp/123",
+			rootDir: "/tmp/123",
+			expected: []string{
+				"/tmp/123",
+			},
+		},
+		{
+			name:    "non / root directory path",
+			path:    "/tmp/120162240/kaniko",
+			rootDir: "/tmp/120162240",
+			expected: []string{
+				"/tmp/120162240",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			original := config.RootDir
+			defer func() { config.RootDir = original }()
+			config.RootDir = tt.rootDir
 			actual := ParentDirectories(tt.path)
+			sort.Strings(actual)
+			sort.Strings(tt.expected)
+
 			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
 		})
 	}

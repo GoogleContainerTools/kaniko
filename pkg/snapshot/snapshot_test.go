@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/pkg/errors"
@@ -159,7 +160,6 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		t.Logf("Info %s in tar", hdr.Name)
 		foundFiles = append(foundFiles, hdr.Name)
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
@@ -458,8 +458,11 @@ func setUpTest() (string, *Snapshotter, func(), error) {
 		return "", nil, nil, errors.Wrap(err, "initializing snapshotter")
 	}
 
+	original := config.KanikoDir
+	config.KanikoDir = testDir
 	cleanup := func() {
 		os.RemoveAll(snapshotPath)
+		config.KanikoDir = original
 		dirCleanUp()
 	}
 
