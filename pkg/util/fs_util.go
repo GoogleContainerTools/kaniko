@@ -725,7 +725,7 @@ func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) erro
 	}
 	if uid > math.MaxUint32 || gid > math.MaxUint32 {
 		// due to https://github.com/golang/go/issues/8537
-		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", math.MaxUint32))
+		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", uint64(math.MaxUint32)))
 	}
 	if err := os.Chown(path, int(uid), int(gid)); err != nil {
 		return err
