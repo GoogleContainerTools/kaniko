@@ -97,3 +97,55 @@ func TestIsUrl(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveEnvironmentBuildArgs(t *testing.T) {
+	tests := []struct {
+		description               string
+		input                     []string
+		expected                  []string
+		mockedEnvironmentResolver func(string) string
+	}{
+		{
+			description: "replace when environment variable is present and value is not specified",
+			input:       []string{"variable1"},
+			expected:    []string{"variable1=value1"},
+			mockedEnvironmentResolver: func(variable string) string {
+				if variable == "variable1" {
+					return "value1"
+				}
+				return ""
+			},
+		},
+		{
+			description: "do not replace when environment variable is present and value is specified",
+			input:       []string{"variable1=value1", "variable2=value2"},
+			expected:    []string{"variable1=value1", "variable2=value2"},
+			mockedEnvironmentResolver: func(variable string) string {
+				return "unexpected"
+			},
+		},
+		{
+			description: "do not replace when environment variable is present and empty value is specified",
+			input:       []string{"variable1="},
+			expected:    []string{"variable1="},
+			mockedEnvironmentResolver: func(variable string) string {
+				return "unexpected"
+			},
+		},
+		{
+			description: "replace with empty value when environment variable is not present or empty and value is not specified",
+			input:       []string{"variable1", "variable2=value2"},
+			expected:    []string{"variable1=", "variable2=value2"},
+			mockedEnvironmentResolver: func(variable string) string {
+				return ""
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			resolveEnvironmentBuildArgs(tt.input, tt.mockedEnvironmentResolver)
+			testutil.CheckDeepEqual(t, tt.expected, tt.input)
+		})
+	}
+}

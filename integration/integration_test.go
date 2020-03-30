@@ -36,13 +36,16 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/pkg/errors"
 )
 
-var config *gcpConfig
+var config *integrationTestConfig
 var imageBuilder *DockerFileBuilder
+var allDockerfiles []string
 
 const (
 	daemonPrefix       = "daemon://"
+	integrationPath    = "integration"
 	dockerfilesPath    = "dockerfiles"
 	emptyContainerDiff = `[
      {
@@ -80,35 +83,57 @@ func getDockerMajorVersion() int {
 	}
 	return ver
 }
+func launchTests(m *testing.M) (int, error) {
+
+	if config.isGcrRepository() {
+		contextFile, err := CreateIntegrationTarball()
+		if err != nil {
+			return 1, errors.Wrap(err, "Failed to create tarball of integration files for build context")
+		}
+
+		fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
+		if err != nil {
+			return 1, errors.Wrap(err, "Failed to upload build context")
+		}
+
+		if err = os.Remove(contextFile); err != nil {
+			return 1, errors.Wrap(err, fmt.Sprintf("Failed to remove tarball at %s", contextFile))
+		}
+
+		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
+		defer DeleteFromBucket(fileInBucket)
+	}
+	if err := buildRequiredImages(); err != nil {
+		return 1, errors.Wrap(err, "Error while building images")
+	}
+
+	imageBuilder = NewDockerFileBuilder()
+
+	return m.Run(), nil
+}
 
 func TestMain(m *testing.M) {
+	var err error
 	if !meetsRequirements() {
 		fmt.Println("Missing required tools")
 		os.Exit(1)
 	}
-	config = initGCPConfig()
 
-	contextFile, err := CreateIntegrationTarball()
-	if err != nil {
-		fmt.Println("Failed to create tarball of integration files for build context", err)
+	if allDockerfiles, err = FindDockerFiles(dockerfilesPath); err != nil {
+		fmt.Println("Coudn't create map of dockerfiles", err)
 		os.Exit(1)
+	} else {
+		config = initIntegrationTestConfig()
+		exitCode, err := launchTests(m)
+		if err != nil {
+			fmt.Println(err)
+		}
+		os.Exit(exitCode)
 	}
 
-	fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
-	if err != nil {
-		fmt.Println("Failed to upload build context", err)
-		os.Exit(1)
-	}
+}
 
-	err = os.Remove(contextFile)
-	if err != nil {
-		fmt.Printf("Failed to remove tarball at %s: %s\n", contextFile, err)
-		os.Exit(1)
-	}
-
-	RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
-	defer DeleteFromBucket(fileInBucket)
-
+func buildRequiredImages() error {
 	setupCommands := []struct {
 		name    string
 		command []string
@@ -123,7 +148,7 @@ func TestMain(m *testing.M) {
 		},
 		{
 			name:    "Building onbuild base image",
-			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", "dockerfiles/Dockerfile_onbuild_base", "."},
+			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
 		},
 		{
 			name:    "Pushing onbuild base image",
@@ -131,7 +156,7 @@ func TestMain(m *testing.M) {
 		},
 		{
 			name:    "Building hardlink base image",
-			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", "dockerfiles/Dockerfile_hardlink_base", "."},
+			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
 		},
 		{
 			name:    "Pushing hardlink base image",
@@ -143,24 +168,14 @@ func TestMain(m *testing.M) {
 		fmt.Println(setupCmd.name)
 		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
 		if out, err := RunCommandWithoutTest(cmd); err != nil {
-			fmt.Printf("%s failed: %s", setupCmd.name, err)
-			fmt.Println(string(out))
-			os.Exit(1)
+			return errors.Wrap(err, fmt.Sprintf("%s failed: %s", setupCmd.name, string(out)))
 		}
 	}
-
-	dockerfiles, err := FindDockerFiles(dockerfilesPath)
-	if err != nil {
-		fmt.Printf("Coudn't create map of dockerfiles: %s", err)
-		os.Exit(1)
-	}
-	imageBuilder = NewDockerFileBuilder(dockerfiles)
-
-	os.Exit(m.Run())
+	return nil
 }
 
 func TestRun(t *testing.T) {
-	for dockerfile := range imageBuilder.FilesBuilt {
+	for _, dockerfile := range allDockerfiles {
 		t.Run("test_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
 			t.Parallel()
@@ -172,18 +187,11 @@ func TestRun(t *testing.T) {
 			}
 
 			buildImage(t, dockerfile, imageBuilder)
-			imageBuilder.FilesBuilt[dockerfile] = true
 
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
 			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
 
-			// container-diff
-			daemonDockerImage := daemonPrefix + dockerImage
-			containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-				daemonDockerImage, kanikoImage,
-				"-q", "--type=file", "--type=metadata", "--json")
-			diff := RunCommand(containerdiffCmd, t)
-			t.Logf("diff = %s", string(diff))
+			diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 			checkContainerDiffOutput(t, diff, expected)
@@ -197,9 +205,26 @@ func TestRun(t *testing.T) {
 	}
 }
 
+func getGitRepo() string {
+	var branch, repoSlug string
+	if _, ok := os.LookupEnv("TRAVIS"); ok {
+		if os.Getenv("TRAVIS_PULL_REQUEST") != "false" {
+			branch = os.Getenv("TRAVIS_PULL_REQUEST_BRANCH")
+			repoSlug = os.Getenv("TRAVIS_PULL_REQUEST_SLUG")
+			log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
+		} else {
+			branch = os.Getenv("TRAVIS_BRANCH")
+			repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
+			log.Printf("Travis CI repo: %s branch: %s\n", repoSlug, branch)
+		}
+		return "github.com/" + repoSlug + "#refs/heads/" + branch
+	}
+	return "github.com/GoogleContainerTools/kaniko"
+}
+
 func TestGitBuildcontext(t *testing.T) {
-	repo := "github.com/GoogleContainerTools/kaniko"
-	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
+	repo := getGitRepo()
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_run_2", integrationPath, dockerfilesPath)
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
@@ -210,12 +235,12 @@ func TestGitBuildcontext(t *testing.T) {
 			repo})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 
 	// Build with kaniko
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	dockerRunFlags := []string{"run"}
+	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
@@ -226,27 +251,21 @@ func TestGitBuildcontext(t *testing.T) {
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 
-	// container-diff
-	daemonDockerImage := daemonPrefix + dockerImage
-	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-		daemonDockerImage, kanikoImage,
-		"-q", "--type=file", "--type=metadata", "--json")
-	diff := RunCommand(containerdiffCmd, t)
-	t.Logf("diff = %s", string(diff))
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
 }
 
-func TestGitBuildContextWithBranch(t *testing.T) {
-	repo := "github.com/GoogleContainerTools/kaniko#refs/tags/v0.10.0"
-	dockerfile := "integration/dockerfiles/Dockerfile_test_run_2"
+func TestBuildViaRegistryMirror(t *testing.T) {
+	repo := getGitRepo()
+	dockerfile := "integration/dockerfiles/Dockerfile_registry_mirror"
 
 	// Build with docker
-	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerCmd := exec.Command("docker",
 		append([]string{"build",
 			"-t", dockerImage,
@@ -254,32 +273,70 @@ func TestGitBuildContextWithBranch(t *testing.T) {
 			repo})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with docker command \"%s\": %s %s", dockerImage, dockerCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
 	}
 
 	// Build with kaniko
-	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
-	dockerRunFlags := []string{"run"}
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
+		"--registry-mirror", "us-mirror.gcr.io",
 		"-c", fmt.Sprintf("git://%s", repo))
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
-		t.Errorf("Failed to build image %s with kaniko command \"%s\": %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}
 
-	// container-diff
-	daemonDockerImage := daemonPrefix + dockerImage
-	containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-		daemonDockerImage, kanikoImage,
-		"-q", "--type=file", "--type=metadata", "--json")
-	diff := RunCommand(containerdiffCmd, t)
-	t.Logf("diff = %s", string(diff))
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
+
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	checkContainerDiffOutput(t, diff, expected)
+}
+
+func TestBuildWithLabels(t *testing.T) {
+	repo := getGitRepo()
+	dockerfile := "integration/dockerfiles/Dockerfile_test_label"
+
+	testLabel := "mylabel=myvalue"
+
+	// Build with docker
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_label:mylabel")
+	dockerCmd := exec.Command("docker",
+		append([]string{"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			"--label", testLabel,
+			repo})...)
+	out, err := RunCommandWithoutTest(dockerCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	}
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_label:mylabel")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"--label", testLabel,
+		"-c", fmt.Sprintf("git://%s", repo),
+	)
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	out, err = RunCommandWithoutTest(kanikoCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+	}
+
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
@@ -290,7 +347,7 @@ func TestLayers(t *testing.T) {
 		"Dockerfile_test_add":     12,
 		"Dockerfile_test_scratch": 3,
 	}
-	for dockerfile := range imageBuilder.FilesBuilt {
+	for _, dockerfile := range allDockerfiles {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
 
@@ -300,7 +357,6 @@ func TestLayers(t *testing.T) {
 			}
 
 			buildImage(t, dockerfile, imageBuilder)
-			imageBuilder.FilesBuilt[dockerfile] = true
 
 			// Pull the kaniko image
 			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
@@ -318,15 +374,10 @@ func TestLayers(t *testing.T) {
 }
 
 func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
-	if imageBuilder.FilesBuilt[dockerfile] {
-		return
-	}
-
 	if err := imageBuilder.BuildImage(config, dockerfilesPath, dockerfile); err != nil {
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
 	}
-
 	return
 }
 
@@ -351,13 +402,7 @@ func TestCache(t *testing.T) {
 			kanikoVersion0 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 0)
 			kanikoVersion1 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 1)
 
-			// container-diff
-			containerdiffCmd := exec.Command("container-diff", "diff",
-				kanikoVersion0, kanikoVersion1,
-				"-q", "--type=file", "--type=metadata", "--json")
-
-			diff := RunCommand(containerdiffCmd, t)
-			t.Logf("diff = %s", diff)
+			diff := containerDiff(t, kanikoVersion0, kanikoVersion1)
 
 			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
 			checkContainerDiffOutput(t, diff, expected)
@@ -371,22 +416,29 @@ func TestCache(t *testing.T) {
 
 func TestRelativePaths(t *testing.T) {
 
-	dockerfile := "Dockerfile_test_copy"
+	dockerfile := "Dockerfile_relative_copy"
 
 	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
 		t.Parallel()
-		imageBuilder.buildRelativePathsImage(config.imageRepo, dockerfile, config.serviceAccount)
 
-		dockerImage := GetDockerImage(config.imageRepo, dockerfile)
-		kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
+		dockerfile = filepath.Join("./dockerfiles", dockerfile)
 
-		// container-diff
-		daemonDockerImage := daemonPrefix + dockerImage
-		containerdiffCmd := exec.Command("container-diff", "diff", "--no-cache",
-			daemonDockerImage, kanikoImage,
-			"-q", "--type=file", "--type=metadata", "--json")
-		diff := RunCommand(containerdiffCmd, t)
-		t.Logf("diff = %s", string(diff))
+		contextPath := "./context"
+
+		err := imageBuilder.buildRelativePathsImage(
+			config.imageRepo,
+			dockerfile,
+			config.serviceAccount,
+			contextPath,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dockerImage := GetDockerImage(config.imageRepo, "test_relative_"+dockerfile)
+		kanikoImage := GetKanikoImage(config.imageRepo, "test_relative_"+dockerfile)
+
+		diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
 		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 		checkContainerDiffOutput(t, diff, expected)
@@ -560,15 +612,6 @@ func logBenchmarks(benchmark string) error {
 	return nil
 }
 
-type gcpConfig struct {
-	gcsBucket          string
-	imageRepo          string
-	onbuildBaseImage   string
-	hardlinkBaseImage  string
-	serviceAccount     string
-	dockerMajorVersion int
-}
-
 type imageDetails struct {
 	name      string
 	numLayers int
@@ -579,8 +622,8 @@ func (i imageDetails) String() string {
 	return fmt.Sprintf("Image: [%s] Digest: [%s] Number of Layers: [%d]", i.name, i.digest, i.numLayers)
 }
 
-func initGCPConfig() *gcpConfig {
-	var c gcpConfig
+func initIntegrationTestConfig() *integrationTestConfig {
+	var c integrationTestConfig
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
@@ -598,8 +641,12 @@ func initGCPConfig() *gcpConfig {
 		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", absPath)
 	}
 
-	if c.gcsBucket == "" || c.imageRepo == "" {
-		log.Fatalf("You must provide a gcs bucket (\"%s\" was provided) and a docker repo (\"%s\" was provided)", c.gcsBucket, c.imageRepo)
+	if c.imageRepo == "" {
+		log.Fatal("You must provide a image repository")
+	}
+
+	if c.isGcrRepository() && c.gcsBucket == "" {
+		log.Fatalf("You must provide a gcs bucket when using a Google Container Registry (\"%s\" was provided)", c.imageRepo)
 	}
 	if !strings.HasSuffix(c.imageRepo, "/") {
 		c.imageRepo = c.imageRepo + "/"
@@ -621,4 +668,17 @@ func meetsRequirements() bool {
 		}
 	}
 	return hasRequirements
+}
+
+// containerDiff compares the container images image1 and image2.
+func containerDiff(t *testing.T, image1, image2 string, flags ...string) []byte {
+	flags = append([]string{"diff"}, flags...)
+	flags = append(flags, image1, image2,
+		"-q", "--type=file", "--type=metadata", "--json")
+
+	containerdiffCmd := exec.Command("container-diff", flags...)
+	diff := RunCommand(containerdiffCmd, t)
+	t.Logf("diff = %s", string(diff))
+
+	return diff
 }

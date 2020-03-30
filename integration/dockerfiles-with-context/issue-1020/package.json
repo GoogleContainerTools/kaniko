@@ -1,0 +1,11 @@
+{
+  "name": "foo",
+  "version": "2.0.0",
+  "description": "Don't forget to sanitize your inputs",
+  "author": "Little Bobby Tables",
+  "private": false,
+  "devDependencies": {},
+  "scripts": {},
+  "license": "MIT",
+  "dependencies": {}
+}

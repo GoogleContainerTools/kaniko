@@ -39,8 +39,13 @@ type KanikoOptions struct {
 	DigestFile              string
 	ImageNameDigestFile     string
 	OCILayoutPath           string
+	RegistryMirror          string
 	Destinations            multiArg
 	BuildArgs               multiArg
+	InsecureRegistries      multiArg
+	Labels                  multiArg
+	SkipTLSVerifyRegistries multiArg
+	RegistriesCertificates  keyValueArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool
@@ -50,8 +55,7 @@ type KanikoOptions struct {
 	NoPush                  bool
 	Cache                   bool
 	Cleanup                 bool
-	InsecureRegistries      multiArg
-	SkipTLSVerifyRegistries multiArg
+	WhitelistVarRun         bool
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.

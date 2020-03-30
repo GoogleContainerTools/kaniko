@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/docker/docker/builder"
 	"github.com/docker/docker/builder/remotecontext"
 	"github.com/docker/docker/pkg/archive"
@@ -23,6 +22,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/tonistiigi/fsutil"
+	fsutiltypes "github.com/tonistiigi/fsutil/types"
+	bolt "go.etcd.io/bbolt"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -614,7 +615,7 @@ func (s sortableCacheSources) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func newTarsumHash(stat *fsutil.Stat) (hash.Hash, error) {
+func newTarsumHash(stat *fsutiltypes.Stat) (hash.Hash, error) {
 	fi := &fsutil.StatInfo{Stat: stat}
 	p := stat.Path
 	if fi.IsDir() {

@@ -15,8 +15,38 @@
 package empty
 
 import (
-	"github.com/google/go-containerregistry/pkg/v1/random"
+	"fmt"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 // Image is a singleton empty image, think: FROM scratch.
-var Image, _ = random.Image(0, 0)
+var Image, _ = partial.UncompressedToImage(emptyImage{})
+
+type emptyImage struct{}
+
+// MediaType implements partial.UncompressedImageCore.
+func (i emptyImage) MediaType() (types.MediaType, error) {
+	return types.DockerManifestSchema2, nil
+}
+
+// RawConfigFile implements partial.UncompressedImageCore.
+func (i emptyImage) RawConfigFile() ([]byte, error) {
+	return partial.RawConfigFile(i)
+}
+
+// ConfigFile implements v1.Image.
+func (i emptyImage) ConfigFile() (*v1.ConfigFile, error) {
+	return &v1.ConfigFile{
+		RootFS: v1.RootFS{
+			// Some clients check this.
+			Type: "layers",
+		},
+	}, nil
+}
+
+func (i emptyImage) LayerByDiffID(h v1.Hash) (partial.UncompressedLayer, error) {
+	return nil, fmt.Errorf("LayerByDiffID(%s): empty image", h)
+}

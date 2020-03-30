@@ -22,27 +22,15 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
 
 	"github.com/minio/highwayhash"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-)
 
-// ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
-func ConfigureLogging(logLevel string) error {
-	lvl, err := logrus.ParseLevel(logLevel)
-	if err != nil {
-		return errors.Wrap(err, "parsing log level")
-	}
-	logrus.SetLevel(lvl)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		ForceColors: true,
-	})
-	return nil
-}
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+)
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
 func Hasher() func(string) (string, error) {
@@ -137,4 +125,12 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
+}
+
+// CurrentPlatform returns the v1.Platform on which the code runs
+func currentPlatform() v1.Platform {
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
 }

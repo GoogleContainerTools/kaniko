@@ -2,19 +2,21 @@ steps:
   # First, build kaniko
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile",
-           "-t", "gcr.io/kaniko-project/executor:${COMMIT_SHA}", "."]
+           "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}", "."]
   # Then, we want to build kaniko:debug
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
-           "-t", "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}", "."]
+           "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug-${COMMIT_SHA}", "."]
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
-           "-t", "gcr.io/kaniko-project/executor:debug", "."]
+           "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug", "."]
   # Then, we want to build the cache warmer
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_warmer",
-           "-t", "gcr.io/kaniko-project/warmer:${COMMIT_SHA}", "."]
-images: ["gcr.io/kaniko-project/executor:${COMMIT_SHA}",
-         "gcr.io/kaniko-project/executor:debug-${COMMIT_SHA}",
-         "gcr.io/kaniko-project/executor:debug",
-         "gcr.io/kaniko-project/warmer:${COMMIT_SHA}"]
+           "-t", "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:${COMMIT_SHA}", "."]
+images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}",
+         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug-${COMMIT_SHA}",
+         "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:${COMMIT_SHA}"]
+substitutions:
+  _EXECUTOR_IMAGE_NAME: executor
+  _WARMER_IMAGE_NAME: warmer

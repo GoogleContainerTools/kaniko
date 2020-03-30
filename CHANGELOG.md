@@ -1,3 +1,167 @@
+# v0.19.0 Release - 2020-03-18
+This is the 19th release of Kaniko!
+ 
+In this release, the highlights are:
+1. Cache layer size duplication regression in v0.18.0 is fixed. [#1138](https://github.com/GoogleContainerTools/kaniko/issues/1138)
+1. Cache performance when using build-args. `build-args` are only part of cache key for a layer if it is used.
+1. Kaniko can support a `tar.gz` context with `tar://` prefix.
+1. Users can provide registry certificates for private registries. 
+ 
+# Bug Fixes
+* Use the correct name for acr helper [#1121](https://github.com/GoogleContainerTools/kaniko/pull/1121)
+* remove build args from composite key and replace all build args [#1085](https://github.com/GoogleContainerTools/kaniko/pull/1085)
+* fix resolve link for dirs with trailing / [#1113](https://github.com/GoogleContainerTools/kaniko/pull/1113)
+
+# New Features
+* feat: add support of local '.tar.gz' file inside the kaniko container [#1115](https://github.com/GoogleContainerTools/kaniko/pull/1115)
+* Add support to `--chown` flag to ADD command (Issue #57) [#1134](https://github.com/GoogleContainerTools/kaniko/pull/1134)
+* executor: add --label flag [#1075](https://github.com/GoogleContainerTools/kaniko/pull/1075)
+* Allow user to provide registry certificate [#1037](https://github.com/GoogleContainerTools/kaniko/pull/1037)
+
+# Refactors And Updates
+* Migrate to golang 1.14 [#1098](https://github.com/GoogleContainerTools/kaniko/pull/1098)
+* Make cloudbuild.yaml re-usable for anyone [#1135](https://github.com/GoogleContainerTools/kaniko/pull/1135)
+* fix: credential typo [#1128](https://github.com/GoogleContainerTools/kaniko/pull/1128)
+* Travis k8s integration test [#1124](https://github.com/GoogleContainerTools/kaniko/pull/1124)
+* Add more tests for Copy and some fixes. [#1114](https://github.com/GoogleContainerTools/kaniko/pull/1114)
+
+# Documentation 
+* Update README on running in Docker [#1141](https://github.com/GoogleContainerTools/kaniko/pull/1141)
+ 
+Huge thank you for this release towards our contributors: 
+ - Anthony Davies
+ - Batuhan Apaydın
+ - Ben Einaudi
+ - Carlos Sanchez
+ - Cole Wippern
+ - cvgw
+ - Dani Raznikov
+ - DracoBlue
+ - James Ravn
+ - Jordan GOASDOUE
+ - Logan.Price
+ - Moritz Wanzenböck
+ - ohchang-kwon
+ - Or Sela
+ - Sam Stoelinga
+ - Tejal Desai
+ - Thomas Bonfort
+ - Thomas Strömberg
+ - tinkerborg
+ - Wietse Muizelaar
+ - xanonid
+ - Yoan Blanc
+ - Yuheng Zhang
+
+ # v0.18.0 Release -2020-03-05
+This release fixes all the regression bugs associated with v0.17.0 and v0.17.1.
+This release, the team did a lot of work improving our test infrastructure, more tests cases
+and refactored filesystem walking.
+
+Thank you all for your patience and supporting us throughout!
+
+# Bug Fixes
+* fix home being reset to root [#1072](https://github.com/GoogleContainerTools/kaniko/pull/1072)
+* fix user metadata set to USER:GROUP if group string is not set [#1105](https://github.com/GoogleContainerTools/kaniko/pull/1105)
+* check for filepath.Walk error everywhere [#1086](https://github.com/GoogleContainerTools/kaniko/pull/1086)
+* fix #1092 TestRelativePaths [#1093](https://github.com/GoogleContainerTools/kaniko/pull/1093)
+* Resolve filepaths before scanning for changes [#1069](https://github.com/GoogleContainerTools/kaniko/pull/1069)
+* Fix #1020 os.Chtimes invalid arg [#1074](https://github.com/GoogleContainerTools/kaniko/pull/1074)
+* Fix #1067 - image no longer available [#1068](https://github.com/GoogleContainerTools/kaniko/pull/1068)
+* Ensure image SHA stays consistent when layer contents haven't changed [#1032](https://github.com/GoogleContainerTools/kaniko/pull/1032)
+* fix flake TestRun/Dockerfile_test_copy_symlink [#1030](https://github.com/GoogleContainerTools/kaniko/pull/1030)
+
+# New Features
+* root: add --registry-mirror flag [#836](https://github.com/GoogleContainerTools/kaniko/pull/836)
+* set log format using a flag [#1031](https://github.com/GoogleContainerTools/kaniko/pull/1031)
+* Do not recompute layers retrieved from cache [#882](https://github.com/GoogleContainerTools/kaniko/pull/882)
+* More idiomatic logging config [#1040](https://github.com/GoogleContainerTools/kaniko/pull/1040)
+
+
+# Test Refactors and Updates
+* Split travis integration tests [#1090](https://github.com/GoogleContainerTools/kaniko/pull/1090)
+* Add integration tests from Issues [#1054](https://github.com/GoogleContainerTools/kaniko/pull/1054)
+* add integration tests with their own context [#1088](https://github.com/GoogleContainerTools/kaniko/pull/1088)
+* Fixed typo in README.md [#1060](https://github.com/GoogleContainerTools/kaniko/pull/1060)
+* test: refactor container-diff call [#1077](https://github.com/GoogleContainerTools/kaniko/pull/1077)
+* Refactor integration image built [#1049](https://github.com/GoogleContainerTools/kaniko/pull/1049)
+* separate travis into multiple jobs for parallelization [#1055](https://github.com/GoogleContainerTools/kaniko/pull/1055)
+* refactor copy.chown code and add more tests [#1027](https://github.com/GoogleContainerTools/kaniko/pull/1027)
+* Allow contributors to launch integration tests against local registry [#1014](https://github.com/GoogleContainerTools/kaniko/pull/1014)
+
+# Documentation
+* add design proposal template [#1046](https://github.com/GoogleContainerTools/kaniko/pull/1046)
+* Update filesystem proposal status to Reviewed [#1066](https://github.com/GoogleContainerTools/kaniko/pull/1066)
+* update instructions for running integration tests [#1034](https://github.com/GoogleContainerTools/kaniko/pull/1034)
+* design proposal 01: filesystem resolution [#1048](https://github.com/GoogleContainerTools/kaniko/pull/1048)
+* Document that this tool is not officially supported by Google [#1044](https://github.com/GoogleContainerTools/kaniko/pull/1044)
+* Fix example pod.yml to not mount to root [#1043](https://github.com/GoogleContainerTools/kaniko/pull/1043)
+* fixing docker run command in README.md [#1103](https://github.com/GoogleContainerTools/kaniko/pull/1103)
+
+Huge thank you for this release towards our contributors: 
+- Anthony Davies
+- Batuhan Apaydın
+- Ben Einaudi
+- Cole Wippern
+- cvgw
+- DracoBlue
+- James Ravn
+- Logan.Price
+- Moritz Wanzenböck
+- ohchang-kwon
+- Or Sela
+- Sam Stoelinga
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Strömberg
+- tinkerborg
+- Wietse Muizelaar
+- xanonid
+- Yoan Blanc
+
+# v0.17.1 Release - 2020-02-04
+
+This is minor patch release to fix [#1002](https://github.com/GoogleContainerTools/kaniko/issues/1002)
+
+# v0.17.0 Release - 2020-02-03
+
+## New Features
+* Expand build argument from environment when no value specified [#993](https://github.com/GoogleContainerTools/kaniko/pull/993)
+* whitelist  /tmp/apt-key-gpghome.* directory [#1000](https://github.com/GoogleContainerTools/kaniko/pull/1000)
+* Add flag to `--whitelist-var-run` set to true to preserver default kani… [#1011](https://github.com/GoogleContainerTools/kaniko/pull/1011)
+* Prefer platform that is currently running for pulling remote images and kaniko binary Makefile target [#980](https://github.com/GoogleContainerTools/kaniko/pull/980)
+
+## Bug Fixes
+* Fix caching to respect .dockerignore [#854](https://github.com/GoogleContainerTools/kaniko/pull/854)
+* Fixes #988 run_in_docker.sh only works with gcr.io [#990](https://github.com/GoogleContainerTools/kaniko/pull/990)
+* Fix Symlinks not being copied across stages [#971](https://github.com/GoogleContainerTools/kaniko/pull/971)
+* Fix home and group set for user command [#995](https://github.com/GoogleContainerTools/kaniko/pull/995)
+* Fix COPY or ADD to symlink destination breaks image [#943](https://github.com/GoogleContainerTools/kaniko/pull/943)
+* [Caching] Fix bug with deleted files and cached run and copy commands
+* [Mutistage Build] Fix bug with capital letter in stage names [#983](https://github.com/GoogleContainerTools/kaniko/pull/983)
+* Fix #940 set modtime when extracting [#981](https://github.com/GoogleContainerTools/kaniko/pull/981)
+* Fix Ability for ADD to unTar a file [#792](https://github.com/GoogleContainerTools/kaniko/pull/792)
+
+# Updates and Refactors
+* fix test flake [#1016](https://github.com/GoogleContainerTools/kaniko/pull/1016)
+* Upgrade go-containerregistry third-party library [#957](https://github.com/GoogleContainerTools/kaniko/pull/957)
+* Remove debug tag being built for every push to master [#1004](https://github.com/GoogleContainerTools/kaniko/pull/1004)
+* Run integration tests in Travis CI [#979](https://github.com/GoogleContainerTools/kaniko/pull/979)
+
+
+Huge thank you for this release towards our contributors:
+- Anthony Davies
+- Ben Einaudi
+- Cole Wippern
+- cvgw
+- Logan.Price
+- Moritz Wanzenböck
+- ohchang-kwon
+- Sam Stoelinga
+- Tejal Desai
+- Thomas Bonfort
+- Wietse Muizelaar
+
 # v0.16.0 Release - 2020-01-17
 
 Happy New Year 2020!

@@ -15,15 +15,9 @@
 package validate
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -114,87 +108,19 @@ func validateLayers(img v1.Image) error {
 
 	digests := []v1.Hash{}
 	diffids := []v1.Hash{}
+	udiffids := []v1.Hash{}
 	sizes := []int64{}
 	for _, layer := range layers {
-		// TODO: Test layer.Uncompressed.
-		compressed, err := layer.Compressed()
+		cl, err := computeLayer(layer)
 		if err != nil {
 			return err
 		}
-
-		// Keep track of compressed digest.
-		digester := sha256.New()
-		// Everything read from compressed is written to digester to compute digest.
-		hashCompressed := io.TeeReader(compressed, digester)
-
-		// Call io.Copy to write from the layer Reader through to the tarReader on
-		// the other side of the pipe.
-		pr, pw := io.Pipe()
-		var size int64
-		go func() {
-			n, err := io.Copy(pw, hashCompressed)
-			if err != nil {
-				pw.CloseWithError(err)
-				return
-			}
-			size = n
-
-			// Now close the compressed reader, to flush the gzip stream
-			// and calculate digest/diffID/size. This will cause pr to
-			// return EOF which will cause readers of the Compressed stream
-			// to finish reading.
-			pw.CloseWithError(compressed.Close())
-		}()
-
-		// Read the bytes through gzip.Reader to compute the DiffID.
-		uncompressed, err := gzip.NewReader(pr)
-		if err != nil {
-			return err
-		}
-		diffider := sha256.New()
-		hashUncompressed := io.TeeReader(uncompressed, diffider)
-
-		// Ensure there aren't duplicate file paths.
-		tarReader := tar.NewReader(hashUncompressed)
-		files := make(map[string]struct{})
-		for {
-			hdr, err := tarReader.Next()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			if _, ok := files[hdr.Name]; ok {
-				return fmt.Errorf("duplicate file path: %s", hdr.Name)
-			}
-			files[hdr.Name] = struct{}{}
-		}
-
-		// Discard any trailing padding that the tar.Reader doesn't consume.
-		if _, err := io.Copy(ioutil.Discard, hashUncompressed); err != nil {
-			return err
-		}
-
-		if err := uncompressed.Close(); err != nil {
-			return err
-		}
-
-		digest := v1.Hash{
-			Algorithm: "sha256",
-			Hex:       hex.EncodeToString(digester.Sum(make([]byte, 0, digester.Size()))),
-		}
-
-		diffid := v1.Hash{
-			Algorithm: "sha256",
-			Hex:       hex.EncodeToString(diffider.Sum(make([]byte, 0, diffider.Size()))),
-		}
-
 		// Compute all of these first before we call Config() and Manifest() to allow
 		// for lazy access e.g. for stream.Layer.
-		digests = append(digests, digest)
-		diffids = append(diffids, diffid)
-		sizes = append(sizes, size)
+		digests = append(digests, cl.digest)
+		diffids = append(diffids, cl.diffid)
+		udiffids = append(udiffids, cl.uncompressedDiffid)
+		sizes = append(sizes, cl.size)
 	}
 
 	cf, err := img.ConfigFile()
@@ -221,6 +147,18 @@ func validateLayers(img v1.Image) error {
 		if err != nil {
 			return err
 		}
+		mediaType, err := layer.MediaType()
+		if err != nil {
+			return err
+		}
+
+		if _, err := img.LayerByDigest(digest); err != nil {
+			return err
+		}
+
+		if _, err := img.LayerByDiffID(diffid); err != nil {
+			return err
+		}
 
 		if digest != digests[i] {
 			errs = append(errs, fmt.Sprintf("mismatched layer[%d] digest: Digest()=%s, SHA256(Compressed())=%s", i, digest, digests[i]))
@@ -232,6 +170,10 @@ func validateLayers(img v1.Image) error {
 
 		if diffid != diffids[i] {
 			errs = append(errs, fmt.Sprintf("mismatched layer[%d] diffid: DiffID()=%s, SHA256(Gunzip(Compressed()))=%s", i, diffid, diffids[i]))
+		}
+
+		if diffid != udiffids[i] {
+			errs = append(errs, fmt.Sprintf("mismatched layer[%d] diffid: DiffID()=%s, SHA256(Uncompressed())=%s", i, diffid, udiffids[i]))
 		}
 
 		if cf.RootFS.DiffIDs[i] != diffids[i] {
@@ -246,6 +188,9 @@ func validateLayers(img v1.Image) error {
 			errs = append(errs, fmt.Sprintf("mismatched layer[%d] size: Manifest.Layers[%d].Size=%d, len(Compressed())=%d", i, i, m.Layers[i].Size, sizes[i]))
 		}
 
+		if m.Layers[i].MediaType != mediaType {
+			errs = append(errs, fmt.Sprintf("mismatched layer[%d] mediaType: Manifest.Layers[%d].MediaType=%s, layer.MediaType()=%s", i, i, m.Layers[i].MediaType, mediaType))
+		}
 	}
 	if len(errs) != 0 {
 		return errors.New(strings.Join(errs, "\n"))
@@ -256,6 +201,11 @@ func validateLayers(img v1.Image) error {
 
 func validateManifest(img v1.Image) error {
 	digest, err := img.Digest()
+	if err != nil {
+		return err
+	}
+
+	size, err := img.Size()
 	if err != nil {
 		return err
 	}
@@ -287,6 +237,10 @@ func validateManifest(img v1.Image) error {
 
 	if diff := cmp.Diff(pm, m); diff != "" {
 		errs = append(errs, fmt.Sprintf("mismatched manifest content: (-ParseManifest(RawManifest()) +Manifest()) %s", diff))
+	}
+
+	if size != int64(len(rm)) {
+		errs = append(errs, fmt.Sprintf("mismatched manifest size: Size()=%d, len(RawManifest())=%d", size, len(rm)))
 	}
 
 	if len(errs) != 0 {

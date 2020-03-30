@@ -4,19 +4,18 @@
 
 ![kaniko logo](logo/Kaniko-Logo.png)
 
-kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster.
+kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster. 
 
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster.
 
-kaniko is meant to be run as an image, `gcr.io/kaniko-project/executor`.
-We do **not** recommend running the kaniko executor binary in another image, as it might not work.
-
+kaniko is meant to be run as an image: `gcr.io/kaniko-project/executor`. We do **not** recommend running the kaniko executor binary in another image, as it might not work.
 
 We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
 
 :mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
 
+Kaniko is not an officially supported Google project. 
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
@@ -59,6 +58,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--no-push](#--no-push)
+    - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
     - [--skip-tls-verify](#--skip-tls-verify)
@@ -67,6 +67,8 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--target](#--target)
     - [--tarPath](#--tarpath)
     - [--verbosity](#--verbosity)
+    - [--whitelist-var-run](#--whitelist-var-run)
+    - [--label](#--label)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -144,6 +146,7 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 |  Source | Prefix  | Example |
 |---------|---------|---------|
 | Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
+| Local Tar Gz      | tar://[path to a .tar.gz in the kaniko container]               | `tar://path/to/context.tar.gz`                                            |
 | GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
 | S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
 | Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
@@ -258,21 +261,24 @@ kaniko will build and push the final image in this build step.
 Requirements:
 
 - [Docker](https://docs.docker.com/install/)
-- [gcloud](https://cloud.google.com/sdk/install)
 
 We can run the kaniko executor image locally in a Docker daemon to build and push an image from a Dockerfile.
 
-1. Load the executor image into the Docker daemon by running:
+For example, when using gcloud and GCR you could run Kaniko as follows:
+```shell
+docker run \
+    -v "$HOME"/.config/gcloud:/root/.config/gcloud \
+    -v /path/to/context:/workspace \
+    gcr.io/kaniko-project/executor:latest \
+    --dockerfile /workspace/Dockerfile
+    --destination "gcr.io/$PROJECT_ID/$IMAGE_NAME:$TAG"
+    --context dir:///workspace/"
+```
 
-  ```shell
-  make images
-  ```
-
-2. Run kaniko in Docker using [`run_in_docker.sh`](./run_in_docker.sh):
-
-  ```shell
-  ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
-  ```
+There is also a utility script [`run_in_docker.sh`](./run_in_docker.sh) that can be used as follows:
+```shell
+./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
+```
 
 _NOTE: `run_in_docker.sh` expects a path to a 
 Dockerfile relative to the absolute path of the build context._
@@ -282,7 +288,7 @@ context in the local directory `/home/user/kaniko-project`, and a Google Contain
 as a remote image destination:
 
 ```shell
-./run_in_docker.sh /workspace/Dockerfile /home/user/kaniko-project gcr.io//<project-id>/<tag>
+./run_in_docker.sh /workspace/Dockerfile /home/user/kaniko-project gcr.io/$PROJECT_ID/$TAG
 ```
 
 ### Caching
@@ -339,7 +345,7 @@ Create a `config.json` file with your Docker registry url and the previous gener
 
 Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 
-    docker run -ti --rm -v `pwd`:/workspace -v config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
+    docker run -ti --rm -v `pwd`:/workspace -v `pwd`/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
 
 #### Pushing to Amazon ECR
 
@@ -449,7 +455,7 @@ For example, to surface the image digest built in a
 this flag should be set to match the image resource `outputImageDir`.
 
 _Note: Depending on the built image, the media type of the image manifest might be either
-`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json``._
+`application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json`._
 
 #### --insecure-registry
 
@@ -476,6 +482,10 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 #### --no-push
 
 Set this flag if you only want to build the image, without pushing to a registry.
+
+#### --registry-mirror
+
+Set this flag if you want to use a registry mirror instead of default `index.docker.io`.
 
 #### --reproducible
 
@@ -511,6 +521,14 @@ You need to set `--destination` as well (for example `--destination=image`).
 #### --verbosity
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
+
+#### --whitelist-var-run
+
+Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
+
+#### --label
+
+Set this flag as `--label key=value` to set some metadata to the final image. This is equivalent as using the `LABEL` within the Dockerfile.
 
 ### Debug Image
 

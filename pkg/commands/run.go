@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -41,7 +40,8 @@ type RunCommand struct {
 
 // for testing
 var (
-	userLookup = user.Lookup
+	userLookup   = user.Lookup
+	userLookupID = user.LookupId
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -68,39 +68,30 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	cmd.Env = addDefaultHOME(config.User, replacementEnvs)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
+	u := config.User
+	userAndGroup := strings.Split(u, ":")
+	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
+	if err != nil {
+		return errors.Wrapf(err, "resolving user %s", userAndGroup[0])
+	}
+
 	// If specified, run the command as a specific user
-	if config.User != "" {
-		userAndGroup := strings.Split(config.User, ":")
-		userStr := userAndGroup[0]
-		var groupStr string
-		if len(userAndGroup) > 1 {
-			groupStr = userAndGroup[1]
-		}
-
-		uidStr, gidStr, err := util.GetUserFromUsername(userStr, groupStr)
+	if userStr != "" {
+		uid, gid, err := util.GetUIDAndGIDFromString(userStr, true)
 		if err != nil {
 			return err
-		}
-
-		// uid and gid need to be uint32
-		uid64, err := strconv.ParseUint(uidStr, 10, 32)
-		if err != nil {
-			return err
-		}
-		uid := uint32(uid64)
-		var gid uint32
-		if gidStr != "" {
-			gid64, err := strconv.ParseUint(gidStr, 10, 32)
-			if err != nil {
-				return err
-			}
-			gid = uint32(gid64)
 		}
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
+
+	env, err := addDefaultHOME(userStr, replacementEnvs)
+	if err != nil {
+		return errors.Wrap(err, "adding default HOME variable")
+	}
+
+	cmd.Env = env
 
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "starting command")
@@ -123,32 +114,31 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
-func addDefaultHOME(u string, envs []string) []string {
+func addDefaultHOME(u string, envs []string) ([]string, error) {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
-			return envs
+			return envs, nil
 		}
 	}
 
 	// If user isn't set, set default value of HOME
 	if u == "" || u == constants.RootUser {
-		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
+		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue)), nil
 	}
 
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
-	home := "/"
 	userObj, err := userLookup(u)
-	if err == nil {
-		if userObj.HomeDir != "" {
-			home = userObj.HomeDir
+	if err != nil {
+		if uo, e := userLookupID(u); e == nil {
+			userObj = uo
 		} else {
-			home = fmt.Sprintf("/home/%s", userObj.Username)
+			return nil, err
 		}
 	}
 
-	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, home))
+	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, userObj.HomeDir)), nil
 }
 
 // String returns some information about the command for the image config
@@ -184,6 +174,7 @@ func (r *RunCommand) ShouldCacheOutput() bool {
 
 type CachingRunCommand struct {
 	BaseCommand
+	caching
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.RunCommand
@@ -197,7 +188,25 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	if cr.img == nil {
 		return errors.New(fmt.Sprintf("command image is nil %v", cr.String()))
 	}
-	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img, cr.extractFn)
+
+	layers, err := cr.img.Layers()
+	if err != nil {
+		return errors.Wrap(err, "retrieving image layers")
+	}
+
+	if len(layers) != 1 {
+		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	}
+
+	cr.layer = layers[0]
+	cr.readSuccess = true
+
+	cr.extractedFiles, err = util.GetFSFromLayers(
+		constants.RootDir,
+		layers,
+		util.ExtractFunc(cr.extractFn),
+		util.IncludeWhiteout(),
+	)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")
 	}
@@ -206,7 +215,10 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 }
 
 func (cr *CachingRunCommand) FilesToSnapshot() []string {
-	return cr.extractedFiles
+	f := cr.extractedFiles
+	logrus.Debugf("files extracted from caching run command %s", f)
+
+	return f
 }
 
 func (cr *CachingRunCommand) String() string {

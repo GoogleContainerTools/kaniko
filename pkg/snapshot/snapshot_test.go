@@ -31,7 +31,7 @@ import (
 )
 
 func TestSnapshotFSFileChange(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -63,19 +63,16 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(fooPath) {
-		snapshotFiles[dir] = ""
-	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		snapshotFiles[dir] = ""
-	}
-	numFiles := 0
+
+	actualFiles := []string{}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
-		numFiles++
+
+		actualFiles = append(actualFiles, hdr.Name)
+
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
 		}
@@ -84,13 +81,13 @@ func TestSnapshotFSFileChange(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != len(snapshotFiles) {
-		t.Fatalf("Incorrect number of files were added, expected: 2, actual: %v", numFiles)
+	if len(actualFiles) != len(snapshotFiles) {
+		t.Fatalf("Incorrect number of files were added, expected: %d, actual: %d", len(snapshotFiles), len(actualFiles))
 	}
 }
 
 func TestSnapshotFSIsReproducible(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -129,7 +126,7 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 }
 
 func TestSnapshotFSChangePermissions(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -155,17 +152,15 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPathWithoutLeadingSlash: "baz2",
 	}
-	for _, dir := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		snapshotFiles[dir] = ""
-	}
-	numFiles := 0
+
+	foundFiles := []string{}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		t.Logf("Info %s in tar", hdr.Name)
-		numFiles++
+		foundFiles = append(foundFiles, hdr.Name)
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
 		}
@@ -174,13 +169,16 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
 	}
-	if numFiles != len(snapshotFiles) {
-		t.Fatalf("Incorrect number of files were added, expected: 1, got: %v", numFiles)
+	if len(foundFiles) != len(snapshotFiles) {
+		t.Logf("expected\n%v\nto equal\n%v", foundFiles, snapshotFiles)
+		t.Fatalf("Incorrect number of files were added, expected: %d, got: %d",
+			len(snapshotFiles),
+			len(foundFiles))
 	}
 }
 
 func TestSnapshotFiles(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTestDir()
+	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -230,7 +228,7 @@ func TestSnapshotFiles(t *testing.T) {
 }
 
 func TestEmptySnapshotFS(t *testing.T) {
-	_, snapshotter, cleanup, err := setUpTestDir()
+	_, snapshotter, cleanup, err := setUpTest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,28 +251,205 @@ func TestEmptySnapshotFS(t *testing.T) {
 	}
 }
 
-func setUpTestDir() (string, *Snapshotter, func(), error) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
+func TestFileWithLinks(t *testing.T) {
+
+	link := "baz/link"
+	tcs := []struct {
+		name           string
+		path           string
+		linkFileTarget string
+		expected       []string
+		shouldErr      bool
+	}{
+		{
+			name:           "given path is a symlink that points to a valid target",
+			path:           link,
+			linkFileTarget: "file",
+			expected:       []string{link, "baz/file"},
+		},
+		{
+			name:           "given path is a symlink points to non existing path",
+			path:           link,
+			linkFileTarget: "does-not-exists",
+			expected:       []string{link},
+		},
+		{
+			name:           "given path is a regular file",
+			path:           "kaniko/file",
+			linkFileTarget: "file",
+			expected:       []string{"kaniko/file"},
+		},
 	}
 
+	for _, tt := range tcs {
+		t.Run(tt.name, func(t *testing.T) {
+			testDir, cleanup, err := setUpTestDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer cleanup()
+			if err := setupSymlink(testDir, link, tt.linkFileTarget); err != nil {
+				t.Fatalf("could not set up symlink due to %s", err)
+			}
+			actual, err := filesWithLinks(filepath.Join(testDir, tt.path))
+			if err != nil {
+				t.Fatalf("unexpected error %s", err)
+			}
+			sortAndCompareFilepaths(t, testDir, tt.expected, actual)
+		})
+	}
+}
+
+func TestSnasphotPreservesFileOrder(t *testing.T) {
+	newFiles := map[string]string{
+		"foo":     "newbaz1",
+		"bar/bat": "baz",
+		"bar/qux": "quuz",
+		"qux":     "quuz",
+		"corge":   "grault",
+		"garply":  "waldo",
+		"fred":    "plugh",
+		"xyzzy":   "thud",
+	}
+
+	newFileNames := []string{}
+
+	for fileName := range newFiles {
+		newFileNames = append(newFileNames, fileName)
+	}
+
+	filesInTars := [][]string{}
+
+	for i := 0; i <= 2; i++ {
+		testDir, snapshotter, cleanup, err := setUpTest()
+		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+		defer cleanup()
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Make some changes to the filesystem
+		if err := testutil.SetupFiles(testDir, newFiles); err != nil {
+			t.Fatalf("Error setting up fs: %s", err)
+		}
+
+		filesToSnapshot := []string{}
+		for _, file := range newFileNames {
+			filesToSnapshot = append(filesToSnapshot, filepath.Join(testDir, file))
+		}
+
+		// Take a snapshot
+		tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot)
+
+		if err != nil {
+			t.Fatalf("Error taking snapshot of fs: %s", err)
+		}
+
+		f, err := os.Open(tarPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tr := tar.NewReader(f)
+		filesInTars = append(filesInTars, []string{})
+		for {
+			hdr, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(hdr.Name, testDirWithoutLeadingSlash))
+		}
+	}
+
+	// Check contents of all snapshots, make sure files appear in consistent order
+	for i := 1; i < len(filesInTars); i++ {
+		testutil.CheckErrorAndDeepEqual(t, false, nil, filesInTars[0], filesInTars[i])
+	}
+}
+
+func TestSnapshotOmitsUnameGname(t *testing.T) {
+	_, snapshotter, cleanup, err := setUpTest()
+
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tarPath, err := snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := tar.NewReader(f)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hdr.Uname != "" || hdr.Gname != "" {
+			t.Fatalf("Expected Uname/Gname for %s to be empty: Uname = '%s', Gname = '%s'", hdr.Name, hdr.Uname, hdr.Gname)
+		}
+	}
+
+}
+
+func setupSymlink(dir string, link string, target string) error {
+	return os.Symlink(target, filepath.Join(dir, link))
+}
+
+func sortAndCompareFilepaths(t *testing.T, testDir string, expected []string, actual []string) {
+	expectedFullPaths := make([]string, len(expected))
+	for i, file := range expected {
+		expectedFullPaths[i] = filepath.Join(testDir, file)
+	}
+	sort.Strings(expectedFullPaths)
+	sort.Strings(actual)
+	testutil.CheckDeepEqual(t, expectedFullPaths, actual)
+}
+
+func setUpTestDir() (string, func(), error) {
+	testDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", nil, errors.Wrap(err, "setting up temp dir")
+	}
+	files := map[string]string{
+		"foo":         "baz1",
+		"bar/bat":     "baz2",
+		"kaniko/file": "file",
+		"baz/file":    "testfile",
+	}
+	// Set up initial files
+	if err := testutil.SetupFiles(testDir, files); err != nil {
+		return "", nil, errors.Wrap(err, "setting up file system")
+	}
+
+	cleanup := func() {
+		os.RemoveAll(testDir)
+	}
+
+	return testDir, cleanup, nil
+}
+
+func setUpTest() (string, *Snapshotter, func(), error) {
+	testDir, dirCleanUp, err := setUpTestDir()
+	if err != nil {
+		return "", nil, nil, err
+	}
 	snapshotPath, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
 	}
 
 	snapshotPathPrefix = snapshotPath
-
-	files := map[string]string{
-		"foo":         "baz1",
-		"bar/bat":     "baz2",
-		"kaniko/file": "file",
-	}
-	// Set up initial files
-	if err := testutil.SetupFiles(testDir, files); err != nil {
-		return "", nil, nil, errors.Wrap(err, "setting up file system")
-	}
 
 	// Take the initial snapshot
 	l := NewLayeredMap(util.Hasher(), util.CacheHasher())
@@ -285,7 +460,7 @@ func setUpTestDir() (string, *Snapshotter, func(), error) {
 
 	cleanup := func() {
 		os.RemoveAll(snapshotPath)
-		os.RemoveAll(testDir)
+		dirCleanUp()
 	}
 
 	return testDir, snapshotter, cleanup, nil

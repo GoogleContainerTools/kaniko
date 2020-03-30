@@ -18,6 +18,7 @@ package commands
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -33,11 +34,13 @@ import (
 
 func Test_addDefaultHOME(t *testing.T) {
 	tests := []struct {
-		name     string
-		user     string
-		mockUser *user.User
-		initial  []string
-		expected []string
+		name        string
+		user        string
+		mockUser    *user.User
+		lookupError error
+		mockUserID  *user.User
+		initial     []string
+		expected    []string
 	}{
 		{
 			name: "HOME already set",
@@ -78,31 +81,19 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name: "HOME not set and user set",
-			user: "www-add",
-			mockUser: &user.User{
-				Username: "www-add",
+			name:        "USER is set using the UID",
+			user:        "newuser",
+			lookupError: errors.New("User not found"),
+			mockUserID: &user.User{
+				Username: "user",
+				HomeDir:  "/home/user",
 			},
 			initial: []string{
 				"PATH=/something/else",
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/home/www-add",
-			},
-		},
-		{
-			name: "HOME not set and user is set",
-			user: "newuser",
-			mockUser: &user.User{
-				Username: "newuser",
-			},
-			initial: []string{
-				"PATH=/something/else",
-			},
-			expected: []string{
-				"PATH=/something/else",
-				"HOME=/home/newuser",
+				"HOME=/home/user",
 			},
 		},
 		{
@@ -122,10 +113,14 @@ func Test_addDefaultHOME(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			userLookup = func(username string) (*user.User, error) { return test.mockUser, nil }
-			defer func() { userLookup = user.Lookup }()
-			actual := addDefaultHOME(test.user, test.initial)
-			testutil.CheckErrorAndDeepEqual(t, false, nil, test.expected, actual)
+			userLookup = func(username string) (*user.User, error) { return test.mockUser, test.lookupError }
+			userLookupID = func(username string) (*user.User, error) { return test.mockUserID, nil }
+			defer func() {
+				userLookup = user.Lookup
+				userLookupID = user.LookupId
+			}()
+			actual, err := addDefaultHOME(test.user, test.initial)
+			testutil.CheckErrorAndDeepEqual(t, false, err, test.expected, actual)
 		})
 	}
 }
@@ -238,14 +233,16 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 			c := &CachingRunCommand{
 				img: fakeImage{},
 			}
-			tc := testCase{
-				desctiption: "with image containing no layers",
-			}
+
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
 				return nil
 			}
-			tc.command = c
-			return tc
+
+			return testCase{
+				desctiption: "with image containing no layers",
+				expectErr:   true,
+				command:     c,
+			}
 		}(),
 		func() testCase {
 			c := &CachingRunCommand{
@@ -309,6 +306,16 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 				if len(cmdFiles) != 0 {
 					t.Errorf("expected files used from context to be empty but was not")
 				}
+			}
+
+			if c.layer == nil && tc.expectLayer {
+				t.Error("expected the command to have a layer set but instead was nil")
+			} else if c.layer != nil && !tc.expectLayer {
+				t.Error("expected the command to have no layer set but instead found a layer")
+			}
+
+			if c.readSuccess != tc.expectLayer {
+				t.Errorf("expected read success to be %v but was %v", tc.expectLayer, c.readSuccess)
 			}
 		})
 	}

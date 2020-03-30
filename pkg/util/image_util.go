@@ -49,12 +49,12 @@ var (
 func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Retrieving Source Image")
 	defer timing.DefaultRun.Stop(t)
-	buildArgs := opts.BuildArgs
-	var metaArgsString []string
+	var buildArgs []string
+
 	for _, arg := range stage.MetaArgs {
-		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+		buildArgs = append(buildArgs, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
 	}
-	buildArgs = append(buildArgs, metaArgsString...)
+	buildArgs = append(buildArgs, opts.BuildArgs...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
@@ -107,11 +107,30 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	}
 
 	registryName := ref.Context().RegistryStr()
-	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
-		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+	var newReg name.Registry
+	toSet := false
+
+	if opts.RegistryMirror != "" && registryName == name.DefaultRegistry {
+		registryName = opts.RegistryMirror
+
+		newReg, err = name.NewRegistry(opts.RegistryMirror, name.StrictValidation)
 		if err != nil {
 			return nil, err
 		}
+
+		toSet = true
+	}
+
+	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
+		newReg, err = name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+		if err != nil {
+			return nil, err
+		}
+
+		toSet = true
+	}
+
+	if toSet {
 		if tag, ok := ref.(name.Tag); ok {
 			tag.Repository.Registry = newReg
 			ref = tag
@@ -134,7 +153,10 @@ func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Opt
 		}
 	}
 
-	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain())}
+	// on which v1.Platform is this currently running?
+	platform := currentPlatform()
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {

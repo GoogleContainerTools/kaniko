@@ -18,11 +18,13 @@ package executor
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -51,6 +53,7 @@ type withUserAgent struct {
 
 const (
 	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
+	DockerConfLocation  = "/kaniko/.docker/config.json"
 )
 
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -61,6 +64,48 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Set("User-Agent", strings.Join(ua, ","))
 	return w.t.RoundTrip(r)
 }
+
+type CertPool interface {
+	value() *x509.CertPool
+	append(path string) error
+}
+
+type X509CertPool struct {
+	inner x509.CertPool
+}
+
+func (p *X509CertPool) value() *x509.CertPool {
+	return &p.inner
+}
+
+func (p *X509CertPool) append(path string) error {
+	pem, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	p.inner.AppendCertsFromPEM(pem)
+	return nil
+}
+
+type systemCertLoader func() CertPool
+
+var defaultX509Handler systemCertLoader = func() CertPool {
+	systemCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		logrus.Warn("Failed to load system cert pool. Loading empty one instead.")
+		systemCertPool = x509.NewCertPool()
+	}
+	return &X509CertPool{
+		inner: *systemCertPool,
+	}
+}
+
+// for testing
+var (
+	fs                        = afero.NewOsFs()
+	execCommand               = exec.Command
+	checkRemotePushPermission = remote.CheckPushPermission
+)
 
 // CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
@@ -79,6 +124,18 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			continue
 		}
 
+		// Historically kaniko was pre-configured by default with gcr credential helper,
+		// in here we keep the backwards compatibility by enabling the GCR helper only
+		// when gcr.io is in one of the destinations.
+		if strings.Contains(destRef.RegistryStr(), "gcr.io") {
+			// Checking for existence of docker.config as it's normally required for
+			// authenticated registries and prevent overwriting user provided docker conf
+			if _, err := fs.Stat(DockerConfLocation); os.IsNotExist(err) {
+				if err := execCommand("docker-credential-gcr", "configure-docker").Run(); err != nil {
+					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
+				}
+			}
+		}
 		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
 			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
@@ -87,8 +144,8 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			}
 			destRef.Repository.Registry = newReg
 		}
-		tr := makeTransport(opts, registryName)
-		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
+		tr := makeTransport(opts, registryName, defaultX509Handler)
+		if err := checkRemotePushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
@@ -184,7 +241,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
 
-		tr := makeTransport(opts, registryName)
+		tr := makeTransport(opts, registryName, defaultX509Handler)
 		rt := &withUserAgent{t: tr}
 
 		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
@@ -194,8 +251,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	timing.DefaultRun.Stop(t)
 	return writeImageOutputs(image, destRefs)
 }
-
-var fs = afero.NewOsFs()
 
 func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	dir := os.Getenv("BUILDER_OUTPUT")
@@ -228,12 +283,21 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	return nil
 }
 
-func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTripper {
+func makeTransport(opts *config.KanikoOptions, registryName string, loader systemCertLoader) http.RoundTripper {
 	// Create a transport to set our user-agent.
-	tr := http.DefaultTransport
+	var tr http.RoundTripper = http.DefaultTransport.(*http.Transport).Clone()
 	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		tr.(*http.Transport).TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
+		}
+	} else if certificatePath := opts.RegistriesCertificates[registryName]; certificatePath != "" {
+		systemCertPool := loader()
+		if err := systemCertPool.append(certificatePath); err != nil {
+			logrus.WithError(err).Warnf("Failed to load certificate %s for %s\n", certificatePath, registryName)
+		} else {
+			tr.(*http.Transport).TLSClientConfig = &tls.Config{
+				RootCAs: systemCertPool.value(),
+			}
 		}
 	}
 	return tr

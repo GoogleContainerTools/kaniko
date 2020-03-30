@@ -4,12 +4,13 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/pkg/errors"
+	"github.com/tonistiigi/fsutil/types"
 )
 
 type WalkOpt struct {
@@ -18,7 +19,7 @@ type WalkOpt struct {
 	// FollowPaths contains symlinks that are resolved into include patterns
 	// before performing the fs walk
 	FollowPaths []string
-	Map         func(*Stat) bool
+	Map         FilterFunc
 }
 
 func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) error {
@@ -71,7 +72,7 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 			return err
 		}
 		defer func() {
-			if retErr != nil && os.IsNotExist(errors.Cause(retErr)) {
+			if retErr != nil && isNotExist(retErr) {
 				retErr = filepath.SkipDir
 			}
 		}()
@@ -146,37 +147,9 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 		}
 
 	passedFilter:
-		path = filepath.ToSlash(path)
-
-		stat := &Stat{
-			Path:    path,
-			Mode:    uint32(fi.Mode()),
-			ModTime: fi.ModTime().UnixNano(),
-		}
-
-		setUnixOpt(fi, stat, path, seenFiles)
-
-		if !fi.IsDir() {
-			stat.Size_ = fi.Size()
-			if fi.Mode()&os.ModeSymlink != 0 {
-				link, err := os.Readlink(origpath)
-				if err != nil {
-					return errors.Wrapf(err, "failed to readlink %s", origpath)
-				}
-				stat.Linkname = link
-			}
-		}
-		if err := loadXattr(origpath, stat); err != nil {
-			return errors.Wrapf(err, "failed to xattr %s", path)
-		}
-
-		if runtime.GOOS == "windows" {
-			permPart := stat.Mode & uint32(os.ModePerm)
-			noPermPart := stat.Mode &^ uint32(os.ModePerm)
-			// Add the x bit: make everything +x from windows
-			permPart |= 0111
-			permPart &= 0755
-			stat.Mode = noPermPart | permPart
+		stat, err := mkstat(origpath, path, fi, seenFiles)
+		if err != nil {
+			return err
 		}
 
 		select {
@@ -184,7 +157,7 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 			return ctx.Err()
 		default:
 			if opt != nil && opt.Map != nil {
-				if allowed := opt.Map(stat); !allowed {
+				if allowed := opt.Map(stat.Path, stat); !allowed {
 					return nil
 				}
 			}
@@ -197,7 +170,7 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 }
 
 type StatInfo struct {
-	*Stat
+	*types.Stat
 }
 
 func (s *StatInfo) Name() string {
@@ -243,4 +216,15 @@ func trimUntilIndex(str, sep string, count int) string {
 			return str[:i-len(sep)]
 		}
 	}
+}
+
+func isNotExist(err error) bool {
+	err = errors.Cause(err)
+	if os.IsNotExist(err) {
+		return true
+	}
+	if pe, ok := err.(*os.PathError); ok {
+		err = pe.Err
+	}
+	return err == syscall.ENOTDIR
 }

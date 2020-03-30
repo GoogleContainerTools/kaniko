@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
-
-	otiai10Cpy "github.com/otiai10/copy"
 
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 
@@ -74,7 +74,7 @@ type stageBuilder struct {
 	stageIdxToDigest map[string]string
 	snapshotter      snapShotter
 	layerCache       cache.LayerCache
-	pushCache        cachePusher
+	pushLayerToCache cachePusher
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -84,7 +84,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 
-	imageConfig, err := initializeConfig(sourceImage)
+	imageConfig, err := initializeConfig(sourceImage, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		layerCache: &cache.RegistryCache{
 			Opts: opts,
 		},
-		pushCache: pushLayerToCache,
+		pushLayerToCache: pushLayerToCache,
 	}
 
 	for _, cmd := range s.stage.Commands {
@@ -136,7 +136,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	return s, nil
 }
 
-func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
+func initializeConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.ConfigFile, error) {
 	imageConfig, err := img.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -145,12 +145,37 @@ func initializeConfig(img partial.WithConfigFile) (*v1.ConfigFile, error) {
 	if imageConfig.Config.Env == nil {
 		imageConfig.Config.Env = constants.ScratchEnvVars
 	}
+
+	if opts == nil {
+		return imageConfig, nil
+	}
+
+	if l := len(opts.Labels); l > 0 {
+		if imageConfig.Config.Labels == nil {
+			imageConfig.Config.Labels = make(map[string]string)
+		}
+		for _, label := range opts.Labels {
+			parts := strings.SplitN(label, "=", 2)
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("labels must be of the form key=value, got %s", label)
+			}
+
+			imageConfig.Config.Labels[parts[0]] = parts[1]
+		}
+	}
+
 	return imageConfig, nil
 }
 
-func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache) (CompositeCache, error) {
+func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache, args *dockerfile.BuildArgs, env []string) (CompositeCache, error) {
+	// First replace all the environment variables or args in the command
+	replacementEnvs := args.ReplacementEnvs(env)
+	resolvedCmd, err := util.ResolveEnvironmentReplacement(command.String(), replacementEnvs, false)
+	if err != nil {
+		return compositeKey, err
+	}
 	// Add the next command to the cache key.
-	compositeKey.AddKey(command.String())
+	compositeKey.AddKey(resolvedCmd)
 	switch v := command.(type) {
 	case *commands.CopyCommand:
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
@@ -158,8 +183,10 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
 	}
 
+	srcCtx := s.opts.SrcContext
+
 	for _, f := range files {
-		if err := compositeKey.AddPath(f); err != nil {
+		if err := compositeKey.AddPath(f, srcCtx); err != nil {
 			return compositeKey, err
 		}
 	}
@@ -201,7 +228,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		compositeKey, err = s.populateCompositeKey(command, files, compositeKey)
+		compositeKey, err = s.populateCompositeKey(command, files, compositeKey, s.args, cfg.Env)
 		if err != nil {
 			return err
 		}
@@ -250,8 +277,6 @@ func (s *stageBuilder) build() error {
 	} else {
 		compositeKey = NewCompositeCache(s.baseImageDigest)
 	}
-
-	compositeKey.AddKey(s.opts.BuildArgs...)
 
 	// Apply optimizations to the instructions.
 	if err := s.optimize(*compositeKey, s.cf.Config); err != nil {
@@ -309,7 +334,7 @@ func (s *stageBuilder) build() error {
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey)
+		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey, s.args, s.cf.Config.Env)
 		if err != nil {
 			return err
 		}
@@ -326,29 +351,47 @@ func (s *stageBuilder) build() error {
 			continue
 		}
 
-		tarPath, err := s.takeSnapshot(files)
-		if err != nil {
-			return errors.Wrap(err, "failed to take snapshot")
+		fn := func() bool {
+			switch v := command.(type) {
+			case commands.Cached:
+				return v.ReadSuccess()
+			default:
+				return false
+			}
 		}
 
-		logrus.Debugf("build: composite key for command %v %v", command.String(), compositeKey)
-		ck, err := compositeKey.Hash()
-		if err != nil {
-			return errors.Wrap(err, "failed to hash composite key")
-		}
+		if fn() {
+			v := command.(commands.Cached)
+			layer := v.Layer()
+			if err := s.saveLayerToImage(layer, command.String()); err != nil {
+				return errors.Wrap(err, "failed to save layer")
+			}
+		} else {
+			tarPath, err := s.takeSnapshot(files)
+			if err != nil {
+				return errors.Wrap(err, "failed to take snapshot")
+			}
 
-		logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
+			logrus.Debugf("build: composite key for command %v %v", command.String(), compositeKey)
+			ck, err := compositeKey.Hash()
+			if err != nil {
+				return errors.Wrap(err, "failed to hash composite key")
+			}
 
-		// Push layer to cache (in parallel) now along with new config file
-		if s.opts.Cache && command.ShouldCacheOutput() {
-			cacheGroup.Go(func() error {
-				return s.pushCache(s.opts, ck, tarPath, command.String())
-			})
-		}
-		if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
-			return errors.Wrap(err, "failed to save snapshot to image")
+			logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
+
+			// Push layer to cache (in parallel) now along with new config file
+			if s.opts.Cache && command.ShouldCacheOutput() {
+				cacheGroup.Go(func() error {
+					return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
+				})
+			}
+			if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
+				return errors.Wrap(err, "failed to save snapshot to image")
+			}
 		}
 	}
+
 	if err := cacheGroup.Wait(); err != nil {
 		logrus.Warnf("error uploading layer to cache: %s", err)
 	}
@@ -398,22 +441,40 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 }
 
 func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) error {
-	if tarPath == "" {
+	layer, err := s.saveSnapshotToLayer(tarPath)
+	if err != nil {
+		return err
+	}
+
+	if layer == nil {
 		return nil
+	}
+
+	return s.saveLayerToImage(layer, createdBy)
+}
+
+func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
+	if tarPath == "" {
+		return nil, nil
 	}
 	fi, err := os.Stat(tarPath)
 	if err != nil {
-		return errors.Wrap(err, "tar file path does not exist")
+		return nil, errors.Wrap(err, "tar file path does not exist")
 	}
 	if fi.Size() <= emptyTarSize {
 		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
-		return nil
+		return nil, nil
 	}
 
 	layer, err := tarball.LayerFromFile(tarPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	return layer, nil
+}
+func (s *stageBuilder) saveLayerToImage(layer v1.Layer, createdBy string) error {
+	var err error
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
 			Layer: layer,
@@ -448,7 +509,7 @@ func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error)
 				return nil, err
 			}
 		}
-		cfg, err := initializeConfig(image)
+		cfg, err := initializeConfig(image, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -529,6 +590,17 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 
+		configFile, err := sourceImage.ConfigFile()
+		if err != nil {
+			return nil, err
+		}
+		configFile.OS = runtime.GOOS
+		configFile.Architecture = runtime.GOARCH
+		sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
+		if err != nil {
+			return nil, err
+		}
+
 		d, err := sourceImage.Digest()
 		if err != nil {
 			return nil, err
@@ -574,8 +646,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		for _, p := range filesToSave {
-			logrus.Infof("Saving file %s for later use.", p)
-			otiai10Cpy.Copy(p, filepath.Join(dstDir, p))
+			logrus.Infof("Saving file %s for later use", p)
+			if err := util.CopyFileOrSymlink(p, dstDir); err != nil {
+				return nil, err
+			}
 		}
 
 		// Delete the filesystem
@@ -587,16 +661,23 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	return nil, err
 }
 
+// fileToSave returns all the files matching the given pattern in deps.
+// If a file is a symlink, it also returns the target file.
 func filesToSave(deps []string) ([]string, error) {
-	allFiles := []string{}
+	srcFiles := []string{}
 	for _, src := range deps {
 		srcs, err := filepath.Glob(src)
 		if err != nil {
 			return nil, err
 		}
-		allFiles = append(allFiles, srcs...)
+		for _, f := range srcs {
+			if link, err := util.EvalSymLink(f); err == nil {
+				srcFiles = append(srcFiles, link)
+			}
+			srcFiles = append(srcFiles, f)
+		}
 	}
-	return allFiles, nil
+	return srcFiles, nil
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
@@ -684,7 +765,7 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 }
 
 func resolveOnBuild(stage *config.KanikoStage, config *v1.Config) error {
-	if config.OnBuild == nil {
+	if config.OnBuild == nil || len(config.OnBuild) == 0 {
 		return nil
 	}
 	// Otherwise, parse into commands

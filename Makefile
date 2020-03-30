@@ -14,14 +14,15 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 0
-VERSION_MINOR ?= 16
+VERSION_MINOR ?= 19
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
+VERSION_PACKAGE = $(REPOPATH/pkg/version)
 
 SHELL := /bin/bash
 GOOS ?= $(shell go env GOOS)
-GOARCH = amd64
+GOARCH ?= $(shell go env GOARCH)
 ORG := github.com/GoogleContainerTools
 PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
@@ -38,7 +39,7 @@ GO_LDFLAGS += '
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
-BUILD_ARG ?= 
+BUILD_ARG ?=
 
 # Force using Go Modules and always read the dependencies from
 # the `vendor` folder.
@@ -52,22 +53,47 @@ out/executor: $(GO_FILES)
 out/warmer: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(WARMER_PACKAGE)
 
+.PHONY: travis-setup
+travis-setup:
+	@ ./scripts/travis-setup.sh
+
+.PHONY: minikube-setup
+minikube-setup:
+	@ ./scripts/minikube-setup.sh
+
 .PHONY: test
 test: out/executor
-	@ ./test.sh
+	@ ./scripts/test.sh
 
 .PHONY: integration-test
 integration-test:
-	@ ./integration-test.sh
+	@ ./scripts/integration-test.sh
+
+.PHONY: integration-test-run
+integration-test-run:
+	@ ./scripts/integration-test.sh -run "TestRun"
+
+.PHONY: integration-test-layers
+integration-test-layers:
+	@ ./scripts/integration-test.sh -run "TestLayers"
+
+.PHONY: integration-test-k8s
+integration-test-k8s:
+	@ ./scripts/integration-test.sh -run "TestK8s"
+
+.PHONY: integration-test-misc
+integration-test-misc:
+	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
+	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:
-	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
-	docker build ${BUILD_ARG} -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 
 .PHONY: push
 push:
-    docker push $(REGISTRY)/executor:latest
-    docker push $(REGISTRY)/executor:debug
-    docker push $(REGISTRY)/warmer:latest
+	docker push $(REGISTRY)/executor:latest
+	docker push $(REGISTRY)/executor:debug
+	docker push $(REGISTRY)/warmer:latest

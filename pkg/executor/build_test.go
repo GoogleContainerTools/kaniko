@@ -462,7 +462,7 @@ func TestInitializeConfig(t *testing.T) {
 			t.Errorf("error seen when running test %s", err)
 			t.Fail()
 		}
-		actual, _ := initializeConfig(img)
+		actual, _ := initializeConfig(img, nil)
 		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
 	}
 }
@@ -497,7 +497,8 @@ func Test_stageBuilder_optimize(t *testing.T) {
 			cf := &v1.ConfigFile{}
 			snap := fakeSnapShotter{}
 			lc := &fakeLayerCache{retrieve: tc.retrieve}
-			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc}
+			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc,
+				args: dockerfile.NewBuildArgs([]string{})}
 			ck := CompositeCache{}
 			file, err := ioutil.TempFile("", "foo")
 			if err != nil {
@@ -517,10 +518,135 @@ func Test_stageBuilder_optimize(t *testing.T) {
 	}
 }
 
+type stageContext struct {
+	command fmt.Stringer
+	args    *dockerfile.BuildArgs
+	env     []string
+}
+
+func newStageContext(command string, args map[string]string, env []string) stageContext {
+	dockerArgs := dockerfile.NewBuildArgs([]string{})
+	for k, v := range args {
+		dockerArgs.AddArg(k, &v)
+	}
+	return stageContext{MockDockerCommand{command: command}, dockerArgs, env}
+}
+
+func Test_stageBuilder_populateCompositeKey(t *testing.T) {
+	testCases := []struct {
+		description string
+		cmd1        stageContext
+		cmd2        stageContext
+		shdEqual    bool
+	}{
+		{
+			description: "cache key for same command, different buildargs, args not used in command",
+			cmd1: newStageContext(
+				"RUN echo const > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=foo1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo const > test",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=bar1"},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with same build args",
+			cmd1: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with same env",
+			cmd1: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=same"},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=same"},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with a build arg values",
+			cmd1: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "bar"},
+				[]string{},
+			),
+		},
+		{
+			description: "cache key for same command with different env values",
+			cmd1: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=2"},
+			),
+		},
+		{
+			description: "cache key for different command same context",
+			cmd1: newStageContext(
+				"RUN echo other > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo another > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			sb := &stageBuilder{opts: &config.KanikoOptions{SrcContext: "workspace"}}
+			ck := CompositeCache{}
+
+			ck1, err := sb.populateCompositeKey(tc.cmd1.command, []string{}, ck, tc.cmd1.args, tc.cmd1.env)
+			if err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+			ck2, err := sb.populateCompositeKey(tc.cmd2.command, []string{}, ck, tc.cmd2.args, tc.cmd2.env)
+			if err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+			key1, key2 := hashCompositeKeys(t, ck1, ck2)
+			if b := key1 == key2; b != tc.shdEqual {
+				t.Errorf("expected keys to be equal as %t but found %t", tc.shdEqual, !tc.shdEqual)
+			}
+		})
+	}
+}
+
 func Test_stageBuilder_build(t *testing.T) {
 	type testcase struct {
 		description       string
 		opts              *config.KanikoOptions
+		args              map[string]string
 		layerCache        *fakeLayerCache
 		expectedCacheKeys []string
 		pushedCacheKeys   []string
@@ -538,12 +664,13 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
 			command := MockDockerCommand{
+				command:      "meow",
 				contextFiles: []string{filePath},
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{filePath},
@@ -570,12 +697,13 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
 			command := MockDockerCommand{
+				command:      "meow",
 				contextFiles: []string{filePath},
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{filePath},
@@ -618,7 +746,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			tarContent := generateTar(t, dir, filename)
 
 			ch := NewCompositeCache("", "")
-			ch.AddPath(filepath)
+			ch.AddPath(filepath, "")
 
 			hash, err := ch.Hash()
 			if err != nil {
@@ -662,7 +790,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			}
 			filePath := filepath.Join(dir, filename)
 			ch := NewCompositeCache("", "")
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 
 			hash, err := ch.Hash()
 			if err != nil {
@@ -713,7 +841,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			}
 
 			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 
 			hash2, err := ch.Hash()
 			if err != nil {
@@ -721,7 +849,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			}
 			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
 			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -777,14 +905,14 @@ COPY %s bar.txt
 			}
 			filePath := filepath.Join(dir, filename)
 			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 
 			hash1, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
 			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 
 			hash2, err := ch.Hash()
 			if err != nil {
@@ -792,7 +920,7 @@ COPY %s bar.txt
 			}
 			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
 			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath)
+			ch.AddPath(filePath, "")
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -838,6 +966,117 @@ COPY %s bar.txt
 				commands:          getCommands(dir, cmds),
 			}
 		}(),
+		func() testcase {
+			dir, _ := tempDirAndFile(t)
+			ch := NewCompositeCache("")
+			ch.AddKey("RUN foobar")
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+
+			command := MockDockerCommand{
+				command:      "RUN foobar",
+				contextFiles: []string{},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{},
+				},
+			}
+
+			return testcase{
+				description: "cached run command with no build arg value used uses cached layer and does not push anything",
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: dir}},
+				opts:        &config.KanikoOptions{Cache: true},
+				args: map[string]string{
+					"test": "value",
+				},
+				expectedCacheKeys: []string{hash},
+				commands:          []commands.DockerCommand{command},
+				// layer key needs to be read.
+				layerCache: &fakeLayerCache{
+					img:         &fakeImage{ImageLayers: []v1.Layer{fakeLayer{}}},
+					keySequence: []string{hash},
+				},
+				rootDir: dir,
+			}
+		}(),
+		func() testcase {
+			dir, _ := tempDirAndFile(t)
+
+			ch := NewCompositeCache("")
+			ch.AddKey("RUN value")
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+
+			command := MockDockerCommand{
+				command:      "RUN $arg",
+				contextFiles: []string{},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{},
+				},
+			}
+
+			return testcase{
+				description: "cached run command with same build arg does not push layer",
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: dir}},
+				opts:        &config.KanikoOptions{Cache: true},
+				args: map[string]string{
+					"arg": "value",
+				},
+				// layer key that exists
+				layerCache: &fakeLayerCache{
+					img:         &fakeImage{ImageLayers: []v1.Layer{fakeLayer{}}},
+					keySequence: []string{hash},
+				},
+				expectedCacheKeys: []string{hash},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
+		func() testcase {
+			dir, _ := tempDirAndFile(t)
+
+			ch1 := NewCompositeCache("")
+			ch1.AddKey("RUN value")
+			hash1, err := ch1.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+
+			ch2 := NewCompositeCache("")
+			ch2.AddKey("RUN anotherValue")
+			hash2, err := ch2.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			command := MockDockerCommand{
+				command:      "RUN $arg",
+				contextFiles: []string{},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{},
+				},
+			}
+
+			return testcase{
+				description: "cached run command with another build arg pushes layer",
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: dir}},
+				opts:        &config.KanikoOptions{Cache: true},
+				args: map[string]string{
+					"arg": "anotherValue",
+				},
+				// layer for arg=value already exists
+				layerCache: &fakeLayerCache{
+					img:         &fakeImage{ImageLayers: []v1.Layer{fakeLayer{}}},
+					keySequence: []string{hash1},
+				},
+				expectedCacheKeys: []string{hash2},
+				pushedCacheKeys:   []string{hash2},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
@@ -875,18 +1114,21 @@ COPY %s bar.txt
 			}
 			keys := []string{}
 			sb := &stageBuilder{
-				args:        &dockerfile.BuildArgs{}, //required or code will panic
+				args:        dockerfile.NewBuildArgs([]string{}), //required or code will panic
 				image:       tc.image,
 				opts:        tc.opts,
 				cf:          cf,
 				snapshotter: snap,
 				layerCache:  lc,
-				pushCache: func(_ *config.KanikoOptions, cacheKey, _, _ string) error {
+				pushLayerToCache: func(_ *config.KanikoOptions, cacheKey, _, _ string) error {
 					keys = append(keys, cacheKey)
 					return nil
 				},
 			}
 			sb.cmds = tc.commands
+			for key, value := range tc.args {
+				sb.args.AddArg(key, &value)
+			}
 			tmp := commands.RootDir
 			if tc.rootDir != "" {
 				commands.RootDir = tc.rootDir
@@ -992,4 +1234,16 @@ func generateTar(t *testing.T, dir string, fileNames ...string) []byte {
 		}
 	}
 	return buf.Bytes()
+}
+
+func hashCompositeKeys(t *testing.T, ck1 CompositeCache, ck2 CompositeCache) (string, string) {
+	key1, err := ck1.Hash()
+	if err != nil {
+		t.Errorf("could not hash composite key due to %s", err)
+	}
+	key2, err := ck2.Hash()
+	if err != nil {
+		t.Errorf("could not hash composite key due to %s", err)
+	}
+	return key1, key2
 }

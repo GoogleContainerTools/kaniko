@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -32,6 +33,15 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/shell"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+)
+
+// for testing
+var (
+	getUIDAndGID = GetUIDAndGIDFromString
+)
+
+const (
+	pathSeparator = "/"
 )
 
 // ResolveEnvironmentReplacementList resolves a list of values by calling resolveEnvironmentReplacement
@@ -113,13 +123,14 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 	logrus.Infof("Resolving srcs %v...", srcs)
 	files, err := RelativeFiles("", root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "resolving sources")
 	}
 	resolved, err := matchSources(srcs, files)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "matching sources")
 	}
 	logrus.Debugf("Resolved sources to %v", resolved)
+	fmt.Println("end of resolve sources")
 	return resolved, nil
 }
 
@@ -153,7 +164,7 @@ func IsDestDir(path string) bool {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		// fall back to string-based determination
-		return strings.HasSuffix(path, "/") || path == "."
+		return strings.HasSuffix(path, pathSeparator) || path == "."
 	}
 	// if it's a real path, check the fs response
 	return fileInfo.IsDir()
@@ -164,20 +175,28 @@ func IsDestDir(path string) bool {
 //	If dest is a dir, copy it to /dest/relpath
 // 	If dest is a file, copy directly to dest
 // If source is a dir:
-//	Assume dest is also a dir, and copy to dest/relpath
+//	Assume dest is also a dir, and copy to dest/
 // If dest is not an absolute filepath, add /cwd to the beginning
 func DestinationFilepath(src, dest, cwd string) (string, error) {
-	if IsDestDir(dest) {
-		destPath := filepath.Join(dest, filepath.Base(src))
-		if filepath.IsAbs(dest) {
-			return destPath, nil
+	_, srcFileName := filepath.Split(src)
+	newDest := dest
+
+	if !filepath.IsAbs(newDest) {
+		newDest = filepath.Join(cwd, newDest)
+		// join call clean on all results.
+		if strings.HasSuffix(dest, pathSeparator) || strings.HasSuffix(dest, ".") {
+			newDest += pathSeparator
 		}
-		return filepath.Join(cwd, destPath), nil
 	}
-	if filepath.IsAbs(dest) {
-		return dest, nil
+	if IsDestDir(newDest) {
+		newDest = filepath.Join(newDest, srcFileName)
 	}
-	return filepath.Join(cwd, dest), nil
+
+	if len(srcFileName) <= 0 && !strings.HasSuffix(newDest, pathSeparator) {
+		newDest += pathSeparator
+	}
+
+	return newDest, nil
 }
 
 // URLDestinationFilepath gives the destination a file from a remote URL should be saved to
@@ -208,7 +227,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
 		for _, src := range srcs {
-			if excludeFile(src, root) {
+			if ExcludeFile(src, root) {
 				continue
 			}
 			totalSrcs++
@@ -245,7 +264,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 			return errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
-			if excludeFile(file, root) {
+			if ExcludeFile(file, root) {
 				continue
 			}
 			totalFiles++
@@ -321,18 +340,59 @@ Loop:
 	return nil
 }
 
-func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
-	// Lookup by username
-	userObj, err := user.Lookup(userStr)
+func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
+	if chownStr == "" {
+		return DoNotChangeUID, DoNotChangeGID, nil
+	}
+
+	chown, err := ResolveEnvironmentReplacement(chownStr, env, false)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); !ok {
-			return "", "", err
-		}
-		// Lookup by id
-		userObj, err = user.LookupId(userStr)
-		if err != nil {
-			return "", "", err
-		}
+		return -1, -1, err
+	}
+
+	uid32, gid32, err := getUIDAndGID(chown, true)
+	if err != nil {
+		return -1, -1, err
+	}
+
+	return int64(uid32), int64(gid32), nil
+}
+
+// Extract user and group id from a string formatted 'user:group'.
+// If fallbackToUID is set, the gid is equal to uid if the group is not specified
+// otherwise gid is set to zero.
+func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+	userAndGroup := strings.Split(userGroupString, ":")
+	userStr := userAndGroup[0]
+	var groupStr string
+	if len(userAndGroup) > 1 {
+		groupStr = userAndGroup[1]
+	}
+
+	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// uid and gid need to be fit into uint32
+	uid64, err := strconv.ParseUint(uidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	gid64, err := strconv.ParseUint(gidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint32(uid64), uint32(gid64), nil
+}
+
+func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (string, string, error) {
+	// Lookup by username
+	userObj, err := Lookup(userStr)
+	if err != nil {
+		return "", "", err
 	}
 
 	// Same dance with groups
@@ -351,10 +411,32 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	}
 
 	uid := userObj.Uid
-	gid := ""
+	gid := "0"
+	if fallbackToUID {
+		gid = userObj.Gid
+	}
 	if group != nil {
 		gid = group.Gid
 	}
 
 	return uid, gid, nil
+}
+
+func Lookup(userStr string) (*user.User, error) {
+	userObj, err := user.Lookup(userStr)
+	if err != nil {
+		if _, ok := err.(user.UnknownUserError); !ok {
+			return nil, err
+		}
+
+		// Lookup by id
+		u, e := user.LookupId(userStr)
+		if e != nil {
+			return nil, err
+		}
+
+		userObj = u
+	}
+
+	return userObj, nil
 }
