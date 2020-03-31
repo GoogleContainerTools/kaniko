@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -47,7 +47,7 @@ type CopyCommand struct {
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// Resolve from
 	if c.cmd.From != "" {
-		c.buildcontext = filepath.Join(constants.KanikoDir, c.cmd.From)
+		c.buildcontext = filepath.Join(kConfig.KanikoDir, c.cmd.From)
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
@@ -74,7 +74,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 		cwd := config.WorkingDir
 		if cwd == "" {
-			cwd = constants.RootDir
+			cwd = kConfig.RootDir
 		}
 
 		destPath, err := util.DestinationFilepath(fullPath, dest, cwd)
@@ -191,7 +191,7 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	cr.layer = layers[0]
 	cr.readSuccess = true
 
-	cr.extractedFiles, err = util.GetFSFromLayers(RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
+	cr.extractedFiles, err = util.GetFSFromLayers(kConfig.RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
 	logrus.Debugf("extractedFiles: %s", cr.extractedFiles)
 	if err != nil {

@@ -26,13 +26,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/moby/buildkit/frontend/dockerfile/shell"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 )
 
 // for testing
@@ -130,7 +131,6 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 		return nil, errors.Wrap(err, "matching sources")
 	}
 	logrus.Debugf("Resolved sources to %v", resolved)
-	fmt.Println("end of resolve sources")
 	return resolved, nil
 }
 
@@ -145,7 +145,7 @@ func matchSources(srcs, files []string) ([]string, error) {
 		src = filepath.Clean(src)
 		for _, file := range files {
 			if filepath.IsAbs(src) {
-				file = filepath.Join(constants.RootDir, file)
+				file = filepath.Join(config.RootDir, file)
 			}
 			matched, err := filepath.Match(src, file)
 			if err != nil {

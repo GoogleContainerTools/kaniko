@@ -371,10 +371,15 @@ func Test_filesToSave(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir, err := ioutil.TempDir("", "")
+			original := config.RootDir
+			config.RootDir = tmpDir
 			if err != nil {
 				t.Errorf("error creating tmpdir: %s", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer func() {
+				config.RootDir = original
+				os.RemoveAll(tmpDir)
+			}()
 
 			for _, f := range tt.files {
 				p := filepath.Join(tmpDir, f)
@@ -391,22 +396,14 @@ func Test_filesToSave(t *testing.T) {
 				fp.Close()
 			}
 
-			args := []string{}
-			for _, arg := range tt.args {
-				args = append(args, filepath.Join(tmpDir, arg))
-			}
-			got, err := filesToSave(args)
+			got, err := filesToSave(tt.args)
 			if err != nil {
 				t.Errorf("got err: %s", err)
 			}
-			want := []string{}
-			for _, w := range tt.want {
-				want = append(want, filepath.Join(tmpDir, w))
-			}
-			sort.Strings(want)
+			sort.Strings(tt.want)
 			sort.Strings(got)
-			if !reflect.DeepEqual(got, want) {
-				t.Errorf("filesToSave() = %v, want %v", got, want)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("filesToSave() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1129,9 +1126,9 @@ COPY %s bar.txt
 			for key, value := range tc.args {
 				sb.args.AddArg(key, &value)
 			}
-			tmp := commands.RootDir
+			tmp := config.RootDir
 			if tc.rootDir != "" {
-				commands.RootDir = tc.rootDir
+				config.RootDir = tc.rootDir
 			}
 			err := sb.build()
 			if err != nil {
@@ -1141,7 +1138,7 @@ COPY %s bar.txt
 			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
 			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
 
-			commands.RootDir = tmp
+			config.RootDir = tmp
 
 		})
 	}
