@@ -556,7 +556,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
-	// TODO is this even used?
 	if err := util.GetExcludedFiles(opts.DockerfilePath, opts.SrcContext); err != nil {
 		return nil, err
 	}
@@ -565,7 +564,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err := fetchExtraStages(stages, opts); err != nil {
 		return nil, err
 	}
-
 	crossStageDependencies, err := CalculateDependencies(stages, opts)
 	if err != nil {
 		return nil, err
