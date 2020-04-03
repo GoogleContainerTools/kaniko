@@ -39,10 +39,11 @@ import (
 )
 
 var (
-	opts      = &config.KanikoOptions{}
-	force     bool
-	logLevel  string
-	logFormat string
+	opts       = &config.KanikoOptions{}
+	ctxSubPath string
+	force      bool
+	logLevel   string
+	logFormat  string
 )
 
 func init() {
@@ -131,6 +132,7 @@ var RootCmd = &cobra.Command{
 func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&opts.DockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SrcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
+	RootCmd.PersistentFlags().StringVarP(&ctxSubPath, "context-sub-path", "", "", "Sub path within the given context.")
 	RootCmd.PersistentFlags().StringVarP(&opts.Bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
@@ -258,6 +260,9 @@ func resolveSourceContext() error {
 	opts.SrcContext, err = contextExecutor.UnpackTarFromBuildContext()
 	if err != nil {
 		return err
+	}
+	if ctxSubPath != "" {
+		opts.SrcContext = filepath.Join(opts.SrcContext, ctxSubPath)
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
