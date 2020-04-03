@@ -263,6 +263,9 @@ func resolveSourceContext() error {
 	}
 	if ctxSubPath != "" {
 		opts.SrcContext = filepath.Join(opts.SrcContext, ctxSubPath)
+		if _, err := os.Stat(opts.SrcContext); os.IsNotExist(err) {
+			return err
+		}
 	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
