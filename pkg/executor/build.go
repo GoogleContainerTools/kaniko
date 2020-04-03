@@ -487,11 +487,7 @@ func (s *stageBuilder) saveLayerToImage(layer v1.Layer, createdBy string) error 
 	return err
 }
 
-func CalculateDependencies(opts *config.KanikoOptions) (map[int][]string, error) {
-	stages, err := dockerfile.Stages(opts)
-	if err != nil {
-		return nil, err
-	}
+func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions) (map[int][]string, error) {
 	images := []v1.Image{}
 	depGraph := map[int][]string{}
 	for _, s := range stages {
@@ -559,15 +555,18 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO is this even used?
 	if err := util.GetExcludedFiles(opts.DockerfilePath, opts.SrcContext); err != nil {
 		return nil, err
 	}
+
 	// Some stages may refer to other random images, not previous stages
 	if err := fetchExtraStages(stages, opts); err != nil {
 		return nil, err
 	}
 
-	crossStageDependencies, err := CalculateDependencies(opts)
+	crossStageDependencies, err := CalculateDependencies(stages, opts)
 	if err != nil {
 		return nil, err
 	}
