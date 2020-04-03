@@ -271,7 +271,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			filepath.Join(repo, integrationPath, dockerfilesPath),
+			repo + ":" + filepath.Join(integrationPath, dockerfilesPath),
 		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
