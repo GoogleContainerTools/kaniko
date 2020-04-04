@@ -25,6 +25,8 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
 var testURL = "https://github.com/GoogleContainerTools/runtimes-common/blob/master/LICENSE"
@@ -272,6 +274,73 @@ func Test_MatchSources(t *testing.T) {
 		sort.Strings(actualFiles)
 		sort.Strings(test.expectedFiles)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
+	}
+}
+
+var updateConfigEnvTests = []struct {
+	name            string
+	envVars         []instructions.KeyValuePair
+	config          *v1.Config
+	replacementEnvs []string
+	expectedEnv     []string
+}{
+	{
+		name: "test env config update",
+		envVars: []instructions.KeyValuePair{
+			{
+				Key:   "key",
+				Value: "var",
+			},
+			{
+				Key:   "foo",
+				Value: "baz",
+			}},
+		config:          &v1.Config{},
+		replacementEnvs: []string{},
+		expectedEnv:     []string{"key=var", "foo=baz"},
+	}, {
+		name: "test env config update with replacmenets",
+		envVars: []instructions.KeyValuePair{
+			{
+				Key:   "key",
+				Value: "/var/run",
+			},
+			{
+				Key:   "env",
+				Value: "$var",
+			},
+			{
+				Key:   "foo",
+				Value: "$argarg",
+			}},
+		config:          &v1.Config{},
+		replacementEnvs: []string{"var=/test/with'chars'/", "not=used", "argarg=\"a\"b\""},
+		expectedEnv:     []string{"key=/var/run", "env=/test/with'chars'/", "foo=\"a\"b\""},
+	}, {
+		name: "test env config update replacing existing variable",
+		envVars: []instructions.KeyValuePair{
+			{
+				Key:   "alice",
+				Value: "nice",
+			},
+			{
+				Key:   "bob",
+				Value: "cool",
+			}},
+		config:          &v1.Config{Env: []string{"bob=used", "more=test"}},
+		replacementEnvs: []string{},
+		expectedEnv:     []string{"bob=cool", "more=test", "alice=nice"},
+	},
+}
+
+func Test_UpdateConfigEnvTests(t *testing.T) {
+	for _, test := range updateConfigEnvTests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := UpdateConfigEnv(test.envVars, test.config, test.replacementEnvs); err != nil {
+				t.Fatalf("error updating config with env vars: %s", err)
+			}
+			testutil.CheckDeepEqual(t, test.expectedEnv, test.config.Env)
+		})
 	}
 }
 
