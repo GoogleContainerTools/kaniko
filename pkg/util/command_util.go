@@ -290,8 +290,9 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 	return err == nil
 }
 
-func UpdateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
-	for index, pair := range newEnvs {
+func UpdateConfigEnv(envVars []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
+	newEnvs := make([]instructions.KeyValuePair, len(envVars))
+	for index, pair := range envVars {
 		expandedKey, err := ResolveEnvironmentReplacement(pair.Key, replacementEnvs, false)
 		if err != nil {
 			return err

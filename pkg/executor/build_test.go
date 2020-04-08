@@ -322,8 +322,11 @@ COPY --from=stage2 /bar /bat
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
 			}
-
-			got, err := CalculateDependencies(opts)
+			testStages, err := dockerfile.Stages(opts)
+			if err != nil {
+				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
+			}
+			got, err := CalculateDependencies(testStages, opts)
 			if err != nil {
 				t.Errorf("got error: %s,", err)
 			}
