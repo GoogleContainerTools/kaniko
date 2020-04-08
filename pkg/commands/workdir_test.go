@@ -97,6 +97,8 @@ func TestWorkdirCommand(t *testing.T) {
 	}()
 
 	cfg := &v1.Config{
+		// Images don't need to already have WorkingDir set;
+		// "" is equivalent to the root directory.
 		WorkingDir: "",
 		Env: []string{
 			"path=usr/",

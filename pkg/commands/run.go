@@ -257,6 +257,9 @@ func (cr *CachingRunCommand) MetadataOnly() bool {
 }
 
 func setWorkDirIfExists(workdir string) string {
+	if workdir == "" {
+		workdir = constants.RootDir
+	}
 	if _, err := os.Lstat(workdir); err == nil {
 		return workdir
 	}

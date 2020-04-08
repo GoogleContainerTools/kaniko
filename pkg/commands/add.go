@@ -23,6 +23,7 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -65,8 +66,12 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	// Else, add to the list of unresolved sources
 	for _, src := range srcs {
 		fullPath := filepath.Join(a.fileContext.Root, src)
+		cwd := config.WorkingDir
+		if cwd == "" {
+			cwd = constants.RootDir
+		}
 		if util.IsSrcRemoteFileURL(src) {
-			urlDest, err := util.URLDestinationFilepath(src, dest, config.WorkingDir, replacementEnvs)
+			urlDest, err := util.URLDestinationFilepath(src, dest, cwd, replacementEnvs)
 			if err != nil {
 				return err
 			}
@@ -76,7 +81,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			}
 			a.snapshotFiles = append(a.snapshotFiles, urlDest)
 		} else if util.IsFileLocalTarArchive(fullPath) {
-			tarDest, err := util.DestinationFilepath("", dest, config.WorkingDir)
+			tarDest, err := util.DestinationFilepath("", dest, cwd)
 			if err != nil {
 				return errors.Wrap(err, "determining dest for tar")
 			}
