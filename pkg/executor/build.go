@@ -487,7 +487,7 @@ func (s *stageBuilder) saveLayerToImage(layer v1.Layer, createdBy string) error 
 	return err
 }
 
-func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions) (map[int][]string, error) {
+func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions, stageNameToIdx map[string]string) (map[int][]string, error) {
 	images := []v1.Image{}
 	depGraph := map[int][]string{}
 	for _, s := range stages {
@@ -509,7 +509,11 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 		if err != nil {
 			return nil, err
 		}
-		for _, c := range s.Commands {
+
+		cmds, err := getOnBuildInstructions(&cfg.Config, stageNameToIdx)
+		stageCmds := append(cmds, s.Commands...)
+
+		for _, c := range stageCmds {
 			switch cmd := c.(type) {
 			case *instructions.CopyCommand:
 				if cmd.From != "" {
@@ -581,7 +585,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err := fetchExtraStages(stages, opts); err != nil {
 		return nil, err
 	}
-	crossStageDependencies, err := CalculateDependencies(stages, opts)
+	crossStageDependencies, err := CalculateDependencies(stages, opts, stageNameToIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -788,18 +792,26 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
-func resolveOnBuild(stage *config.KanikoStage, config *v1.Config, stageNameToIdx map[string]string) error {
+func getOnBuildInstructions(config *v1.Config, stageNameToIdx map[string]string) ([]instructions.Command, error) {
 	if config.OnBuild == nil || len(config.OnBuild) == 0 {
-		return nil
+		return nil, nil
 	}
-	// Otherwise, parse into commands
+
 	cmds, err := dockerfile.ParseCommands(config.OnBuild)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Iterate over commands and replace references to other stages with their index
 	dockerfile.ResolveCommands(cmds, stageNameToIdx)
+	return cmds, nil
+}
+
+func resolveOnBuild(stage *config.KanikoStage, config *v1.Config, stageNameToIdx map[string]string) error {
+	cmds, err := getOnBuildInstructions(config, stageNameToIdx)
+	if err != nil {
+		return err
+	}
 
 	// Append to the beginning of the commands in the stage
 	stage.Commands = append(cmds, stage.Commands...)
