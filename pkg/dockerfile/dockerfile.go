@@ -87,6 +87,75 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	return kanikoStages, nil
 }
 
+func ParseInstructions(opts *config.KanikoOptions) ([]instructions.Stage, []instructions.ArgCommand, error) {
+	var err error
+	var d []uint8
+	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
+	if match {
+		response, e := http.Get(opts.DockerfilePath)
+		if e != nil {
+			return nil, nil, e
+		}
+		d, err = ioutil.ReadAll(response.Body)
+	} else {
+		d, err = ioutil.ReadFile(opts.DockerfilePath)
+	}
+
+	if err != nil {
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
+	}
+
+	stages, metaArgs, err := Parse(d)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "parsing dockerfile")
+	}
+
+	return stages, metaArgs, nil
+}
+
+func ResolveCrossStageInstructions(stages []instructions.Stage) map[string]string {
+	nameToIndex := make(map[string]string)
+	for i, stage := range stages {
+		index := strconv.Itoa(i)
+		if stage.Name != "" {
+			nameToIndex[stage.Name] = index
+		}
+		ResolveCommands(stage.Commands, nameToIndex)
+	}
+
+	logrus.Debugf("Built stage name to index map: %v", nameToIndex)
+	return nameToIndex
+}
+
+func MakeKanikoStages(opts *config.KanikoOptions, stages []instructions.Stage, metaArgs []instructions.ArgCommand) ([]config.KanikoStage, error) {
+	targetStage, err := targetStage(stages, opts.Target)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error finding target stage")
+	}
+	var kanikoStages []config.KanikoStage
+	for index, stage := range stages {
+		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, opts.BuildArgs, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "resolving base name")
+		}
+		stage.Name = resolvedBaseName
+		logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
+		kanikoStages = append(kanikoStages, config.KanikoStage{
+			Stage:                  stage,
+			BaseImageIndex:         baseImageIndex(index, stages),
+			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
+			SaveStage:              saveStage(index, stages),
+			Final:                  index == targetStage,
+			MetaArgs:               metaArgs,
+			Index:                  index,
+		})
+		if index == targetStage {
+			break
+		}
+	}
+	return kanikoStages, nil
+}
+
 // baseImageIndex returns the index of the stage the current stage is built off
 // returns -1 if the current stage isn't built off a previous stage
 func baseImageIndex(currentStage int, stages []instructions.Stage) int {
@@ -221,7 +290,6 @@ func resolveStages(stages []instructions.Stage) {
 					if val, ok := nameToIndex[strings.ToLower(c.From)]; ok {
 						c.From = val
 					}
-
 				}
 			}
 		}
@@ -263,4 +331,19 @@ func saveStage(index int, stages []instructions.Stage) bool {
 	}
 
 	return false
+}
+
+// TODO move it to private method or put elsewhere
+func ResolveCommands(cmds []instructions.Command, stageNameToIdx map[string]string) () {
+	for _, cmd := range cmds {
+		switch c := cmd.(type) {
+		case *instructions.CopyCommand:
+			if c.From != "" {
+				if val, ok := stageNameToIdx[strings.ToLower(c.From)]; ok {
+					c.From = val
+				}
+			}
+		}
+	}
+
 }

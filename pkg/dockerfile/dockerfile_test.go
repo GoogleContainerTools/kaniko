@@ -25,6 +25,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 func Test_Stages_ArgValueWithQuotes(t *testing.T) {
@@ -363,4 +364,31 @@ func Test_baseImageIndex(t *testing.T) {
 			}
 		})
 	}
+}
+
+
+
+func Test_ResolveStages(t *testing.T) {
+	in := &instructions.CopyCommand{
+		SourcesAndDest: []string{
+			"/var/bo", "foo.txt",
+		},
+		From:  "boo",
+		Chown: "",
+	}
+	ibn := &instructions.CopyCommand{
+		SourcesAndDest: []string{
+			"/var/bo", "foo.txt",
+		},
+		From:  "poo",
+		Chown: "",
+	}
+
+	foo := []instructions.Command{in, ibn}
+	stageMap := map[string]string{"boo": "1"}
+	logrus.Infof("%#v", foo)
+	ResolveCommands(foo, stageMap)
+	logrus.Infof("%#v", foo)
+	logrus.Infof("%#v", foo[0])
+
 }
