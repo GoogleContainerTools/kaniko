@@ -432,6 +432,12 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+#### --context-sub-path
+
+Set a sub path within the given `--context`.
+
+Its particularly useful when your context is, for example, a git repository,
+and you want to build one of its subfolders instead of the root folder.
 
 #### --digest-file
 
