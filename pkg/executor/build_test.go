@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
@@ -35,6 +36,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
@@ -194,7 +196,8 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 
 func TestCalculateDependencies(t *testing.T) {
 	type args struct {
-		dockerfile string
+		dockerfile     string
+		mockInitConfig func(partial.WithConfigFile, *config.KanikoOptions) (*v1.ConfigFile, error)
 	}
 	tests := []struct {
 		name string
@@ -314,19 +317,58 @@ COPY --from=stage2 /bar /bat
 				1: {"/bar"},
 			},
 		},
+		{
+			name: "one image has onbuild config",
+			args: args{
+				mockInitConfig: func(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.ConfigFile, error) {
+					cfg, err := img.ConfigFile()
+					// if image is "alpine" then add ONBUILD to its config
+					if cfg != nil && cfg.Architecture != "" {
+						cfg.Config.OnBuild = []string{"COPY --from=builder /app /app"}
+					}
+					return cfg, err
+				},
+				dockerfile: `
+FROM scratch as builder
+RUN foo
+FROM alpine as second
+# This image has an ONBUILD command so it will be executed
+COPY --from=builder /foo /bar
+FROM scratch as target
+COPY --from=second /bar /bat
+`,
+			},
+			want: map[int][]string{
+				0: {"/app", "/foo"},
+				1: {"/bar"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.args.mockInitConfig != nil {
+				original := initializeConfig
+				defer func() { initializeConfig = original }()
+				initializeConfig = tt.args.mockInitConfig
+			}
+
 			f, _ := ioutil.TempFile("", "")
 			ioutil.WriteFile(f.Name(), []byte(tt.args.dockerfile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
 			}
-			testStages, err := dockerfile.Stages(opts)
+			testStages, metaArgs, err := dockerfile.ParseStages(opts)
 			if err != nil {
 				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
 			}
-			got, err := CalculateDependencies(testStages, opts)
+
+			stageNameToIdx := ResolveCrossStageInstructions(testStages)
+			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
+			if err != nil {
+				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
+			}
+
+			got, err := CalculateDependencies(kanikoStages, opts, stageNameToIdx)
 			if err != nil {
 				t.Errorf("got error: %s,", err)
 			}
@@ -870,12 +912,16 @@ COPY %s bar.txt
 				DockerfilePath: f.Name(),
 			}
 
-			stages, err := dockerfile.Stages(opts)
+			testStages, metaArgs, err := dockerfile.ParseStages(opts)
 			if err != nil {
-				t.Errorf("could not parse test dockerfile")
+				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
 			}
-
-			stage := stages[0]
+			_ = ResolveCrossStageInstructions(testStages)
+			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
+			if err != nil {
+				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
+			}
+			stage := kanikoStages[0]
 
 			cmds := stage.Commands
 			return testcase{
@@ -941,12 +987,17 @@ COPY %s bar.txt
 				DockerfilePath: f.Name(),
 			}
 
-			stages, err := dockerfile.Stages(opts)
+			testStages, metaArgs, err := dockerfile.ParseStages(opts)
 			if err != nil {
-				t.Errorf("could not parse test dockerfile")
+				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
+			}
+			_ = ResolveCrossStageInstructions(testStages)
+			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
+			if err != nil {
+				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
 			}
 
-			stage := stages[0]
+			stage := kanikoStages[0]
 
 			cmds := stage.Commands
 			return testcase{
@@ -1246,4 +1297,43 @@ func hashCompositeKeys(t *testing.T, ck1 CompositeCache, ck2 CompositeCache) (st
 		t.Errorf("could not hash composite key due to %s", err)
 	}
 	return key1, key2
+}
+
+func Test_ResolveCrossStageInstructions(t *testing.T) {
+	df := `
+	FROM scratch
+	RUN echo hi > /hi
+
+	FROM scratch AS second
+	COPY --from=0 /hi /hi2
+
+	FROM scratch AS tHiRd
+	COPY --from=second /hi2 /hi3
+	COPY --from=1 /hi2 /hi3
+
+	FROM scratch
+	COPY --from=thIrD /hi3 /hi4
+	COPY --from=third /hi3 /hi4
+	COPY --from=2 /hi3 /hi4
+	`
+	stages, _, err := dockerfile.Parse([]byte(df))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stageToIdx := ResolveCrossStageInstructions(stages)
+	for index, stage := range stages {
+		if index == 0 {
+			continue
+		}
+		expectedStage := strconv.Itoa(index - 1)
+		for _, command := range stage.Commands {
+			copyCmd := command.(*instructions.CopyCommand)
+			if copyCmd.From != expectedStage {
+				t.Fatalf("unexpected copy command: %s resolved to stage %s, expected %s", copyCmd.String(), copyCmd.From, expectedStage)
+			}
+		}
+
+		expectedMap := map[string]string{"second": "1", "third": "2"}
+		testutil.CheckDeepEqual(t, expectedMap, stageToIdx)
+	}
 }
