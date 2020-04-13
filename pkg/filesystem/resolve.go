@@ -72,6 +72,7 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 			}
 
 			logrus.Debugf("symlink path %s, target does not exist", f)
+			continue
 		}
 
 		// If the given path is a symlink and the target is part of the whitelist
