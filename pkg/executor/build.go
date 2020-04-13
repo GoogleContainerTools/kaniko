@@ -334,9 +334,11 @@ func (s *stageBuilder) build() error {
 			return errors.Wrap(err, "failed to get files used from context")
 		}
 
-		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey, s.args, s.cf.Config.Env)
-		if err != nil {
-			return err
+		if s.opts.Cache {
+			*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey, s.args, s.cf.Config.Env)
+			if err != nil && s.opts.Cache {
+				return err
+			}
 		}
 
 		logrus.Info(command.String())
@@ -372,19 +374,21 @@ func (s *stageBuilder) build() error {
 				return errors.Wrap(err, "failed to take snapshot")
 			}
 
-			logrus.Debugf("build: composite key for command %v %v", command.String(), compositeKey)
-			ck, err := compositeKey.Hash()
-			if err != nil {
-				return errors.Wrap(err, "failed to hash composite key")
-			}
+			if s.opts.Cache {
+				logrus.Debugf("build: composite key for command %v %v", command.String(), compositeKey)
+				ck, err := compositeKey.Hash()
+				if err != nil {
+					return errors.Wrap(err, "failed to hash composite key")
+				}
 
-			logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
+				logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
 
-			// Push layer to cache (in parallel) now along with new config file
-			if s.opts.Cache && command.ShouldCacheOutput() {
-				cacheGroup.Go(func() error {
-					return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
-				})
+				// Push layer to cache (in parallel) now along with new config file
+				if command.ShouldCacheOutput() {
+					cacheGroup.Go(func() error {
+						return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
+					})
+				}
 			}
 			if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
 				return errors.Wrap(err, "failed to save snapshot to image")
