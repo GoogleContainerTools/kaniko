@@ -415,7 +415,7 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 }
 
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
-	isLastCommand := index == len(s.stage.Commands)-1
+	isLastCommand := index == len(s.cmds)-1
 
 	// We only snapshot the very end with single snapshot mode on.
 	if s.opts.SingleSnapshot {
