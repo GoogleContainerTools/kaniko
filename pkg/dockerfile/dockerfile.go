@@ -62,18 +62,20 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 		return nil, err
 	}
 	resolveStages(stages)
+	args := unifyArgs(metaArgs, opts.BuildArgs)
+	if err := resolveStagesArgs(stages, args); err != nil {
+		return nil, errors.Wrap(err, "resolving args")
+	}
 	var kanikoStages []config.KanikoStage
 	for index, stage := range stages {
-		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, opts.BuildArgs, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "resolving base name")
+		if len(stage.Name) > 0 {
+			logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
 		}
-		stage.Name = resolvedBaseName
-		logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
+		baseImageIndex := baseImageIndex(index, stages)
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
-			BaseImageIndex:         baseImageIndex(index, stages),
-			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
+			BaseImageIndex:         baseImageIndex,
+			BaseImageStoredLocally: (baseImageIndex != -1),
 			SaveStage:              saveStage(index, stages),
 			Final:                  index == targetStage,
 			MetaArgs:               metaArgs,
@@ -85,6 +87,29 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	}
 
 	return kanikoStages, nil
+}
+
+// unifyArgs returns the unified args between metaArgs and --build-arg
+// by default --build-arg overrides metaArgs except when --build-arg is empty
+func unifyArgs(metaArgs []instructions.ArgCommand, buildArgs []string) []string {
+	argsMap := make(map[string]string)
+	for _, a := range metaArgs {
+		if a.Value != nil {
+			argsMap[a.Key] = *a.Value
+		}
+	}
+	splitter := "="
+	for _, a := range buildArgs {
+		s := strings.Split(a, splitter)
+		if len(s) > 1 && s[1] != "" {
+			argsMap[s[0]] = s[1]
+		}
+	}
+	var args []string
+	for k, v := range argsMap {
+		args = append(args, fmt.Sprintf("%s=%s", k, v))
+	}
+	return args
 }
 
 // baseImageIndex returns the index of the stage the current stage is built off
@@ -226,6 +251,20 @@ func resolveStages(stages []instructions.Stage) {
 			}
 		}
 	}
+}
+
+// resolveStagesArgs resolves all the args from list of stages
+func resolveStagesArgs(stages []instructions.Stage, args []string) error {
+	for i, s := range stages {
+		resolvedBaseName, err := util.ResolveEnvironmentReplacement(s.BaseName, args, false)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("resolving base name %s", s.BaseName))
+		}
+		if s.BaseName != resolvedBaseName {
+			stages[i].BaseName = resolvedBaseName
+		}
+	}
+	return nil
 }
 
 // ParseCommands parses an array of commands into an array of instructions.Command; used for onbuild
