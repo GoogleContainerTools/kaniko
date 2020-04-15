@@ -17,6 +17,7 @@ limitations under the License.
 package dockerfile
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -425,5 +426,74 @@ func Test_baseImageIndex(t *testing.T) {
 				t.Fatalf("unexpected result, expected %d got %d", test.expected, actual)
 			}
 		})
+	}
+}
+
+func Test_ResolveStagesArgs(t *testing.T) {
+	dockerfile := `
+	ARG IMAGE="ubuntu:16.04"
+	ARG LAST_STAGE_VARIANT
+	FROM ${IMAGE} as base
+	RUN echo hi > /hi
+	FROM base AS base-dev
+	RUN echo dev >> /hi
+	FROM base AS base-prod
+	RUN echo prod >> /hi
+	FROM base-${LAST_STAGE_VARIANT}
+	RUN cat /hi
+	`
+
+	buildArgLastVariants := []string{"dev", "prod"}
+	buildArgImages := []string{"alpine:3.11", ""}
+	var expectedImage string
+
+	for _, buildArgLastVariant := range buildArgLastVariants {
+		for _, buildArgImage := range buildArgImages {
+			if buildArgImage != "" {
+				expectedImage = buildArgImage
+			} else {
+				expectedImage = "ubuntu:16.04"
+			}
+			buildArgs := []string{fmt.Sprintf("IMAGE=%s", buildArgImage), fmt.Sprintf("LAST_STAGE_VARIANT=%s", buildArgLastVariant)}
+
+			stages, metaArgs, err := Parse([]byte(dockerfile))
+			if err != nil {
+				t.Fatal(err)
+			}
+			stagesLen := len(stages)
+
+			args := unifyArgs(metaArgs, buildArgs)
+			if err := resolveStagesArgs(stages, args); err != nil {
+				t.Fatalf("fail to resolves args %v: %v", buildArgs, err)
+			}
+			tests := []struct {
+				name               string
+				actualSourceCode   string
+				actualBaseName     string
+				expectedSourceCode string
+				expectedBaseName   string
+			}{
+				{
+					name:               "Test_BuildArg_From_First_Stage",
+					actualSourceCode:   stages[0].SourceCode,
+					actualBaseName:     stages[0].BaseName,
+					expectedSourceCode: "FROM ${IMAGE} as base",
+					expectedBaseName:   expectedImage,
+				},
+				{
+					name:               "Test_BuildArg_From_Last_Stage",
+					actualSourceCode:   stages[stagesLen-1].SourceCode,
+					actualBaseName:     stages[stagesLen-1].BaseName,
+					expectedSourceCode: "FROM base-${LAST_STAGE_VARIANT}",
+					expectedBaseName:   fmt.Sprintf("base-%s", buildArgLastVariant),
+				},
+			}
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					testutil.CheckDeepEqual(t, test.expectedSourceCode, test.actualSourceCode)
+					testutil.CheckDeepEqual(t, test.expectedBaseName, test.actualBaseName)
+				})
+			}
+		}
 	}
 }

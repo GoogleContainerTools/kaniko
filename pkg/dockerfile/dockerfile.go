@@ -230,23 +230,40 @@ func ResolveCrossStageCommands(cmds []instructions.Command, stageNameToIdx map[s
 	}
 }
 
+// resolveStagesArgs resolves all the args from list of stages
+func resolveStagesArgs(stages []instructions.Stage, args []string) error {
+	for i, s := range stages {
+		resolvedBaseName, err := util.ResolveEnvironmentReplacement(s.BaseName, args, false)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("resolving base name %s", s.BaseName))
+		}
+		if s.BaseName != resolvedBaseName {
+			stages[i].BaseName = resolvedBaseName
+		}
+	}
+	return nil
+}
+
 func MakeKanikoStages(opts *config.KanikoOptions, stages []instructions.Stage, metaArgs []instructions.ArgCommand) ([]config.KanikoStage, error) {
 	targetStage, err := targetStage(stages, opts.Target)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error finding target stage")
 	}
+	args := unifyArgs(metaArgs, opts.BuildArgs)
+	if err := resolveStagesArgs(stages, args); err != nil {
+		return nil, errors.Wrap(err, "resolving args")
+	}
 	var kanikoStages []config.KanikoStage
 	for index, stage := range stages {
-		resolvedBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, opts.BuildArgs, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "resolving base name")
+		if len(stage.Name) > 0 {
+			logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
 		}
-		stage.Name = resolvedBaseName
-		logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
+		baseImageIndex := baseImageIndex(index, stages)
+
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
-			BaseImageIndex:         baseImageIndex(index, stages),
-			BaseImageStoredLocally: (baseImageIndex(index, stages) != -1),
+			BaseImageIndex:         baseImageIndex,
+			BaseImageStoredLocally: (baseImageIndex != -1),
 			SaveStage:              saveStage(index, stages),
 			Final:                  index == targetStage,
 			MetaArgs:               metaArgs,
@@ -272,4 +289,27 @@ func GetOnBuildInstructions(config *v1.Config, stageNameToIdx map[string]string)
 	// Iterate over commands and replace references to other stages with their index
 	ResolveCrossStageCommands(cmds, stageNameToIdx)
 	return cmds, nil
+}
+
+// unifyArgs returns the unified args between metaArgs and --build-arg
+// by default --build-arg overrides metaArgs except when --build-arg is empty
+func unifyArgs(metaArgs []instructions.ArgCommand, buildArgs []string) []string {
+	argsMap := make(map[string]string)
+	for _, a := range metaArgs {
+		if a.Value != nil {
+			argsMap[a.Key] = *a.Value
+		}
+	}
+	splitter := "="
+	for _, a := range buildArgs {
+		s := strings.Split(a, splitter)
+		if len(s) > 1 && s[1] != "" {
+			argsMap[s[0]] = s[1]
+		}
+	}
+	var args []string
+	for k, v := range argsMap {
+		args = append(args, fmt.Sprintf("%s=%s", k, v))
+	}
+	return args
 }
