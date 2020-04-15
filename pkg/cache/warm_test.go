@@ -29,6 +29,7 @@ import (
 
 const (
 	image = "foo:latest"
+	image_digest = "foo:latest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
 func Test_Warmer_Warm_not_in_cache(t *testing.T) {

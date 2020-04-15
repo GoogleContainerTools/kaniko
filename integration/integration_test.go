@@ -427,7 +427,7 @@ func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder
 
 // Build each image with kaniko twice, and then make sure they're exactly the same
 func TestCache(t *testing.T) {
-	populateVolumeCache()
+	 populateVolumeCache(t)
 	for dockerfile := range imageBuilder.TestCacheDockerfiles {
 		t.Run("test_cache_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile

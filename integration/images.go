@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 )
@@ -330,7 +331,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 	return nil
 }
 
-func populateVolumeCache() error {
+func populateVolumeCache(t *testing.T) {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 	warmerCmd := exec.Command("docker",
@@ -344,11 +345,7 @@ func populateVolumeCache() error {
 		)...,
 	)
 
-	if _, err := RunCommandWithoutTest(warmerCmd); err != nil {
-		return fmt.Errorf("Failed to warm kaniko cache: %s", err)
-	}
-
-	return nil
+	RunCommand(warmerCmd, t);
 }
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
