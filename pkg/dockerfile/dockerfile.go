@@ -22,9 +22,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -34,15 +34,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Stages parses a Dockerfile and returns an array of KanikoStage
-func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
+func ParseStages(opts *config.KanikoOptions) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	var err error
 	var d []uint8
 	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
 	if match {
 		response, e := http.Get(opts.DockerfilePath)
 		if e != nil {
-			return nil, e
+			return nil, nil, e
 		}
 		d, err = ioutil.ReadAll(response.Body)
 	} else {
@@ -50,66 +49,15 @@ func Stages(opts *config.KanikoOptions) ([]config.KanikoStage, error) {
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("reading dockerfile at path %s", opts.DockerfilePath))
 	}
 
 	stages, metaArgs, err := Parse(d)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing dockerfile")
-	}
-	targetStage, err := targetStage(stages, opts.Target)
-	if err != nil {
-		return nil, err
-	}
-	resolveStages(stages)
-	args := unifyArgs(metaArgs, opts.BuildArgs)
-	if err := resolveStagesArgs(stages, args); err != nil {
-		return nil, errors.Wrap(err, "resolving args")
-	}
-	var kanikoStages []config.KanikoStage
-	for index, stage := range stages {
-		if len(stage.Name) > 0 {
-			logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
-		}
-		baseImageIndex := baseImageIndex(index, stages)
-		kanikoStages = append(kanikoStages, config.KanikoStage{
-			Stage:                  stage,
-			BaseImageIndex:         baseImageIndex,
-			BaseImageStoredLocally: (baseImageIndex != -1),
-			SaveStage:              saveStage(index, stages),
-			Final:                  index == targetStage,
-			MetaArgs:               metaArgs,
-			Index:                  index,
-		})
-		if index == targetStage {
-			break
-		}
+		return nil, nil, errors.Wrap(err, "parsing dockerfile")
 	}
 
-	return kanikoStages, nil
-}
-
-// unifyArgs returns the unified args between metaArgs and --build-arg
-// by default --build-arg overrides metaArgs except when --build-arg is empty
-func unifyArgs(metaArgs []instructions.ArgCommand, buildArgs []string) []string {
-	argsMap := make(map[string]string)
-	for _, a := range metaArgs {
-		if a.Value != nil {
-			argsMap[a.Key] = *a.Value
-		}
-	}
-	splitter := "="
-	for _, a := range buildArgs {
-		s := strings.Split(a, splitter)
-		if len(s) > 1 && s[1] != "" {
-			argsMap[s[0]] = s[1]
-		}
-	}
-	var args []string
-	for k, v := range argsMap {
-		args = append(args, fmt.Sprintf("%s=%s", k, v))
-	}
-	return args
+	return stages, metaArgs, nil
 }
 
 // baseImageIndex returns the index of the stage the current stage is built off
@@ -229,44 +177,6 @@ func targetStage(stages []instructions.Stage, target string) (int, error) {
 	return -1, fmt.Errorf("%s is not a valid target build stage", target)
 }
 
-// resolveStages resolves any calls to previous stages with names to indices
-// Ex. --from=second_stage should be --from=1 for easier processing later on
-// As third party library lowers stage name in FROM instruction, this function resolves stage case insensitively.
-func resolveStages(stages []instructions.Stage) {
-	nameToIndex := make(map[string]string)
-	for i, stage := range stages {
-		index := strconv.Itoa(i)
-		if stage.Name != index {
-			nameToIndex[stage.Name] = index
-		}
-		for _, cmd := range stage.Commands {
-			switch c := cmd.(type) {
-			case *instructions.CopyCommand:
-				if c.From != "" {
-					if val, ok := nameToIndex[strings.ToLower(c.From)]; ok {
-						c.From = val
-					}
-
-				}
-			}
-		}
-	}
-}
-
-// resolveStagesArgs resolves all the args from list of stages
-func resolveStagesArgs(stages []instructions.Stage, args []string) error {
-	for i, s := range stages {
-		resolvedBaseName, err := util.ResolveEnvironmentReplacement(s.BaseName, args, false)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("resolving base name %s", s.BaseName))
-		}
-		if s.BaseName != resolvedBaseName {
-			stages[i].BaseName = resolvedBaseName
-		}
-	}
-	return nil
-}
-
 // ParseCommands parses an array of commands into an array of instructions.Command; used for onbuild
 func ParseCommands(cmdArray []string) ([]instructions.Command, error) {
 	var cmds []instructions.Command
@@ -302,4 +212,103 @@ func saveStage(index int, stages []instructions.Stage) bool {
 	}
 
 	return false
+}
+
+// ResolveCrossStageCommands resolves any calls to previous stages with names to indices
+// Ex. --from=secondStage should be --from=1 for easier processing later on
+// As third party library lowers stage name in FROM instruction, this function resolves stage case insensitively.
+func ResolveCrossStageCommands(cmds []instructions.Command, stageNameToIdx map[string]string) {
+	for _, cmd := range cmds {
+		switch c := cmd.(type) {
+		case *instructions.CopyCommand:
+			if c.From != "" {
+				if val, ok := stageNameToIdx[strings.ToLower(c.From)]; ok {
+					c.From = val
+				}
+			}
+		}
+	}
+}
+
+// resolveStagesArgs resolves all the args from list of stages
+func resolveStagesArgs(stages []instructions.Stage, args []string) error {
+	for i, s := range stages {
+		resolvedBaseName, err := util.ResolveEnvironmentReplacement(s.BaseName, args, false)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("resolving base name %s", s.BaseName))
+		}
+		if s.BaseName != resolvedBaseName {
+			stages[i].BaseName = resolvedBaseName
+		}
+	}
+	return nil
+}
+
+func MakeKanikoStages(opts *config.KanikoOptions, stages []instructions.Stage, metaArgs []instructions.ArgCommand) ([]config.KanikoStage, error) {
+	targetStage, err := targetStage(stages, opts.Target)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error finding target stage")
+	}
+	args := unifyArgs(metaArgs, opts.BuildArgs)
+	if err := resolveStagesArgs(stages, args); err != nil {
+		return nil, errors.Wrap(err, "resolving args")
+	}
+	var kanikoStages []config.KanikoStage
+	for index, stage := range stages {
+		if len(stage.Name) > 0 {
+			logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
+		}
+		baseImageIndex := baseImageIndex(index, stages)
+		kanikoStages = append(kanikoStages, config.KanikoStage{
+			Stage:                  stage,
+			BaseImageIndex:         baseImageIndex,
+			BaseImageStoredLocally: (baseImageIndex != -1),
+			SaveStage:              saveStage(index, stages),
+			Final:                  index == targetStage,
+			MetaArgs:               metaArgs,
+			Index:                  index,
+		})
+		if index == targetStage {
+			break
+		}
+	}
+	return kanikoStages, nil
+}
+
+func GetOnBuildInstructions(config *v1.Config, stageNameToIdx map[string]string) ([]instructions.Command, error) {
+	if config.OnBuild == nil || len(config.OnBuild) == 0 {
+		return nil, nil
+	}
+
+	cmds, err := ParseCommands(config.OnBuild)
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate over commands and replace references to other stages with their index
+	ResolveCrossStageCommands(cmds, stageNameToIdx)
+	return cmds, nil
+}
+
+// unifyArgs returns the unified args between metaArgs and --build-arg
+// by default --build-arg overrides metaArgs except when --build-arg is empty
+func unifyArgs(metaArgs []instructions.ArgCommand, buildArgs []string) []string {
+	argsMap := make(map[string]string)
+	for _, a := range metaArgs {
+		if a.Value != nil {
+			argsMap[a.Key] = *a.Value
+		}
+	}
+	splitter := "="
+	for _, a := range buildArgs {
+		s := strings.Split(a, splitter)
+		if len(s) > 1 && s[1] != "" {
+			argsMap[s[0]] = s[1]
+		}
+	}
+	var args []string
+	for k, v := range argsMap {
+		args = append(args, fmt.Sprintf("%s=%s", k, v))
+	}
+	return args
 }

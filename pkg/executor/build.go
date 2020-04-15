@@ -52,6 +52,11 @@ import (
 // This is the size of an empty tar in Go
 const emptyTarSize = 1024
 
+// for testing
+var (
+	initializeConfig = initConfig
+)
+
 type cachePusher func(*config.KanikoOptions, string, string, string) error
 type snapShotter interface {
 	Init() error
@@ -78,7 +83,7 @@ type stageBuilder struct {
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string) (*stageBuilder, error) {
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string) (*stageBuilder, error) {
 	sourceImage, err := util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
@@ -89,7 +94,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 
-	if err := resolveOnBuild(&stage, &imageConfig.Config); err != nil {
+	if err := resolveOnBuild(&stage, &imageConfig.Config, stageNameToIdx); err != nil {
 		return nil, err
 	}
 
@@ -136,7 +141,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	return s, nil
 }
 
-func initializeConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.ConfigFile, error) {
+func initConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.ConfigFile, error) {
 	imageConfig, err := img.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -487,7 +492,7 @@ func (s *stageBuilder) saveLayerToImage(layer v1.Layer, createdBy string) error 
 	return err
 }
 
-func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions) (map[int][]string, error) {
+func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptions, stageNameToIdx map[string]string) (map[int][]string, error) {
 	images := []v1.Image{}
 	depGraph := map[int][]string{}
 	for _, s := range stages {
@@ -509,7 +514,11 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 		if err != nil {
 			return nil, err
 		}
-		for _, c := range s.Commands {
+
+		cmds, err := dockerfile.GetOnBuildInstructions(&cfg.Config, stageNameToIdx)
+		cmds = append(cmds, s.Commands...)
+
+		for _, c := range cmds {
 			switch cmd := c.(type) {
 			case *instructions.CopyCommand:
 				if cmd.From != "" {
@@ -550,8 +559,13 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	digestToCacheKey := make(map[string]string)
 	stageIdxToDigest := make(map[string]string)
 
-	// Parse dockerfile
-	stages, err := dockerfile.Stages(opts)
+	stages, metaArgs, err := dockerfile.ParseStages(opts)
+	if err != nil {
+		return nil, err
+	}
+	stageNameToIdx := ResolveCrossStageInstructions(stages)
+
+	kanikoStages, err := dockerfile.MakeKanikoStages(opts, stages, metaArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -561,17 +575,17 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 
 	// Some stages may refer to other random images, not previous stages
-	if err := fetchExtraStages(stages, opts); err != nil {
+	if err := fetchExtraStages(kanikoStages, opts); err != nil {
 		return nil, err
 	}
-	crossStageDependencies, err := CalculateDependencies(stages, opts)
+	crossStageDependencies, err := CalculateDependencies(kanikoStages, opts, stageNameToIdx)
 	if err != nil {
 		return nil, err
 	}
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
-	for index, stage := range stages {
-		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest)
+	for index, stage := range kanikoStages {
+		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -771,15 +785,12 @@ func getHasher(snapshotMode string) (func(string) (string, error), error) {
 	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
-func resolveOnBuild(stage *config.KanikoStage, config *v1.Config) error {
-	if config.OnBuild == nil || len(config.OnBuild) == 0 {
-		return nil
-	}
-	// Otherwise, parse into commands
-	cmds, err := dockerfile.ParseCommands(config.OnBuild)
+func resolveOnBuild(stage *config.KanikoStage, config *v1.Config, stageNameToIdx map[string]string) error {
+	cmds, err := dockerfile.GetOnBuildInstructions(config, stageNameToIdx)
 	if err != nil {
 		return err
 	}
+
 	// Append to the beginning of the commands in the stage
 	stage.Commands = append(cmds, stage.Commands...)
 	logrus.Infof("Executing %v build triggers", len(cmds))
@@ -807,4 +818,20 @@ func reviewConfig(stage config.KanikoStage, config *v1.Config) {
 	if entrypoint && !cmd {
 		config.Cmd = nil
 	}
+}
+
+// iterates over a list of stages and resolves instructions referring to earlier stages
+// returns a mapping of stage name to stage id, f.e - ["first": "0", "second": "1", "target": "2"]
+func ResolveCrossStageInstructions(stages []instructions.Stage) map[string]string {
+	nameToIndex := make(map[string]string)
+	for i, stage := range stages {
+		index := strconv.Itoa(i)
+		if stage.Name != "" {
+			nameToIndex[stage.Name] = index
+		}
+		dockerfile.ResolveCrossStageCommands(stage.Commands, nameToIndex)
+	}
+
+	logrus.Debugf("Built stage name to index map: %v", nameToIndex)
+	return nameToIndex
 }
