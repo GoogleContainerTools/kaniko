@@ -259,7 +259,6 @@ func MakeKanikoStages(opts *config.KanikoOptions, stages []instructions.Stage, m
 			logrus.Infof("Resolved base name %s to %s", stage.BaseName, stage.Name)
 		}
 		baseImageIndex := baseImageIndex(index, stages)
-
 		kanikoStages = append(kanikoStages, config.KanikoStage{
 			Stage:                  stage,
 			BaseImageIndex:         baseImageIndex,

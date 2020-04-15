@@ -35,10 +35,10 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	ARG FOO=bar
 	FROM ${IMAGE}
 	RUN echo hi > /hi
-	
+
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
-	
+
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
@@ -190,46 +190,6 @@ func Test_stripEnclosingQuotes(t *testing.T) {
 	}
 }
 
-func Test_ResolveCrossStageCommands(t *testing.T) {
-	type testCase struct {
-		name       string
-		cmd        instructions.CopyCommand
-		stageToIdx map[string]string
-		expFrom    string
-	}
-
-	tests := []testCase{
-		{
-			name:       "resolve copy command",
-			cmd:        instructions.CopyCommand{From: "builder"},
-			stageToIdx: map[string]string{"builder": "0"},
-			expFrom:    "0",
-		},
-		{
-			name:       "resolve upper case FROM",
-			cmd:        instructions.CopyCommand{From: "BuIlDeR"},
-			stageToIdx: map[string]string{"builder": "0"},
-			expFrom:    "0",
-		},
-		{
-			name:       "nothing to resolve",
-			cmd:        instructions.CopyCommand{From: "downloader"},
-			stageToIdx: map[string]string{"builder": "0"},
-			expFrom:    "downloader",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			cmds := []instructions.Command{&test.cmd}
-			ResolveCrossStageCommands(cmds, test.stageToIdx)
-			if test.cmd.From != test.expFrom {
-				t.Fatalf("Failed to resolve command: expected from %s, resolved to %s", test.expFrom, test.cmd.From)
-			}
-		})
-	}
-}
-
 func Test_GetOnBuildInstructions(t *testing.T) {
 	type testCase struct {
 		name        string
@@ -294,10 +254,10 @@ func Test_targetStage(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
-	
+
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
-	
+
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
@@ -461,7 +421,6 @@ func Test_ResolveStagesArgs(t *testing.T) {
 				t.Fatal(err)
 			}
 			stagesLen := len(stages)
-
 			args := unifyArgs(metaArgs, buildArgs)
 			if err := resolveStagesArgs(stages, args); err != nil {
 				t.Fatalf("fail to resolves args %v: %v", buildArgs, err)
