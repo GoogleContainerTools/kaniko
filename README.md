@@ -270,9 +270,9 @@ docker run \
     -v "$HOME"/.config/gcloud:/root/.config/gcloud \
     -v /path/to/context:/workspace \
     gcr.io/kaniko-project/executor:latest \
-    --dockerfile /workspace/Dockerfile
-    --destination "gcr.io/$PROJECT_ID/$IMAGE_NAME:$TAG"
-    --context dir:///workspace/"
+    --dockerfile /workspace/Dockerfile \
+    --destination "gcr.io/$PROJECT_ID/$IMAGE_NAME:$TAG" \
+    --context dir:///workspace/
 ```
 
 There is also a utility script [`run_in_docker.sh`](./run_in_docker.sh) that can be used as follows:
