@@ -15,7 +15,7 @@ func TestGetGitPullMethod(t *testing.T) {
 		{
 			testName: "noEnv",
 			setEnv: func() (expectedValue string) {
-				expectedValue = "https"
+				expectedValue = gitPullMethodHttps
 				return
 			},
 		},
@@ -23,18 +23,18 @@ func TestGetGitPullMethod(t *testing.T) {
 			testName: "emptyEnv",
 			setEnv: func() (expectedValue string) {
 				_ = os.Setenv(gitPullMethodEnvKey, "")
-				expectedValue = "https"
+				expectedValue = gitPullMethodHttps
 				return
 			},
 		},
 		{
 			testName: "httpEnv",
 			setEnv: func() (expectedValue string) {
-				err := os.Setenv(gitPullMethodEnvKey, "http")
+				err := os.Setenv(gitPullMethodEnvKey, gitPullMethodHttp)
 				if nil != err {
-					expectedValue = "https"
+					expectedValue = gitPullMethodHttps
 				} else {
-					expectedValue = "http"
+					expectedValue = gitPullMethodHttp
 				}
 				return
 			},
@@ -42,8 +42,8 @@ func TestGetGitPullMethod(t *testing.T) {
 		{
 			testName: "httpsEnv",
 			setEnv: func() (expectedValue string) {
-				_ = os.Setenv(gitPullMethodEnvKey, "https")
-				expectedValue = "https"
+				_ = os.Setenv(gitPullMethodEnvKey, gitPullMethodHttps)
+				expectedValue = gitPullMethodHttps
 				return
 			},
 		},
@@ -51,7 +51,7 @@ func TestGetGitPullMethod(t *testing.T) {
 			testName: "unknownEnv",
 			setEnv: func() (expectedValue string) {
 				_ = os.Setenv(gitPullMethodEnvKey, "unknown")
-				expectedValue = "https"
+				expectedValue = gitPullMethodHttps
 				return
 			},
 		},
