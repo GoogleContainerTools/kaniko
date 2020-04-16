@@ -60,7 +60,7 @@ func TestGetGitPullMethod(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
 			expectedValue := tt.setEnv()
-			testutil.CheckDeepEqual(t, getGitPullMethod(), expectedValue)
+			testutil.CheckDeepEqual(t, expectedValue, getGitPullMethod())
 		})
 	}
 }
