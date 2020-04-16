@@ -27,12 +27,12 @@ import (
 
 const (
 	gitPullMethodEnvKey = "GIT_PULL_METHOD"
-	gitPullMethodHttps  = "https"
-	gitPullMethodHttp   = "http"
+	gitPullMethodHTTPS  = "https"
+	gitPullMethodHTTP   = "http"
 )
 
 var (
-	supportedGitPullMethods = map[string]bool{gitPullMethodHttps: true, gitPullMethodHttp: true}
+	supportedGitPullMethods = map[string]bool{gitPullMethodHTTPS: true, gitPullMethodHTTP: true}
 )
 
 // Git unifies calls to download and unpack the build context.
