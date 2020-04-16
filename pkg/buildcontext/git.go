@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	supportedGitPullMethods = map[string]bool{"https":true, "http":true}
+	supportedGitPullMethods = map[string]bool{"https": true, "http": true}
 )
 
 // Git unifies calls to download and unpack the build context.

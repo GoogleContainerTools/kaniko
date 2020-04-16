@@ -1,42 +1,66 @@
 package buildcontext
 
 import (
-	"github.com/GoogleContainerTools/kaniko/testutil"
 	"os"
 	"testing"
+
+	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
 func TestGetGitPullMethod(t *testing.T) {
 	tests := []struct {
-		setEnv        func()
-		expectedValue string
+		testName string
+		setEnv   func() (expectedValue string)
 	}{
 		{
-			setEnv:        func() {},
-			expectedValue: "https",
-		},
-		{
-			setEnv: func() {
-				_ = os.Setenv(gitPullMethodEnvKey, "http")
+			testName: "noEnv",
+			setEnv: func() (expectedValue string) {
+				expectedValue = "https"
+				return
 			},
-			expectedValue: "http",
 		},
 		{
-			setEnv: func() {
+			testName: "emptyEnv",
+			setEnv: func() (expectedValue string) {
+				_ = os.Setenv(gitPullMethodEnvKey, "")
+				expectedValue = "https"
+				return
+			},
+		},
+		{
+			testName: "httpEnv",
+			setEnv: func() (expectedValue string) {
+				err := os.Setenv(gitPullMethodEnvKey, "http")
+				if nil != err {
+					expectedValue = "https"
+				} else {
+					expectedValue = "http"
+				}
+				return
+			},
+		},
+		{
+			testName: "httpsEnv",
+			setEnv: func() (expectedValue string) {
 				_ = os.Setenv(gitPullMethodEnvKey, "https")
+				expectedValue = "https"
+				return
 			},
-			expectedValue: "https",
 		},
 		{
-			setEnv: func() {
+			testName: "unknownEnv",
+			setEnv: func() (expectedValue string) {
 				_ = os.Setenv(gitPullMethodEnvKey, "unknown")
+				expectedValue = "https"
+				return
 			},
-			expectedValue: "https",
 		},
 	}
 
 	for _, tt := range tests {
-		tt.setEnv()
-		testutil.CheckDeepEqual(t, getGitPullMethod(), tt.expectedValue)
+		t.Run(tt.testName, func(t *testing.T) {
+			expectedValue := tt.setEnv()
+			testutil.CheckDeepEqual(t, getGitPullMethod(), expectedValue)
+		})
 	}
 }
