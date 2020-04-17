@@ -58,7 +58,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 func getGitPullMethod() string {
 	gitPullMethod := os.Getenv(gitPullMethodEnvKey)
 	if ok := supportedGitPullMethods[gitPullMethod]; !ok {
-		gitPullMethod = "https"
+		gitPullMethod = gitPullMethodHTTPS
 	}
 	return gitPullMethod
 }
