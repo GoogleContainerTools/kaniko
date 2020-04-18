@@ -217,7 +217,8 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 
 func (cr *CachingRunCommand) FilesToSnapshot() []string {
 	f := cr.extractedFiles
-	logrus.Debugf("files extracted from caching run command %s", f)
+	logrus.Debugf("%d files extracted by caching run command", len(f))
+	logrus.Tracef("Extracted files: %s", f)
 
 	return f
 }

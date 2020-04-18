@@ -526,7 +526,7 @@ You need to set `--destination` as well (for example `--destination=image`).
 
 #### --verbosity
 
-Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
+Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set the logging level. Defaults to `info`.
 
 #### --whitelist-var-run
 
