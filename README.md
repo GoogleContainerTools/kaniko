@@ -272,7 +272,7 @@ docker run \
     gcr.io/kaniko-project/executor:latest \
     --dockerfile /workspace/Dockerfile
     --destination "gcr.io/$PROJECT_ID/$IMAGE_NAME:$TAG"
-    --context dir:///workspace/"
+    --context dir:///workspace/
 ```
 
 There is also a utility script [`run_in_docker.sh`](./run_in_docker.sh) that can be used as follows:
