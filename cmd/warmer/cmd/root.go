@@ -29,14 +29,16 @@ import (
 )
 
 var (
-	opts      = &config.WarmerOptions{}
-	logLevel  string
-	logFormat string
+	opts         = &config.WarmerOptions{}
+	logLevel     string
+	logFormat    string
+	logTimestamp bool
 )
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (debug, info, warn, error, fatal, panic")
 	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
+	RootCmd.PersistentFlags().BoolVar(&logTimestamp, "log-timestamp", logging.DefaultLogTimestamp, "Timestamp in log output")
 
 	addKanikoOptionsFlags()
 	addHiddenFlags()
@@ -45,7 +47,7 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "cache warmer",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := logging.Configure(logLevel, logFormat); err != nil {
+		if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
 			return err
 		}
 

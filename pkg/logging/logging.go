@@ -26,6 +26,8 @@ import (
 const (
 	// Default log level
 	DefaultLevel = "info"
+	// Default timestamp in logs
+	DefaultLogTimestamp = false
 
 	// Text format
 	FormatText = "text"
@@ -36,7 +38,7 @@ const (
 )
 
 // Configure sets the logrus logging level and formatter
-func Configure(level, format string) error {
+func Configure(level, format string, logTimestamp bool) error {
 	lvl, err := logrus.ParseLevel(level)
 	if err != nil {
 		return errors.Wrap(err, "parsing log level")
@@ -48,10 +50,12 @@ func Configure(level, format string) error {
 	case FormatText:
 		formatter = &logrus.TextFormatter{
 			DisableColors: true,
+			FullTimestamp: logTimestamp,
 		}
 	case FormatColor:
 		formatter = &logrus.TextFormatter{
-			ForceColors: true,
+			ForceColors:   true,
+			FullTimestamp: logTimestamp,
 		}
 	case FormatJSON:
 		formatter = &logrus.JSONFormatter{}
