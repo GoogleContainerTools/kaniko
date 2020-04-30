@@ -18,7 +18,7 @@ package constants
 
 const (
 	// RootDir is the path to the root directory
-	RootDir = "/root"
+	RootDir = "/"
 
 	// WorkspaceDir is the path to the workspace directory
 	WorkspaceDir = "/workspace"

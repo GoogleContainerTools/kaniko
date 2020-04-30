@@ -200,7 +200,6 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	}
 
 	cr.layer = layers[0]
-	cr.readSuccess = true
 
 	cr.extractedFiles, err = util.GetFSFromLayers(
 		kConfig.RootDir,

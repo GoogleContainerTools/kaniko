@@ -51,6 +51,7 @@ func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
 
 // Init initializes a new snapshotter
 func (s *Snapshotter) Init() error {
+	logrus.Info("Taking initial snapshot")
 	_, _, err := s.scanFullFilesystem()
 	return err
 }

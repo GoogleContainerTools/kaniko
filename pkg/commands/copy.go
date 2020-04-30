@@ -189,8 +189,6 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	}
 
 	cr.layer = layers[0]
-	cr.readSuccess = true
-
 	cr.extractedFiles, err = util.GetFSFromLayers(kConfig.RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
 	logrus.Debugf("extractedFiles: %s", cr.extractedFiles)

@@ -317,13 +317,7 @@ func (s *stageBuilder) build() error {
 		return errors.Wrap(err, "failed to check filesystem whitelist")
 	}
 
-	// Take initial snapshot
-	t := timing.Start("Initial FS snapshot")
-	if err := s.snapshotter.Init(); err != nil {
-		return err
-	}
-
-	timing.DefaultRun.Stop(t)
+	initSnapshotTaken := false
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
@@ -346,6 +340,24 @@ func (s *stageBuilder) build() error {
 
 		logrus.Info(command.String())
 
+		isCacheCommand := func() bool {
+			switch command.(type) {
+			case commands.Cached:
+				return true
+			default:
+				return false
+			}
+		}
+		if !isCacheCommand() && !initSnapshotTaken {
+			// Take initial snapshot
+			t := timing.Start("Initial FS snapshot")
+			if err := s.snapshotter.Init(); err != nil {
+				return err
+			}
+			timing.DefaultRun.Stop(t)
+			initSnapshotTaken = true
+		}
+
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 			return errors.Wrap(err, "failed to execute command")
 		}
@@ -356,16 +368,7 @@ func (s *stageBuilder) build() error {
 			continue
 		}
 
-		fn := func() bool {
-			switch v := command.(type) {
-			case commands.Cached:
-				return v.ReadSuccess()
-			default:
-				return false
-			}
-		}
-
-		if fn() {
+		if isCacheCommand() {
 			v := command.(commands.Cached)
 			layer := v.Layer()
 			if err := s.saveLayerToImage(layer, command.String()); err != nil {
@@ -388,6 +391,7 @@ func (s *stageBuilder) build() error {
 			// Push layer to cache (in parallel) now along with new config file
 			if s.opts.Cache && command.ShouldCacheOutput() {
 				cacheGroup.Go(func() error {
+					logrus.Infof("%s is saved at %s", ck, tarPath)
 					return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
 				})
 			}
