@@ -347,15 +347,18 @@ func (s *stageBuilder) build() error {
 			default:
 				return false
 			}
-		}
-		if !isCacheCommand() && !initSnapshotTaken {
-			// Take initial snapshot
-			t := timing.Start("Initial FS snapshot")
-			if err := s.snapshotter.Init(); err != nil {
-				return err
+		}()
+		if !initSnapshotTaken && !isCacheCommand && !command.MetadataOnly() {
+			if !command.ProvidesFilesToSnapshot() {
+				// Take initial snapshot if command is not metadata only
+				// and does not return a list of files changed
+				t := timing.Start("Initial FS snapshot")
+				if err := s.snapshotter.Init(); err != nil {
+					return err
+				}
+				timing.DefaultRun.Stop(t)
+				initSnapshotTaken = true
 			}
-			timing.DefaultRun.Stop(t)
-			initSnapshotTaken = true
 		}
 
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
@@ -368,7 +371,7 @@ func (s *stageBuilder) build() error {
 			continue
 		}
 
-		if isCacheCommand() {
+		if isCacheCommand {
 			v := command.(commands.Cached)
 			layer := v.Layer()
 			if err := s.saveLayerToImage(layer, command.String()); err != nil {

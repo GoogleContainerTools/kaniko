@@ -138,6 +138,10 @@ func (c *CopyCommand) MetadataOnly() bool {
 	return false
 }
 
+func (c *CopyCommand) ProvidesFilesToSnapshot() bool {
+	return true
+}
+
 func (c *CopyCommand) RequiresUnpackedFS() bool {
 	return true
 }
@@ -208,6 +212,14 @@ func (cr *CachingCopyCommand) FilesToSnapshot() []string {
 	logrus.Debugf("files extracted by caching copy command %s", f)
 
 	return f
+}
+
+func (cr *CachingCopyCommand) MetadataOnly() bool {
+	return false
+}
+
+func (cr *CachingCopyCommand) ProvidesFilesToSnapshot() bool {
+	return true
 }
 
 func (cr *CachingCopyCommand) String() string {

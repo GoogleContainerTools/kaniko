@@ -75,3 +75,7 @@ func (w *WorkdirCommand) String() string {
 func (w *WorkdirCommand) MetadataOnly() bool {
 	return false
 }
+
+func (w *WorkdirCommand) ProvidesFilesToSnapshot() bool {
+	return true
+}

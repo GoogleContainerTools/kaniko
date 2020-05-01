@@ -116,6 +116,10 @@ func (a *AddCommand) FilesToSnapshot() []string {
 	return a.snapshotFiles
 }
 
+func (a *AddCommand) ProvidesFilesToSnapshot() bool {
+	return true
+}
+
 // String returns some information about the command for the image config
 func (a *AddCommand) String() string {
 	return a.cmd.String()
