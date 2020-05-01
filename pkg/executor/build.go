@@ -391,7 +391,6 @@ func (s *stageBuilder) build() error {
 			// Push layer to cache (in parallel) now along with new config file
 			if s.opts.Cache && command.ShouldCacheOutput() {
 				cacheGroup.Go(func() error {
-					logrus.Infof("%s is saved at %s", ck, tarPath)
 					return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
 				})
 			}
