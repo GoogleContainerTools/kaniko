@@ -213,8 +213,6 @@ func Test_ParentDirectories(t *testing.T) {
 			defer func() { config.RootDir = original }()
 			config.RootDir = tt.rootDir
 			actual := ParentDirectories(tt.path)
-			sort.Strings(actual)
-			sort.Strings(tt.expected)
 
 			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
 		})
