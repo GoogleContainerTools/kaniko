@@ -207,7 +207,8 @@ func (cr *CachingCopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs 
 
 func (cr *CachingCopyCommand) FilesToSnapshot() []string {
 	f := cr.extractedFiles
-	logrus.Debugf("files extracted by caching copy command %s", f)
+	logrus.Debugf("%d files extracted by caching copy command", len(f))
+	logrus.Tracef("Extracted files: %s", f)
 
 	return f
 }
