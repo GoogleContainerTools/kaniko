@@ -23,7 +23,7 @@ type Cached interface {
 }
 
 type caching struct {
-	layer       v1.Layer
+	layer v1.Layer
 }
 
 func (c caching) Layer() v1.Layer {
