@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -253,6 +254,9 @@ func MakeKanikoStages(opts *config.KanikoOptions, stages []instructions.Stage, m
 	if err := resolveStagesArgs(stages, args); err != nil {
 		return nil, errors.Wrap(err, "resolving args")
 	}
+	if opts.SkipUnusedStages {
+		stages = skipUnusedStages(stages, &targetStage, opts.Target)
+	}
 	var kanikoStages []config.KanikoStage
 	for index, stage := range stages {
 		if len(stage.Name) > 0 {
@@ -311,4 +315,54 @@ func unifyArgs(metaArgs []instructions.ArgCommand, buildArgs []string) []string 
 		args = append(args, fmt.Sprintf("%s=%s", k, v))
 	}
 	return args
+}
+
+// skipUnusedStages returns the list of used stages without the unnecessaries ones
+func skipUnusedStages(stages []instructions.Stage, lastStageIndex *int, target string) []instructions.Stage {
+	stagesDependencies := make(map[string]bool)
+	var onlyUsedStages []instructions.Stage
+	idx := *lastStageIndex
+
+	lastStageBaseName := stages[idx].BaseName
+
+	for i := idx; i >= 0; i-- {
+		s := stages[i]
+		if (s.Name != "" && stagesDependencies[s.Name]) || s.Name == lastStageBaseName || i == idx {
+			for _, c := range s.Commands {
+				switch cmd := c.(type) {
+				case *instructions.CopyCommand:
+					stageName := cmd.From
+					if copyFromIndex, err := strconv.Atoi(stageName); err == nil {
+						stageName = stages[copyFromIndex].Name
+					}
+					if !stagesDependencies[stageName] {
+						stagesDependencies[stageName] = true
+					}
+				}
+			}
+			if i != idx {
+				stagesDependencies[s.BaseName] = true
+			}
+		}
+	}
+	dependenciesLen := len(stagesDependencies)
+	if target == "" && dependenciesLen == 0 {
+		return stages
+	} else if dependenciesLen > 0 {
+		for i := 0; i < idx; i++ {
+			if stages[i].Name == "" {
+				continue
+			}
+			s := stages[i]
+			if stagesDependencies[s.Name] || s.Name == lastStageBaseName {
+				onlyUsedStages = append(onlyUsedStages, s)
+			}
+		}
+	}
+	onlyUsedStages = append(onlyUsedStages, stages[idx])
+	if idx > len(onlyUsedStages)-1 {
+		*lastStageIndex = len(onlyUsedStages) - 1
+	}
+
+	return onlyUsedStages
 }
