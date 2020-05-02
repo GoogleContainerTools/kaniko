@@ -39,7 +39,6 @@ var snapshotPathPrefix = config.KanikoDir
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
-	i         int
 	l         *LayeredMap
 	directory string
 	whitelist []util.WhitelistEntry
@@ -52,8 +51,6 @@ func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
 
 // Init initializes a new snapshotter
 func (s *Snapshotter) Init() error {
-	s.i++
-	logrus.Infof("Taking initial snapshot %d", s.i)
 	_, _, err := s.scanFullFilesystem()
 	return err
 }

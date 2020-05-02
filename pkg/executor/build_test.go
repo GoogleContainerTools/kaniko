@@ -114,8 +114,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 		opts  *config.KanikoOptions
 	}
 	type args struct {
-		index int
-		files []string
+		index    int
+		files    []string
+		hasFiles bool
 	}
 	tests := []struct {
 		name   string
@@ -163,6 +164,36 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "not final stage not last command but empty list of files",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: false,
+					Stage: stage,
+				},
+			},
+			args: args{
+				index:    0,
+				files:    []string{},
+				hasFiles: true,
+			},
+			want: false,
+		},
+		{
+			name: "not final stage not last command no files provided",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: false,
+					Stage: stage,
+				},
+			},
+			args: args{
+				index:    0,
+				files:    nil,
+				hasFiles: false,
+			},
+			want: true,
+		},
+		{
 			name: "caching enabled intermediate container",
 			fields: fields{
 				stage: config.KanikoStage{
@@ -187,7 +218,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 				stage: tt.fields.stage,
 				opts:  tt.fields.opts,
 			}
-			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files); got != tt.want {
+			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files, tt.args.hasFiles); got != tt.want {
 				t.Errorf("stageBuilder.shouldTakeSnapshot() = %v, want %v", got, tt.want)
 			}
 		})

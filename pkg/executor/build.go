@@ -367,7 +367,7 @@ func (s *stageBuilder) build() error {
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files) {
+		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot()) {
 			continue
 		}
 
@@ -425,7 +425,7 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	return snapshot, err
 }
 
-func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
+func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
 	isLastCommand := index == len(s.stage.Commands)-1
 
 	// We only snapshot the very end with single snapshot mode on.
@@ -438,8 +438,8 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 		return true
 	}
 
-	// nil means snapshot everything.
-	if files == nil {
+	// if command does not provide files, snapshot everything.
+	if !provideFiles {
 		return true
 	}
 
