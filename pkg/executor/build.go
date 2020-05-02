@@ -318,6 +318,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	initSnapshotTaken := false
+	layer := 0
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
@@ -370,7 +371,8 @@ func (s *stageBuilder) build() error {
 		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot()) {
 			continue
 		}
-
+		layer++
+    logrus.Infof(fmt.Sprintf("%d", layer))
 		if isCacheCommand {
 			v := command.(commands.Cached)
 			layer := v.Layer()

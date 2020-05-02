@@ -33,7 +33,7 @@ func (b *BaseCommand) FilesToSnapshot() []string {
 }
 
 func (b *BaseCommand) ProvidesFilesToSnapshot() bool {
-	return false
+	return true
 }
 
 func (b *BaseCommand) FilesUsedFromContext(_ *v1.Config, _ *dockerfile.BuildArgs) ([]string, error) {
