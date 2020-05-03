@@ -552,6 +552,10 @@ You need to set `--destination` as well (for example `--destination=image`).
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set the logging level. Defaults to `info`.
 
+#### --log-format
+
+Set this flag as `--log-format=<text|color|json>` to set the log format. Defaults to `color`.
+
 #### --whitelist-var-run
 
 Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
