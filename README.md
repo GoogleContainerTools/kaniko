@@ -360,7 +360,7 @@ Create a `config.json` file with your Docker registry url and the previous gener
 ```
 {
 	"auths": {
-		"https://index.docker.io/v1/": {
+		"https://index.docker.io/v2/": {
 			"auth": "xxxxxxxxxxxxxxx"
 		}
 	}
