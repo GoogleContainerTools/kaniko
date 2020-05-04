@@ -1,3 +1,84 @@
+# v0.20.0 Release - 2020-05-04
+This is the 20th release of Kaniko! Thank you for patience.
+Please give us feedback on how we are doing by taking a short [5 question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)
+
+In this release, the highlights are:
+1. Fix doubling cache layers size and error due to duplicate files in cached layers
+1. Kaniko now supports reading a tar context from a stdin using `--context=tar:/.
+1. Kaniko adds a new flag `--context-sub-path` to represent a subpath within the given context
+1. Skip buiklding unused stages using `--skip-unused-stages` flags.
+
+# Bug Fixes
+* Snapshot FS on first cache miss. [#1214](https://github.com/GoogleContainerTools/kaniko/pull/1214)
+* Add secondary group impersonation w/ !cgo support  [#1164](https://github.com/GoogleContainerTools/kaniko/pull/1164)
+* kaniko generates images that docker supports in the presence of dangling symlinks [#1193](https://github.com/GoogleContainerTools/kaniko/pull/1193)
+* Handle `MAINTAINERS` when passing `--single-snapshot`. [#1192](https://github.com/GoogleContainerTools/kaniko/pull/1192)
+* Multistage ONBUILD COPY Support [#1190](https://github.com/GoogleContainerTools/kaniko/pull/1190)
+* fix previous name checking in 'executor.build.fetchExtraStages' [#1167](https://github.com/GoogleContainerTools/kaniko/pull/1167)
+* Always add parent directories of files to snapshots. [#1166](https://github.com/GoogleContainerTools/kaniko/pull/1166)
+
+# New Features
+* Add ability to use public GCR repos without being authenticated [#1140](https://github.com/GoogleContainerTools/kaniko/pull/1140)
+* Add timestamp to logs [#1211](https://github.com/GoogleContainerTools/kaniko/pull/1211)
+* Add http support for git repository context [#1196](https://github.com/GoogleContainerTools/kaniko/pull/1196)
+* Kaniko now resolves args from all stages [#1160](https://github.com/GoogleContainerTools/kaniko/pull/1160)
+* kaniko adds a new flag `--context-sub-path` to represent a subpath within the given context
+* feat: allow injecting through stdin tar.gz on kaniko [#1139](https://github.com/GoogleContainerTools/kaniko/pull/1139)
+* Set image platform for any build [#1130](https://github.com/GoogleContainerTools/kaniko/pull/1130)
+* Add --log-format parameter to README.md [#1216](https://github.com/GoogleContainerTools/kaniko/pull/1216)
+* feat: multistages now respect dependencies without building unnecessary stages [#1165](https://github.com/GoogleContainerTools/kaniko/pull/1165)
+
+# Refactors and Updates
+* Refactor Kaniko to test across multistages [#1155](https://github.com/GoogleContainerTools/kaniko/pull/1155)
+* upgrade go container registry to latest master [#1146](https://github.com/GoogleContainerTools/kaniko/pull/1146)
+* small perf optimizing. Only remove whiteout path if it needs to be included in base image [#1147](https://github.com/GoogleContainerTools/kaniko/pull/1147)
+* Don't generate cache key, if not caching builds. [#1194](https://github.com/GoogleContainerTools/kaniko/pull/1194)
+* Set very large logs to Trace level [#1203](https://github.com/GoogleContainerTools/kaniko/pull/1203)
+* optimize: don't parse Dockerfile twice, reusing stages [#1174](https://github.com/GoogleContainerTools/kaniko/pull/1174)
+* 32bit overflow fix [#1168](https://github.com/GoogleContainerTools/kaniko/pull/1168)
+
+# Documentation
+* Update Pushing to Docker Hub to use v2 api [#1204](https://github.com/GoogleContainerTools/kaniko/pull/1204)
+* Fix line endings in shell script [#1199](https://github.com/GoogleContainerTools/kaniko/pull/1199)
+
+Huge thank you for this release towards our contributors: 
+- Anthony Davies
+- Batuhan Apaydın
+- Ben Einaudi
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Cole Wippern
+- cvgw
+- Dani Raznikov
+- DracoBlue
+- Gilbert Gilb's
+- Giovan Isa Musthofa
+- James Ravn
+- Jon Henrik Bjørnstad
+- Jordan GOASDOUE
+- Jordan Goasdoué
+- Liubov Grinkevich
+- Logan.Price
+- Michel Hollands
+- Moritz Wanzenböck
+- ohchang-kwon
+- Or Sela
+- PhoenixMage
+- Sam Stoelinga
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Stromberg
+- Thomas Strömberg
+- tinkerborg
+- Tom Prince
+- Vincent Latombe
+- Wietse Muizelaar
+- xanonid
+- Yoan Blanc
+- Yuheng Zhang
+- yw-liu
+
+
 # v0.19.0 Release - 2020-03-18
 This is the 19th release of Kaniko!
  
