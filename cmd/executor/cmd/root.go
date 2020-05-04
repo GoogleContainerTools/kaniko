@@ -39,16 +39,18 @@ import (
 )
 
 var (
-	opts       = &config.KanikoOptions{}
-	ctxSubPath string
-	force      bool
-	logLevel   string
-	logFormat  string
+	opts         = &config.KanikoOptions{}
+	ctxSubPath   string
+	force        bool
+	logLevel     string
+	logFormat    string
+	logTimestamp bool
 )
 
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (trace, debug, info, warn, error, fatal, panic)")
 	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
+	RootCmd.PersistentFlags().BoolVar(&logTimestamp, "log-timestamp", logging.DefaultLogTimestamp, "Timestamp in log output")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 
 	addKanikoOptionsFlags()
@@ -62,7 +64,7 @@ var RootCmd = &cobra.Command{
 		if cmd.Use == "executor" {
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
 
-			if err := logging.Configure(logLevel, logFormat); err != nil {
+			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
 				return err
 			}
 
