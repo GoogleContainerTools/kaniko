@@ -318,6 +318,12 @@ func (s *stageBuilder) build() error {
 	}
 
 	initSnapshotTaken := false
+	if s.opts.SingleSnapshot {
+		if err := s.initSnapshotWithTimings(); err != nil {
+			return err
+		}
+		initSnapshotTaken = true
+	}
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
@@ -348,15 +354,13 @@ func (s *stageBuilder) build() error {
 				return false
 			}
 		}()
-		if !initSnapshotTaken && !command.ProvidesFilesToSnapshot() {
-				// Take initial snapshot if command does not expect to return
-				// a list of files.
-				t := timing.Start("Initial FS snapshot")
-				if err := s.snapshotter.Init(); err != nil {
-					return err
-				}
-				timing.DefaultRun.Stop(t)
-				initSnapshotTaken = true
+		if !initSnapshotTaken && !isCacheCommand && !command.ProvidesFilesToSnapshot() {
+			// Take initial snapshot if command does not expect to return
+			// a list of files.
+			if err := s.initSnapshotWithTimings(); err != nil {
+				return err
+			}
+			initSnapshotTaken = true
 		}
 
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
@@ -423,19 +427,12 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	return snapshot, err
 }
 
-func (s *stageBuilder) singleSnapshot(index int) bool {
-  isLastCommand := index == len(s.stage.Commands)-1
-
-  // We only snapshot the very end with single snapshot mode on.
-  if s.opts.SingleSnapshot {
-    return isLastCommand
-  }
-  return false
-}
-
 func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
-	if s.singleSnapshot(index){
-		return true
+	isLastCommand := index == len(s.stage.Commands)-1
+
+	// We only snapshot the very end with single snapshot mode on.
+	if s.opts.SingleSnapshot {
+		return isLastCommand
 	}
 
 	// Always take snapshots if we're using the cache.
@@ -845,4 +842,13 @@ func ResolveCrossStageInstructions(stages []instructions.Stage) map[string]strin
 
 	logrus.Debugf("Built stage name to index map: %v", nameToIndex)
 	return nameToIndex
+}
+
+func (s stageBuilder) initSnapshotWithTimings() error {
+	t := timing.Start("Initial FS snapshot")
+	if err := s.snapshotter.Init(); err != nil {
+		return err
+	}
+	timing.DefaultRun.Stop(t)
+	return nil
 }
