@@ -4,7 +4,7 @@
 
 ![kaniko logo](logo/Kaniko-Logo.png)
 
-kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster. 
+kaniko is a tool to build container images from a Dockerfile, inside a container or Kubernetes cluster.
 
 kaniko doesn't depend on a Docker daemon and executes each command within a Dockerfile completely in userspace.
 This enables building container images in environments that can't easily or securely run a Docker daemon, such as a standard Kubernetes cluster.
@@ -15,7 +15,7 @@ We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kuber
 
 :mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
 
-Kaniko is not an officially supported Google project. 
+Kaniko is not an officially supported Google project.
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
@@ -50,6 +50,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache](#--cache)
     - [--cache-dir](#--cache-dir)
     - [--cache-repo](#--cache-repo)
+    - [--context-sub-path](#context-sub-path)
     - [--digest-file](#--digest-file)
     - [--oci-layout-path](#--oci-layout-path)
     - [--insecure-registry](#--insecure-registry)
@@ -69,6 +70,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--verbosity](#--verbosity)
     - [--whitelist-var-run](#--whitelist-var-run)
     - [--label](#--label)
+    - [--skip-unused-stages](#skip-unused-stages)
   - [Debug Image](#debug-image)
 - [Security](#security)
 - [Comparison with Other Tools](#comparison-with-other-tools)
@@ -121,10 +123,17 @@ Right now, kaniko supports these storage solutions:
 - S3 Bucket
 - Azure Blob Storage
 - Local Directory
+- Local Tar
+- Standard Input
 - Git Repository
 
-_Note: the local directory option refers to a directory within the kaniko container.
+_Note about Local Directory: this option refers to a directory within the kaniko container.
 If you wish to use this option, you will need to mount in your build context into the container as a directory._
+
+_Note about Local Tar: this option refers to a tar gz  file within the kaniko container.
+If you wish to use this option, you will need to mount in your build context into the container as a file._
+
+_Note about Standard Input: the only Standard Input allowed by kaniko is in `.tar.gz` format._
 
 If using a GCS or S3 bucket, you will first need to create a compressed tar of your build context and upload it to your bucket.
 Once running, kaniko will then download and unpack the compressed tar of the build context before starting the image build.
@@ -147,6 +156,7 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 |---------|---------|---------|
 | Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
 | Local Tar Gz      | tar://[path to a .tar.gz in the kaniko container]               | `tar://path/to/context.tar.gz`                                            |
+| Standard Input    | tar://[stdin]                                                   | `tar://stdin`                                                 |
 | GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
 | S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
 | Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
@@ -160,6 +170,20 @@ If you are using Azure Blob Storage for context file, you will need to pass [Azu
 
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
+
+### Using Standard Input
+If running kaniko and using Standard Input build context, you will need to add the docker or kubernetes `-i, --interactive` flag.
+Once running, kaniko will then get the data from `STDIN` and create the build context as a compressed tar.
+It will then unpack the compressed tar of the build context before starting the image build.
+If no data is piped during the interactive run, you will need to send the EOF signal by yourself by pressing `Ctrl+D`.
+
+Complete example of how to interactively run kaniko with `.tar.gz` Standard Input data, using docker:
+```shell
+echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | docker run \
+  --interactive -v $(pwd):/workspace gcr.io/kaniko-project/executor:latest \
+  --context tar://stdin \
+  --destination=<gcr.io/$project/$image:$tag>
+```
 
 ### Running kaniko
 
@@ -270,9 +294,9 @@ docker run \
     -v "$HOME"/.config/gcloud:/root/.config/gcloud \
     -v /path/to/context:/workspace \
     gcr.io/kaniko-project/executor:latest \
-    --dockerfile /workspace/Dockerfile
-    --destination "gcr.io/$PROJECT_ID/$IMAGE_NAME:$TAG"
-    --context dir:///workspace/"
+    --dockerfile /workspace/Dockerfile \
+    --destination "gcr.io/$PROJECT_ID/$IMAGE_NAME:$TAG" \
+    --context dir:///workspace/
 ```
 
 There is also a utility script [`run_in_docker.sh`](./run_in_docker.sh) that can be used as follows:
@@ -280,7 +304,7 @@ There is also a utility script [`run_in_docker.sh`](./run_in_docker.sh) that can
 ./run_in_docker.sh <path to Dockerfile> <path to build context> <destination of final image>
 ```
 
-_NOTE: `run_in_docker.sh` expects a path to a 
+_NOTE: `run_in_docker.sh` expects a path to a
 Dockerfile relative to the absolute path of the build context._
 
 An example run, specifying the Dockerfile in the container directory `/workspace`, the build
@@ -336,7 +360,7 @@ Create a `config.json` file with your Docker registry url and the previous gener
 ```
 {
 	"auths": {
-		"https://index.docker.io/v1/": {
+		"https://index.docker.io/v2/": {
 			"auth": "xxxxxxxxxxxxxxx"
 		}
 	}
@@ -526,7 +550,11 @@ You need to set `--destination` as well (for example `--destination=image`).
 
 #### --verbosity
 
-Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug>` to set the logging level. Defaults to `info`.
+Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set the logging level. Defaults to `info`.
+
+#### --log-format
+
+Set this flag as `--log-format=<text|color|json>` to set the log format. Defaults to `color`.
 
 #### --whitelist-var-run
 
@@ -535,6 +563,11 @@ Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run
 #### --label
 
 Set this flag as `--label key=value` to set some metadata to the final image. This is equivalent as using the `LABEL` within the Dockerfile.
+
+#### --skip-unused-stages
+
+This flag builds only used stages if defined to `true`.
+Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile
 
 ### Debug Image
 

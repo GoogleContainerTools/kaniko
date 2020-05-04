@@ -35,8 +35,8 @@ import (
 // output set.
 // * Add all ancestors of each path to the output set.
 func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string, err error) {
-	logrus.Info("Resolving paths")
-	logrus.Debugf("Resolving paths %s", paths)
+	logrus.Infof("Resolving %d paths", len(paths))
+	logrus.Tracef("Resolving paths %s", paths)
 
 	fileSet := make(map[string]bool)
 
@@ -73,6 +73,7 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 			}
 
 			logrus.Debugf("symlink path %s, target does not exist", f)
+			continue
 		}
 
 		// If the given path is a symlink and the target is part of the whitelist

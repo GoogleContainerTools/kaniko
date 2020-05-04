@@ -468,10 +468,10 @@ func ParentDirectories(path string) []string {
 		}
 		dir, _ = filepath.Split(dir)
 		dir = filepath.Clean(dir)
-		paths = append(paths, dir)
+		paths = append([]string{dir}, paths...)
 	}
 	if len(paths) == 0 {
-		paths = append(paths, config.RootDir)
+		paths = []string{config.RootDir}
 	}
 	return paths
 }
