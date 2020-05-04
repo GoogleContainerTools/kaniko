@@ -58,6 +58,8 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cleanup](#--cleanup)
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
+    - [--log-format](#--log-format)
+    - [--log-timestamp](#--log-timestamp)
     - [--no-push](#--no-push)
     - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
@@ -555,6 +557,10 @@ Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set 
 #### --log-format
 
 Set this flag as `--log-format=<text|color|json>` to set the log format. Defaults to `color`.
+
+#### --log-timestamp
+
+Set this flag as `--log-format=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
 
 #### --whitelist-var-run
 
