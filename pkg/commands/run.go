@@ -80,11 +80,10 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	// If specified, run the command as a specific user
 	if userStr != "" {
-		uid, gid, err := util.GetUIDAndGIDFromString(userStr, true)
+		cmd.SysProcAttr.Credential, err = util.SyscallCredentials(userStr)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "credentials")
 		}
-		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 	}
 
 	env, err := addDefaultHOME(userStr, replacementEnvs)
@@ -94,6 +93,7 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	cmd.Env = env
 
+	logrus.Infof("Running: %s", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "starting command")
 	}

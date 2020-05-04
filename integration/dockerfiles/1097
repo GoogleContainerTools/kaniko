@@ -1,0 +1,12 @@
+FROM ubuntu:latest
+
+RUN groupadd -g 20000 bar
+RUN groupadd -g 10000 foo
+
+RUN useradd -c "Foo user" -u 10000 -g 10000 -G bar -m foo
+
+RUN id foo
+
+USER foo
+
+RUN id
