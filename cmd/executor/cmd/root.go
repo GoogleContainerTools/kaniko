@@ -40,7 +40,7 @@ import (
 
 var (
 	opts         = &config.KanikoOptions{}
-  ctxSubPath string
+        ctxSubPath string
 	force        bool
 	logLevel     string
 	logFormat    string
