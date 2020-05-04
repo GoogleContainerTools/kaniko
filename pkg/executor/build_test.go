@@ -379,11 +379,11 @@ COPY --from=second /bar /bat
 				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
 			}
 
-			stageNameToIdx := ResolveCrossStageInstructions(testStages)
 			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
 			if err != nil {
 				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
 			}
+			stageNameToIdx := ResolveCrossStageInstructions(kanikoStages)
 
 			got, err := CalculateDependencies(kanikoStages, opts, stageNameToIdx)
 			if err != nil {
@@ -933,11 +933,12 @@ COPY %s bar.txt
 			if err != nil {
 				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
 			}
-			_ = ResolveCrossStageInstructions(testStages)
+
 			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
 			if err != nil {
 				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
 			}
+			_ = ResolveCrossStageInstructions(kanikoStages)
 			stage := kanikoStages[0]
 
 			cmds := stage.Commands
@@ -1008,11 +1009,12 @@ COPY %s bar.txt
 			if err != nil {
 				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
 			}
-			_ = ResolveCrossStageInstructions(testStages)
+
 			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
 			if err != nil {
 				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
 			}
+			_ = ResolveCrossStageInstructions(kanikoStages)
 
 			stage := kanikoStages[0]
 
@@ -1333,11 +1335,16 @@ func Test_ResolveCrossStageInstructions(t *testing.T) {
 	COPY --from=third /hi3 /hi4
 	COPY --from=2 /hi3 /hi4
 	`
-	stages, _, err := dockerfile.Parse([]byte(df))
+	stages, metaArgs, err := dockerfile.Parse([]byte(df))
 	if err != nil {
 		t.Fatal(err)
 	}
-	stageToIdx := ResolveCrossStageInstructions(stages)
+	opts := &config.KanikoOptions{}
+	kanikoStages, err := dockerfile.MakeKanikoStages(opts, stages, metaArgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stageToIdx := ResolveCrossStageInstructions(kanikoStages)
 	for index, stage := range stages {
 		if index == 0 {
 			continue
