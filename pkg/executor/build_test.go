@@ -90,28 +90,17 @@ func stage(t *testing.T, d string) config.KanikoStage {
 	}
 }
 
-type MockCommand struct {
-	name string
-}
-
-func (m *MockCommand) Name() string {
-	return m.name
-}
-
 func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
-	commands := []instructions.Command{
-		&MockCommand{name: "command1"},
-		&MockCommand{name: "command2"},
-		&MockCommand{name: "command3"},
-	}
-
-	stage := instructions.Stage{
-		Commands: commands,
+	cmds := []commands.DockerCommand{
+		&MockDockerCommand{command: "command1"},
+		&MockDockerCommand{command: "command2"},
+		&MockDockerCommand{command: "command3"},
 	}
 
 	type fields struct {
 		stage config.KanikoStage
 		opts  *config.KanikoOptions
+		cmds  []commands.DockerCommand
 	}
 	type args struct {
 		index int
@@ -128,8 +117,8 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			fields: fields{
 				stage: config.KanikoStage{
 					Final: true,
-					Stage: stage,
 				},
+				cmds: cmds,
 			},
 			args: args{
 				index: 1,
@@ -141,11 +130,11 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			fields: fields{
 				stage: config.KanikoStage{
 					Final: false,
-					Stage: stage,
 				},
+				cmds: cmds,
 			},
 			args: args{
-				index: len(commands) - 1,
+				index: len(cmds) - 1,
 			},
 			want: true,
 		},
@@ -154,8 +143,8 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			fields: fields{
 				stage: config.KanikoStage{
 					Final: false,
-					Stage: stage,
 				},
+				cmds: cmds,
 			},
 			args: args{
 				index: 0,
@@ -167,9 +156,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			fields: fields{
 				stage: config.KanikoStage{
 					Final: false,
-					Stage: stage,
 				},
 				opts: &config.KanikoOptions{Cache: true},
+				cmds: cmds,
 			},
 			args: args{
 				index: 0,
@@ -186,6 +175,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			s := &stageBuilder{
 				stage: tt.fields.stage,
 				opts:  tt.fields.opts,
+				cmds:  tt.fields.cmds,
 			}
 			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files); got != tt.want {
 				t.Errorf("stageBuilder.shouldTakeSnapshot() = %v, want %v", got, tt.want)
