@@ -28,14 +28,14 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/karrick/godirwalk"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
 // For testing
-var snapshotPathPrefix = constants.KanikoDir
+var snapshotPathPrefix = config.KanikoDir
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
@@ -63,7 +63,7 @@ func (s *Snapshotter) Key() (string, error) {
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the whitelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
-	f, err := ioutil.TempFile(snapshotPathPrefix, "")
+	f, err := ioutil.TempFile(config.KanikoDir, "")
 	if err != nil {
 		return "", err
 	}
@@ -226,10 +226,28 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 			return err
 		}
 	}
+
+	addedPaths := make(map[string]bool)
 	for _, path := range files {
+		if _, fileExists := addedPaths[path]; fileExists {
+			continue
+		}
+		for _, parentPath := range util.ParentDirectories(path) {
+			if parentPath == "/" {
+				continue
+			}
+			if _, dirExists := addedPaths[parentPath]; dirExists {
+				continue
+			}
+			if err := t.AddFileToTar(parentPath); err != nil {
+				return err
+			}
+			addedPaths[parentPath] = true
+		}
 		if err := t.AddFileToTar(path); err != nil {
 			return err
 		}
+		addedPaths[path] = true
 	}
 	return nil
 }

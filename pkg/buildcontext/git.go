@@ -25,6 +25,16 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
+const (
+	gitPullMethodEnvKey = "GIT_PULL_METHOD"
+	gitPullMethodHTTPS  = "https"
+	gitPullMethodHTTP   = "http"
+)
+
+var (
+	supportedGitPullMethods = map[string]bool{gitPullMethodHTTPS: true, gitPullMethodHTTP: true}
+)
+
 // Git unifies calls to download and unpack the build context.
 type Git struct {
 	context string
@@ -35,7 +45,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	directory := constants.BuildContextDir
 	parts := strings.Split(g.context, "#")
 	options := git.CloneOptions{
-		URL:      "https://" + parts[0],
+		URL:      getGitPullMethod() + "://" + parts[0],
 		Progress: os.Stdout,
 	}
 	if len(parts) > 1 {
@@ -43,4 +53,12 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	}
 	_, err := git.PlainClone(directory, false, &options)
 	return directory, err
+}
+
+func getGitPullMethod() string {
+	gitPullMethod := os.Getenv(gitPullMethodEnvKey)
+	if ok := supportedGitPullMethods[gitPullMethod]; !ok {
+		gitPullMethod = gitPullMethodHTTPS
+	}
+	return gitPullMethod
 }

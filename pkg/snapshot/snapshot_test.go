@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/pkg/errors"
@@ -63,6 +64,12 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		fooPath: "newbaz1",
 		batPath: "baz",
 	}
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
+		if path == "/" {
+			continue
+		}
+		snapshotFiles[path+"/"] = ""
+	}
 
 	actualFiles := []string{}
 	for {
@@ -75,6 +82,9 @@ func TestSnapshotFSFileChange(t *testing.T) {
 
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
+		}
+		if hdr.Typeflag == tar.TypeDir {
+			continue
 		}
 		contents, _ := ioutil.ReadAll(tr)
 		if string(contents) != snapshotFiles[hdr.Name] {
@@ -152,6 +162,12 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	snapshotFiles := map[string]string{
 		batPathWithoutLeadingSlash: "baz2",
 	}
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPathWithoutLeadingSlash) {
+		if path == "/" {
+			continue
+		}
+		snapshotFiles[path+"/"] = ""
+	}
 
 	foundFiles := []string{}
 	for {
@@ -159,10 +175,12 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		t.Logf("Info %s in tar", hdr.Name)
 		foundFiles = append(foundFiles, hdr.Name)
 		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
 			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
+		}
+		if hdr.Typeflag == tar.TypeDir {
+			continue
 		}
 		contents, _ := ioutil.ReadAll(tr)
 		if string(contents) != snapshotFiles[hdr.Name] {
@@ -203,7 +221,9 @@ func TestSnapshotFiles(t *testing.T) {
 	expectedFiles := []string{
 		filepath.Join(testDirWithoutLeadingSlash, "foo"),
 	}
-	expectedFiles = append(expectedFiles, util.ParentDirectoriesWithoutLeadingSlash(filepath.Join(testDir, "foo"))...)
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(filepath.Join(testDir, "foo")) {
+		expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
+	}
 
 	f, err := os.Open(tarPath)
 	if err != nil {
@@ -458,8 +478,11 @@ func setUpTest() (string, *Snapshotter, func(), error) {
 		return "", nil, nil, errors.Wrap(err, "initializing snapshotter")
 	}
 
+	original := config.KanikoDir
+	config.KanikoDir = testDir
 	cleanup := func() {
 		os.RemoveAll(snapshotPath)
+		config.KanikoDir = original
 		dirCleanUp()
 	}
 

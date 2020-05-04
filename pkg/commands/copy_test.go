@@ -405,7 +405,6 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		if err := os.MkdirAll(dir, 0777); err != nil {
 			t.Fatal(err)
 		}
-
 		file := filepath.Join(dir, "bam.txt")
 
 		if err := ioutil.WriteFile(file, []byte("meow"), 0777); err != nil {
@@ -418,6 +417,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		if err := os.Symlink("dam.txt", filepath.Join(dir, "sym.link")); err != nil {
 			t.Fatal(err)
 		}
+
 		return testDir, filepath.Base(dir)
 	}
 
@@ -921,5 +921,43 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		if !errors.Is(err, os.ErrPermission) {
 			testutil.CheckNoError(t, err)
 		}
+	})
+
+	t.Run("copy src dir with relative symlinks in a dir", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		// Make another dir inside bar with a relative symlink
+		dir := filepath.Join(testDir, srcDir, "another")
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			t.Fatal(err)
+		}
+		os.Symlink("../bam.txt", filepath.Join(dir, "bam_relative.txt"))
+
+		dest := filepath.Join(testDir, "copy")
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: []string{srcDir, dest},
+			},
+			buildcontext: testDir,
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		testutil.CheckNoError(t, err)
+		actual, err := ioutil.ReadDir(filepath.Join(dest, "another"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, "bam_relative.txt", actual[0].Name())
+		linkName, err := os.Readlink(filepath.Join(dest, "another", "bam_relative.txt"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckDeepEqual(t, "../bam.txt", linkName)
 	})
 }

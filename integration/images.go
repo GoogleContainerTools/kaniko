@@ -73,9 +73,10 @@ var additionalDockerFlagsMap = map[string][]string{
 
 // Arguments to build Dockerfiles with when building with kaniko
 var additionalKanikoFlagsMap = map[string][]string{
-	"Dockerfile_test_add":     {"--single-snapshot"},
-	"Dockerfile_test_scratch": {"--single-snapshot"},
-	"Dockerfile_test_target":  {"--target=second"},
+	"Dockerfile_test_add":        {"--single-snapshot"},
+	"Dockerfile_test_scratch":    {"--single-snapshot"},
+	"Dockerfile_test_maintainer": {"--single-snapshot"},
+	"Dockerfile_test_target":     {"--target=second"},
 }
 
 // output check to do when building with kaniko

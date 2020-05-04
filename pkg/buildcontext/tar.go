@@ -17,11 +17,15 @@ limitations under the License.
 package buildcontext
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Tar unifies calls to download and unpack the build context.
@@ -34,6 +38,23 @@ func (t *Tar) UnpackTarFromBuildContext() (string, error) {
 	directory := constants.BuildContextDir
 	if err := os.MkdirAll(directory, 0750); err != nil {
 		return "", errors.Wrap(err, "unpacking tar from build context")
+	}
+	if t.context == "stdin" {
+		fi, _ := os.Stdin.Stat()
+		if (fi.Mode() & os.ModeCharDevice) != 0 {
+			return "", fmt.Errorf("no data found.. don't forget to add the '--interactive, -i' flag")
+		}
+		logrus.Infof("To simulate EOF and exit, press 'Ctrl+D'")
+		// if launched through docker in interactive mode and without piped data
+		// process will be stuck here until EOF is sent
+		data, err := util.GetInputFrom(os.Stdin)
+		if err != nil {
+			return "", errors.Wrap(err, "fail to get standard input")
+		}
+		t.context = filepath.Join(directory, constants.ContextTar)
+		if err := ioutil.WriteFile(t.context, data, 0644); err != nil {
+			return "", errors.Wrap(err, "fail to redirect standard input into compressed tar file")
+		}
 	}
 
 	return directory, util.UnpackCompressedTar(t.context, directory)

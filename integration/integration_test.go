@@ -32,11 +32,11 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/pkg/errors"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/pkg/errors"
 )
 
 var config *integrationTestConfig
@@ -102,15 +102,6 @@ func launchTests(m *testing.M) (int, error) {
 
 		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
 		defer DeleteFromBucket(fileInBucket)
-	} else {
-		var err error
-		var migratedFiles []string
-		if migratedFiles, err = MigrateGCRRegistry(dockerfilesPath, allDockerfiles, config.imageRepo); err != nil {
-			RollbackMigratedFiles(dockerfilesPath, migratedFiles)
-			return 1, errors.Wrap(err, "Fail to migrate dockerfiles from gcs")
-		}
-		RunOnInterrupt(func() { RollbackMigratedFiles(dockerfilesPath, migratedFiles) })
-		defer RollbackMigratedFiles(dockerfilesPath, migratedFiles)
 	}
 	if err := buildRequiredImages(); err != nil {
 		return 1, errors.Wrap(err, "Error while building images")
@@ -255,6 +246,50 @@ func TestGitBuildcontext(t *testing.T) {
 		"-f", dockerfile,
 		"-d", kanikoImage,
 		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	out, err = RunCommandWithoutTest(kanikoCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+	}
+
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
+
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	checkContainerDiffOutput(t, diff, expected)
+}
+
+func TestGitBuildcontextSubPath(t *testing.T) {
+	repo := getGitRepo()
+	dockerfile := "Dockerfile_test_run_2"
+
+	// Build with docker
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
+	dockerCmd := exec.Command("docker",
+		append([]string{
+			"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			repo + ":" + filepath.Join(integrationPath, dockerfilesPath),
+		})...)
+	out, err := RunCommandWithoutTest(dockerCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	}
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(
+		dockerRunFlags,
+		ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo),
+		"--context-sub-path", filepath.Join(integrationPath, dockerfilesPath),
+	)
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 

@@ -17,25 +17,28 @@ limitations under the License.
 package dockerfile
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
+	"reflect"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
-func Test_Stages_ArgValueWithQuotes(t *testing.T) {
+func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	dockerfile := `
 	ARG IMAGE="ubuntu:16.04"
+	ARG FOO=bar
 	FROM ${IMAGE}
 	RUN echo hi > /hi
-	
+
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
-	
+
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
@@ -53,25 +56,23 @@ func Test_Stages_ArgValueWithQuotes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stages, err := Stages(&config.KanikoOptions{DockerfilePath: tmpfile.Name()})
+	stages, metaArgs, err := ParseStages(&config.KanikoOptions{DockerfilePath: tmpfile.Name()})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if len(stages) == 0 {
 		t.Fatal("length of stages expected to be greater than zero, but was zero")
-
 	}
 
-	if len(stages[0].MetaArgs) == 0 {
-		t.Fatal("length of stage[0] meta args expected to be greater than zero, but was zero")
+	if len(metaArgs) != 2 {
+		t.Fatalf("length of stage meta args expected to be 2, but was %d", len(metaArgs))
 	}
 
-	expectedVal := "ubuntu:16.04"
-
-	arg := stages[0].MetaArgs[0]
-	if arg.ValueString() != expectedVal {
-		t.Fatalf("expected stages[0].MetaArgs[0] val to be %s but was %s", expectedVal, arg.ValueString())
+	for i, expectedVal := range []string{"ubuntu:16.04", "bar"} {
+		if metaArgs[i].ValueString() != expectedVal {
+			t.Fatalf("expected metaArg %d val to be %s but was %s", i, expectedVal, metaArgs[i].ValueString())
+		}
 	}
 }
 
@@ -189,40 +190,63 @@ func Test_stripEnclosingQuotes(t *testing.T) {
 	}
 }
 
-func Test_resolveStages(t *testing.T) {
-	dockerfile := `
-	FROM scratch
-	RUN echo hi > /hi
-	
-	FROM scratch AS second
-	COPY --from=0 /hi /hi2
-	
-	FROM scratch AS tHiRd
-	COPY --from=second /hi2 /hi3
-	COPY --from=1 /hi2 /hi3
-
-	FROM scratch
-	COPY --from=thIrD /hi3 /hi4
-	COPY --from=third /hi3 /hi4
-	COPY --from=2 /hi3 /hi4
-	`
-	stages, _, err := Parse([]byte(dockerfile))
-	if err != nil {
-		t.Fatal(err)
+func Test_GetOnBuildInstructions(t *testing.T) {
+	type testCase struct {
+		name        string
+		cfg         *v1.Config
+		stageToIdx  map[string]string
+		expCommands []instructions.Command
 	}
-	resolveStages(stages)
-	for index, stage := range stages {
-		if index == 0 {
-			continue
-		}
-		expectedStage := strconv.Itoa(index - 1)
-		for _, command := range stage.Commands {
-			copyCmd := command.(*instructions.CopyCommand)
-			if copyCmd.From != expectedStage {
-				t.Fatalf("unexpected copy command: %s resolved to stage %s, expected %s", copyCmd.String(), copyCmd.From, expectedStage)
-			}
-		}
 
+	tests := []testCase{
+		{name: "no on-build on config",
+			cfg:         &v1.Config{},
+			stageToIdx:  map[string]string{"builder": "0"},
+			expCommands: nil,
+		},
+		{name: "onBuild on config, nothing to resolve",
+			cfg:         &v1.Config{OnBuild: []string{"WORKDIR /app"}},
+			stageToIdx:  map[string]string{"builder": "0", "temp": "1"},
+			expCommands: []instructions.Command{&instructions.WorkdirCommand{Path: "/app"}},
+		},
+		{name: "onBuild on config, resolve multiple stages",
+			cfg:        &v1.Config{OnBuild: []string{"COPY --from=builder a.txt b.txt", "COPY --from=temp /app /app"}},
+			stageToIdx: map[string]string{"builder": "0", "temp": "1"},
+			expCommands: []instructions.Command{
+				&instructions.CopyCommand{
+					SourcesAndDest: []string{"a.txt b.txt"},
+					From:           "0",
+				},
+				&instructions.CopyCommand{
+					SourcesAndDest: []string{"/app /app"},
+					From:           "1",
+				},
+			}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmds, err := GetOnBuildInstructions(test.cfg, test.stageToIdx)
+			if err != nil {
+				t.Fatalf("Failed to parse config for on-build instructions")
+			}
+			if len(cmds) != len(test.expCommands) {
+				t.Fatalf("Expected %d commands, got %d", len(test.expCommands), len(cmds))
+			}
+
+			for i, cmd := range cmds {
+				if reflect.TypeOf(cmd) != reflect.TypeOf(test.expCommands[i]) {
+					t.Fatalf("Got command %s, expected %s", cmd, test.expCommands[i])
+				}
+				switch c := cmd.(type) {
+				case *instructions.CopyCommand:
+					{
+						exp := test.expCommands[i].(*instructions.CopyCommand)
+						testutil.CheckDeepEqual(t, exp.From, c.From)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -230,10 +254,10 @@ func Test_targetStage(t *testing.T) {
 	dockerfile := `
 	FROM scratch
 	RUN echo hi > /hi
-	
+
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
-	
+
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
@@ -362,5 +386,263 @@ func Test_baseImageIndex(t *testing.T) {
 				t.Fatalf("unexpected result, expected %d got %d", test.expected, actual)
 			}
 		})
+	}
+}
+
+func Test_ResolveStagesArgs(t *testing.T) {
+	dockerfile := `
+	ARG IMAGE="ubuntu:16.04"
+	ARG LAST_STAGE_VARIANT
+	FROM ${IMAGE} as base
+	RUN echo hi > /hi
+	FROM base AS base-dev
+	RUN echo dev >> /hi
+	FROM base AS base-prod
+	RUN echo prod >> /hi
+	FROM base-${LAST_STAGE_VARIANT}
+	RUN cat /hi
+	`
+
+	buildArgLastVariants := []string{"dev", "prod"}
+	buildArgImages := []string{"alpine:3.11", ""}
+	var expectedImage string
+
+	for _, buildArgLastVariant := range buildArgLastVariants {
+		for _, buildArgImage := range buildArgImages {
+			if buildArgImage != "" {
+				expectedImage = buildArgImage
+			} else {
+				expectedImage = "ubuntu:16.04"
+			}
+			buildArgs := []string{fmt.Sprintf("IMAGE=%s", buildArgImage), fmt.Sprintf("LAST_STAGE_VARIANT=%s", buildArgLastVariant)}
+
+			stages, metaArgs, err := Parse([]byte(dockerfile))
+			if err != nil {
+				t.Fatal(err)
+			}
+			stagesLen := len(stages)
+			args := unifyArgs(metaArgs, buildArgs)
+			if err := resolveStagesArgs(stages, args); err != nil {
+				t.Fatalf("fail to resolves args %v: %v", buildArgs, err)
+			}
+			tests := []struct {
+				name               string
+				actualSourceCode   string
+				actualBaseName     string
+				expectedSourceCode string
+				expectedBaseName   string
+			}{
+				{
+					name:               "Test_BuildArg_From_First_Stage",
+					actualSourceCode:   stages[0].SourceCode,
+					actualBaseName:     stages[0].BaseName,
+					expectedSourceCode: "FROM ${IMAGE} as base",
+					expectedBaseName:   expectedImage,
+				},
+				{
+					name:               "Test_BuildArg_From_Last_Stage",
+					actualSourceCode:   stages[stagesLen-1].SourceCode,
+					actualBaseName:     stages[stagesLen-1].BaseName,
+					expectedSourceCode: "FROM base-${LAST_STAGE_VARIANT}",
+					expectedBaseName:   fmt.Sprintf("base-%s", buildArgLastVariant),
+				},
+			}
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					testutil.CheckDeepEqual(t, test.expectedSourceCode, test.actualSourceCode)
+					testutil.CheckDeepEqual(t, test.expectedBaseName, test.actualBaseName)
+				})
+			}
+		}
+	}
+}
+
+func Test_SkipingUnusedStages(t *testing.T) {
+	tests := []struct {
+		description                   string
+		dockerfile                    string
+		targets                       []string
+		expectedSourceCodes           map[string][]string
+		expectedTargetIndexBeforeSkip map[string]int
+		expectedTargetIndexAfterSkip  map[string]int
+	}{
+		{
+			description: "dockerfile_without_copyFrom",
+			dockerfile: `
+			FROM alpine:3.11 AS base-dev
+			RUN echo dev > /hi
+			FROM alpine:3.11 AS base-prod
+			RUN echo prod > /hi
+			FROM base-dev as final-stage
+			RUN cat /hi
+			`,
+			targets: []string{"base-dev", "base-prod", ""},
+			expectedSourceCodes: map[string][]string{
+				"base-dev":  {"FROM alpine:3.11 AS base-dev"},
+				"base-prod": {"FROM alpine:3.11 AS base-prod"},
+				"":          {"FROM alpine:3.11 AS base-dev", "FROM base-dev as final-stage"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 1,
+				"":          2,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 0,
+				"":          1,
+			},
+		},
+		{
+			description: "dockerfile_with_copyFrom",
+			dockerfile: `
+			FROM alpine:3.11 AS base-dev
+			RUN echo dev > /hi
+			FROM alpine:3.11 AS base-prod
+			RUN echo prod > /hi
+			FROM alpine:3.11
+			COPY --from=base-prod /hi /finalhi
+			RUN cat /finalhi
+			`,
+			targets: []string{"base-dev", "base-prod", ""},
+			expectedSourceCodes: map[string][]string{
+				"base-dev":  {"FROM alpine:3.11 AS base-dev"},
+				"base-prod": {"FROM alpine:3.11 AS base-prod"},
+				"":          {"FROM alpine:3.11 AS base-prod", "FROM alpine:3.11"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 1,
+				"":          2,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 0,
+				"":          1,
+			},
+		},
+		{
+			description: "dockerfile_with_two_copyFrom",
+			dockerfile: `
+			FROM alpine:3.11 AS base-dev
+			RUN echo dev > /hi
+			FROM alpine:3.11 AS base-prod
+			RUN echo prod > /hi
+			FROM alpine:3.11
+			COPY --from=base-dev /hi /finalhidev
+			COPY --from=base-prod /hi /finalhiprod
+			RUN cat /finalhidev
+			RUN cat /finalhiprod
+			`,
+			targets: []string{"base-dev", "base-prod", ""},
+			expectedSourceCodes: map[string][]string{
+				"base-dev":  {"FROM alpine:3.11 AS base-dev"},
+				"base-prod": {"FROM alpine:3.11 AS base-prod"},
+				"":          {"FROM alpine:3.11 AS base-dev", "FROM alpine:3.11 AS base-prod", "FROM alpine:3.11"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 1,
+				"":          2,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base-dev":  0,
+				"base-prod": 0,
+				"":          2,
+			},
+		},
+		{
+			description: "dockerfile_with_two_copyFrom_and_arg",
+			dockerfile: `
+			FROM debian:9.11 as base
+			COPY . .
+			FROM scratch as second
+			ENV foopath context/foo
+			COPY --from=0 $foopath context/b* /foo/
+			FROM second as third
+			COPY --from=base /context/foo /new/foo
+			FROM base as fourth
+			# Make sure that we snapshot intermediate images correctly
+			RUN date > /date
+			ENV foo bar
+			# This base image contains symlinks with relative paths to whitelisted directories
+			# We need to test they're extracted correctly
+			FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5aa48
+			FROM fourth
+			ARG file=/foo2
+			COPY --from=second /foo ${file}
+			COPY --from=debian:9.11 /etc/os-release /new
+			`,
+			targets: []string{"base", ""},
+			expectedSourceCodes: map[string][]string{
+				"base":   {"FROM debian:9.11 as base"},
+				"second": {"FROM debian:9.11 as base", "FROM scratch as second"},
+				"":       {"FROM debian:9.11 as base", "FROM scratch as second", "FROM base as fourth", "FROM fourth"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"base":   0,
+				"second": 1,
+				"":       5,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"base":   0,
+				"second": 1,
+				"":       3,
+			},
+		},
+		{
+			description: "dockerfile_without_final_dependencies",
+			dockerfile: `
+			FROM alpine:3.11
+			FROM debian:9.11 as base
+			RUN echo foo > /foo
+			FROM debian:9.11 as fizz
+			RUN echo fizz >> /fizz
+			COPY --from=base /foo /fizz
+			FROM alpine:3.11 as buzz
+			RUN echo buzz > /buzz
+			FROM alpine:3.11 as final
+			RUN echo bar > /bar
+			`,
+			targets: []string{"final", "buzz", "fizz", ""},
+			expectedSourceCodes: map[string][]string{
+				"final": {"FROM alpine:3.11 as final"},
+				"buzz":  {"FROM alpine:3.11 as buzz"},
+				"fizz":  {"FROM debian:9.11 as base", "FROM debian:9.11 as fizz"},
+				"":      {"FROM alpine:3.11", "FROM debian:9.11 as base", "FROM debian:9.11 as fizz", "FROM alpine:3.11 as buzz", "FROM alpine:3.11 as final"},
+			},
+			expectedTargetIndexBeforeSkip: map[string]int{
+				"final": 4,
+				"buzz":  3,
+				"fizz":  2,
+				"":      4,
+			},
+			expectedTargetIndexAfterSkip: map[string]int{
+				"final": 0,
+				"buzz":  0,
+				"fizz":  1,
+				"":      4,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		stages, _, err := Parse([]byte(test.dockerfile))
+		testutil.CheckError(t, false, err)
+		actualSourceCodes := make(map[string][]string)
+		for _, target := range test.targets {
+			targetIndex, err := targetStage(stages, target)
+			testutil.CheckError(t, false, err)
+			targetIndexBeforeSkip := targetIndex
+			onlyUsedStages := skipUnusedStages(stages, &targetIndex, target)
+			for _, s := range onlyUsedStages {
+				actualSourceCodes[target] = append(actualSourceCodes[target], s.SourceCode)
+			}
+			t.Run(test.description, func(t *testing.T) {
+				testutil.CheckDeepEqual(t, test.expectedSourceCodes[target], actualSourceCodes[target])
+				testutil.CheckDeepEqual(t, test.expectedTargetIndexBeforeSkip[target], targetIndexBeforeSkip)
+				testutil.CheckDeepEqual(t, test.expectedTargetIndexAfterSkip[target], targetIndex)
+			})
+		}
 	}
 }

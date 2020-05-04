@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -133,4 +134,13 @@ func currentPlatform() v1.Platform {
 		OS:           runtime.GOOS,
 		Architecture: runtime.GOARCH,
 	}
+}
+
+// GetInputFrom returns Reader content
+func GetInputFrom(r io.Reader) ([]byte, error) {
+	output, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
 }
