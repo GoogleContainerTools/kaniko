@@ -55,6 +55,9 @@ func (m MockDockerCommand) String() string {
 func (m MockDockerCommand) FilesToSnapshot() []string {
 	return []string{"meow-snapshot-no-cache"}
 }
+func (m MockDockerCommand) ProvidesFilesToSnapshot() bool {
+	return true
+}
 func (m MockDockerCommand) CacheCommand(image v1.Image) commands.DockerCommand {
 	return m.cacheCommand
 }
@@ -83,6 +86,9 @@ func (m MockCachedDockerCommand) String() string {
 }
 func (m MockCachedDockerCommand) FilesToSnapshot() []string {
 	return []string{"meow-snapshot"}
+}
+func (m MockCachedDockerCommand) ProvidesFilesToSnapshot() bool {
+	return true
 }
 func (m MockCachedDockerCommand) CacheCommand(image v1.Image) commands.DockerCommand {
 	return nil

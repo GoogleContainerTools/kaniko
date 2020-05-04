@@ -21,16 +21,12 @@ import (
 )
 
 func Test_caching(t *testing.T) {
-	c := caching{layer: fakeLayer{}, readSuccess: true}
+	c := caching{layer: fakeLayer{}}
 
 	actual := c.Layer().(fakeLayer)
 	expected := fakeLayer{}
 	actualLen, expectedLen := len(actual.TarContent), len(expected.TarContent)
 	if actualLen != expectedLen {
 		t.Errorf("expected layer tar content to be %v but was %v", expectedLen, actualLen)
-	}
-
-	if !c.ReadSuccess() {
-		t.Errorf("expected ReadSuccess to be %v but was %v", true, c.ReadSuccess())
 	}
 }

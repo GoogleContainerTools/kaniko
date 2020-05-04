@@ -20,18 +20,12 @@ import v1 "github.com/google/go-containerregistry/pkg/v1"
 
 type Cached interface {
 	Layer() v1.Layer
-	ReadSuccess() bool
 }
 
 type caching struct {
-	layer       v1.Layer
-	readSuccess bool
+	layer v1.Layer
 }
 
 func (c caching) Layer() v1.Layer {
 	return c.layer
-}
-
-func (c caching) ReadSuccess() bool {
-	return c.readSuccess
 }

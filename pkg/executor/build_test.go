@@ -103,8 +103,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 		cmds  []commands.DockerCommand
 	}
 	type args struct {
-		index int
-		files []string
+		index    int
+		files    []string
+		hasFiles bool
 	}
 	tests := []struct {
 		name   string
@@ -152,6 +153,32 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "not final stage not last command but empty list of files",
+			fields: fields{
+				stage: config.KanikoStage{},
+			},
+			args: args{
+				index:    0,
+				files:    []string{},
+				hasFiles: true,
+			},
+			want: false,
+		},
+		{
+			name: "not final stage not last command no files provided",
+			fields: fields{
+				stage: config.KanikoStage{
+					Final: false,
+				},
+			},
+			args: args{
+				index:    0,
+				files:    nil,
+				hasFiles: false,
+			},
+			want: true,
+		},
+		{
 			name: "caching enabled intermediate container",
 			fields: fields{
 				stage: config.KanikoStage{
@@ -177,7 +204,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 				opts:  tt.fields.opts,
 				cmds:  tt.fields.cmds,
 			}
-			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files); got != tt.want {
+			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files, tt.args.hasFiles); got != tt.want {
 				t.Errorf("stageBuilder.shouldTakeSnapshot() = %v, want %v", got, tt.want)
 			}
 		})

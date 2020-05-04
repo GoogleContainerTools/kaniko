@@ -385,10 +385,6 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 			} else if c.layer != nil && !tc.expectLayer {
 				t.Error("expected the command to have no layer set but instead found a layer")
 			}
-
-			if c.readSuccess != tc.expectLayer {
-				t.Errorf("expected read success to be %v but was %v", tc.expectLayer, c.readSuccess)
-			}
 		})
 	}
 }

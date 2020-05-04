@@ -317,13 +317,13 @@ func (s *stageBuilder) build() error {
 		return errors.Wrap(err, "failed to check filesystem whitelist")
 	}
 
-	// Take initial snapshot
-	t := timing.Start("Initial FS snapshot")
-	if err := s.snapshotter.Init(); err != nil {
-		return err
+	initSnapshotTaken := false
+	if s.opts.SingleSnapshot {
+		if err := s.initSnapshotWithTimings(); err != nil {
+			return err
+		}
+		initSnapshotTaken = true
 	}
-
-	timing.DefaultRun.Stop(t)
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
@@ -348,26 +348,33 @@ func (s *stageBuilder) build() error {
 
 		logrus.Info(command.String())
 
+		isCacheCommand := func() bool {
+			switch command.(type) {
+			case commands.Cached:
+				return true
+			default:
+				return false
+			}
+		}()
+		if !initSnapshotTaken && !isCacheCommand && !command.ProvidesFilesToSnapshot() {
+			// Take initial snapshot if command does not expect to return
+			// a list of files.
+			if err := s.initSnapshotWithTimings(); err != nil {
+				return err
+			}
+			initSnapshotTaken = true
+		}
+
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 			return errors.Wrap(err, "failed to execute command")
 		}
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files) {
+		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot()) {
 			continue
 		}
-
-		fn := func() bool {
-			switch v := command.(type) {
-			case commands.Cached:
-				return v.ReadSuccess()
-			default:
-				return false
-			}
-		}
-
-		if fn() {
+		if isCacheCommand {
 			v := command.(commands.Cached)
 			layer := v.Layer()
 			if err := s.saveLayerToImage(layer, command.String()); err != nil {
@@ -411,6 +418,7 @@ func (s *stageBuilder) build() error {
 func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	var snapshot string
 	var err error
+
 	t := timing.Start("Snapshotting FS")
 	if files == nil || s.opts.SingleSnapshot {
 		snapshot, err = s.snapshotter.TakeSnapshotFS()
@@ -423,7 +431,7 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	return snapshot, err
 }
 
-func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
+func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
 	isLastCommand := index == len(s.cmds)-1
 
 	// We only snapshot the very end with single snapshot mode on.
@@ -436,8 +444,8 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string) bool {
 		return true
 	}
 
-	// nil means snapshot everything.
-	if files == nil {
+	// if command does not provide files, snapshot everything.
+	if !provideFiles {
 		return true
 	}
 
@@ -847,4 +855,13 @@ func ResolveCrossStageInstructions(stages []instructions.Stage) map[string]strin
 
 	logrus.Debugf("Built stage name to index map: %v", nameToIndex)
 	return nameToIndex
+}
+
+func (s stageBuilder) initSnapshotWithTimings() error {
+	t := timing.Start("Initial FS snapshot")
+	if err := s.snapshotter.Init(); err != nil {
+		return err
+	}
+	timing.DefaultRun.Stop(t)
+	return nil
 }

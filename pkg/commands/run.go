@@ -151,6 +151,10 @@ func (r *RunCommand) FilesToSnapshot() []string {
 	return nil
 }
 
+func (r *RunCommand) ProvidesFilesToSnapshot() bool {
+	return false
+}
+
 // CacheCommand returns true since this command should be cached
 func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
 
@@ -200,7 +204,6 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	}
 
 	cr.layer = layers[0]
-	cr.readSuccess = true
 
 	cr.extractedFiles, err = util.GetFSFromLayers(
 		kConfig.RootDir,
@@ -228,4 +231,8 @@ func (cr *CachingRunCommand) String() string {
 		return "nil command"
 	}
 	return cr.cmd.String()
+}
+
+func (cr *CachingRunCommand) MetadataOnly() bool {
+	return false
 }

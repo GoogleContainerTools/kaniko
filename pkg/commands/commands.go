@@ -37,6 +37,10 @@ type DockerCommand interface {
 	// A list of files to snapshot, empty for metadata commands or nil if we don't know
 	FilesToSnapshot() []string
 
+	// ProvidesFileToSnapshot is true for all metadata commands and commands which know
+	// list of files changed. False for Run command.
+	ProvidesFilesToSnapshot() bool
+
 	// Return a cache-aware implementation of this command, if it exists.
 	CacheCommand(v1.Image) DockerCommand
 
