@@ -16,6 +16,8 @@ In this release, the highlights are:
 * Multistage ONBUILD COPY Support [#1190](https://github.com/GoogleContainerTools/kaniko/pull/1190)
 * fix previous name checking in 'executor.build.fetchExtraStages' [#1167](https://github.com/GoogleContainerTools/kaniko/pull/1167)
 * Always add parent directories of files to snapshots. [#1166](https://github.com/GoogleContainerTools/kaniko/pull/1166)
+* Fix `workdir` command pointing to relative dir in first command.
+* fix stages are now resolved correctly when `--skip-unused-stages` is used
 
 # New Features
 * Add ability to use public GCR repos without being authenticated [#1140](https://github.com/GoogleContainerTools/kaniko/pull/1140)
