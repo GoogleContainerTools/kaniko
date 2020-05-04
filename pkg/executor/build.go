@@ -318,7 +318,6 @@ func (s *stageBuilder) build() error {
 	}
 
 	initSnapshotTaken := false
-	layer := 0
 
 	cacheGroup := errgroup.Group{}
 	for index, command := range s.cmds {
@@ -349,17 +348,15 @@ func (s *stageBuilder) build() error {
 				return false
 			}
 		}()
-		if !initSnapshotTaken && !isCacheCommand && !command.MetadataOnly() {
-			if !command.ProvidesFilesToSnapshot() {
-				// Take initial snapshot if command is not metadata only
-				// and does not return a list of files changed
+		if !initSnapshotTaken && !command.ProvidesFilesToSnapshot() {
+				// Take initial snapshot if command does not expect to return
+				// a list of files.
 				t := timing.Start("Initial FS snapshot")
 				if err := s.snapshotter.Init(); err != nil {
 					return err
 				}
 				timing.DefaultRun.Stop(t)
 				initSnapshotTaken = true
-			}
 		}
 
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
@@ -371,8 +368,6 @@ func (s *stageBuilder) build() error {
 		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot()) {
 			continue
 		}
-		layer++
-    logrus.Infof(fmt.Sprintf("%d", layer))
 		if isCacheCommand {
 			v := command.(commands.Cached)
 			layer := v.Layer()
@@ -415,6 +410,7 @@ func (s *stageBuilder) build() error {
 func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	var snapshot string
 	var err error
+
 	t := timing.Start("Snapshotting FS")
 	if files == nil || s.opts.SingleSnapshot {
 		snapshot, err = s.snapshotter.TakeSnapshotFS()
@@ -427,12 +423,19 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	return snapshot, err
 }
 
-func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
-	isLastCommand := index == len(s.stage.Commands)-1
+func (s *stageBuilder) singleSnapshot(index int) bool {
+  isLastCommand := index == len(s.stage.Commands)-1
 
-	// We only snapshot the very end with single snapshot mode on.
-	if s.opts.SingleSnapshot {
-		return isLastCommand
+  // We only snapshot the very end with single snapshot mode on.
+  if s.opts.SingleSnapshot {
+    return isLastCommand
+  }
+  return false
+}
+
+func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
+	if s.singleSnapshot(index){
+		return true
 	}
 
 	// Always take snapshots if we're using the cache.
