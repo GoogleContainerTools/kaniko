@@ -155,10 +155,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 		{
 			name: "not final stage not last command but empty list of files",
 			fields: fields{
-				stage: config.KanikoStage{
-					Final: false,
-					Stage: stage,
-				},
+				stage: config.KanikoStage{},
 			},
 			args: args{
 				index:    0,
@@ -172,7 +169,6 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 			fields: fields{
 				stage: config.KanikoStage{
 					Final: false,
-					Stage: stage,
 				},
 			},
 			args: args{
