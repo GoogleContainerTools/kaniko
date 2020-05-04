@@ -235,7 +235,3 @@ func (cr *CachingRunCommand) String() string {
 func (cr *CachingRunCommand) MetadataOnly() bool {
 	return false
 }
-
-func (cr *CachingRunCommand) RequiresUnpackedFS() bool {
-	return true
-}
