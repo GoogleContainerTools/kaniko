@@ -1,6 +1,6 @@
 FROM debian:9.11
 COPY context/foo foo
-WORKDIR /test
+WORKDIR test
 # Test that this will be appended on to the previous command, to create /test/workdir
 WORKDIR workdir 
 COPY context/foo ./currentfoo
