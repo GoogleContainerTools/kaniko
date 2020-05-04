@@ -575,12 +575,12 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	stageNameToIdx := ResolveCrossStageInstructions(stages)
 
 	kanikoStages, err := dockerfile.MakeKanikoStages(opts, stages, metaArgs)
 	if err != nil {
 		return nil, err
 	}
+	stageNameToIdx := ResolveCrossStageInstructions(kanikoStages)
 
 	if err := util.GetExcludedFiles(opts.DockerfilePath, opts.SrcContext); err != nil {
 		return nil, err
@@ -841,9 +841,9 @@ func reviewConfig(stage config.KanikoStage, config *v1.Config) {
 	}
 }
 
-// iterates over a list of stages and resolves instructions referring to earlier stages
+// iterates over a list of KanikoStage and resolves instructions referring to earlier stages
 // returns a mapping of stage name to stage id, f.e - ["first": "0", "second": "1", "target": "2"]
-func ResolveCrossStageInstructions(stages []instructions.Stage) map[string]string {
+func ResolveCrossStageInstructions(stages []config.KanikoStage) map[string]string {
 	nameToIndex := make(map[string]string)
 	for i, stage := range stages {
 		index := strconv.Itoa(i)
