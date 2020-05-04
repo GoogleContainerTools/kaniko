@@ -17,8 +17,6 @@ limitations under the License.
 package executor
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -34,6 +32,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -48,14 +47,14 @@ import (
 	"github.com/spf13/afero"
 )
 
+type withUserAgent struct {
+	t http.RoundTripper
+}
+
 // for testing
 var (
 	newRetry = transport.NewRetry
 )
-
-type withUserAgent struct {
-	t http.RoundTripper
-}
 
 const (
 	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
@@ -80,41 +79,6 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	r.Header.Set("User-Agent", strings.Join(ua, ","))
 	return w.t.RoundTrip(r)
-}
-
-type CertPool interface {
-	value() *x509.CertPool
-	append(path string) error
-}
-
-type X509CertPool struct {
-	inner x509.CertPool
-}
-
-func (p *X509CertPool) value() *x509.CertPool {
-	return &p.inner
-}
-
-func (p *X509CertPool) append(path string) error {
-	pem, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	p.inner.AppendCertsFromPEM(pem)
-	return nil
-}
-
-type systemCertLoader func() CertPool
-
-var defaultX509Handler systemCertLoader = func() CertPool {
-	systemCertPool, err := x509.SystemCertPool()
-	if err != nil {
-		logrus.Warn("Failed to load system cert pool. Loading empty one instead.")
-		systemCertPool = x509.NewCertPool()
-	}
-	return &X509CertPool{
-		inner: *systemCertPool,
-	}
 }
 
 // for testing
@@ -161,7 +125,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			}
 			destRef.Repository.Registry = newReg
 		}
-		tr := makeTransport(opts, registryName, defaultX509Handler)
+		tr := newRetry(util.MakeTransport(opts, registryName))
 		if err := checkRemotePushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
@@ -258,7 +222,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
 
-		tr := makeTransport(opts, registryName, defaultX509Handler)
+		tr := newRetry(util.MakeTransport(opts, registryName))
 		rt := &withUserAgent{t: tr}
 
 		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
@@ -298,26 +262,6 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 		}
 	}
 	return nil
-}
-
-func makeTransport(opts *config.KanikoOptions, registryName string, loader systemCertLoader) http.RoundTripper {
-	// Create a transport to set our user-agent.
-	var tr http.RoundTripper = http.DefaultTransport.(*http.Transport).Clone()
-	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
-		tr.(*http.Transport).TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	} else if certificatePath := opts.RegistriesCertificates[registryName]; certificatePath != "" {
-		systemCertPool := loader()
-		if err := systemCertPool.append(certificatePath); err != nil {
-			logrus.WithError(err).Warnf("Failed to load certificate %s for %s\n", certificatePath, registryName)
-		} else {
-			tr.(*http.Transport).TLSClientConfig = &tls.Config{
-				RootCAs: systemCertPool.value(),
-			}
-		}
-	}
-	return newRetry(tr)
 }
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache

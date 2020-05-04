@@ -18,8 +18,6 @@ package executor
 
 import (
 	"bytes"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -34,7 +32,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/validate"
 
 	"github.com/spf13/afero"
@@ -270,103 +267,6 @@ func TestImageNameDigestFile(t *testing.T) {
 
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 
-}
-
-type mockedCertPool struct {
-	certificatesPath []string
-}
-
-func (m *mockedCertPool) value() *x509.CertPool {
-	return &x509.CertPool{}
-}
-
-func (m *mockedCertPool) append(path string) error {
-	m.certificatesPath = append(m.certificatesPath, path)
-	return nil
-}
-
-type retryTransport struct {
-	inner http.RoundTripper
-}
-
-func (t *retryTransport) RoundTrip(in *http.Request) (out *http.Response, err error) {
-	return nil, nil
-}
-
-func Test_makeTransport(t *testing.T) {
-	registryName := "my.registry.name"
-
-	tests := []struct {
-		name  string
-		opts  *config.KanikoOptions
-		check func(*tls.Config, *mockedCertPool)
-	}{
-		{
-			name: "SkipTLSVerify set",
-			opts: &config.KanikoOptions{SkipTLSVerify: true},
-			check: func(config *tls.Config, pool *mockedCertPool) {
-				if !config.InsecureSkipVerify {
-					t.Errorf("makeTransport().TLSClientConfig.InsecureSkipVerify not set while SkipTLSVerify set")
-				}
-			},
-		},
-		{
-			name: "SkipTLSVerifyRegistries set with expected registry",
-			opts: &config.KanikoOptions{SkipTLSVerifyRegistries: []string{registryName}},
-			check: func(config *tls.Config, pool *mockedCertPool) {
-				if !config.InsecureSkipVerify {
-					t.Errorf("makeTransport().TLSClientConfig.InsecureSkipVerify not set while SkipTLSVerifyRegistries set with registry name")
-				}
-			},
-		},
-		{
-			name: "SkipTLSVerifyRegistries set with other registry",
-			opts: &config.KanikoOptions{SkipTLSVerifyRegistries: []string{fmt.Sprintf("other.%s", registryName)}},
-			check: func(config *tls.Config, pool *mockedCertPool) {
-				if config.InsecureSkipVerify {
-					t.Errorf("makeTransport().TLSClientConfig.InsecureSkipVerify set while SkipTLSVerifyRegistries not set with registry name")
-				}
-			},
-		},
-		{
-			name: "RegistriesCertificates set for registry",
-			opts: &config.KanikoOptions{RegistriesCertificates: map[string]string{registryName: "/path/to/the/certificate.cert"}},
-			check: func(config *tls.Config, pool *mockedCertPool) {
-				if len(pool.certificatesPath) != 1 || pool.certificatesPath[0] != "/path/to/the/certificate.cert" {
-					t.Errorf("makeTransport().RegistriesCertificates certificate not appended to system certificates")
-				}
-			},
-		},
-		{
-			name: "RegistriesCertificates set for another registry",
-			opts: &config.KanikoOptions{RegistriesCertificates: map[string]string{fmt.Sprintf("other.%s=", registryName): "/path/to/the/certificate.cert"}},
-			check: func(config *tls.Config, pool *mockedCertPool) {
-				if len(pool.certificatesPath) != 0 {
-					t.Errorf("makeTransport().RegistriesCertificates certificate appended to system certificates while added for other registry")
-				}
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			originalRetry := newRetry
-			newRetry = func(inner http.RoundTripper, _ ...transport.Option) http.RoundTripper {
-				return &retryTransport{
-					inner: inner,
-				}
-			}
-			defer func() { newRetry = originalRetry }()
-			var certificatesPath []string
-			certPool := mockedCertPool{
-				certificatesPath: certificatesPath,
-			}
-			var mockedSystemCertLoader systemCertLoader = func() CertPool {
-				return &certPool
-			}
-			actual := makeTransport(tt.opts, registryName, mockedSystemCertLoader)
-			tt.check(actual.(*retryTransport).inner.(*http.Transport).TLSClientConfig, &certPool)
-		})
-	}
 }
 
 var calledExecCommand = false
