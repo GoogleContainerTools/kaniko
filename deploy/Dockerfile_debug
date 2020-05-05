@@ -47,6 +47,8 @@ COPY --from=1 /distroless/bazel-bin/experimental/busybox/busybox/ /busybox/
 # Declare /busybox as a volume to get it automatically whitelisted
 VOLUME /busybox
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
+# Add .docker config dir
+RUN mkdir /kaniko/.docker
 ENV HOME /root
 ENV USER /root
 ENV PATH /usr/local/bin:/kaniko:/busybox

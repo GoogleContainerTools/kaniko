@@ -36,6 +36,8 @@ COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
+# Add .docker config dir
+RUN mkdir /kaniko/.docker
 ENV HOME /root
 ENV USER /root
 ENV PATH /usr/local/bin:/kaniko
