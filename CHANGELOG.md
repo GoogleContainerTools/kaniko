@@ -1,3 +1,9 @@
+# v0.21.0 Release - 2020-05-04
+This is the 21th release of Kaniko! Thank you for patience.
+
+This is minor release which fixes the `/kaniko/.docker` being removed in executor image
+* Fixes #1227 - Readded the `/kaniko/.docker` directory [#1230](https://github.com/GoogleContainerTools/kaniko/pull/1230)
+
 # v0.20.0 Release - 2020-05-04
 This is the 20th release of Kaniko! Thank you for patience.
 Please give us feedback on how we are doing by taking a short [5 question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)
