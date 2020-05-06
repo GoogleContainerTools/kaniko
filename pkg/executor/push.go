@@ -53,8 +53,17 @@ type withUserAgent struct {
 
 const (
 	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
-	DockerConfLocation  = "/kaniko/.docker/config.json"
 )
+
+// DockerConfLocation returns the file system location of the Docker configuration
+// from the DOCKER_CONFIG environment variable.  If that variable is not set, it
+// returns "/kaniko/.docker/config.json".
+func DockerConfLocation() string {
+	if dockerConfLocation := os.Getenv("DOCKER_CONFIG"); dockerConfLocation != "" {
+		return dockerConfLocation
+	}
+	return "/kaniko/.docker/config.json"
+}
 
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
@@ -130,7 +139,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if strings.Contains(destRef.RegistryStr(), "gcr.io") {
 			// Checking for existence of docker.config as it's normally required for
 			// authenticated registries and prevent overwriting user provided docker conf
-			if _, err := fs.Stat(DockerConfLocation); os.IsNotExist(err) {
+			if _, err := fs.Stat(DockerConfLocation()); os.IsNotExist(err) {
 				if err := execCommand("docker-credential-gcr", "configure-docker").Run(); err != nil {
 					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
 				}
