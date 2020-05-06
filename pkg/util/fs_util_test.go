@@ -1024,6 +1024,12 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Write a whiteout path
+	d1 := []byte("Hello World\n")
+	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	defer os.Remove(root)
 
 	opts := []FSOpt{
@@ -1105,6 +1111,11 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 		err,
 		expectErr,
 	)
+	// Make sure whiteout files are removed form the root.
+	_, err = os.Lstat(filepath.Join(root, "foobar"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Errorf("expected whiteout foobar file to be deleted. However found it.")
+	}
 }
 
 func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T) {
@@ -1112,6 +1123,11 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 
 	root, err := ioutil.TempDir("", "layers-test")
 	if err != nil {
+		t.Fatal(err)
+	}
+	// Write a whiteout path
+	d1 := []byte("Hello World\n")
+	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(root)
@@ -1159,6 +1175,13 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 
 	mockLayer := mockv1.NewMockLayer(ctrl)
 	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+	layerFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(layerFiles, tw)
 
 	rc := ioutil.NopCloser(buf)
 	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
@@ -1192,6 +1215,11 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 		err,
 		expectErr,
 	)
+	// Make sure whiteout files are removed form the root.
+	_, err = os.Lstat(filepath.Join(root, "foobar"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Errorf("expected whiteout foobar file to be deleted. However found it.")
+	}
 }
 
 func Test_GetFSFromLayers(t *testing.T) {
