@@ -30,6 +30,7 @@ import (
 )
 
 type LayeredMap struct {
+	dirs      map[string]struct{}
 	layers    []map[string]string
 	whiteouts []map[string]string
 	hasher    func(string) (string, error)
@@ -43,6 +44,7 @@ func NewLayeredMap(h func(string) (string, error), c func(string) (string, error
 		cacheHasher: c,
 	}
 	l.layers = []map[string]string{}
+	l.dirs = map[string]struct{}{}
 	return &l
 }
 
@@ -131,4 +133,17 @@ func (l *LayeredMap) CheckFileChange(s string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+func (l *LayeredMap) ImageHasDir(s string) bool {
+	s = strings.TrimLeft(s, "/")
+	if _, ok := l.dirs[s]; ok {
+		return true
+	}
+	return false
+}
+
+func (l *LayeredMap) AddDir(s string) {
+	s = strings.TrimLeft(s, "/")
+	l.dirs[s] = struct{}{}
 }

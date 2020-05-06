@@ -1,0 +1,4 @@
+FROM debian:9.11
+# First, try one file
+ADD context/bam/ /bar/
+Add context/bazsame_dir /bar/

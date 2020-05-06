@@ -195,6 +195,66 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	}
 }
 
+func TestSnapshotWithDirsAlreadyAdded(t *testing.T) {
+	testDir, snapshotter, cleanup, err := setUpTest()
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+	snapshotter.l.AddDir(filepath.Join(testDirWithoutLeadingSlash, "bar"))
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Change permissions on a file
+	batPath := filepath.Join(testDir, "bar/bat")
+	batPathWithoutLeadingSlash := filepath.Join(testDirWithoutLeadingSlash, "bar/bat")
+	if err := os.Chmod(batPath, 0600); err != nil {
+		t.Fatalf("Error changing permissions on %s: %v", batPath, err)
+	}
+	// Take another snapshot
+	tarPath, err := snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+	f, err := os.Open(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
+	tr := tar.NewReader(f)
+	snapshotFiles := map[string]string{
+		batPathWithoutLeadingSlash: "baz2",
+	}
+	prefix := ""
+	for _, file := range strings.Split(testDirWithoutLeadingSlash, "/") {
+		prefix = filepath.Join(prefix, file)
+		snapshotFiles[prefix+"/"] = ""
+	}
+
+	foundFiles := []string{}
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		foundFiles = append(foundFiles, hdr.Name)
+		if _, isFile := snapshotFiles[hdr.Name]; !isFile {
+			t.Fatalf("File %s unexpectedly in tar", hdr.Name)
+		}
+		if hdr.Typeflag == tar.TypeDir {
+			continue
+		}
+		contents, _ := ioutil.ReadAll(tr)
+		if string(contents) != snapshotFiles[hdr.Name] {
+			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
+		}
+	}
+	if len(foundFiles) != len(snapshotFiles) {
+		t.Logf("expected\n%v\nto equal\n%v", foundFiles, snapshotFiles)
+		t.Fatalf("Incorrect number of files were added, expected: %d, got: %d",
+			len(snapshotFiles),
+			len(foundFiles))
+	}
+}
+
 func TestSnapshotFiles(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTest()
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")

@@ -94,7 +94,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 
 	t := util.NewTar(f)
 	defer t.Close()
-	if err := writeToTar(t, filesToAdd, nil); err != nil {
+	if err := s.writeToTar(t, filesToAdd, nil); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -116,7 +116,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		return "", err
 	}
 
-	if err := writeToTar(t, filesToAdd, filesToWhiteOut); err != nil {
+	if err := s.writeToTar(t, filesToAdd, filesToWhiteOut); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -217,7 +217,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	return filesToAdd, filesToWhiteOut, nil
 }
 
-func writeToTar(t util.Tar, files, whiteouts []string) error {
+func (s *Snapshotter) writeToTar(t util.Tar, files, whiteouts []string) error {
 	timer := timing.Start("Writing tar file")
 	defer timing.DefaultRun.Stop(timer)
 	// Now create the tar.
@@ -227,27 +227,28 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 		}
 	}
 
-	addedPaths := make(map[string]bool)
 	for _, path := range files {
-		if _, fileExists := addedPaths[path]; fileExists {
+		if s.l.ImageHasDir(path) {
 			continue
 		}
 		for _, parentPath := range util.ParentDirectories(path) {
 			if parentPath == "/" {
 				continue
 			}
-			if _, dirExists := addedPaths[parentPath]; dirExists {
+			if s.l.ImageHasDir(parentPath) {
 				continue
 			}
 			if err := t.AddFileToTar(parentPath); err != nil {
 				return err
 			}
-			addedPaths[parentPath] = true
+			s.l.AddDir(parentPath)
 		}
 		if err := t.AddFileToTar(path); err != nil {
 			return err
 		}
-		addedPaths[path] = true
+		if fi, _ := os.Lstat(path); fi.IsDir() {
+			s.l.AddDir(path)
+		}
 	}
 	return nil
 }
