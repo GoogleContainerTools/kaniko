@@ -55,14 +55,16 @@ const (
 	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
 )
 
-// DockerConfLocation returns the file system location of the Docker configuration
-// from the DOCKER_CONFIG environment variable.  If that variable is not set, it
-// returns "/kaniko/.docker/config.json".
+// DockerConfLocation returns the file system location of the Docker
+// configuration file under the directory set in the DOCKER_CONFIG environment
+// variable.  If that variable is not set, it returns the OS-equivalent of
+// "/kaniko/.docker/config.json".
 func DockerConfLocation() string {
-	if dockerConfLocation := os.Getenv("DOCKER_CONFIG"); dockerConfLocation != "" {
-		return dockerConfLocation
+	configFile := "config.json"
+	if dockerConfDir := os.Getenv("DOCKER_CONFIG"); dockerConfDir != "" {
+		return filepath.Join(dockerConfDir, configFile)
 	}
-	return "/kaniko/.docker/config.json"
+	return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
 }
 
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
