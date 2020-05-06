@@ -676,7 +676,7 @@ func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
 
 // ExcludeFile returns true if the .dockerignore specified this file should be ignored
 func ExcludeFile(path, buildcontext string) bool {
-	// Do not apply dockerfile excludes for first stage
+	// Apply dockerfile excludes for first stage only
 	if !IsFirstStage {
 		return false
 	}
