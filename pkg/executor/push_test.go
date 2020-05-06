@@ -46,6 +46,48 @@ func mustTag(t *testing.T, s string) name.Tag {
 	return tag
 }
 
+func TestDockerConfLocation(t *testing.T) {
+	dcfg := "DOCKER_CONFIG"
+	originalDockerConfig := os.Getenv(dcfg)
+
+	if err := os.Unsetenv(dcfg); err != nil {
+		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
+	}
+	unset := DockerConfLocation()
+	unsetExpected := "/kaniko/.docker/config.json" // will fail on Windows
+	if unset != unsetExpected {
+		t.Errorf("Unexpected default Docker configuration file location: expected:'%s' got:'%s'", unsetExpected, unset)
+	}
+
+	if err := os.Setenv(dcfg, "/kaniko/.docker"); err != nil {
+		t.Fatalf("Failed to set DOCKER_CONFIG: %v", err)
+	}
+	kanikoDefault := DockerConfLocation()
+	kanikoDefaultExpected := "/kaniko/.docker/config.json" // will fail on Windows
+	if kanikoDefault != kanikoDefaultExpected {
+		t.Errorf("Unexpected kaniko default Docker conf file location: expected:'%s' got:'%s'", kanikoDefaultExpected, kanikoDefault)
+	}
+
+	if err := os.Setenv(dcfg, "/a/different/path"); err != nil {
+		t.Fatalf("Failed to set DOCKER_CONFIG: %v", err)
+	}
+	set := DockerConfLocation()
+	setExpected := "/a/different/path/config.json" // will fail on Windows
+	if set != setExpected {
+		t.Errorf("Unexpected DOCKER_CONF-based file location: expected:'%s' got:'%s'", setExpected, set)
+	}
+
+	if originalDockerConfig != "" {
+		if err := os.Setenv(dcfg, originalDockerConfig); err != nil {
+			t.Fatalf("Failed to set DOCKER_CONFIG back to original value '%s': %v", originalDockerConfig, err)
+		}
+	} else {
+		if err := os.Unsetenv(dcfg); err != nil {
+			t.Fatalf("Failed to unset DOCKER_CONFIG after testing: %v", err)
+		}
+	}
+}
+
 func TestWriteImageOutputs(t *testing.T) {
 	img, err := random.Image(1024, 3)
 	if err != nil {
