@@ -1,3 +1,12 @@
+# v0.22.0 Release 2020-05-07
+This is a minor release of kaniko fixing:
+- GCB Authentication issue
+  [1242](https://github.com/GoogleContainerTools/kaniko/issues/1242)
+- Re-added files if removed from base imaged [1236](https://github.com/GoogleContainerTools/kaniko/issues/1236)
+
+Big thanks to
+- David Dooling
+
 # v0.21.0 Release - 2020-05-04
 This is the 21th release of Kaniko! Thank you for patience.
 
