@@ -710,7 +710,16 @@ func filesToSave(deps []string) ([]string, error) {
 			srcFiles = append(srcFiles, f)
 		}
 	}
-	return srcFiles, nil
+	// remove duplicates
+	deduped := []string{}
+	m := map[string]struct{}{}
+	for _, f := range srcFiles {
+		if _, ok := m[f]; !ok {
+			deduped = append(deduped, f)
+			m[f] = struct{}{}
+		}
+	}
+	return deduped, nil
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {
