@@ -228,9 +228,6 @@ func (s *Snapshotter) writeToTar(t util.Tar, files, whiteouts []string) error {
 	}
 
 	for _, path := range files {
-		if s.l.ImageHasDir(path) {
-			continue
-		}
 		for _, parentPath := range util.ParentDirectories(path) {
 			if parentPath == "/" {
 				continue
@@ -241,7 +238,7 @@ func (s *Snapshotter) writeToTar(t util.Tar, files, whiteouts []string) error {
 			if err := t.AddFileToTar(parentPath); err != nil {
 				return err
 			}
-			s.l.AddDir(parentPath)
+			//s.l.AddDir(parentPath)
 		}
 		if err := t.AddFileToTar(path); err != nil {
 			return err
