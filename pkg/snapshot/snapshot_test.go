@@ -188,7 +188,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		}
 	}
 	if len(foundFiles) != len(snapshotFiles) {
-		t.Logf("expected\n%v\nto equal\n%v", foundFiles, snapshotFiles)
+		t.Logf("expected\n%v\not equal\n%v", foundFiles, snapshotFiles)
 		t.Fatalf("Incorrect number of files were added, expected: %d, got: %d",
 			len(snapshotFiles),
 			len(foundFiles))
