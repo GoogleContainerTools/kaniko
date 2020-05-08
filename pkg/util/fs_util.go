@@ -504,9 +504,9 @@ func FilepathExists(path string) bool {
 }
 
 // CreateFile creates a file at path and copies over contents from the reader
-func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
+func CreateFile(path string, reader io.Reader, perm os.FileMode, uid int64, gid int64) error {
 	// Create directory path if it doesn't exist
-	if err := createParentDirectory(path); err != nil {
+	if err := mkdirAllWithPermissions(path, 0755, uid, gid); err != nil {
 		return errors.Wrap(err, "creating parent dir")
 	}
 
@@ -542,7 +542,7 @@ func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if err := CreateFile(dest, resp.Body, 0600, uint32(uid), uint32(gid)); err != nil {
+	if err := CreateFile(dest, resp.Body, 0600, uid, gid); err != nil {
 		return err
 	}
 	mTime := time.Time{}
@@ -654,7 +654,7 @@ func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
 	}
 	defer srcFile.Close()
 	uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
-	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
+	return false, CreateFile(dest, srcFile, fi.Mode(), uid, gid)
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore
@@ -849,6 +849,7 @@ func createParentDirectory(path string) error {
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
 		}
+
 	} else if IsSymlink(info) {
 		logrus.Infof("destination cannot be a symlink %v", baseDir)
 		return errors.New("destination cannot be a symlink")
