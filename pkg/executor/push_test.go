@@ -283,6 +283,14 @@ func (m *mockedCertPool) append(path string) error {
 	return nil
 }
 
+type retryTransport struct {
+	inner http.RoundTripper
+}
+
+func (t *retryTransport) RoundTrip(in *http.Request) (out *http.Response, err error) {
+	return nil, nil
+}
+
 func Test_makeTransport(t *testing.T) {
 	registryName := "my.registry.name"
 
@@ -347,7 +355,7 @@ func Test_makeTransport(t *testing.T) {
 				return &certPool
 			}
 			transport := makeTransport(tt.opts, registryName, mockedSystemCertLoader)
-			tt.check(transport.(*http.Transport).TLSClientConfig, &certPool)
+			tt.check(transport.(*retryTransport).inner.(*http.Transport).TLSClientConfig, &certPool)
 		})
 	}
 }

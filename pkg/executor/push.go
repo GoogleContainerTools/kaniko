@@ -41,6 +41,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -311,7 +312,7 @@ func makeTransport(opts *config.KanikoOptions, registryName string, loader syste
 			}
 		}
 	}
-	return tr
+	return transport.NewRetry(tr)
 }
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache
