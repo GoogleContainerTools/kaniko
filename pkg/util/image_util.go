@@ -113,7 +113,7 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 	if opts.RegistryMirror != "" && registryName == name.DefaultRegistry {
 		registryName = opts.RegistryMirror
 
-		newReg, err = name.NewRegistry(opts.RegistryMirror, name.StrictValidation)
+		newReg, err = name.NewRegistry(opts.RegistryMirror, name.WeakValidation)
 		if err != nil {
 			return nil, err
 		}
