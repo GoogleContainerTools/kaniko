@@ -23,12 +23,17 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 const (
 	gitPullMethodEnvKey = "GIT_PULL_METHOD"
 	gitPullMethodHTTPS  = "https"
 	gitPullMethodHTTP   = "http"
+
+	gitAuthUsernameEnvKey = "GIT_USERNAME"
+	gitAuthPasswordEnvKey = "GIT_PASSWORD"
 )
 
 var (
@@ -46,6 +51,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	parts := strings.Split(g.context, "#")
 	options := git.CloneOptions{
 		URL:      getGitPullMethod() + "://" + parts[0],
+		Auth:     getGitAuth(),
 		Progress: os.Stdout,
 	}
 	if len(parts) > 1 {
@@ -53,6 +59,18 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	}
 	_, err := git.PlainClone(directory, false, &options)
 	return directory, err
+}
+
+func getGitAuth() transport.AuthMethod {
+	username := os.Getenv(gitAuthUsernameEnvKey)
+	password := os.Getenv(gitAuthPasswordEnvKey)
+	if username != "" || password != "" {
+		return &http.BasicAuth{
+			Username: username,
+			Password: password,
+		}
+	}
+	return nil
 }
 
 func getGitPullMethod() string {

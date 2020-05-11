@@ -173,6 +173,9 @@ If you are using Azure Blob Storage for context file, you will need to pass [Azu
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
+You can either pass this in as part of the git URL (e.g., `git://TOKEN@github.com/acme/myproject.git#refs/heads/mybranch`)
+or using the environment variable `GIT_USERNAME`.
+
 ### Using Standard Input
 If running kaniko and using Standard Input build context, you will need to add the docker or kubernetes `-i, --interactive` flag.
 Once running, kaniko will then get the data from `STDIN` and create the build context as a compressed tar.
