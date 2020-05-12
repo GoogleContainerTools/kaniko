@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 
@@ -116,6 +117,13 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		newReg, err = name.NewRegistry(opts.RegistryMirror, name.StrictValidation)
 		if err != nil {
 			return nil, err
+		}
+
+		if !strings.ContainsRune(image, '/') {
+			ref, err = name.ParseReference("library/"+image, name.WeakValidation)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		toSet = true
