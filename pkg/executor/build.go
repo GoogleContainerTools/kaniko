@@ -596,6 +596,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
+	util.IsFirstStage = true
 	for index, stage := range kanikoStages {
 		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx)
 		if err != nil {
@@ -604,6 +605,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
+		util.IsFirstStage = false
 
 		reviewConfig(stage, &sb.cf.Config)
 

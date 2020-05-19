@@ -73,6 +73,7 @@ var whitelist = initialWhitelist
 var volumes = []string{}
 
 var excluded []string
+var IsFirstStage = true
 
 type ExtractFunction func(string, *tar.Header, io.Reader) error
 
@@ -678,6 +679,10 @@ func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
 
 // ExcludeFile returns true if the .dockerignore specified this file should be ignored
 func ExcludeFile(path, buildcontext string) bool {
+	// Apply dockerfile excludes for first stage only
+	if !IsFirstStage {
+		return false
+	}
 	if HasFilepathPrefix(path, buildcontext, false) {
 		var err error
 		path, err = filepath.Rel(buildcontext, path)
