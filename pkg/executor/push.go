@@ -48,6 +48,11 @@ import (
 	"github.com/spf13/afero"
 )
 
+// for testing
+var (
+	newRetry = transport.NewRetry
+)
+
 type withUserAgent struct {
 	t http.RoundTripper
 }
@@ -312,7 +317,7 @@ func makeTransport(opts *config.KanikoOptions, registryName string, loader syste
 			}
 		}
 	}
-	return transport.NewRetry(tr)
+	return newRetry(tr)
 }
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache

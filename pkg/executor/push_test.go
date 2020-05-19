@@ -34,7 +34,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/validate"
+
 	"github.com/spf13/afero"
 )
 
@@ -347,6 +349,13 @@ func Test_makeTransport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			originalRetry := newRetry
+			newRetry = func(inner http.RoundTripper, _ ...transport.Option) http.RoundTripper {
+				return &retryTransport{
+					inner: inner,
+				}
+			}
+			defer func() { newRetry = originalRetry }()
 			var certificatesPath []string
 			certPool := mockedCertPool{
 				certificatesPath: certificatesPath,
@@ -354,8 +363,8 @@ func Test_makeTransport(t *testing.T) {
 			var mockedSystemCertLoader systemCertLoader = func() CertPool {
 				return &certPool
 			}
-			transport := makeTransport(tt.opts, registryName, mockedSystemCertLoader)
-			tt.check(transport.(*retryTransport).inner.(*http.Transport).TLSClientConfig, &certPool)
+			actual := makeTransport(tt.opts, registryName, mockedSystemCertLoader)
+			tt.check(actual.(*retryTransport).inner.(*http.Transport).TLSClientConfig, &certPool)
 		})
 	}
 }
