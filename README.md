@@ -1,5 +1,7 @@
 # kaniko - Build Images In Kubernetes
 
+`NOTE: Kaniko is not an officially supported Google product`
+
 [![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/GoogleContainerTools/kaniko)](https://goreportcard.com/report/github.com/GoogleContainerTools/kaniko)
 
 ![kaniko logo](logo/Kaniko-Logo.png)
@@ -15,7 +17,6 @@ We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kuber
 
 :mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
 
-Kaniko is not an officially supported Google project.
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
