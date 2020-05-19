@@ -41,10 +41,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+)
+
+// for testing
+var (
+	newRetry = transport.NewRetry
 )
 
 type withUserAgent struct {
@@ -311,7 +317,7 @@ func makeTransport(opts *config.KanikoOptions, registryName string, loader syste
 			}
 		}
 	}
-	return tr
+	return newRetry(tr)
 }
 
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache
