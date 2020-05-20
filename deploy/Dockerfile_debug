@@ -47,7 +47,7 @@ COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
 COPY --from=1 /distroless/bazel-bin/experimental/busybox/busybox/ /busybox/
 # Workaround See #https://github.com/GoogleContainerTools/kaniko/issues/656#issuecomment-564035645
-COPY --from=amd64/busybox:1.31.0 /bin/busybox /busybox/busybox
+COPY --from=amd64/busybox:1.31.1 /bin/busybox /busybox/busybox
 
 # Declare /busybox as a volume to get it automatically whitelisted
 VOLUME /busybox
