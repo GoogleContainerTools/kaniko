@@ -46,6 +46,8 @@ type KanikoOptions struct {
 	Labels                  multiArg
 	SkipTLSVerifyRegistries multiArg
 	RegistriesCertificates  keyValueArg
+	CacheTTL                time.Duration
+	RegistryTLS             multiArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool
@@ -55,10 +57,6 @@ type KanikoOptions struct {
 	NoPush                  bool
 	Cache                   bool
 	Cleanup                 bool
-	CacheTTL                time.Duration
-	InsecureRegistries      multiArg
-	SkipTLSVerifyRegistries multiArg
-	RegistryTLS             multiArg
 	WhitelistVarRun         bool
 	SkipUnusedStages        bool
 }
