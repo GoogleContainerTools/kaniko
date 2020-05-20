@@ -14,29 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package image
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"path/filepath"
+	"runtime"
 	"strconv"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/timing"
-
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/sirupsen/logrus"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/cache"
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -55,7 +54,7 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 		buildArgs = append(buildArgs, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
 	}
 	buildArgs = append(buildArgs, opts.BuildArgs...)
-	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
+	currentBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
 	}
@@ -146,12 +145,7 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {
-	tr := http.DefaultTransport.(*http.Transport)
-	if opts.SkipTLSVerifyPull || opts.SkipTLSVerifyRegistries.Contains(registryName) {
-		tr.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	}
+	tr := util.MakeTransport(opts, registryName)
 
 	// on which v1.Platform is this currently running?
 	platform := currentPlatform()
@@ -181,4 +175,12 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 		cacheKey = d.String()
 	}
 	return cache.LocalSource(&opts.CacheOptions, cacheKey)
+}
+
+// CurrentPlatform returns the v1.Platform on which the code runs
+func currentPlatform() v1.Platform {
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
 }
