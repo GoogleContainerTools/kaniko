@@ -21,14 +21,14 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"strconv"
 	"strings"
 	"syscall"
 
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -38,6 +38,12 @@ type RunCommand struct {
 	BaseCommand
 	cmd *instructions.RunCommand
 }
+
+// for testing
+var (
+	userLookup   = user.Lookup
+	userLookupID = user.LookupId
+)
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	var newCommand []string
@@ -59,44 +65,36 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	logrus.Infof("args: %s", newCommand[1:])
 
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
-	cmd.Dir = config.WorkingDir
+
+	cmd.Dir = setWorkDirIfExists(config.WorkingDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	cmd.Env = addDefaultHOME(config.User, replacementEnvs)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// If specified, run the command as a specific user
-	if config.User != "" {
-		userAndGroup := strings.Split(config.User, ":")
-		userStr := userAndGroup[0]
-		var groupStr string
-		if len(userAndGroup) > 1 {
-			groupStr = userAndGroup[1]
-		}
-
-		uidStr, gidStr, err := util.GetUserFromUsername(userStr, groupStr)
-		if err != nil {
-			return err
-		}
-
-		// uid and gid need to be uint32
-		uid64, err := strconv.ParseUint(uidStr, 10, 32)
-		if err != nil {
-			return err
-		}
-		uid := uint32(uid64)
-		var gid uint32
-		if gidStr != "" {
-			gid64, err := strconv.ParseUint(gidStr, 10, 32)
-			if err != nil {
-				return err
-			}
-			gid = uint32(gid64)
-		}
-		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
+	u := config.User
+	userAndGroup := strings.Split(u, ":")
+	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
+	if err != nil {
+		return errors.Wrapf(err, "resolving user %s", userAndGroup[0])
 	}
 
+	// If specified, run the command as a specific user
+	if userStr != "" {
+		cmd.SysProcAttr.Credential, err = util.SyscallCredentials(userStr)
+		if err != nil {
+			return errors.Wrap(err, "credentials")
+		}
+	}
+
+	env, err := addDefaultHOME(userStr, replacementEnvs)
+	if err != nil {
+		return errors.Wrap(err, "adding default HOME variable")
+	}
+
+	cmd.Env = env
+
+	logrus.Infof("Running: %s", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "starting command")
 	}
@@ -118,29 +116,31 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
-func addDefaultHOME(u string, envs []string) []string {
+func addDefaultHOME(u string, envs []string) ([]string, error) {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
-			return envs
+			return envs, nil
 		}
 	}
 
 	// If user isn't set, set default value of HOME
 	if u == "" || u == constants.RootUser {
-		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue))
+		return append(envs, fmt.Sprintf("%s=%s", constants.HOME, constants.DefaultHOMEValue)), nil
 	}
 
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
-	home := fmt.Sprintf("%s=/", constants.HOME)
-	userObj, err := user.Lookup(u)
-	if err == nil {
-		u = userObj.Username
-		home = fmt.Sprintf("%s=/home/%s", constants.HOME, u)
+	userObj, err := userLookup(u)
+	if err != nil {
+		if uo, e := userLookupID(u); e == nil {
+			userObj = uo
+		} else {
+			return nil, err
+		}
 	}
 
-	return append(envs, home)
+	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, userObj.HomeDir)), nil
 }
 
 // String returns some information about the command for the image config
@@ -152,12 +152,17 @@ func (r *RunCommand) FilesToSnapshot() []string {
 	return nil
 }
 
+func (r *RunCommand) ProvidesFilesToSnapshot() bool {
+	return false
+}
+
 // CacheCommand returns true since this command should be cached
 func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
 
 	return &CachingRunCommand{
-		img: img,
-		cmd: r.cmd,
+		img:       img,
+		cmd:       r.cmd,
+		extractFn: util.ExtractFile,
 	}
 }
 
@@ -175,25 +180,67 @@ func (r *RunCommand) ShouldCacheOutput() bool {
 
 type CachingRunCommand struct {
 	BaseCommand
+	caching
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.RunCommand
+	extractFn      util.ExtractFunction
 }
 
 func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Infof("Found cached layer, extracting to filesystem")
 	var err error
-	cr.extractedFiles, err = util.GetFSFromImage(constants.RootDir, cr.img)
+
+	if cr.img == nil {
+		return errors.New(fmt.Sprintf("command image is nil %v", cr.String()))
+	}
+
+	layers, err := cr.img.Layers()
+	if err != nil {
+		return errors.Wrap(err, "retrieving image layers")
+	}
+
+	if len(layers) != 1 {
+		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	}
+
+	cr.layer = layers[0]
+
+	cr.extractedFiles, err = util.GetFSFromLayers(
+		kConfig.RootDir,
+		layers,
+		util.ExtractFunc(cr.extractFn),
+		util.IncludeWhiteout(),
+	)
 	if err != nil {
 		return errors.Wrap(err, "extracting fs from image")
 	}
+
 	return nil
 }
 
 func (cr *CachingRunCommand) FilesToSnapshot() []string {
-	return cr.extractedFiles
+	f := cr.extractedFiles
+	logrus.Debugf("%d files extracted by caching run command", len(f))
+	logrus.Tracef("Extracted files: %s", f)
+
+	return f
 }
 
 func (cr *CachingRunCommand) String() string {
+	if cr.cmd == nil {
+		return "nil command"
+	}
 	return cr.cmd.String()
+}
+
+func (cr *CachingRunCommand) MetadataOnly() bool {
+	return false
+}
+
+func setWorkDirIfExists(workdir string) string {
+	if _, err := os.Lstat(workdir); err == nil {
+		return workdir
+	}
+	return ""
 }

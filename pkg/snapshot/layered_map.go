@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 type LayeredMap struct {
@@ -103,23 +105,28 @@ func (l *LayeredMap) Add(s string) error {
 	// Use hash function and add to layers
 	newV, err := l.hasher(s)
 	if err != nil {
-		return fmt.Errorf("Error creating hash for %s: %v", s, err)
+		return fmt.Errorf("error creating hash for %s: %v", s, err)
 	}
 	l.layers[len(l.layers)-1][s] = newV
 	return nil
 }
 
-// CheckFileChange checkes whether a given file changed
+// CheckFileChange checks whether a given file changed
 // from the current layered map by its hashing function.
 // Returns true if the file is changed.
 func (l *LayeredMap) CheckFileChange(s string) (bool, error) {
-	oldV, ok := l.Get(s)
 	t := timing.Start("Hashing files")
 	defer timing.DefaultRun.Stop(t)
 	newV, err := l.hasher(s)
 	if err != nil {
+		// if this file does not exist in the new layer return.
+		if os.IsNotExist(err) {
+			logrus.Tracef("%s detected as changed but does not exist", s)
+			return false, nil
+		}
 		return false, err
 	}
+	oldV, ok := l.Get(s)
 	if ok && newV == oldV {
 		return false, nil
 	}

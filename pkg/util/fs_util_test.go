@@ -19,14 +19,23 @@ package util
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/golang/mock/gomock"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 func Test_DetectFilesystemWhitelist(t *testing.T) {
@@ -56,8 +65,8 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/dev", false},
 		{"/dev/pts", false},
 		{"/sys", false},
-		{"/var/run", false},
 		{"/etc/mtab", false},
+		{"/tmp/apt-key-gpghome", true},
 	}
 	actualWhitelist := whitelist
 	sort.Slice(actualWhitelist, func(i, j int) bool {
@@ -149,6 +158,71 @@ func Test_ParentDirectories(t *testing.T) {
 	tests := []struct {
 		name     string
 		path     string
+		rootDir  string
+		expected []string
+	}{
+		{
+			name:    "regular path",
+			path:    "/path/to/dir",
+			rootDir: "/",
+			expected: []string{
+				"/",
+				"/path",
+				"/path/to",
+			},
+		},
+		{
+			name:    "current directory",
+			path:    ".",
+			rootDir: "/",
+			expected: []string{
+				"/",
+			},
+		},
+		{
+			name:    "non / root directory",
+			path:    "/tmp/kaniko/test/another/dir",
+			rootDir: "/tmp/kaniko/",
+			expected: []string{
+				"/tmp/kaniko",
+				"/tmp/kaniko/test",
+				"/tmp/kaniko/test/another",
+			},
+		},
+		{
+			name:    "non / root director same path",
+			path:    "/tmp/123",
+			rootDir: "/tmp/123",
+			expected: []string{
+				"/tmp/123",
+			},
+		},
+		{
+			name:    "non / root directory path",
+			path:    "/tmp/120162240/kaniko",
+			rootDir: "/tmp/120162240",
+			expected: []string{
+				"/tmp/120162240",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original := config.RootDir
+			defer func() { config.RootDir = original }()
+			config.RootDir = tt.rootDir
+			actual := ParentDirectories(tt.path)
+
+			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
+		})
+	}
+}
+
+func Test_ParentDirectoriesWithoutLeadingSlash(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
 		expected []string
 	}{
 		{
@@ -156,8 +230,8 @@ func Test_ParentDirectories(t *testing.T) {
 			path: "/path/to/dir",
 			expected: []string{
 				"/",
-				"/path",
-				"/path/to",
+				"path",
+				"path/to",
 			},
 		},
 		{
@@ -171,7 +245,7 @@ func Test_ParentDirectories(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ParentDirectories(tt.path)
+			actual := ParentDirectoriesWithoutLeadingSlash(tt.path)
 			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
 		})
 	}
@@ -218,6 +292,14 @@ func Test_CheckWhitelist(t *testing.T) {
 				whitelist: []WhitelistEntry{{"/foo/bat", false}},
 			},
 			want: false,
+		},
+		{
+			name: "prefix match only ",
+			args: args{
+				path:      "/tmp/apt-key-gpghome.xft/gpg.key",
+				whitelist: []WhitelistEntry{{"/tmp/apt-key-gpghome.*", true}},
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
@@ -310,6 +392,84 @@ func TestHasFilepathPrefix(t *testing.T) {
 	}
 }
 
+func BenchmarkHasFilepathPrefix(b *testing.B) {
+	tests := []struct {
+		path            string
+		prefix          string
+		prefixMatchOnly bool
+	}{
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo/bar",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+		{
+			path:            "/foo/bar/baz/foo/foobar",
+			prefix:          "/foo/bar/baz",
+			prefixMatchOnly: true,
+		},
+	}
+	for _, ts := range tests {
+		name := fmt.Sprint("PathDepth=", strings.Count(ts.path, "/"), ",PrefixDepth=", strings.Count(ts.prefix, "/"))
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				HasFilepathPrefix(ts.path, ts.prefix, ts.prefixMatchOnly)
+			}
+		})
+	}
+}
+
 type checker func(root string, t *testing.T)
 
 func fileExists(p string) checker {
@@ -329,6 +489,19 @@ func fileMatches(p string, c []byte) checker {
 		}
 		if !reflect.DeepEqual(actual, c) {
 			t.Errorf("file contents do not match. %v!=%v", actual, c)
+		}
+	}
+}
+
+func timesMatch(p string, fTime time.Time) checker {
+	return func(root string, t *testing.T) {
+		fi, err := os.Stat(filepath.Join(root, p))
+		if err != nil {
+			t.Fatalf("error statting file %s", p)
+		}
+
+		if fi.ModTime().UTC() != fTime.UTC() {
+			t.Errorf("Expected modtime to equal %v but was %v", fTime, fi.ModTime())
 		}
 	}
 }
@@ -376,14 +549,16 @@ func filesAreHardlinks(first, second string) checker {
 	}
 }
 
-func fileHeader(name string, contents string, mode int64) *tar.Header {
+func fileHeader(name string, contents string, mode int64, fTime time.Time) *tar.Header {
 	return &tar.Header{
-		Name:     name,
-		Size:     int64(len(contents)),
-		Mode:     mode,
-		Typeflag: tar.TypeReg,
-		Uid:      os.Getuid(),
-		Gid:      os.Getgid(),
+		Name:       name,
+		Size:       int64(len(contents)),
+		Mode:       mode,
+		Typeflag:   tar.TypeReg,
+		Uid:        os.Getuid(),
+		Gid:        os.Getgid(),
+		AccessTime: fTime,
+		ModTime:    fTime,
 	}
 }
 
@@ -416,6 +591,87 @@ func dirHeader(name string, mode int64) *tar.Header {
 	}
 }
 
+func createUncompressedTar(fileContents map[string]string, tarFileName, testDir string) error {
+	if err := testutil.SetupFiles(testDir, fileContents); err != nil {
+		return err
+	}
+	tarFile, err := os.Create(filepath.Join(testDir, tarFileName))
+	if err != nil {
+		return err
+	}
+	t := NewTar(tarFile)
+	defer t.Close()
+	for file := range fileContents {
+		filePath := filepath.Join(testDir, file)
+		if err := t.AddFileToTar(filePath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func Test_unTar(t *testing.T) {
+	tcs := []struct {
+		name             string
+		setupTarContents map[string]string
+		tarFileName      string
+		destination      string
+		expectedFileList []string
+		errorExpected    bool
+	}{
+		{
+			name: "multfile tar",
+			setupTarContents: map[string]string{
+				"foo/file1": "hello World",
+				"bar/file1": "hello World",
+				"bar/file2": "hello World",
+				"file1":     "hello World",
+			},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			expectedFileList: []string{"foo/file1", "bar/file1", "bar/file2", "file1"},
+			errorExpected:    false,
+		},
+		{
+			name:             "empty tar",
+			setupTarContents: map[string]string{},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			expectedFileList: nil,
+			errorExpected:    false,
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			testDir, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(testDir)
+			if err := createUncompressedTar(tc.setupTarContents, tc.tarFileName, testDir); err != nil {
+				t.Fatal(err)
+			}
+			file, err := os.Open(filepath.Join(testDir, tc.tarFileName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			fileList, err := unTar(file, tc.destination)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// update expectedFileList to take into factor temp directory
+			for i, file := range tc.expectedFileList {
+				tc.expectedFileList[i] = filepath.Join(testDir, file)
+			}
+			// sort both slices to ensure objects are in the same order for deep equals
+			sort.Strings(tc.expectedFileList)
+			sort.Strings(fileList)
+			testutil.CheckErrorAndDeepEqual(t, tc.errorExpected, err, tc.expectedFileList, fileList)
+
+		})
+	}
+}
+
 func TestExtractFile(t *testing.T) {
 	type tc struct {
 		name     string
@@ -425,21 +681,27 @@ func TestExtractFile(t *testing.T) {
 		checkers []checker
 	}
 
+	defaultTestTime, err := time.Parse(time.RFC3339, "1912-06-23T00:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tcs := []tc{
 		{
 			name:     "normal file",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0644)},
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
 				permissionsMatch("/bar", 0644),
+				timesMatch("/bar", defaultTestTime),
 			},
 		},
 		{
 			name:     "normal file, directory does not exist",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0644)},
+			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/foo/bar"),
 				fileMatches("/foo/bar", []byte("helloworld")),
@@ -451,7 +713,7 @@ func TestExtractFile(t *testing.T) {
 			name:     "normal file, directory is created after",
 			contents: []byte("helloworld"),
 			hdrs: []*tar.Header{
-				fileHeader("./foo/bar", "helloworld", 0644),
+				fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime),
 				dirHeader("./foo", 0722),
 			},
 			checkers: []checker{
@@ -495,7 +757,7 @@ func TestExtractFile(t *testing.T) {
 			name:   "hardlink",
 			tmpdir: "/tmp/hardlink",
 			hdrs: []*tar.Header{
-				fileHeader("/bin/gzip", "gzip-binary", 0751),
+				fileHeader("/bin/gzip", "gzip-binary", 0751, defaultTestTime),
 				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
 			},
 			checkers: []checker{
@@ -506,7 +768,7 @@ func TestExtractFile(t *testing.T) {
 		{
 			name:     "file with setuid bit",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644)},
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
@@ -518,7 +780,7 @@ func TestExtractFile(t *testing.T) {
 			contents: []byte("helloworld"),
 			hdrs: []*tar.Header{
 				dirHeader("./foo", 01755),
-				fileHeader("./foo/bar", "helloworld", 0644),
+				fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime),
 			},
 			checkers: []checker{
 				fileExists("/foo/bar"),
@@ -547,7 +809,7 @@ func TestExtractFile(t *testing.T) {
 			defer os.RemoveAll(r)
 
 			for _, hdr := range tc.hdrs {
-				if err := extractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
+				if err := ExtractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -586,6 +848,9 @@ func TestCopySymlink(t *testing.T) {
 			tc := tc
 			t.Parallel()
 			r, err := ioutil.TempDir("", "")
+			os.MkdirAll(filepath.Join(r, filepath.Dir(tc.linkTarget)), 0777)
+			tc.linkTarget = filepath.Join(r, tc.linkTarget)
+			ioutil.WriteFile(tc.linkTarget, nil, 0644)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -607,12 +872,8 @@ func TestCopySymlink(t *testing.T) {
 			if _, err := CopySymlink(link, dest, ""); err != nil {
 				t.Fatal(err)
 			}
-			got, err := os.Readlink(dest)
-			if err != nil {
+			if _, err := os.Lstat(dest); err != nil {
 				t.Fatalf("error reading link %s: %s", link, err)
-			}
-			if got != tc.linkTarget {
-				t.Errorf("link target does not match: %s != %s", got, tc.linkTarget)
 			}
 		})
 	}
@@ -658,6 +919,513 @@ func Test_childDirInWhitelist(t *testing.T) {
 			whitelist = tt.args.whitelist
 			if got := childDirInWhitelist(tt.args.path); got != tt.want {
 				t.Errorf("childDirInWhitelist() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_correctDockerignoreFileIsUsed(t *testing.T) {
+	type args struct {
+		dockerfilepath string
+		buildcontext   string
+		excluded       []string
+		included       []string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "relative dockerfile used",
+			args: args{
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_dockerignore_relative",
+				buildcontext:   "../../integration/",
+				excluded:       []string{"ignore_relative/bar"},
+				included:       []string{"ignore_relative/foo", "ignore/bar"},
+			},
+		},
+		{
+			name: "context dockerfile is used",
+			args: args{
+				dockerfilepath: "../../integration/dockerfiles/Dockerfile_test_dockerignore",
+				buildcontext:   "../../integration/",
+				excluded:       []string{"ignore/bar"},
+				included:       []string{"ignore/foo", "ignore_relative/bar"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		if err := GetExcludedFiles(tt.args.dockerfilepath, tt.args.buildcontext); err != nil {
+			t.Fatal(err)
+		}
+		for _, excl := range tt.args.excluded {
+			t.Run(tt.name+" to exclude "+excl, func(t *testing.T) {
+				if !ExcludeFile(excl, tt.args.buildcontext) {
+					t.Errorf("'%v' not excluded", excl)
+				}
+			})
+		}
+		for _, incl := range tt.args.included {
+			t.Run(tt.name+" to include "+incl, func(t *testing.T) {
+				if ExcludeFile(incl, tt.args.buildcontext) {
+					t.Errorf("'%v' not included", incl)
+				}
+			})
+		}
+	}
+}
+
+func Test_CopyFile_skips_self(t *testing.T) {
+	t.Parallel()
+	tempDir, err := ioutil.TempDir("", "kaniko_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tempFile := filepath.Join(tempDir, "foo")
+	expected := "bar"
+
+	if err := ioutil.WriteFile(
+		tempFile,
+		[]byte(expected),
+		0755,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	ignored, err := CopyFile(tempFile, tempFile, "", DoNotChangeUID, DoNotChangeGID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ignored {
+		t.Fatal("expected file to NOT be ignored")
+	}
+
+	// Ensure file has expected contents
+	actualData, err := ioutil.ReadFile(tempFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if actual := string(actualData); actual != expected {
+		t.Fatalf("expected file contents to be %q, but got %q", expected, actual)
+	}
+}
+
+func fakeExtract(dest string, hdr *tar.Header, tr io.Reader) error {
+	return nil
+}
+
+func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Write a whiteout path
+	d1 := []byte("Hello World\n")
+	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(root)
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+		IncludeWhiteout(),
+	}
+
+	expectErr := false
+
+	f := func(expectedFiles []string, tw *tar.Writer) {
+		for _, f := range expectedFiles {
+			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+			hdr := &tar.Header{
+				Name: f,
+				Mode: 0644,
+				Size: int64(len("Hello World\n")),
+			}
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tw.Write([]byte("Hello World\n")); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	secondLayerFiles := []string{
+		filepath.Join(root, ".wh.foobar"),
+	}
+
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(secondLayerFiles, tw)
+
+	mockLayer2 := mockv1.NewMockLayer(ctrl)
+	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc = ioutil.NopCloser(buf)
+	mockLayer2.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+		mockLayer2,
+	}
+
+	expectedFiles = append(expectedFiles, secondLayerFiles...)
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		expectErr,
+	)
+	// Make sure whiteout files are removed form the root.
+	_, err = os.Lstat(filepath.Join(root, "foobar"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Errorf("expected whiteout foobar file to be deleted. However found it.")
+	}
+}
+
+func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Write a whiteout path
+	d1 := []byte("Hello World\n")
+	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+	}
+
+	expectErr := false
+
+	f := func(expectedFiles []string, tw *tar.Writer) {
+		for _, f := range expectedFiles {
+			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+			hdr := &tar.Header{
+				Name: f,
+				Mode: 0644,
+				Size: int64(len("Hello world\n")),
+			}
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tw.Write([]byte("Hello world\n")); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+	layerFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(layerFiles, tw)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	secondLayerFiles := []string{
+		filepath.Join(root, ".wh.foobar"),
+	}
+
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(secondLayerFiles, tw)
+
+	mockLayer2 := mockv1.NewMockLayer(ctrl)
+	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc = ioutil.NopCloser(buf)
+	mockLayer2.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+		mockLayer2,
+	}
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		expectErr,
+	)
+	// Make sure whiteout files are removed form the root.
+	_, err = os.Lstat(filepath.Join(root, "foobar"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Errorf("expected whiteout foobar file to be deleted. However found it.")
+	}
+}
+
+func Test_GetFSFromLayers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+	}
+
+	expectErr := false
+	expectedFiles := []string{
+		filepath.Join(root, "foobar"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	for _, f := range expectedFiles {
+		f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+		hdr := &tar.Header{
+			Name: f,
+			Mode: 0644,
+			Size: int64(len("Hello world\n")),
+		}
+
+		if err := tw.WriteHeader(hdr); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := tw.Write([]byte("Hello world\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+	}
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		expectErr,
+	)
+}
+
+func assertGetFSFromLayers(
+	t *testing.T,
+	actualFiles []string,
+	expectedFiles []string,
+	err error,
+	expectErr bool,
+) {
+	if !expectErr && err != nil {
+		t.Error(err)
+		t.FailNow()
+	} else if expectErr && err == nil {
+		t.Error("expected err to not be nil")
+		t.FailNow()
+	}
+
+	if len(actualFiles) != len(expectedFiles) {
+		t.Errorf("expected %s to equal %s", actualFiles, expectedFiles)
+		t.FailNow()
+	}
+
+	for i := range expectedFiles {
+		if actualFiles[i] != expectedFiles[i] {
+			t.Errorf("expected %s to equal %s", actualFiles[i], expectedFiles[i])
+		}
+	}
+}
+
+func TestUpdateWhitelist(t *testing.T) {
+	tests := []struct {
+		name            string
+		whitelistVarRun bool
+		expected        []WhitelistEntry
+	}{
+		{
+			name:            "var/run whitelisted",
+			whitelistVarRun: true,
+			expected: []WhitelistEntry{
+				{
+					Path:            "/kaniko",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/etc/mtab",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/var/run",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/tmp/apt-key-gpghome",
+					PrefixMatchOnly: true,
+				},
+			},
+		},
+		{
+			name: "var/run not whitelisted",
+			expected: []WhitelistEntry{
+				{
+					Path:            "/kaniko",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/etc/mtab",
+					PrefixMatchOnly: false,
+				},
+				{
+					Path:            "/tmp/apt-key-gpghome",
+					PrefixMatchOnly: true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original := initialWhitelist
+			defer func() { initialWhitelist = original }()
+			UpdateWhitelist(tt.whitelistVarRun)
+			sort.Slice(tt.expected, func(i, j int) bool {
+				return tt.expected[i].Path < tt.expected[j].Path
+			})
+			sort.Slice(initialWhitelist, func(i, j int) bool {
+				return initialWhitelist[i].Path < initialWhitelist[j].Path
+			})
+			testutil.CheckDeepEqual(t, tt.expected, initialWhitelist)
+		})
+	}
+}
+
+func Test_setFileTimes(t *testing.T) {
+	testDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(testDir)
+
+	p := filepath.Join(testDir, "foo.txt")
+
+	if err := ioutil.WriteFile(p, []byte("meow"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	type testcase struct {
+		desc  string
+		path  string
+		aTime time.Time
+		mTime time.Time
+	}
+
+	testCases := []testcase{
+		{
+			desc: "zero for mod and access",
+			path: p,
+		},
+		{
+			desc:  "zero for mod",
+			path:  p,
+			aTime: time.Now(),
+		},
+		{
+			desc:  "zero for access",
+			path:  p,
+			mTime: time.Now(),
+		},
+		{
+			desc:  "both non-zero",
+			path:  p,
+			mTime: time.Now(),
+			aTime: time.Now(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			err := setFileTimes(tc.path, tc.aTime, tc.mTime)
+			if err != nil {
+				t.Errorf("expected err to be nil not %s", err)
 			}
 		})
 	}

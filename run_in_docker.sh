@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
 set -e
 
-if [ $# -lt 3 ];
-    then echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag> <cache>"
+if [ $# -lt 3 ]; then
+    echo "Usage: run_in_docker.sh <path to Dockerfile> <context directory> <image tag> <cache>"
+    exit 1
 fi
 
 dockerfile=$1
@@ -28,15 +30,21 @@ if [[ ! -z "$4" ]]; then
     cache=$4
 fi
 
-if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
-    echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
-    exit 1
+if [[ $destination == *"gcr"* ]]; then
+    if [[ ! -e $HOME/.config/gcloud/application_default_credentials.json ]]; then
+        echo "Application Default Credentials do not exist. Run [gcloud auth application-default login] to configure them"
+        exit 1
+    fi
+    docker run \
+        -v "$HOME"/.config/gcloud:/root/.config/gcloud \
+        -v "$context":/workspace \
+        gcr.io/kaniko-project/executor:latest \
+        --dockerfile "${dockerfile}" --destination "${destination}" --context dir:///workspace/ \
+        --cache="${cache}"
+else
+    docker run \
+        -v "$context":/workspace \
+        gcr.io/kaniko-project/executor:latest \
+        --dockerfile "${dockerfile}" --destination "${destination}" --context dir:///workspace/ \
+        --cache="${cache}"
 fi
-
-docker run \
-    -v $HOME/.config/gcloud:/root/.config/gcloud \
-    -v ${context}:/workspace \
-    gcr.io/kaniko-project/executor:latest \
-    --dockerfile ${dockerfile} --destination ${destination} --context dir:///workspace/ \
-    --cache=${cache}
-

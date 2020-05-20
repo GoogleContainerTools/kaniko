@@ -21,31 +21,29 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"os"
+	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-)
+	"github.com/minio/highwayhash"
 
-// ConfigureLogging sets the logrus logging level and forces logs to be colorful (!)
-func ConfigureLogging(logLevel string) error {
-	lvl, err := logrus.ParseLevel(logLevel)
-	if err != nil {
-		return errors.Wrap(err, "parsing log level")
-	}
-	logrus.SetLevel(lvl)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		ForceColors: true,
-	})
-	return nil
-}
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+)
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
 func Hasher() func(string) (string, error) {
+	pool := sync.Pool{
+		New: func() interface{} {
+			b := make([]byte, highwayhash.Size*10*1024)
+			return &b
+		},
+	}
+	key := make([]byte, highwayhash.Size)
 	hasher := func(p string) (string, error) {
-		h := md5.New()
+		h, _ := highwayhash.New(key)
 		fi, err := os.Lstat(p)
 		if err != nil {
 			return "", err
@@ -63,7 +61,9 @@ func Hasher() func(string) (string, error) {
 				return "", err
 			}
 			defer f.Close()
-			if _, err := io.Copy(h, f); err != nil {
+			buf := pool.Get().(*[]byte)
+			defer pool.Put(buf)
+			if _, err := io.CopyBuffer(h, f, *buf); err != nil {
 				return "", err
 			}
 		}
@@ -126,4 +126,21 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
+}
+
+// CurrentPlatform returns the v1.Platform on which the code runs
+func currentPlatform() v1.Platform {
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
+}
+
+// GetInputFrom returns Reader content
+func GetInputFrom(r io.Reader) ([]byte, error) {
+	output, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
 }

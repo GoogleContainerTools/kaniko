@@ -1,0 +1,10 @@
+FROM debian:9.11
+
+ARG SSH_PRIVATE_KEY
+ARG SSH_PUBLIC_KEY
+
+RUN mkdir .ssh                                 && \
+    chmod 700 .ssh                             && \
+    echo "$SSH_PRIVATE_KEY" > .ssh/id_rsa      && \
+    echo "$SSH_PUBLIC_KEY"  > .ssh/id_rsa.pub  && \
+    chmod 600 .ssh/id_rsa .ssh/id_rsa.pub

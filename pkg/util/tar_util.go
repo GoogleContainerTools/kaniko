@@ -25,8 +25,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -74,7 +76,22 @@ func (t *Tar) AddFileToTar(p string) error {
 	if err != nil {
 		return err
 	}
-	hdr.Name = p
+
+	if p == config.RootDir {
+		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
+		hdr.Name = "/"
+	} else {
+		// Docker uses no leading / in the tarball
+		hdr.Name = strings.TrimPrefix(p, config.RootDir)
+		hdr.Name = strings.TrimLeft(hdr.Name, "/")
+	}
+	if hdr.Typeflag == tar.TypeDir && !strings.HasSuffix(hdr.Name, "/") {
+		hdr.Name = hdr.Name + "/"
+	}
+	// rootfs may not have been extracted when using cache, preventing uname/gname from resolving
+	// this makes this layer unnecessarily differ from a cached layer which does contain this information
+	hdr.Uname = ""
+	hdr.Gname = ""
 
 	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {
@@ -104,7 +121,8 @@ func (t *Tar) Whiteout(p string) error {
 	name := ".wh." + filepath.Base(p)
 
 	th := &tar.Header{
-		Name: filepath.Join(dir, name),
+		// Docker uses no leading / in the tarball
+		Name: strings.TrimLeft(filepath.Join(dir, name), "/"),
 		Size: 0,
 	}
 	if err := t.w.WriteHeader(th); err != nil {

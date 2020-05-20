@@ -1,15 +1,16 @@
-ARG REGISTRY=gcr.io
-ARG REPO=google-appengine
+ARG REGISTRY=docker.io
+ARG IMAGE=debian
+ARG TAG=9.11
 ARG WORD=hello
 ARG W0RD2=hey
 
-FROM ${REGISTRY}/${REPO}/debian9 as stage1
+FROM ${REGISTRY}/${IMAGE}:${TAG} as stage1
 
 # Should evaluate WORD and create /tmp/hello
 ARG WORD
 RUN touch /${WORD}
 
-FROM ${REGISTRY}/${REPO}/debian9
+FROM ${REGISTRY}/${IMAGE}:${TAG}
 
 COPY --from=stage1 /hello /tmp
 

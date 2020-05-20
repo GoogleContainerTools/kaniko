@@ -22,7 +22,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
@@ -60,6 +60,7 @@ func Test_StandardImage(t *testing.T) {
 	}, &config.KanikoOptions{})
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
 }
+
 func Test_ScratchImage(t *testing.T) {
 	stages, err := parse(dockerfile)
 	if err != nil {
@@ -91,6 +92,20 @@ func Test_TarImage(t *testing.T) {
 		Stage:                  stages[2],
 	}, &config.KanikoOptions{})
 	testutil.CheckErrorAndDeepEqual(t, false, err, nil, actual)
+}
+
+func Test_ScratchImageFromMirror(t *testing.T) {
+	stages, err := parse(dockerfile)
+	if err != nil {
+		t.Error(err)
+	}
+	actual, err := RetrieveSourceImage(config.KanikoStage{
+		Stage: stages[1],
+	}, &config.KanikoOptions{
+		RegistryMirror: "mirror.gcr.io",
+	})
+	expected := empty.Image
+	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
 }
 
 // parse parses the contents of a Dockerfile and returns a list of commands

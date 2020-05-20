@@ -162,7 +162,7 @@ type Writer interface {
 	// WriteResponse writes the specified HTTP response to the logger if the log level is greater than
 	// or equal to LogInfo.  The response body, if set, is logged at level LogDebug or higher.
 	// Custom filters can be specified to exclude URL, header, and/or body content from the log.
-	// By default no respone content is excluded.
+	// By default no response content is excluded.
 	WriteResponse(resp *http.Response, filter Filter)
 }
 
@@ -282,7 +282,7 @@ func (fl fileLogger) WriteRequest(req *http.Request, filter Filter) {
 	}
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
-	fmt.Fprintf(fl.logFile, b.String())
+	fmt.Fprint(fl.logFile, b.String())
 	fl.logFile.Sync()
 }
 
@@ -311,14 +311,14 @@ func (fl fileLogger) WriteResponse(resp *http.Response, filter Filter) {
 	}
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
-	fmt.Fprintf(fl.logFile, b.String())
+	fmt.Fprint(fl.logFile, b.String())
 	fl.logFile.Sync()
 }
 
 // returns true if the provided body should be included in the log
 func (fl fileLogger) shouldLogBody(header http.Header, body io.ReadCloser) bool {
 	ct := header.Get("Content-Type")
-	return fl.logLevel >= LogDebug && body != nil && strings.Index(ct, "application/octet-stream") == -1
+	return fl.logLevel >= LogDebug && body != nil && !strings.Contains(ct, "application/octet-stream")
 }
 
 // creates standard header for log entries, it contains a timestamp and the log level

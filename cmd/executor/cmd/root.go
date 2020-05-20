@@ -28,6 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/executor"
+	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/genuinetools/amicontained/container"
@@ -38,15 +39,21 @@ import (
 )
 
 var (
-	opts     = &config.KanikoOptions{}
-	logLevel string
-	force    bool
+	opts         = &config.KanikoOptions{}
+	ctxSubPath   string
+	force        bool
+	logLevel     string
+	logFormat    string
+	logTimestamp bool
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", constants.DefaultLogLevel, "Log level (debug, info, warn, error, fatal, panic")
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (trace, debug, info, warn, error, fatal, panic)")
+	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
+	RootCmd.PersistentFlags().BoolVar(&logTimestamp, "log-timestamp", logging.DefaultLogTimestamp, "Timestamp in log output")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
-	addKanikoOptionsFlags(RootCmd)
+
+	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
 }
 
@@ -54,20 +61,30 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := util.ConfigureLogging(logLevel); err != nil {
-			return err
-		}
-		if !opts.NoPush && len(opts.Destinations) == 0 {
-			return errors.New("You must provide --destination, or use --no-push")
-		}
-		if err := cacheFlagsValid(); err != nil {
-			return errors.Wrap(err, "cache flags invalid")
-		}
-		if err := resolveSourceContext(); err != nil {
-			return errors.Wrap(err, "error resolving source context")
-		}
-		if err := resolveDockerfilePath(); err != nil {
-			return errors.Wrap(err, "error resolving dockerfile path")
+		if cmd.Use == "executor" {
+			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
+
+			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
+				return err
+			}
+
+			if !opts.NoPush && len(opts.Destinations) == 0 {
+				return errors.New("You must provide --destination, or use --no-push")
+			}
+			if err := cacheFlagsValid(); err != nil {
+				return errors.Wrap(err, "cache flags invalid")
+			}
+			if err := resolveSourceContext(); err != nil {
+				return errors.Wrap(err, "error resolving source context")
+			}
+			if err := resolveDockerfilePath(); err != nil {
+				return errors.Wrap(err, "error resolving dockerfile path")
+			}
+			if len(opts.Destinations) == 0 && opts.ImageNameDigestFile != "" {
+				return errors.New("You must provide --destination if setting ImageNameDigestFile")
+			}
+			// Update whitelisted paths
+			util.UpdateWhitelist(opts.WhitelistVarRun)
 		}
 		return nil
 	},
@@ -80,6 +97,9 @@ var RootCmd = &cobra.Command{
 		}
 		if err := executor.CheckPushPermissions(opts); err != nil {
 			exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
+		}
+		if err := resolveRelativePaths(); err != nil {
+			exit(errors.Wrap(err, "error resolving relative paths to absolute paths"))
 		}
 		if err := os.Chdir("/"); err != nil {
 			exit(errors.Wrap(err, "error changing to root dir"))
@@ -110,9 +130,10 @@ var RootCmd = &cobra.Command{
 }
 
 // addKanikoOptionsFlags configures opts
-func addKanikoOptionsFlags(cmd *cobra.Command) {
+func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&opts.DockerfilePath, "dockerfile", "f", "Dockerfile", "Path to the dockerfile to be built.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SrcContext, "context", "c", "/workspace/", "Path to the dockerfile build context.")
+	RootCmd.PersistentFlags().StringVarP(&ctxSubPath, "context-sub-path", "", "", "Sub path within the given context.")
 	RootCmd.PersistentFlags().StringVarP(&opts.Bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
@@ -129,12 +150,20 @@ func addKanikoOptionsFlags(cmd *cobra.Command) {
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheRepo, "cache-repo", "", "", "Specify a repository to use as a cache, otherwise one will be inferred from the destination provided")
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "", "/cache", "Specify a local directory to use as a cache.")
 	RootCmd.PersistentFlags().StringVarP(&opts.DigestFile, "digest-file", "", "", "Specify a file to save the digest of the built image to.")
+	RootCmd.PersistentFlags().StringVarP(&opts.ImageNameDigestFile, "image-name-with-digest-file", "", "", "Specify a file to save the image name w/ digest of the built image to.")
+	RootCmd.PersistentFlags().StringVarP(&opts.OCILayoutPath, "oci-layout-path", "", "", "Path to save the OCI image layout of the built image.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.RegistryTLS, "registry-tls", "", "A TLS certificate for a registry. (registry=my.registry,cert=/mnt/cert.crt,key=/mnt/cert.key)")
+	opts.RegistriesCertificates = make(map[string]string)
+	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.RegistryMirror, "registry-mirror", "", "", "Registry mirror to use has pull-through cache instead of docker.io.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.WhitelistVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
+	RootCmd.PersistentFlags().VarP(&opts.Labels, "label", "", "Set metadata for an image. Set it repeatedly for multiple labels.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SkipUnusedStages, "skip-unused-stages", "", false, "Build only used stages if defined to true. Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -165,7 +194,7 @@ func cacheFlagsValid() error {
 
 // resolveDockerfilePath resolves the Dockerfile path to an absolute path
 func resolveDockerfilePath() error {
-	if match, _ := regexp.MatchString("^https?://", opts.DockerfilePath); match {
+	if isURL(opts.DockerfilePath) {
 		return nil
 	}
 	if util.FilepathExists(opts.DockerfilePath) {
@@ -188,17 +217,28 @@ func resolveDockerfilePath() error {
 	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
 }
 
+// resolveEnvironmentBuildArgs replace build args without value by the same named environment variable
+func resolveEnvironmentBuildArgs(arguments []string, resolver func(string) string) {
+	for index, argument := range arguments {
+		i := strings.Index(argument, "=")
+		if i < 0 {
+			value := resolver(argument)
+			arguments[index] = fmt.Sprintf("%s=%s", argument, value)
+		}
+	}
+}
+
 // copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
 // it won't be copied into the image
 func copyDockerfile() error {
-	if _, err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, ""); err != nil {
+	if _, err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, "", util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 		return errors.Wrap(err, "copying dockerfile")
 	}
 	opts.DockerfilePath = constants.DockerfilePath
 	return nil
 }
 
-// resolveSourceContext unpacks the source context if it is a tar in a bucket
+// resolveSourceContext unpacks the source context if it is a tar in a bucket or in kaniko container
 // it resets srcContext to be the path to the unpacked build context within the image
 func resolveSourceContext() error {
 	if opts.SrcContext == "" && opts.Bucket == "" {
@@ -209,12 +249,12 @@ func resolveSourceContext() error {
 	}
 	if opts.Bucket != "" {
 		if !strings.Contains(opts.Bucket, "://") {
+			// if no prefix use Google Cloud Storage as default for backwards compatibility
 			opts.SrcContext = constants.GCSBuildContextPrefix + opts.Bucket
 		} else {
 			opts.SrcContext = opts.Bucket
 		}
 	}
-	// if no prefix use Google Cloud Storage as default for backwards compatibility
 	contextExecutor, err := buildcontext.GetBuildContext(opts.SrcContext)
 	if err != nil {
 		return err
@@ -224,11 +264,55 @@ func resolveSourceContext() error {
 	if err != nil {
 		return err
 	}
+	if ctxSubPath != "" {
+		opts.SrcContext = filepath.Join(opts.SrcContext, ctxSubPath)
+		if _, err := os.Stat(opts.SrcContext); os.IsNotExist(err) {
+			return err
+		}
+	}
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
+	return nil
+}
+
+func resolveRelativePaths() error {
+	optsPaths := []*string{
+		&opts.DockerfilePath,
+		&opts.SrcContext,
+		&opts.CacheDir,
+		&opts.TarPath,
+		&opts.DigestFile,
+		&opts.ImageNameDigestFile,
+	}
+
+	for _, p := range optsPaths {
+		if path := *p; shdSkip(path) {
+			logrus.Debugf("Skip resolving path %s", path)
+			continue
+		}
+
+		// Resolve relative path to absolute path
+		var err error
+		relp := *p // save original relative path
+		if *p, err = filepath.Abs(*p); err != nil {
+			return errors.Wrapf(err, "Couldn't resolve relative path %s to an absolute path", *p)
+		}
+		logrus.Debugf("Resolved relative path %s to %s", relp, *p)
+	}
 	return nil
 }
 
 func exit(err error) {
 	fmt.Println(err)
 	os.Exit(1)
+}
+
+func isURL(path string) bool {
+	if match, _ := regexp.MatchString("^https?://", path); match {
+		return true
+	}
+	return false
+}
+
+func shdSkip(path string) bool {
+	return path == "" || isURL(path) || filepath.IsAbs(path)
 }

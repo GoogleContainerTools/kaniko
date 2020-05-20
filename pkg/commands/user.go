@@ -17,13 +17,20 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+)
+
+// for testing
+var (
+	Lookup = util.Lookup
 )
 
 type UserCommand struct {
@@ -38,19 +45,17 @@ func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
 	if err != nil {
-		return err
-	}
-	var groupStr string
-	if len(userAndGroup) > 1 {
-		groupStr, err = util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
-		if err != nil {
-			return err
-		}
+		return errors.Wrap(err, fmt.Sprintf("resolving user %s", userAndGroup[0]))
 	}
 
-	if groupStr != "" {
+	if len(userAndGroup) > 1 {
+		groupStr, err := util.ResolveEnvironmentReplacement(userAndGroup[1], replacementEnvs, false)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("resolving group %s", userAndGroup[1]))
+		}
 		userStr = userStr + ":" + groupStr
 	}
+
 	config.User = userStr
 	return nil
 }

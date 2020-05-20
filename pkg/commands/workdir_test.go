@@ -22,7 +22,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
@@ -35,6 +35,11 @@ var workdirTests = []struct {
 	expectedPath  string
 	snapshotFiles []string
 }{
+	{
+		path:          "a",
+		expectedPath:  "/a",
+		snapshotFiles: []string{"/a"},
+	},
 	{
 		path:          "/a",
 		expectedPath:  "/a",
@@ -92,7 +97,7 @@ func TestWorkdirCommand(t *testing.T) {
 	}()
 
 	cfg := &v1.Config{
-		WorkingDir: "/",
+		WorkingDir: "",
 		Env: []string{
 			"path=usr/",
 			"home=/root",

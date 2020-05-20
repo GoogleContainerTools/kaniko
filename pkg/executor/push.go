@@ -18,11 +18,16 @@ package executor
 
 import (
 	"crypto/tls"
+  "crypto/x509"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -35,23 +40,93 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
+)
+
+// for testing
+var (
+	newRetry = transport.NewRetry
 )
 
 type withUserAgent struct {
 	t http.RoundTripper
 }
 
+const (
+	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
+)
+
+// DockerConfLocation returns the file system location of the Docker
+// configuration file under the directory set in the DOCKER_CONFIG environment
+// variable.  If that variable is not set, it returns the OS-equivalent of
+// "/kaniko/.docker/config.json".
+func DockerConfLocation() string {
+	configFile := "config.json"
+	if dockerConfDir := os.Getenv("DOCKER_CONFIG"); dockerConfDir != "" {
+		return filepath.Join(dockerConfDir, configFile)
+	}
+	return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
+}
+
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Set("User-Agent", fmt.Sprintf("kaniko/%s", version.Version()))
+	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
+	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
+		ua = append(ua, upstream)
+	}
+	r.Header.Set("User-Agent", strings.Join(ua, ","))
 	return w.t.RoundTrip(r)
 }
 
-// CheckPushPermissionos checks that the configured credentials can be used to
+type CertPool interface {
+	value() *x509.CertPool
+	append(path string) error
+}
+
+type X509CertPool struct {
+	inner x509.CertPool
+}
+
+func (p *X509CertPool) value() *x509.CertPool {
+	return &p.inner
+}
+
+func (p *X509CertPool) append(path string) error {
+	pem, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	p.inner.AppendCertsFromPEM(pem)
+	return nil
+}
+
+type systemCertLoader func() CertPool
+
+var defaultX509Handler systemCertLoader = func() CertPool {
+	systemCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		logrus.Warn("Failed to load system cert pool. Loading empty one instead.")
+		systemCertPool = x509.NewCertPool()
+	}
+	return &X509CertPool{
+		inner: *systemCertPool,
+	}
+}
+
+// for testing
+var (
+	fs                        = afero.NewOsFs()
+	execCommand               = exec.Command
+	checkRemotePushPermission = remote.CheckPushPermission
+)
+
+// CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	if opts.NoPush {
@@ -68,9 +143,28 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			continue
 		}
 
+		// Historically kaniko was pre-configured by default with gcr credential helper,
+		// in here we keep the backwards compatibility by enabling the GCR helper only
+		// when gcr.io is in one of the destinations.
+		if strings.Contains(destRef.RegistryStr(), "gcr.io") {
+			// Checking for existence of docker.config as it's normally required for
+			// authenticated registries and prevent overwriting user provided docker conf
+			if _, err := fs.Stat(DockerConfLocation()); os.IsNotExist(err) {
+				if err := execCommand("docker-credential-gcr", "configure-docker").Run(); err != nil {
+					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
+				}
+			}
+		}
 		registryName := destRef.Repository.Registry.Name()
-		tr := makeTransport(opts, registryName)
-		if err := remote.CheckPushPermission(destRef, creds.GetKeychain(), tr); err != nil {
+		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+			if err != nil {
+				return errors.Wrap(err, "getting new insecure registry")
+			}
+			destRef.Repository.Registry = newReg
+		}
+		tr := makeTransport(opts, registryName, defaultX509Handler)
+		if err := checkRemotePushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
 		checked[destRef.Context().RepositoryStr()] = true
@@ -78,19 +172,41 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	return nil
 }
 
+func getDigest(image v1.Image) ([]byte, error) {
+	digest, err := image.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(digest.String()), nil
+}
+
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
-
-	if opts.DigestFile != "" {
-		digest, err := image.Digest()
+	var digestByteArray []byte
+	var builder strings.Builder
+	if opts.DigestFile != "" || opts.ImageNameDigestFile != "" {
+		var err error
+		digestByteArray, err = getDigest(image)
 		if err != nil {
 			return errors.Wrap(err, "error fetching digest")
 		}
-		digestByteArray := []byte(digest.String())
-		err = ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
+	}
+
+	if opts.DigestFile != "" {
+		err := ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
 		if err != nil {
 			return errors.Wrap(err, "writing digest to file failed")
+		}
+	}
+
+	if opts.OCILayoutPath != "" {
+		path, err := layout.Write(opts.OCILayoutPath, empty.Index)
+		if err != nil {
+			return errors.Wrap(err, "writing empty layout")
+		}
+		if err := path.AppendImage(image); err != nil {
+			return errors.Wrap(err, "appending image")
 		}
 	}
 
@@ -100,7 +216,19 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
+		if opts.ImageNameDigestFile != "" {
+			imageName := []byte(destRef.Repository.Name() + "@")
+			builder.Write(append(imageName, digestByteArray...))
+			builder.WriteString("\n")
+		}
 		destRefs = append(destRefs, destRef)
+	}
+
+	if opts.ImageNameDigestFile != "" {
+		err := ioutil.WriteFile(opts.ImageNameDigestFile, []byte(builder.String()), 0644)
+		if err != nil {
+			return errors.Wrap(err, "writing image name with digest to file failed")
+		}
 	}
 
 	if opts.TarPath != "" {
@@ -120,7 +248,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	for _, destRef := range destRefs {
 		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
-			newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
 				return errors.Wrap(err, "getting new insecure registry")
 			}
@@ -132,22 +260,54 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
 
-		tr := makeTransport(opts, registryName)
+		tr := makeTransport(opts, registryName, defaultX509Handler)
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, pushAuth, rt); err != nil {
+		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
 	timing.DefaultRun.Stop(t)
+	return writeImageOutputs(image, destRefs)
+}
+
+func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
+	dir := os.Getenv("BUILDER_OUTPUT")
+	if dir == "" {
+		return nil
+	}
+	f, err := fs.Create(filepath.Join(dir, "images"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	d, err := image.Digest()
+	if err != nil {
+		return err
+	}
+
+	type imageOutput struct {
+		Name   string `json:"name"`
+		Digest string `json:"digest"`
+	}
+	for _, r := range destRefs {
+		if err := json.NewEncoder(f).Encode(imageOutput{
+			Name:   r.String(),
+			Digest: d.String(),
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTripper {
+func makeTransport(opts *config.KanikoOptions, registryName string, loader systemCertLoader) http.RoundTripper {
 	// Create a transport to set our user-agent.
-	tr := http.DefaultTransport
 	toAdd := false
 	cfg := &tls.Config{}
+
+	var tr http.RoundTripper = http.DefaultTransport.(*http.Transport).Clone()
 
 	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		cfg.InsecureSkipVerify = true
@@ -164,13 +324,22 @@ func makeTransport(opts *config.KanikoOptions, registryName string) http.RoundTr
 			cfg.Certificates = []tls.Certificate{cert}
 			toAdd = true
 		}
+	} else if certificatePath := opts.RegistriesCertificates[registryName]; certificatePath != "" {
+		systemCertPool := loader()
+		if err := systemCertPool.append(certificatePath); err != nil {
+			logrus.WithError(err).Warnf("Failed to load certificate %s for %s\n", certificatePath, registryName)
+		} else {
+			tr.(*http.Transport).TLSClientConfig = &tls.Config{
+				RootCAs: systemCertPool.value(),
+			}
+		}
 	}
 
 	if toAdd {
 		tr.(*http.Transport).TLSClientConfig = cfg
 	}
 
-	return tr
+	return newRetry(tr)
 }
 
 func parseLine(s string) (m map[string]string) {

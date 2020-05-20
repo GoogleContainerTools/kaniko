@@ -22,7 +22,7 @@ const (
 
 // UnmountIpcMount unmounts Ipc related mounts.
 // This is a NOOP on windows.
-func (container *Container) UnmountIpcMount(unmount func(pth string) error) error {
+func (container *Container) UnmountIpcMount() error {
 	return nil
 }
 
@@ -159,7 +159,7 @@ func (container *Container) UpdateContainer(hostConfig *containertypes.HostConfi
 		resources.MemorySwap != 0 ||
 		resources.MemorySwappiness != nil ||
 		resources.OomKillDisable != nil ||
-		resources.PidsLimit != 0 ||
+		(resources.PidsLimit != nil && *resources.PidsLimit != 0) ||
 		len(resources.Ulimits) != 0 ||
 		resources.CPUCount != 0 ||
 		resources.CPUPercent != 0 ||

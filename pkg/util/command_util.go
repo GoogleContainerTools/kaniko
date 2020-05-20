@@ -17,33 +17,39 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/moby/buildkit/frontend/dockerfile/shell"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+)
+
+// for testing
+var (
+	getUIDAndGID = GetUIDAndGIDFromString
+)
+
+const (
+	pathSeparator = "/"
 )
 
 // ResolveEnvironmentReplacementList resolves a list of values by calling resolveEnvironmentReplacement
 func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) ([]string, error) {
 	var resolvedValues []string
 	for _, value := range values {
-		var resolved string
-		var err error
-		if IsSrcRemoteFileURL(value) {
-			resolved, err = ResolveEnvironmentReplacement(value, envs, false)
-		} else {
-			resolved, err = ResolveEnvironmentReplacement(value, envs, isFilepath)
-		}
+		resolved, err := ResolveEnvironmentReplacement(value, envs, isFilepath)
 		logrus.Debugf("Resolved %s to %s", value, resolved)
 		if err != nil {
 			return nil, err
@@ -55,7 +61,7 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 
 // ResolveEnvironmentReplacement resolves replacing env variables in some text from envs
 // It takes in a string representation of the command, the value to be resolved, and a list of envs (config.Env)
-// Ex: fp = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
+// Ex: value = $foo/newdir, envs = [foo=/foodir], then this should return /foodir/newdir
 // The dockerfile/shell package handles processing env values
 // It handles escape characters and supports expansion from the config.Env array
 // Shlex handles some of the following use cases (these and more are tested in integration tests)
@@ -65,7 +71,8 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool) (string, error) {
 	shlex := shell.NewLex(parser.DefaultEscapeToken)
 	fp, err := shlex.ProcessWord(value, envs)
-	if !isFilepath {
+	// Check after replacement if value is a remote URL
+	if !isFilepath || IsSrcRemoteFileURL(fp) {
 		return fp, err
 	}
 	if err != nil {
@@ -82,13 +89,16 @@ func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string,
 	// First, resolve any environment replacement
 	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.Wrap(err, "failed to resolve environment")
+	}
+	if len(resolvedEnvs) == 0 {
+		return nil, "", errors.New("resolved envs is empty")
 	}
 	dest := resolvedEnvs[len(resolvedEnvs)-1]
 	// Resolve wildcards and get a list of resolved sources
 	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.Wrap(err, "failed to resolve sources")
 	}
 	err = IsSrcsValid(sd, srcs, buildcontext)
 	return srcs, dest, err
@@ -114,11 +124,11 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 	logrus.Infof("Resolving srcs %v...", srcs)
 	files, err := RelativeFiles("", root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "resolving sources")
 	}
 	resolved, err := matchSources(srcs, files)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "matching sources")
 	}
 	logrus.Debugf("Resolved sources to %v", resolved)
 	return resolved, nil
@@ -135,7 +145,7 @@ func matchSources(srcs, files []string) ([]string, error) {
 		src = filepath.Clean(src)
 		for _, file := range files {
 			if filepath.IsAbs(src) {
-				file = filepath.Join(constants.RootDir, file)
+				file = filepath.Join(config.RootDir, file)
 			}
 			matched, err := filepath.Match(src, file)
 			if err != nil {
@@ -154,7 +164,7 @@ func IsDestDir(path string) bool {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		// fall back to string-based determination
-		return strings.HasSuffix(path, "/") || path == "."
+		return strings.HasSuffix(path, pathSeparator) || path == "."
 	}
 	// if it's a real path, check the fs response
 	return fileInfo.IsDir()
@@ -165,20 +175,28 @@ func IsDestDir(path string) bool {
 //	If dest is a dir, copy it to /dest/relpath
 // 	If dest is a file, copy directly to dest
 // If source is a dir:
-//	Assume dest is also a dir, and copy to dest/relpath
+//	Assume dest is also a dir, and copy to dest/
 // If dest is not an absolute filepath, add /cwd to the beginning
 func DestinationFilepath(src, dest, cwd string) (string, error) {
-	if IsDestDir(dest) {
-		destPath := filepath.Join(dest, filepath.Base(src))
-		if filepath.IsAbs(dest) {
-			return destPath, nil
+	_, srcFileName := filepath.Split(src)
+	newDest := dest
+
+	if !filepath.IsAbs(newDest) {
+		newDest = filepath.Join(cwd, newDest)
+		// join call clean on all results.
+		if strings.HasSuffix(dest, pathSeparator) || strings.HasSuffix(dest, ".") {
+			newDest += pathSeparator
 		}
-		return filepath.Join(cwd, destPath), nil
 	}
-	if filepath.IsAbs(dest) {
-		return dest, nil
+	if IsDestDir(newDest) {
+		newDest = filepath.Join(newDest, srcFileName)
 	}
-	return filepath.Join(cwd, dest), nil
+
+	if len(srcFileName) <= 0 && !strings.HasSuffix(newDest, pathSeparator) {
+		newDest += pathSeparator
+	}
+
+	return newDest, nil
 }
 
 // URLDestinationFilepath gives the destination a file from a remote URL should be saved to
@@ -209,7 +227,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
 		for _, src := range srcs {
-			if excludeFile(src, root) {
+			if ExcludeFile(src, root) {
 				continue
 			}
 			totalSrcs++
@@ -224,9 +242,10 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		if IsSrcRemoteFileURL(resolvedSources[0]) {
 			return nil
 		}
-		fi, err := os.Lstat(filepath.Join(root, resolvedSources[0]))
+		path := filepath.Join(root, resolvedSources[0])
+		fi, err := os.Lstat(path)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("failed to get fileinfo for %v", path))
 		}
 		if fi.IsDir() {
 			return nil
@@ -242,10 +261,10 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		src = filepath.Clean(src)
 		files, err := RelativeFiles(src, root)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
-			if excludeFile(file, root) {
+			if ExcludeFile(file, root) {
 				continue
 			}
 			totalFiles++
@@ -271,8 +290,9 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 	return err == nil
 }
 
-func UpdateConfigEnv(newEnvs []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
-	for index, pair := range newEnvs {
+func UpdateConfigEnv(envVars []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
+	newEnvs := make([]instructions.KeyValuePair, len(envVars))
+	for index, pair := range envVars {
 		expandedKey, err := ResolveEnvironmentReplacement(pair.Key, replacementEnvs, false)
 		if err != nil {
 			return err
@@ -321,19 +341,59 @@ Loop:
 	return nil
 }
 
-func GetUserFromUsername(userStr string, groupStr string) (string, string, error) {
-	// Lookup by username
-	userObj, err := user.Lookup(userStr)
+func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
+	if chownStr == "" {
+		return DoNotChangeUID, DoNotChangeGID, nil
+	}
+
+	chown, err := ResolveEnvironmentReplacement(chownStr, env, false)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); ok {
-			// Lookup by id
-			userObj, err = user.LookupId(userStr)
-			if err != nil {
-				return "", "", err
-			}
-		} else {
-			return "", "", err
-		}
+		return -1, -1, err
+	}
+
+	uid32, gid32, err := getUIDAndGID(chown, true)
+	if err != nil {
+		return -1, -1, err
+	}
+
+	return int64(uid32), int64(gid32), nil
+}
+
+// Extract user and group id from a string formatted 'user:group'.
+// If fallbackToUID is set, the gid is equal to uid if the group is not specified
+// otherwise gid is set to zero.
+func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+	userAndGroup := strings.Split(userGroupString, ":")
+	userStr := userAndGroup[0]
+	var groupStr string
+	if len(userAndGroup) > 1 {
+		groupStr = userAndGroup[1]
+	}
+
+	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// uid and gid need to be fit into uint32
+	uid64, err := strconv.ParseUint(uidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	gid64, err := strconv.ParseUint(gidStr, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint32(uid64), uint32(gid64), nil
+}
+
+func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (string, string, error) {
+	// Lookup by username
+	userObj, err := Lookup(userStr)
+	if err != nil {
+		return "", "", err
 	}
 
 	// Same dance with groups
@@ -341,22 +401,43 @@ func GetUserFromUsername(userStr string, groupStr string) (string, string, error
 	if groupStr != "" {
 		group, err = user.LookupGroup(groupStr)
 		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); ok {
-				group, err = user.LookupGroupId(groupStr)
-				if err != nil {
-					return "", "", err
-				}
-			} else {
+			if _, ok := err.(user.UnknownGroupError); !ok {
+				return "", "", err
+			}
+			group, err = user.LookupGroupId(groupStr)
+			if err != nil {
 				return "", "", err
 			}
 		}
 	}
 
 	uid := userObj.Uid
-	gid := ""
+	gid := "0"
+	if fallbackToUID {
+		gid = userObj.Gid
+	}
 	if group != nil {
 		gid = group.Gid
 	}
 
 	return uid, gid, nil
+}
+
+func Lookup(userStr string) (*user.User, error) {
+	userObj, err := user.Lookup(userStr)
+	if err != nil {
+		if _, ok := err.(user.UnknownUserError); !ok {
+			return nil, err
+		}
+
+		// Lookup by id
+		u, e := user.LookupId(userStr)
+		if e != nil {
+			return nil, err
+		}
+
+		userObj = u
+	}
+
+	return userObj, nil
 }

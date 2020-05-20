@@ -18,7 +18,7 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -36,6 +36,10 @@ type DockerCommand interface {
 	String() string
 	// A list of files to snapshot, empty for metadata commands or nil if we don't know
 	FilesToSnapshot() []string
+
+	// ProvidesFileToSnapshot is true for all metadata commands and commands which know
+	// list of files changed. False for Run command.
+	ProvidesFilesToSnapshot() bool
 
 	// Return a cache-aware implementation of this command, if it exists.
 	CacheCommand(v1.Image) DockerCommand

@@ -17,16 +17,18 @@ package remote
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"sync"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
+
+var acceptableIndexMediaTypes = []types.MediaType{
+	types.DockerManifestList,
+	types.OCIImageIndex,
+}
 
 // remoteIndex accesses an index from a remote registry
 type remoteIndex struct {
@@ -34,32 +36,17 @@ type remoteIndex struct {
 	manifestLock sync.Mutex // Protects manifest
 	manifest     []byte
 	mediaType    types.MediaType
+	descriptor   *v1.Descriptor
 }
 
-// Index provides access to a remote index reference, applying functional options
-// to the underlying imageOpener before resolving the reference into a v1.ImageIndex.
-func Index(ref name.Reference, options ...ImageOption) (v1.ImageIndex, error) {
-	i := &imageOpener{
-		auth:      authn.Anonymous,
-		transport: http.DefaultTransport,
-		ref:       ref,
-	}
-
-	for _, option := range options {
-		if err := option(i); err != nil {
-			return nil, err
-		}
-	}
-	tr, err := transport.New(i.ref.Context().Registry, i.auth, i.transport, []string{i.ref.Scope(transport.PullScope)})
+// Index provides access to a remote index reference.
+func Index(ref name.Reference, options ...Option) (v1.ImageIndex, error) {
+	desc, err := get(ref, acceptableIndexMediaTypes, options...)
 	if err != nil {
 		return nil, err
 	}
-	return &remoteIndex{
-		fetcher: fetcher{
-			Ref:    i.ref,
-			Client: &http.Client{Transport: tr},
-		},
-	}, nil
+
+	return desc.ImageIndex()
 }
 
 func (r *remoteIndex) MediaType() (types.MediaType, error) {
@@ -73,6 +60,10 @@ func (r *remoteIndex) Digest() (v1.Hash, error) {
 	return partial.Digest(r)
 }
 
+func (r *remoteIndex) Size() (int64, error) {
+	return partial.Size(r)
+}
+
 func (r *remoteIndex) RawManifest() ([]byte, error) {
 	r.manifestLock.Lock()
 	defer r.manifestLock.Unlock()
@@ -80,15 +71,17 @@ func (r *remoteIndex) RawManifest() ([]byte, error) {
 		return r.manifest, nil
 	}
 
-	acceptable := []types.MediaType{
-		types.DockerManifestList,
-		types.OCIImageIndex,
-	}
-	manifest, desc, err := r.fetchManifest(acceptable)
+	// NOTE(jonjohnsonjr): We should never get here because the public entrypoints
+	// do type-checking via remote.Descriptor. I've left this here for tests that
+	// directly instantiate a remoteIndex.
+	manifest, desc, err := r.fetchManifest(r.Ref, acceptableIndexMediaTypes)
 	if err != nil {
 		return nil, err
 	}
 
+	if r.descriptor == nil {
+		r.descriptor = desc
+	}
 	r.mediaType = desc.MediaType
 	r.manifest = manifest
 	return r.manifest, nil
@@ -103,37 +96,141 @@ func (r *remoteIndex) IndexManifest() (*v1.IndexManifest, error) {
 }
 
 func (r *remoteIndex) Image(h v1.Hash) (v1.Image, error) {
-	imgRef, err := name.ParseReference(fmt.Sprintf("%s@%s", r.Ref.Context(), h), name.StrictValidation)
+	desc, err := r.childByHash(h)
 	if err != nil {
 		return nil, err
 	}
-	ri := &remoteImage{
-		fetcher: fetcher{
-			Ref:    imgRef,
-			Client: r.Client,
-		},
-	}
-	imgCore, err := partial.CompressedToImage(ri)
-	if err != nil {
-		return imgCore, err
-	}
-	// Wrap the v1.Layers returned by this v1.Image in a hint for downstream
-	// remote.Write calls to facilitate cross-repo "mounting".
-	return &mountableImage{
-		Image:     imgCore,
-		Reference: r.Ref,
-	}, nil
+
+	// Descriptor.Image will handle coercing nested indexes into an Image.
+	return desc.Image()
+}
+
+// Descriptor retains the original descriptor from an index manifest.
+// See partial.Descriptor.
+func (r *remoteIndex) Descriptor() (*v1.Descriptor, error) {
+	// kind of a hack, but RawManifest does appropriate locking/memoization
+	// and makes sure r.descriptor is populated.
+	_, err := r.RawManifest()
+	return r.descriptor, err
 }
 
 func (r *remoteIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
-	idxRef, err := name.ParseReference(fmt.Sprintf("%s@%s", r.Ref.Context(), h), name.StrictValidation)
+	desc, err := r.childByHash(h)
 	if err != nil {
 		return nil, err
 	}
-	return &remoteIndex{
+	return desc.ImageIndex()
+}
+
+func (r *remoteIndex) imageByPlatform(platform v1.Platform) (v1.Image, error) {
+	desc, err := r.childByPlatform(platform)
+	if err != nil {
+		return nil, err
+	}
+
+	// Descriptor.Image will handle coercing nested indexes into an Image.
+	return desc.Image()
+}
+
+// This naively matches the first manifest with matching platform attributes.
+//
+// We should probably use this instead:
+//	 github.com/containerd/containerd/platforms
+//
+// But first we'd need to migrate to:
+//   github.com/opencontainers/image-spec/specs-go/v1
+func (r *remoteIndex) childByPlatform(platform v1.Platform) (*Descriptor, error) {
+	index, err := r.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, childDesc := range index.Manifests {
+		// If platform is missing from child descriptor, assume it's amd64/linux.
+		p := defaultPlatform
+		if childDesc.Platform != nil {
+			p = *childDesc.Platform
+		}
+
+		if matchesPlatform(p, platform) {
+			return r.childDescriptor(childDesc, platform)
+		}
+	}
+	return nil, fmt.Errorf("no child with platform %s/%s in index %s", platform.Architecture, platform.OS, r.Ref)
+}
+
+func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
+	index, err := r.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, childDesc := range index.Manifests {
+		if h == childDesc.Digest {
+			return r.childDescriptor(childDesc, defaultPlatform)
+		}
+	}
+	return nil, fmt.Errorf("no child with digest %s in index %s", h, r.Ref)
+}
+
+// Convert one of this index's child's v1.Descriptor into a remote.Descriptor, with the given platform option.
+func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform) (*Descriptor, error) {
+	ref := r.Ref.Context().Digest(child.Digest.String())
+	manifest, _, err := r.fetchManifest(ref, []types.MediaType{child.MediaType})
+	if err != nil {
+		return nil, err
+	}
+	return &Descriptor{
 		fetcher: fetcher{
-			Ref:    idxRef,
+			Ref:    ref,
 			Client: r.Client,
 		},
+		Manifest:   manifest,
+		Descriptor: child,
+		platform:   platform,
 	}, nil
+}
+
+// matchesPlatform checks if the given platform matches the required platforms.
+// The given platform matches the required platform if
+// - architecture and OS are identical.
+// - OS version and variant are identical if provided.
+// - features and OS features of the required platform are subsets of those of the given platform.
+func matchesPlatform(given, required v1.Platform) bool {
+	// Required fields that must be identical.
+	if given.Architecture != required.Architecture || given.OS != required.OS {
+		return false
+	}
+
+	// Optional fields that may be empty, but must be identical if provided.
+	if required.OSVersion != "" && given.OSVersion != required.OSVersion {
+		return false
+	}
+	if required.Variant != "" && given.Variant != required.Variant {
+		return false
+	}
+
+	// Verify required platform's features are a subset of given platform's features.
+	if !isSubset(given.OSFeatures, required.OSFeatures) {
+		return false
+	}
+	if !isSubset(given.Features, required.Features) {
+		return false
+	}
+
+	return true
+}
+
+// isSubset checks if the required array of strings is a subset of the given lst.
+func isSubset(lst, required []string) bool {
+	set := make(map[string]bool)
+	for _, value := range lst {
+		set[value] = true
+	}
+
+	for _, value := range required {
+		if _, ok := set[value]; !ok {
+			return false
+		}
+	}
+
+	return true
 }

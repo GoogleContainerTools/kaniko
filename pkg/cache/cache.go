@@ -28,7 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -59,8 +59,8 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	}
 
 	registryName := cacheRef.Repository.Registry.Name()
-	if rc.Opts.InsecureRegistries.Contains(registryName) {
-		newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+	if rc.Opts.Insecure || rc.Opts.InsecureRegistries.Contains(registryName) {
+		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 	// Layer is stale, rebuild it.
 	if expiry.Before(time.Now()) {
 		logrus.Infof("Cache entry expired: %s", cache)
-		return nil, errors.New(fmt.Sprintf("Cache entry expired: %s", cache))
+		return nil, fmt.Errorf("Cache entry expired: %s", cache)
 	}
 
 	// Force the manifest to be populated
@@ -113,8 +113,8 @@ func Destination(opts *config.KanikoOptions, cacheKey string) (string, error) {
 	return fmt.Sprintf("%s:%s", cache, cacheKey), nil
 }
 
-// LocalSource retieves a source image from a local cache given cacheKey
-func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) {
+// LocalSource retrieves a source image from a local cache given cacheKey
+func LocalSource(opts *config.CacheOptions, cacheKey string) (v1.Image, error) {
 	cache := opts.CacheDir
 	if cache == "" {
 		return nil, nil
@@ -124,14 +124,17 @@ func LocalSource(opts *config.KanikoOptions, cacheKey string) (v1.Image, error) 
 
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "getting file info")
+		msg := fmt.Sprintf("No file found for cache key %v %v", cacheKey, err)
+		logrus.Debug(msg)
+		return nil, NotFoundErr{msg: msg}
 	}
 
 	// A stale cache is a bad cache
 	expiry := fi.ModTime().Add(opts.CacheTTL)
 	if expiry.Before(time.Now()) {
-		logrus.Debugf("Cached image is too old: %v", fi.ModTime())
-		return nil, nil
+		msg := fmt.Sprintf("Cached image is too old: %v", fi.ModTime())
+		logrus.Debug(msg)
+		return nil, ExpiredErr{msg: msg}
 	}
 
 	logrus.Infof("Found %s in local cache", cacheKey)

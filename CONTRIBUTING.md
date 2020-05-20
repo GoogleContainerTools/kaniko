@@ -41,7 +41,7 @@ specifically:
 
 - Start with a subject line
 - Contain a body that explains _why_ you're making the change you're making
-- Reference an issue number one exists, closing it if applicable (with text such as
+- Reference an issue number if one exists, closing it if applicable (with text such as
   ["Fixes #245" or "Closes #111"](https://help.github.com/articles/closing-issues-using-keywords/))
 
 Aim for [2 paragraphs in the body](https://www.youtube.com/watch?v=PJjmw9TRB7s).

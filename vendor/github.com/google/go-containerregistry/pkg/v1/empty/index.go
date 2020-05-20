@@ -36,18 +36,16 @@ func (i emptyIndex) Digest() (v1.Hash, error) {
 	return partial.Digest(i)
 }
 
+func (i emptyIndex) Size() (int64, error) {
+	return partial.Size(i)
+}
+
 func (i emptyIndex) IndexManifest() (*v1.IndexManifest, error) {
-	return &v1.IndexManifest{
-		SchemaVersion: 2,
-	}, nil
+	return base(), nil
 }
 
 func (i emptyIndex) RawManifest() ([]byte, error) {
-	im, err := i.IndexManifest()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(im)
+	return json.Marshal(base())
 }
 
 func (i emptyIndex) Image(v1.Hash) (v1.Image, error) {
@@ -56,4 +54,10 @@ func (i emptyIndex) Image(v1.Hash) (v1.Image, error) {
 
 func (i emptyIndex) ImageIndex(v1.Hash) (v1.ImageIndex, error) {
 	return nil, errors.New("empty index")
+}
+
+func base() *v1.IndexManifest {
+	return &v1.IndexManifest{
+		SchemaVersion: 2,
+	}
 }

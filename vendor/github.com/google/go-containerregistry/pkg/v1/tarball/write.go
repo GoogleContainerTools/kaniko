@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // WriteToFile writes in the compressed format to a tarball, on disk.
@@ -41,7 +42,7 @@ func WriteToFile(p string, ref name.Reference, img v1.Image) error {
 // MultiWriteToFile writes in the compressed format to a tarball, on disk.
 // This is just syntactic sugar wrapping tarball.MultiWrite with a new file.
 func MultiWriteToFile(p string, tagToImage map[name.Tag]v1.Image) error {
-	var refToImage map[name.Reference]v1.Image = make(map[name.Reference]v1.Image, len(tagToImage))
+	refToImage := make(map[name.Reference]v1.Image, len(tagToImage))
 	for i, d := range tagToImage {
 		refToImage[i] = d
 	}
@@ -71,7 +72,7 @@ func Write(ref name.Reference, img v1.Image, w io.Writer) error {
 // One file for each layer, named after the layer's SHA.
 // One file for the config blob, named after its SHA.
 func MultiWrite(tagToImage map[name.Tag]v1.Image, w io.Writer) error {
-	var refToImage map[name.Reference]v1.Image = make(map[name.Reference]v1.Image, len(tagToImage))
+	refToImage := make(map[name.Reference]v1.Image, len(tagToImage))
 	for i, d := range tagToImage {
 		refToImage[i] = d
 	}
@@ -88,8 +89,9 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 	defer tf.Close()
 
 	imageToTags := dedupRefToImage(refToImage)
-	var td tarDescriptor
+	var m Manifest
 
+	seenLayerDigests := make(map[string]struct{})
 	for img, tags := range imageToTags {
 		// Write the config.
 		cfgName, err := img.ConfigName()
@@ -104,6 +106,9 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 			return err
 		}
 
+		// Store foreign layer info.
+		layerSources := make(map[v1.Hash]v1.Descriptor)
+
 		// Write the layers.
 		layers, err := img.Layers()
 		if err != nil {
@@ -115,7 +120,6 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 			if err != nil {
 				return err
 			}
-
 			// Munge the file name to appease ancient technology.
 			//
 			// tar assumes anything with a colon is a remote tape drive:
@@ -126,6 +130,24 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 			// gunzip expects certain file extensions:
 			// https://www.gnu.org/software/gzip/manual/html_node/Overview.html
 			layerFiles[i] = fmt.Sprintf("%s.tar.gz", hex)
+
+			if _, ok := seenLayerDigests[hex]; ok {
+				continue
+			}
+			seenLayerDigests[hex] = struct{}{}
+
+			// Add to LayerSources if it's a foreign layer.
+			desc, err := partial.BlobDescriptor(img, d)
+			if err != nil {
+				return err
+			}
+			if !desc.MediaType.IsDistributable() {
+				diffid, err := partial.BlobToDiffID(img, d)
+				if err != nil {
+					return err
+				}
+				layerSources[diffid] = *desc
+			}
 
 			r, err := l.Compressed()
 			if err != nil {
@@ -142,20 +164,19 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 		}
 
 		// Generate the tar descriptor and write it.
-		sitd := singleImageTarDescriptor{
-			Config:   cfgName.String(),
-			RepoTags: tags,
-			Layers:   layerFiles,
-		}
-
-		td = append(td, sitd)
+		m = append(m, Descriptor{
+			Config:       cfgName.String(),
+			RepoTags:     tags,
+			Layers:       layerFiles,
+			LayerSources: layerSources,
+		})
 	}
 
-	tdBytes, err := json.Marshal(td)
+	mBytes, err := json.Marshal(m)
 	if err != nil {
 		return err
 	}
-	return writeTarEntry(tf, "manifest.json", bytes.NewReader(tdBytes), int64(len(tdBytes)))
+	return writeTarEntry(tf, "manifest.json", bytes.NewReader(mBytes), int64(len(mBytes)))
 }
 
 func dedupRefToImage(refToImage map[name.Reference]v1.Image) map[v1.Image][]string {
@@ -178,7 +199,7 @@ func dedupRefToImage(refToImage map[name.Reference]v1.Image) map[v1.Image][]stri
 	return imageToTags
 }
 
-// write a file to the provided writer with a corresponding tar header
+// Writes a file to the provided writer with a corresponding tar header
 func writeTarEntry(tf *tar.Writer, path string, r io.Reader, size int64) error {
 	hdr := &tar.Header{
 		Mode:     0644,

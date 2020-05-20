@@ -19,11 +19,11 @@ package commands
 import (
 	"path/filepath"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/pkg/errors"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-
-	"github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -43,9 +43,14 @@ type AddCommand struct {
 // 		- If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
 // 		- If dest doesn't end with a slash, the filepath is inferred to be <dest>/<filename>
 // 	2. If <src> is a local tar archive:
-// 		-If <src> is a local tar archive, it is unpacked at the dest, as 'tar -x' would
+// 		- it is unpacked at the dest, as 'tar -x' would
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+
+	uid, gid, err := util.GetUserGroup(a.cmd.Chown, replacementEnvs)
+	if err != nil {
+		return errors.Wrap(err, "getting user group from chown")
+	}
 
 	srcs, dest, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
 	if err != nil {
@@ -66,15 +71,19 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 				return err
 			}
 			logrus.Infof("Adding remote URL %s to %s", src, urlDest)
-			if err := util.DownloadFileToDest(src, urlDest); err != nil {
-				return err
+			if err := util.DownloadFileToDest(src, urlDest, uid, gid); err != nil {
+				return errors.Wrap(err, "downloading remote source file")
 			}
 			a.snapshotFiles = append(a.snapshotFiles, urlDest)
 		} else if util.IsFileLocalTarArchive(fullPath) {
-			logrus.Infof("Unpacking local tar archive %s to %s", src, dest)
-			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, dest)
+			tarDest, err := util.DestinationFilepath("", dest, config.WorkingDir)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "determining dest for tar")
+			}
+			logrus.Infof("Unpacking local tar archive %s to %s", src, tarDest)
+			extractedFiles, err := util.UnpackLocalTarArchive(fullPath, tarDest)
+			if err != nil {
+				return errors.Wrap(err, "unpacking local tar")
 			}
 			logrus.Debugf("Added %v from local tar archive %s", extractedFiles, src)
 			a.snapshotFiles = append(a.snapshotFiles, extractedFiles...)
@@ -90,12 +99,13 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	copyCmd := CopyCommand{
 		cmd: &instructions.CopyCommand{
 			SourcesAndDest: append(unresolvedSrcs, dest),
+			Chown:          a.cmd.Chown,
 		},
 		buildcontext: a.buildcontext,
 	}
 
 	if err := copyCmd.ExecuteCommand(config, buildArgs); err != nil {
-		return err
+		return errors.Wrap(err, "executing copy command")
 	}
 	a.snapshotFiles = append(a.snapshotFiles, copyCmd.snapshotFiles...)
 	return nil
@@ -137,4 +147,8 @@ func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfi
 
 func (a *AddCommand) MetadataOnly() bool {
 	return false
+}
+
+func (a *AddCommand) RequiresUnpackedFS() bool {
+	return true
 }

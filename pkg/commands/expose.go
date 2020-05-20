@@ -21,9 +21,9 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/sirupsen/logrus"
 )
@@ -54,7 +54,7 @@ func (r *ExposeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 		}
 		protocol := strings.Split(p, "/")[1]
 		if !validProtocol(protocol) {
-			return fmt.Errorf("Invalid protocol: %s", protocol)
+			return fmt.Errorf("invalid protocol: %s", protocol)
 		}
 		logrus.Infof("Adding exposed port: %s", p)
 		existingPorts[p] = struct{}{}

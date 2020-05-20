@@ -1,32 +1,47 @@
 package jsonutil
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/private/protocol"
 )
+
+// UnmarshalJSONError unmarshal's the reader's JSON document into the passed in
+// type. The value to unmarshal the json document into must be a pointer to the
+// type.
+func UnmarshalJSONError(v interface{}, stream io.Reader) error {
+	var errBuf bytes.Buffer
+	body := io.TeeReader(stream, &errBuf)
+
+	err := json.NewDecoder(body).Decode(v)
+	if err != nil {
+		msg := "failed decoding error message"
+		if err == io.EOF {
+			msg = "error message missing"
+			err = nil
+		}
+		return awserr.NewUnmarshalError(err, msg, errBuf.Bytes())
+	}
+
+	return nil
+}
 
 // UnmarshalJSON reads a stream and unmarshals the results in object v.
 func UnmarshalJSON(v interface{}, stream io.Reader) error {
 	var out interface{}
 
-	b, err := ioutil.ReadAll(stream)
-	if err != nil {
-		return err
-	}
-
-	if len(b) == 0 {
+	err := json.NewDecoder(stream).Decode(&out)
+	if err == io.EOF {
 		return nil
-	}
-
-	if err := json.Unmarshal(b, &out); err != nil {
+	} else if err != nil {
 		return err
 	}
 

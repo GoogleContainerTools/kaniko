@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
@@ -49,7 +49,8 @@ func (c *CmdCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	config.Cmd = newCommand
-	config.ArgsEscaped = true
+	// ArgsEscaped is only used in windows environments
+	config.ArgsEscaped = false
 	return nil
 }
 

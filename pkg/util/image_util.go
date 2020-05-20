@@ -28,7 +28,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -49,12 +49,12 @@ var (
 func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Retrieving Source Image")
 	defer timing.DefaultRun.Stop(t)
-	buildArgs := opts.BuildArgs
-	var metaArgsString []string
+	var buildArgs []string
+
 	for _, arg := range stage.MetaArgs {
-		metaArgsString = append(metaArgsString, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+		buildArgs = append(buildArgs, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
 	}
-	buildArgs = append(buildArgs, metaArgsString...)
+	buildArgs = append(buildArgs, opts.BuildArgs...)
 	currentBaseName, err := ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)
 	if err != nil {
 		return nil, err
@@ -74,12 +74,17 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	// If so, look in the local cache before trying the remote registry
 	if opts.CacheDir != "" {
 		cachedImage, err := cachedImage(opts, currentBaseName)
-		if cachedImage != nil {
-			return cachedImage, nil
-		}
-
 		if err != nil {
-			logrus.Infof("Error while retrieving image from cache: %v", err)
+			switch {
+			case cache.IsNotFound(err):
+				logrus.Debugf("Image %v not found in cache", currentBaseName)
+			case cache.IsExpired(err):
+				logrus.Debugf("Image %v found in cache but was expired", currentBaseName)
+			default:
+				logrus.Errorf("Error while retrieving image from cache: %v %v", currentBaseName, err)
+			}
+		} else if cachedImage != nil {
+			return cachedImage, nil
 		}
 	}
 
@@ -93,19 +98,39 @@ func tarballImage(index int) (v1.Image, error) {
 	return tarball.ImageFromPath(tarPath, nil)
 }
 
+// Retrieves the manifest for the specified image from the specified registry
 func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
-	logrus.Infof("Downloading base image %s", image)
+	logrus.Infof("Retrieving image manifest %s", image)
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
 	}
 
 	registryName := ref.Context().RegistryStr()
-	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
-		newReg, err := name.NewInsecureRegistry(registryName, name.WeakValidation)
+	var newReg name.Registry
+	toSet := false
+
+	if opts.RegistryMirror != "" && registryName == name.DefaultRegistry {
+		registryName = opts.RegistryMirror
+
+		newReg, err = name.NewRegistry(opts.RegistryMirror, name.StrictValidation)
 		if err != nil {
 			return nil, err
 		}
+
+		toSet = true
+	}
+
+	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
+		newReg, err = name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+		if err != nil {
+			return nil, err
+		}
+
+		toSet = true
+	}
+
+	if toSet {
 		if tag, ok := ref.(name.Tag); ok {
 			tag.Repository.Registry = newReg
 			ref = tag
@@ -116,6 +141,11 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		}
 	}
 
+	rOpts := remoteOptions(registryName, opts)
+	return remote.Image(ref, rOpts...)
+}
+
+func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {
 	tr := http.DefaultTransport.(*http.Transport)
 	if opts.SkipTLSVerifyPull || opts.SkipTLSVerifyRegistries.Contains(registryName) {
 		tr.TLSClientConfig = &tls.Config{
@@ -123,7 +153,10 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		}
 	}
 
-	return remote.Image(ref, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
+	// on which v1.Platform is this currently running?
+	platform := currentPlatform()
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
 }
 
 func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
@@ -136,18 +169,16 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 	if d, ok := ref.(name.Digest); ok {
 		cacheKey = d.DigestStr()
 	} else {
-		img, err := remoteImage(image, opts)
+		image, err := remoteImage(image, opts)
 		if err != nil {
 			return nil, err
 		}
 
-		d, err := img.Digest()
+		d, err := image.Digest()
 		if err != nil {
 			return nil, err
 		}
-
 		cacheKey = d.String()
 	}
-
-	return cache.LocalSource(opts, cacheKey)
+	return cache.LocalSource(&opts.CacheOptions, cacheKey)
 }
