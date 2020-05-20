@@ -21,8 +21,10 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -36,7 +38,8 @@ import (
 
 type RunCommand struct {
 	BaseCommand
-	cmd *instructions.RunCommand
+	cmd   *instructions.RunCommand
+	Files []string
 }
 
 // for testing
@@ -63,6 +66,13 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	logrus.Infof("cmd: %s", newCommand[0])
 	logrus.Infof("args: %s", newCommand[1:])
+
+	// run command `touch filemarker`
+	file, _ := os.Create("/kaniko/marker.txt")
+	file.Close()
+	defer func() {
+		os.Remove("/kaniko/marker.txt")
+	}()
 
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 
@@ -112,6 +122,21 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		return err
 	}
 
+	// run command find to find all new files generated
+	t1 := time.Now().Second()
+	find := exec.Command("find", "/", "-newer", "/kaniko/marker.txt")
+	out, err := find.Output()
+	r.Files = []string{}
+	s := strings.Split(string(out), "\n")
+	for _, path := range s {
+		path = filepath.Clean(path)
+		if util.IsDestDir(path) || util.CheckWhitelist(path) {
+			continue
+		}
+		r.Files = append(r.Files, path)
+	}
+	t2 := time.Now().Second()
+	logrus.Infof("%d files changed found in %d seconds", len(r.Files), t2-t1)
 	return nil
 }
 
@@ -149,7 +174,7 @@ func (r *RunCommand) String() string {
 }
 
 func (r *RunCommand) FilesToSnapshot() []string {
-	return nil
+	return r.Files
 }
 
 func (r *RunCommand) ProvidesFilesToSnapshot() bool {

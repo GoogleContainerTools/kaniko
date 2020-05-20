@@ -22,7 +22,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/filesystem"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
@@ -74,8 +76,16 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 		logrus.Info("No files changed in this command, skipping snapshotting.")
 		return "", nil
 	}
-
-	filesToAdd, err := filesystem.ResolvePaths(files, s.whitelist)
+	whiteouts := []string{}
+	filesAdded := []string{}
+	for _, file := range files {
+		if strings.HasPrefix(file, "!") {
+			whiteouts = append(whiteouts, file)
+		} else {
+			filesAdded = append(filesAdded, file)
+		}
+	}
+	filesToAdd, err := filesystem.ResolvePaths(filesAdded, s.whitelist)
 	if err != nil {
 		return "", nil
 	}
@@ -94,7 +104,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 
 	t := util.NewTar(f)
 	defer t.Close()
-	if err := writeToTar(t, filesToAdd, nil); err != nil {
+	if err := writeToTar(t, filesToAdd, whiteouts); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -125,6 +135,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	logrus.Info("Taking snapshot of full filesystem...")
 
+	timer1 := time.Now().Second()
 	// Some of the operations that follow (e.g. hashing) depend on the file system being synced,
 	// for example the hashing function that determines if files are equal uses the mtime of the files,
 	// which can lag if sync is not called. Unfortunately there can still be lag if too much data needs
@@ -158,40 +169,13 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	)
 	timing.DefaultRun.Stop(timer)
 
-	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.whitelist)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	resolvedMemFs := make(map[string]bool)
-	for _, f := range resolvedFiles {
-		resolvedMemFs[f] = true
-	}
-
 	// First handle whiteouts
 	//   Get a list of all the files that existed before this layer
 	existingPaths := s.l.getFlattenedPathsForWhiteOut()
 
-	//   Find the delta by removing everything left in this layer.
-	for p := range resolvedMemFs {
-		delete(existingPaths, p)
-	}
-
-	//   The paths left here are the ones that have been deleted in this layer.
-	filesToWhiteOut := []string{}
-	for path := range existingPaths {
-		// Only add the whiteout if the directory for the file still exists.
-		dir := filepath.Dir(path)
-		if _, ok := resolvedMemFs[dir]; ok {
-			if s.l.MaybeAddWhiteout(path) {
-				logrus.Debugf("Adding whiteout for %s", path)
-				filesToWhiteOut = append(filesToWhiteOut, path)
-			}
-		}
-	}
-
 	filesToAdd := []string{}
-	for path := range resolvedMemFs {
+	for _, path := range foundPaths {
+		delete(existingPaths, path)
 		if util.CheckWhitelist(path) {
 			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
 			continue
@@ -206,8 +190,23 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			filesToAdd = append(filesToAdd, path)
 		}
 	}
+	timer3 := time.Now().Second()
+	logrus.Infof("Resolve, %d files found  in %d ", len(filesToAdd), timer3-timer1)
 
 	sort.Strings(filesToAdd)
+
+	// The paths left here are the ones that have been deleted in this layer.
+	filesToWhiteOut := []string{}
+	for path := range existingPaths {
+		// Only add the whiteout if the directory for the file still exists.
+		dir := filepath.Dir(path)
+		if _, ok := existingPaths[dir]; !ok {
+			if s.l.MaybeAddWhiteout(path) {
+				logrus.Debugf("Adding whiteout for %s", path)
+				filesToWhiteOut = append(filesToWhiteOut, path)
+			}
+		}
+	}
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
