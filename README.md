@@ -62,6 +62,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--log-format](#--log-format)
     - [--log-timestamp](#--log-timestamp)
     - [--no-push](#--no-push)
+    - [--registry-certificate](#--registry-certificate)
     - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
@@ -518,6 +519,12 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 #### --no-push
 
 Set this flag if you only want to build the image, without pushing to a registry.
+
+#### --registry-certificate
+
+Set this flag to provide a certificate for TLS communication with a given registry.
+
+Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
 #### --registry-mirror
 
