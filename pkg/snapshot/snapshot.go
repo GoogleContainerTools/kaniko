@@ -157,56 +157,52 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	},
 	)
 	timing.DefaultRun.Stop(timer)
-
-	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.whitelist)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	resolvedMemFs := make(map[string]bool)
-	for _, f := range resolvedFiles {
-		resolvedMemFs[f] = true
-	}
-
 	// First handle whiteouts
 	//   Get a list of all the files that existed before this layer
 	existingPaths := s.l.getFlattenedPathsForWhiteOut()
 
-	//   Find the delta by removing everything left in this layer.
-	for p := range resolvedMemFs {
-		delete(existingPaths, p)
+	filesToAdd := []string{}
+	resolvedMemFs := make(map[string]bool)
+
+	for _, path := range foundPaths {
+		delete(existingPaths, path)
+		resolvedFiles, err := filesystem.ResolvePaths([]string{path}, s.whitelist)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, path := range resolvedFiles {
+			// Continue if this path is already processed
+			if _, ok := resolvedMemFs[path]; ok {
+				continue
+			}
+			if util.CheckWhitelist(path) {
+				logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
+				continue
+			}
+			// Only add changed files.
+			fileChanged, err := s.l.CheckFileChange(path)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
+			}
+			if fileChanged {
+				logrus.Tracef("Adding file %s to layer, because it was changed.", path)
+				filesToAdd = append(filesToAdd, path)
+			}
+		}
 	}
 
-	//   The paths left here are the ones that have been deleted in this layer.
+	// The paths left here are the ones that have been deleted in this layer.
 	filesToWhiteOut := []string{}
 	for path := range existingPaths {
 		// Only add the whiteout if the directory for the file still exists.
 		dir := filepath.Dir(path)
-		if _, ok := resolvedMemFs[dir]; ok {
+		if _, ok := existingPaths[dir]; !ok {
 			if s.l.MaybeAddWhiteout(path) {
 				logrus.Debugf("Adding whiteout for %s", path)
 				filesToWhiteOut = append(filesToWhiteOut, path)
 			}
 		}
 	}
-
-	filesToAdd := []string{}
-	for path := range resolvedMemFs {
-		if util.CheckWhitelist(path) {
-			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
-			continue
-		}
-		// Only add changed files.
-		fileChanged, err := s.l.CheckFileChange(path)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
-		}
-		if fileChanged {
-			logrus.Tracef("Adding file %s to layer, because it was changed.", path)
-			filesToAdd = append(filesToAdd, path)
-		}
-	}
-
 	sort.Strings(filesToAdd)
 	// Add files to the layered map
 	for _, file := range filesToAdd {
