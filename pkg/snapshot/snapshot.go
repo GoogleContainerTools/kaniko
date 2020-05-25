@@ -158,6 +158,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	)
 	timing.DefaultRun.Stop(timer)
 
+	timer = timing.Start("Resolving Paths")
 	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.whitelist)
 	if err != nil {
 		return nil, nil, err
@@ -207,6 +208,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 
+	timing.DefaultRun.Stop(timer)
 	sort.Strings(filesToAdd)
 	// Add files to the layered map
 	for _, file := range filesToAdd {

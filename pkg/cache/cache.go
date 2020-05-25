@@ -17,9 +17,7 @@ limitations under the License.
 package cache
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,6 +25,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -67,12 +66,7 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 		cacheRef.Repository.Registry = newReg
 	}
 
-	tr := http.DefaultTransport.(*http.Transport)
-	if rc.Opts.SkipTLSVerifyRegistries.Contains(registryName) {
-		tr.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	}
+	tr := util.MakeTransport(rc.Opts, registryName)
 
 	img, err := remote.Image(cacheRef, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
 	if err != nil {

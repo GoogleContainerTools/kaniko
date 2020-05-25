@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 func TestGetGitPullMethod(t *testing.T) {
@@ -79,4 +81,89 @@ func TestGetGitPullMethod(t *testing.T) {
 			testutil.CheckDeepEqual(t, expectedValue, getGitPullMethod())
 		})
 	}
+}
+
+func TestGetGitAuth(t *testing.T) {
+	tests := []struct {
+		testName string
+		setEnv   func() (expectedValue transport.AuthMethod)
+	}{
+		{
+			testName: "noEnv",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				expectedValue = nil
+				return
+			},
+		},
+		{
+			testName: "emptyUsernameEnv",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				_ = os.Setenv(gitAuthUsernameEnvKey, "")
+				expectedValue = nil
+				return
+			},
+		},
+		{
+			testName: "emptyPasswordEnv",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				_ = os.Setenv(gitAuthPasswordEnvKey, "")
+				expectedValue = nil
+				return
+			},
+		},
+		{
+			testName: "emptyEnv",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				_ = os.Setenv(gitAuthUsernameEnvKey, "")
+				_ = os.Setenv(gitAuthPasswordEnvKey, "")
+				expectedValue = nil
+				return
+			},
+		},
+		{
+			testName: "withUsername",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				username := "foo"
+				_ = os.Setenv(gitAuthUsernameEnvKey, username)
+				expectedValue = &http.BasicAuth{Username: username}
+				return
+			},
+		},
+		{
+			testName: "withPassword",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				pass := "super-secret-password-1234"
+				_ = os.Setenv(gitAuthPasswordEnvKey, pass)
+				expectedValue = &http.BasicAuth{Password: pass}
+				return
+			},
+		},
+		{
+			testName: "withUsernamePassword",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				username := "foo"
+				pass := "super-secret-password-1234"
+				_ = os.Setenv(gitAuthUsernameEnvKey, username)
+				_ = os.Setenv(gitAuthPasswordEnvKey, pass)
+				expectedValue = &http.BasicAuth{Username: username, Password: pass}
+				return
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			// Make sure to unset environment vars to get a clean test each time
+			defer clearTestAuthEnv()
+
+			expectedValue := tt.setEnv()
+			testutil.CheckDeepEqual(t, expectedValue, getGitAuth())
+		})
+	}
+
+}
+
+func clearTestAuthEnv() {
+	_ = os.Unsetenv(gitAuthUsernameEnvKey)
+	_ = os.Unsetenv(gitAuthPasswordEnvKey)
 }

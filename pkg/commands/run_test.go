@@ -316,3 +316,12 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestSetWorkDirIfExists(t *testing.T) {
+	testDir, err := ioutil.TempDir("", "workdir")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.CheckDeepEqual(t, testDir, setWorkDirIfExists(testDir))
+	testutil.CheckDeepEqual(t, "", setWorkDirIfExists("doesnot-exists"))
+}
