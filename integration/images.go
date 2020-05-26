@@ -259,70 +259,25 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 		}
 	}
 
-	reproducibleFlag := ""
+	additionalKanikoFlags := additionalDockerFlagsMap[dockerfile]
+	additionalKanikoFlags = append(additionalKanikoFlags, contextFlag, contextPath)
 	for _, d := range reproducibleTests {
 		if d == dockerfile {
-			reproducibleFlag = "--reproducible"
+			additionalKanikoFlags = append(additionalKanikoFlags, "--reproducible")
 			break
 		}
 	}
 
-	benchmarkEnv := "BENCHMARK_FILE=false"
-	benchmarkDir, err := ioutil.TempDir("", "")
+	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
+	out, err := buildKanikoImage(dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
+		contextDir, gcsBucket, serviceAccount)
 	if err != nil {
 		return err
-	}
-	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
-		benchmarkEnv = "BENCHMARK_FILE=/kaniko/benchmarks/" + dockerfile
-		benchmarkFile := path.Join(benchmarkDir, dockerfile)
-		fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
-		dst := path.Join("benchmarks", fileName)
-		defer UploadFileToBucket(gcsBucket, benchmarkFile, dst)
-	}
-
-	// build kaniko image
-	additionalFlags := append(buildArgs, additionalKanikoFlagsMap[dockerfile]...)
-	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
-	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
-
-	dockerRunFlags := []string{"run", "--net=host",
-		"-e", benchmarkEnv,
-		"-v", contextDir + ":/workspace",
-		"-v", benchmarkDir + ":/kaniko/benchmarks",
-	}
-
-	if env, ok := envsMap[dockerfile]; ok {
-		for _, envVariable := range env {
-			dockerRunFlags = append(dockerRunFlags, "-e", envVariable)
-		}
-	}
-
-	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
-
-	kanikoDockerfilePath := path.Join(buildContextPath, dockerfilesPath, dockerfile)
-	if dockerfilesPath == "" {
-		kanikoDockerfilePath = path.Join(buildContextPath, "Dockerfile")
-	}
-
-	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
-		"-f", kanikoDockerfilePath,
-		"-d", kanikoImage, reproducibleFlag,
-		contextFlag, contextPath)
-	dockerRunFlags = append(dockerRunFlags, additionalFlags...)
-
-	kanikoCmd := exec.Command("docker", dockerRunFlags...)
-
-	timer = timing.Start(dockerfile + "_kaniko")
-	out, err := RunCommandWithoutTest(kanikoCmd)
-	timing.DefaultRun.Stop(timer)
-
-	if err != nil {
-		return fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
 	}
 
 	if outputCheck := outputChecks[dockerfile]; outputCheck != nil {
 		if err := outputCheck(dockerfile, out); err != nil {
-			return fmt.Errorf("Output check failed for image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
+			return fmt.Errorf("Output check failed for image %s with kaniko command : %s %s", kanikoImage, err, string(out))
 		}
 	}
 
@@ -434,4 +389,59 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 	}
 
 	return nil
+}
+
+func buildKanikoImage(dockerfilesPath string, dockerfile string, buildArgs []string, kanikoArgs []string, kanikoImage string,
+	contextDir string, gcsBucket string, serviceAccount string) ([]byte, error) {
+	benchmarkEnv := "BENCHMARK_FILE=false"
+	benchmarkDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return nil, err
+	}
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
+		benchmarkEnv = "BENCHMARK_FILE=/kaniko/benchmarks/" + dockerfile
+		benchmarkFile := path.Join(benchmarkDir, dockerfile)
+		fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
+		dst := path.Join("benchmarks", fileName)
+		defer UploadFileToBucket(gcsBucket, benchmarkFile, dst)
+	}
+
+	// build kaniko image
+	additionalFlags := append(buildArgs, kanikoArgs...)
+	fmt.Printf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
+
+	dockerRunFlags := []string{"run", "--net=host",
+		"-e", benchmarkEnv,
+		"-v", contextDir + ":/workspace",
+		"-v", benchmarkDir + ":/kaniko/benchmarks",
+	}
+
+	if env, ok := envsMap[dockerfile]; ok {
+		for _, envVariable := range env {
+			dockerRunFlags = append(dockerRunFlags, "-e", envVariable)
+		}
+	}
+
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+
+	kanikoDockerfilePath := path.Join(buildContextPath, dockerfilesPath, dockerfile)
+	if dockerfilesPath == "" {
+		kanikoDockerfilePath = path.Join(buildContextPath, "Dockerfile")
+	}
+
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", kanikoDockerfilePath,
+		"-d", kanikoImage)
+	dockerRunFlags = append(dockerRunFlags, additionalFlags...)
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	timer := timing.Start(dockerfile + "_kaniko")
+	out, err := RunCommandWithoutTest(kanikoCmd)
+	timing.DefaultRun.Stop(timer)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
+	}
+	return out, nil
 }

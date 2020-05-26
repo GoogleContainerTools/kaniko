@@ -21,19 +21,6 @@ IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 docker version
 
 # Sets up a kokoro (Google internal integration testing tool) environment
-if [ -f "$KOKORO_GFILE_DIR"/common.sh ]; then
-    echo "Installing dependencies..."
-    source "$KOKORO_GFILE_DIR/common.sh"
-    mkdir -p /usr/local/go/src/github.com/GoogleContainerTools/
-    cp -r github/kaniko /usr/local/go/src/github.com/GoogleContainerTools/
-    pushd /usr/local/go/src/github.com/GoogleContainerTools/kaniko
-    echo "Installing container-diff..."
-    mv $KOKORO_GFILE_DIR/container-diff-linux-amd64 $KOKORO_GFILE_DIR/container-diff
-    chmod +x $KOKORO_GFILE_DIR/container-diff
-    export PATH=$PATH:$KOKORO_GFILE_DIR
-    cp $KOKORO_ROOT/src/keystore/72508_gcr_application_creds $HOME/.config/gcloud/application_default_credentials.json
-fi
-
 echo "Running integration tests..."
 make out/executor
 make out/warmer
