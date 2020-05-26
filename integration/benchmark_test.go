@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -34,6 +35,9 @@ type result struct {
 }
 
 func TestSnapshotBenchmark(t *testing.T) {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil || !b {
+		t.SkipNow()
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -48,22 +52,22 @@ func TestSnapshotBenchmark(t *testing.T) {
 		t.Run(fmt.Sprintf("test_benchmark_%d", num), func(t *testing.T) {
 			wg.Add(1)
 			var err error
-			go func(num int, err error) {
+			go func(num int, err *error) {
 				dockerfile := "Dockerfile_fs_benchmark"
 				kanikoImage := fmt.Sprintf("%s_%d", GetKanikoImage(config.imageRepo, dockerfile), num)
 				buildArgs := []string{"--build-arg", fmt.Sprintf("NUM=%d", num)}
 				var benchmarkDir string
-				benchmarkDir, err = buildKanikoImage("", dockerfile,
+				benchmarkDir, *err = buildKanikoImage("", dockerfile,
 					buildArgs, []string{}, kanikoImage, contextDir, config.gcsBucket,
 					config.serviceAccount, false)
-				if err != nil {
+				if *err != nil {
 					return
 				}
 				r := newResult(t, filepath.Join(benchmarkDir, dockerfile))
 				timeMap.Store(num, r)
 				wg.Done()
 				defer os.Remove(benchmarkDir)
-			}(num, err)
+			}(num, &err)
 			if err != nil {
 				t.Errorf("could not run benchmark results for num %d due to %s", num, err)
 			}
