@@ -440,9 +440,7 @@ func buildKanikoImage(
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
-	timer := timing.Start(dockerfile + "_kaniko")
 	out, err := RunCommandWithoutTest(kanikoCmd)
-	timing.DefaultRun.Stop(timer)
 	if err != nil {
 		return "", fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
 	}

@@ -47,21 +47,26 @@ func TestSnapshotBenchmark(t *testing.T) {
 	for _, num := range nums {
 		t.Run(fmt.Sprintf("test_benchmark_%d", num), func(t *testing.T) {
 			wg.Add(1)
-			go func(num int) {
+			var err error
+			go func(num int, err error) {
 				dockerfile := "Dockerfile_fs_benchmark"
 				kanikoImage := fmt.Sprintf("%s_%d", GetKanikoImage(config.imageRepo, dockerfile), num)
 				buildArgs := []string{"--build-arg", fmt.Sprintf("NUM=%d", num)}
-				benchmarkDir, err := buildKanikoImage("", dockerfile,
+				var benchmarkDir string
+				benchmarkDir, err = buildKanikoImage("", dockerfile,
 					buildArgs, []string{}, kanikoImage, contextDir, config.gcsBucket,
 					config.serviceAccount, false)
 				if err != nil {
-					t.Errorf("could not run benchmark results for num %d", num)
+					return
 				}
 				r := newResult(t, filepath.Join(benchmarkDir, dockerfile))
 				timeMap.Store(num, r)
 				wg.Done()
 				defer os.Remove(benchmarkDir)
-			}(num)
+			}(num, err)
+			if err != nil {
+				t.Errorf("could not run benchmark results for num %d due to %s", num, err)
+			}
 		})
 	}
 	wg.Wait()
