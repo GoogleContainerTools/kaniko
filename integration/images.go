@@ -259,7 +259,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 		}
 	}
 
-	additionalKanikoFlags := additionalDockerFlagsMap[dockerfile]
+	additionalKanikoFlags := additionalKanikoFlagsMap[dockerfile]
 	additionalKanikoFlags = append(additionalKanikoFlags, contextFlag, contextPath)
 	for _, d := range reproducibleTests {
 		if d == dockerfile {
