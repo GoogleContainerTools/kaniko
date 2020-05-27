@@ -192,6 +192,48 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
   --destination=<gcr.io/$project/$image:$tag>
 ```
 
+Complete example of how to interactively run kaniko with `.tar.gz` Standard Input data, using Kubernetes command line with a temporary container and completely dockerless:
+```shell
+echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | kubectl run kaniko \
+--rm --stdin=true \
+--image=gcr.io/kaniko-project/executor:latest --restart=Never \
+--overrides='{ 
+  "apiVersion": "v1",
+  "spec": {
+    "containers": [
+    {
+      "name": "kaniko",
+      "image": "gcr.io/kaniko-project/executor:latest",
+      "stdin": true,
+      "stdinOnce": true,
+      "args": [
+  	"--dockerfile=Dockerfile",
+  	"--context=tar://stdin",
+  	"--destination=gcr.io/my-repo/my-image" ],
+      "volumeMounts": [
+        { 
+          "name": "cabundle",
+          "mountPath": "/kaniko/ssl/certs/"
+        },
+        { 
+          "name": "docker-config", 
+          "mountPath": "/kaniko/.docker/"
+      }]
+    }],
+    "volumes": [
+    {
+      "name": "cabundle",
+      "configMap": {
+        "name": "cabundle"}},
+    { 
+      "name": "docker-config",
+      "configMap": { 
+        "name": "docker-config" }}
+    ]
+  }
+}'
+```
+
 ### Running kaniko
 
 There are several different ways to deploy and run kaniko:
