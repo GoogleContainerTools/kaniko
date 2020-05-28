@@ -45,9 +45,11 @@ type CopyCommand struct {
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	ignoreExcludes := false
 	// Resolve from
 	if c.cmd.From != "" {
 		c.buildcontext = filepath.Join(kConfig.KanikoDir, c.cmd.From)
+		ignoreExcludes = true
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
@@ -90,7 +92,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext, uid, gid)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext, uid, gid, ignoreExcludes)
 			if err != nil {
 				return errors.Wrap(err, "copying dir")
 			}
@@ -107,7 +109,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			if c.cmd.From != "" {
+			if !ignoreExcludes {
 				exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
 				if err != nil {
 					return errors.Wrap(err, "copying file")

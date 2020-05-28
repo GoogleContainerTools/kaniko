@@ -570,7 +570,7 @@ func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64)
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
+func CopyDir(src, dest, buildcontext string, uid, gid int64, ignoreExcludes bool) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, errors.Wrap(err, "copying dir")
@@ -582,7 +582,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "copying dir")
 		}
-		if ExcludeFile(fullPath, buildcontext) {
+		if ExcludeFile(fullPath, buildcontext) && !ignoreExcludes {
 			logrus.Debugf("%s found in .dockerignore, ignoring", src)
 			continue
 		}
@@ -602,7 +602,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if _, err := CopyFile(fullPath, destPath, buildcontext, uid, gid); err != nil {
+			if err := CopyFileIgnoreExclude(fullPath, destPath, buildcontext, uid, gid); err != nil {
 				return nil, err
 			}
 		}
