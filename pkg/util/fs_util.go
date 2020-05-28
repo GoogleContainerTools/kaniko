@@ -632,30 +632,35 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 	return false, os.Symlink(link, dest)
 }
 
-// CopyFile copies the file at src to dest
+// CopyFileIgnoreExclude copies the file at src to dest without checking excludes
+func CopyFileIgnoreExclude(src, dest, buildcontext string, uid, gid int64) error {
+	if src == dest {
+		// This is a no-op.
+		// We have to make sure we do this so we don't overwrite our own file.
+		// See iusse #904 for an example.
+		return nil
+	}
+	fi, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("Copying file %s to %s", src, dest)
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+	uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
+	return CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
+}
+
+// CopyFile copies the file at src to dest, unless it is excluded
 func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
 	if ExcludeFile(src, buildcontext) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
-	if src == dest {
-		// This is a no-op. Move on, but don't list it as ignored.
-		// We have to make sure we do this so we don't overwrite our own file.
-		// See iusse #904 for an example.
-		return false, nil
-	}
-	fi, err := os.Stat(src)
-	if err != nil {
-		return false, err
-	}
-	logrus.Debugf("Copying file %s to %s", src, dest)
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return false, err
-	}
-	defer srcFile.Close()
-	uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
-	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
+	return false, CopyFileIgnoreExclude(src, dest, buildcontext, uid, gid)
 }
 
 // GetExcludedFiles gets a list of files to exclude from the .dockerignore

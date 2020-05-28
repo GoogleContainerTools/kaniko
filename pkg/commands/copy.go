@@ -107,12 +107,19 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
-			if err != nil {
-				return errors.Wrap(err, "copying file")
-			}
-			if exclude {
-				continue
+			if c.cmd.From != "" {
+				exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
+				if err != nil {
+					return errors.Wrap(err, "copying file")
+				}
+				if exclude {
+					continue
+				}
+			} else {
+				err = util.CopyFileIgnoreExclude(fullPath, destPath, c.buildcontext, uid, gid)
+				if err != nil {
+					return errors.Wrap(err, "copying file")
+				}
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		}
