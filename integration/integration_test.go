@@ -588,14 +588,14 @@ func filterMetaDiff(metaDiff []string) []string {
 func filterFileDiff(f []fileDiff) []fileDiff {
 	var newDiffs []fileDiff
 	for _, diff := range f {
-		isSkipped := false
+		isIgnored := false
 		for _, p := range allowedDiffPaths {
 			if util.HasFilepathPrefix(diff.Name, p, false) {
-				isSkipped = true
+				isIgnored = true
 				break
 			}
 		}
-		if !isSkipped {
+		if !isIgnored {
 			newDiffs = append(newDiffs, diff)
 		}
 	}

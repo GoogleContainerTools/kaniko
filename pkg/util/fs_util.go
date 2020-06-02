@@ -55,13 +55,13 @@ var initialIgnoreList = []IgnoreListEntry{
 		PrefixMatchOnly: false,
 	},
 	{
-		// similarly, we skip /etc/mtab, since there is no way to know if the file was mounted or came
+		// similarly, we ignore /etc/mtab, since there is no way to know if the file was mounted or came
 		// from the base image
 		Path:            "/etc/mtab",
 		PrefixMatchOnly: false,
 	},
 	{
-		// we skip /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
+		// we ingore /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
 		// from the base image
 		Path:            "/tmp/apt-key-gpghome",
 		PrefixMatchOnly: true,
