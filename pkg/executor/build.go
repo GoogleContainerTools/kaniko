@@ -314,7 +314,7 @@ func (s *stageBuilder) build() error {
 		logrus.Info("Skipping unpacking as no commands require it.")
 	}
 
-	if err := util.DetectFilesystemWhitelist(config.WhitelistPath); err != nil {
+	if err := util.DetectFilesystemAllowlist(config.AllowlistPath); err != nil {
 		return errors.Wrap(err, "failed to check filesystem whitelist")
 	}
 

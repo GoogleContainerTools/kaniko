@@ -26,24 +26,24 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ResolvePaths takes a slice of file paths and a slice of whitelist entries. It resolve each
+// ResolvePaths takes a slice of file paths and a slice of allowlist entries. It resolve each
 // file path according to a set of rules and then returns a slice of resolved paths or error.
 // File paths are resolved according to the following rules:
-// * If path is whitelisted, skip it.
+// * If path is in allowlist, skip it.
 // * If path is a symlink, resolve it's ancestor link and add it to the output set.
-// * If path is a symlink, resolve it's target. If the target is not whitelisted add it to the
+// * If path is a symlink, resolve it's target. If the target is not in allowedlist add it to the
 // output set.
 // * Add all ancestors of each path to the output set.
-func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string, err error) {
+func ResolvePaths(paths []string, wl []util.AllowlistEntry) (pathsToAdd []string, err error) {
 	logrus.Infof("Resolving %d paths", len(paths))
 	logrus.Tracef("Resolving paths %s", paths)
 
 	fileSet := make(map[string]bool)
 
 	for _, f := range paths {
-		// If the given path is part of the whitelist ignore it
-		if util.IsInProvidedWhitelist(f, wl) {
-			logrus.Debugf("path %s is whitelisted, ignoring it", f)
+		// If the given path is part of the allowlist ignore it
+		if util.IsInProvidedAllowlist(f, wl) {
+			logrus.Debugf("path %s is in allowlist, ignoring it", f)
 			continue
 		}
 
@@ -76,9 +76,9 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 			continue
 		}
 
-		// If the given path is a symlink and the target is part of the whitelist
+		// If the given path is a symlink and the target is part of the allowlist
 		// ignore the target
-		if util.IsInProvidedWhitelist(evaled, wl) {
+		if util.IsInProvidedAllowlist(evaled, wl) {
 			logrus.Debugf("path %s is whitelisted, ignoring it", evaled)
 			continue
 		}

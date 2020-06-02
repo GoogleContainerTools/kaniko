@@ -41,12 +41,12 @@ var snapshotPathPrefix = config.KanikoDir
 type Snapshotter struct {
 	l         *LayeredMap
 	directory string
-	whitelist []util.WhitelistEntry
+	whitelist []util.AllowlistEntry
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
 func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
-	return &Snapshotter{l: l, directory: d, whitelist: util.Whitelist()}
+	return &Snapshotter{l: l, directory: d, whitelist: util.Allowlist()}
 }
 
 // Init initializes a new snapshotter
@@ -139,7 +139,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	godirwalk.Walk(s.directory, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
-			if util.IsInWhitelist(path) {
+			if util.IsInAllowlist(path) {
 				if util.IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a whitelisted directory", path)
 
@@ -193,7 +193,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	filesToAdd := []string{}
 	for path := range resolvedMemFs {
-		if util.CheckWhitelist(path) {
+		if util.CheckAllowlist(path) {
 			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
 			continue
 		}

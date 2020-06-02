@@ -178,10 +178,10 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	if err := ioutil.WriteFile(mFile, []byte(mountInfo), 0644); err != nil {
 		t.Fatal(err)
 	}
-	config.WhitelistPath = mFile
+	config.AllowlistPath = mFile
 	return testDir, func() {
 		config.KanikoDir = constants.KanikoDir
 		config.RootDir = constants.RootDir
-		config.WhitelistPath = constants.WhitelistPath
+		config.AllowlistPath = constants.AllowlistPath
 	}
 }

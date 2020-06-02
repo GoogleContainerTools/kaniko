@@ -38,7 +38,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
-func Test_DetectFilesystemWhitelist(t *testing.T) {
+func Test_DetectFilesystemAllowlist(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatalf("Error creating tempdir: %s", err)
@@ -58,8 +58,8 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		t.Fatalf("Error writing file contents to %s: %s", path, err)
 	}
 
-	err = DetectFilesystemWhitelist(path)
-	expectedWhitelist := []WhitelistEntry{
+	err = DetectFilesystemAllowlist(path)
+	expectedAllowlist := []AllowlistEntry{
 		{"/kaniko", false},
 		{"/proc", false},
 		{"/dev", false},
@@ -68,14 +68,14 @@ func Test_DetectFilesystemWhitelist(t *testing.T) {
 		{"/etc/mtab", false},
 		{"/tmp/apt-key-gpghome", true},
 	}
-	actualWhitelist := whitelist
-	sort.Slice(actualWhitelist, func(i, j int) bool {
-		return actualWhitelist[i].Path < actualWhitelist[j].Path
+	actualAllowlist := allowlist
+	sort.Slice(actualAllowlist, func(i, j int) bool {
+		return actualAllowlist[i].Path < actualAllowlist[j].Path
 	})
-	sort.Slice(expectedWhitelist, func(i, j int) bool {
-		return expectedWhitelist[i].Path < expectedWhitelist[j].Path
+	sort.Slice(expectedAllowlist, func(i, j int) bool {
+		return expectedAllowlist[i].Path < expectedAllowlist[j].Path
 	})
-	testutil.CheckErrorAndDeepEqual(t, false, err, expectedWhitelist, actualWhitelist)
+	testutil.CheckErrorAndDeepEqual(t, false, err, expectedAllowlist, actualAllowlist)
 }
 
 var tests = []struct {
@@ -254,7 +254,7 @@ func Test_ParentDirectoriesWithoutLeadingSlash(t *testing.T) {
 func Test_CheckWhitelist(t *testing.T) {
 	type args struct {
 		path      string
-		whitelist []WhitelistEntry
+		whitelist []AllowlistEntry
 	}
 	tests := []struct {
 		name string
@@ -265,7 +265,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "file whitelisted",
 			args: args{
 				path:      "/foo",
-				whitelist: []WhitelistEntry{{"/foo", false}},
+				whitelist: []AllowlistEntry{{"/foo", false}},
 			},
 			want: true,
 		},
@@ -273,7 +273,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "directory whitelisted",
 			args: args{
 				path:      "/foo/bar",
-				whitelist: []WhitelistEntry{{"/foo", false}},
+				whitelist: []AllowlistEntry{{"/foo", false}},
 			},
 			want: true,
 		},
@@ -281,7 +281,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "grandparent whitelisted",
 			args: args{
 				path:      "/foo/bar/baz",
-				whitelist: []WhitelistEntry{{"/foo", false}},
+				whitelist: []AllowlistEntry{{"/foo", false}},
 			},
 			want: true,
 		},
@@ -289,7 +289,7 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "sibling whitelisted",
 			args: args{
 				path:      "/foo/bar/baz",
-				whitelist: []WhitelistEntry{{"/foo/bat", false}},
+				whitelist: []AllowlistEntry{{"/foo/bat", false}},
 			},
 			want: false,
 		},
@@ -297,21 +297,21 @@ func Test_CheckWhitelist(t *testing.T) {
 			name: "prefix match only ",
 			args: args{
 				path:      "/tmp/apt-key-gpghome.xft/gpg.key",
-				whitelist: []WhitelistEntry{{"/tmp/apt-key-gpghome.*", true}},
+				whitelist: []AllowlistEntry{{"/tmp/apt-key-gpghome.*", true}},
 			},
 			want: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			original := whitelist
+			original := allowlist
 			defer func() {
-				whitelist = original
+				allowlist = original
 			}()
-			whitelist = tt.args.whitelist
-			got := CheckWhitelist(tt.args.path)
+			allowlist = tt.args.whitelist
+			got := CheckAllowlist(tt.args.path)
 			if got != tt.want {
-				t.Errorf("CheckWhitelist() = %v, want %v", got, tt.want)
+				t.Errorf("CheckAllowlist() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -882,7 +882,7 @@ func TestCopySymlink(t *testing.T) {
 func Test_childDirInWhitelist(t *testing.T) {
 	type args struct {
 		path      string
-		whitelist []WhitelistEntry
+		whitelist []AllowlistEntry
 	}
 	tests := []struct {
 		name string
@@ -890,17 +890,17 @@ func Test_childDirInWhitelist(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "not in whitelist",
+			name: "not in allowlist",
 			args: args{
 				path: "/foo",
 			},
 			want: false,
 		},
 		{
-			name: "child in whitelist",
+			name: "child in allowlist",
 			args: args{
 				path: "/foo",
-				whitelist: []WhitelistEntry{
+				whitelist: []AllowlistEntry{
 					{
 						Path: "/foo/bar",
 					},
@@ -909,14 +909,14 @@ func Test_childDirInWhitelist(t *testing.T) {
 			want: true,
 		},
 	}
-	oldWhitelist := whitelist
+	oldWhitelist := allowlist
 	defer func() {
-		whitelist = oldWhitelist
+		allowlist = oldWhitelist
 	}()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			whitelist = tt.args.whitelist
+			allowlist = tt.args.whitelist
 			if got := childDirInWhitelist(tt.args.path); got != tt.want {
 				t.Errorf("childDirInWhitelist() = %v, want %v", got, tt.want)
 			}
@@ -1319,12 +1319,12 @@ func TestUpdateWhitelist(t *testing.T) {
 	tests := []struct {
 		name            string
 		whitelistVarRun bool
-		expected        []WhitelistEntry
+		expected        []AllowlistEntry
 	}{
 		{
 			name:            "var/run whitelisted",
 			whitelistVarRun: true,
-			expected: []WhitelistEntry{
+			expected: []AllowlistEntry{
 				{
 					Path:            "/kaniko",
 					PrefixMatchOnly: false,
@@ -1345,7 +1345,7 @@ func TestUpdateWhitelist(t *testing.T) {
 		},
 		{
 			name: "var/run not whitelisted",
-			expected: []WhitelistEntry{
+			expected: []AllowlistEntry{
 				{
 					Path:            "/kaniko",
 					PrefixMatchOnly: false,
@@ -1363,16 +1363,16 @@ func TestUpdateWhitelist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			original := initialWhitelist
-			defer func() { initialWhitelist = original }()
+			original := initialAllowlist
+			defer func() { initialAllowlist = original }()
 			UpdateWhitelist(tt.whitelistVarRun)
 			sort.Slice(tt.expected, func(i, j int) bool {
 				return tt.expected[i].Path < tt.expected[j].Path
 			})
-			sort.Slice(initialWhitelist, func(i, j int) bool {
-				return initialWhitelist[i].Path < initialWhitelist[j].Path
+			sort.Slice(initialAllowlist, func(i, j int) bool {
+				return initialAllowlist[i].Path < initialAllowlist[j].Path
 			})
-			testutil.CheckDeepEqual(t, tt.expected, initialWhitelist)
+			testutil.CheckDeepEqual(t, tt.expected, initialAllowlist)
 		})
 	}
 }

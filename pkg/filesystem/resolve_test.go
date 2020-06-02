@@ -86,7 +86,7 @@ func Test_ResolvePaths(t *testing.T) {
 			}
 
 			t.Run("none are whitelisted", func(t *testing.T) {
-				wl := []util.WhitelistEntry{}
+				wl := []util.AllowlistEntry{}
 
 				inputFiles := []string{}
 				expectedFiles := []string{}
@@ -108,7 +108,7 @@ func Test_ResolvePaths(t *testing.T) {
 			})
 
 			t.Run("some are whitelisted", func(t *testing.T) {
-				wl := []util.WhitelistEntry{
+				wl := []util.AllowlistEntry{
 					{
 						Path: filepath.Join(dir, "link", "baz"),
 					},
@@ -124,7 +124,7 @@ func Test_ResolvePaths(t *testing.T) {
 					link := filepath.Join(dir, "link", f)
 					inputFiles = append(inputFiles, link)
 
-					if util.IsInProvidedWhitelist(link, wl) {
+					if util.IsInProvidedAllowlist(link, wl) {
 						t.Logf("skipping %s", link)
 						continue
 					}
@@ -133,7 +133,7 @@ func Test_ResolvePaths(t *testing.T) {
 
 					target := filepath.Join(dir, "target", f)
 
-					if util.IsInProvidedWhitelist(target, wl) {
+					if util.IsInProvidedAllowlist(target, wl) {
 						t.Logf("skipping %s", target)
 						continue
 					}
@@ -177,7 +177,7 @@ func Test_ResolvePaths(t *testing.T) {
 		inputFiles := []string{}
 		expectedFiles := []string{}
 
-		wl := []util.WhitelistEntry{}
+		wl := []util.AllowlistEntry{}
 
 		files, err := ResolvePaths(inputFiles, wl)
 
