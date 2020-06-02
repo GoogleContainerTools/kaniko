@@ -55,7 +55,7 @@ type KanikoOptions struct {
 	NoPush                  bool
 	Cache                   bool
 	Cleanup                 bool
-	WhitelistVarRun         bool
+	SkipVarRun              bool
 	SkipUnusedStages        bool
 }
 
