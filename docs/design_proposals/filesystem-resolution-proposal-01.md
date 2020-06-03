@@ -19,7 +19,7 @@ To accomplish this, Kaniko walks the entire filesystem to discover every object.
 Some of these objects may actually be a symlink to another object in the
 filesystem; in these cases we must consider both the link and the target object.
 
-Kaniko also maintains a set of whitelisted (aka ignored) filepaths. Any object
+Kaniko also maintains a set of ignored (aka ignored) filepaths. Any object
 which matches one of these filepaths should be ignored by kaniko.
 
 This results in a 3 dimensional search space

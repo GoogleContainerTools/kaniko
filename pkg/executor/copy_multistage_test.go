@@ -166,7 +166,7 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	// set up config
 	config.RootDir = testDir
 	config.KanikoDir = fmt.Sprintf("%s/%s", testDir, "kaniko")
-	// Write a whitelist path
+	// Write path to ignore list
 	if err := os.MkdirAll(filepath.Join(testDir, "proc"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -178,10 +178,10 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	if err := ioutil.WriteFile(mFile, []byte(mountInfo), 0644); err != nil {
 		t.Fatal(err)
 	}
-	config.WhitelistPath = mFile
+	config.IgnoreListPath = mFile
 	return testDir, func() {
 		config.KanikoDir = constants.KanikoDir
 		config.RootDir = constants.RootDir
-		config.WhitelistPath = constants.WhitelistPath
+		config.IgnoreListPath = constants.IgnoreListPath
 	}
 }
