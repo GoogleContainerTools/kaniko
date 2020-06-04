@@ -38,7 +38,6 @@ COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
-COPY --from=1 /distroless/bazel-bin/experimental/busybox/busybox/ /busybox/
 COPY --from=amd64/busybox:1.31.1 /bin/busybox /busybox/busybox
 
 # Declare /busybox as a volume to get it automatically in the path to ignore
