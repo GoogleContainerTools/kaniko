@@ -33,6 +33,9 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	dockerfile := `
 	ARG IMAGE="ubuntu:16.04"
 	ARG FOO=bar
+	ARG HELLO="Hello"
+	ARG WORLD="World"
+	ARG NESTED="$HELLO $WORLD"
 	FROM ${IMAGE}
 	RUN echo hi > /hi
 
@@ -65,11 +68,11 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 		t.Fatal("length of stages expected to be greater than zero, but was zero")
 	}
 
-	if len(metaArgs) != 2 {
-		t.Fatalf("length of stage meta args expected to be 2, but was %d", len(metaArgs))
+	if len(metaArgs) != 5 {
+		t.Fatalf("length of stage meta args expected to be 5, but was %d", len(metaArgs))
 	}
 
-	for i, expectedVal := range []string{"ubuntu:16.04", "bar"} {
+	for i, expectedVal := range []string{"ubuntu:16.04", "bar", "Hello", "World", "Hello World"} {
 		if metaArgs[i].ValueString() != expectedVal {
 			t.Fatalf("expected metaArg %d val to be %s but was %s", i, expectedVal, metaArgs[i].ValueString())
 		}
