@@ -44,6 +44,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	image_util "github.com/GoogleContainerTools/kaniko/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -84,7 +85,7 @@ type stageBuilder struct {
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string) (*stageBuilder, error) {
-	sourceImage, err := util.RetrieveSourceImage(stage, opts)
+	sourceImage, err := image_util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -313,8 +314,8 @@ func (s *stageBuilder) build() error {
 		logrus.Info("Skipping unpacking as no commands require it.")
 	}
 
-	if err := util.DetectFilesystemWhitelist(config.WhitelistPath); err != nil {
-		return errors.Wrap(err, "failed to check filesystem whitelist")
+	if err := util.DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
+		return errors.Wrap(err, "failed to check filesystem mount paths")
 	}
 
 	initSnapshotTaken := false
@@ -517,7 +518,7 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 		} else if s.Name == constants.NoBaseImage {
 			image = empty.Image
 		} else {
-			image, err = util.RetrieveSourceImage(s, opts)
+			image, err = image_util.RetrieveSourceImage(s, opts)
 			if err != nil {
 				return nil, err
 			}
@@ -596,6 +597,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
+	util.IsFirstStage = true
 	for index, stage := range kanikoStages {
 		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx)
 		if err != nil {
@@ -604,6 +606,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
+		util.IsFirstStage = false
 
 		reviewConfig(stage, &sb.cf.Config)
 
@@ -749,7 +752,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 
 			// This must be an image name, fetch it.
 			logrus.Debugf("Found extra base image stage %s", c.From)
-			sourceImage, err := util.RetrieveRemoteImage(c.From, opts)
+			sourceImage, err := image_util.RetrieveRemoteImage(c.From, opts)
 			if err != nil {
 				return err
 			}

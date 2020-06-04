@@ -26,7 +26,7 @@ const (
 	//KanikoDir is the path to the Kaniko directory
 	KanikoDir = "/kaniko"
 
-	WhitelistPath = "/proc/self/mountinfo"
+	IgnoreListPath = "/proc/self/mountinfo"
 
 	Author = "kaniko"
 

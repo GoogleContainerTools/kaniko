@@ -14,7 +14,7 @@ ADD $contextenv/* /tmp/${contextenv}/
 ADD context/tars/fil* /tars/
 ADD context/tars/file.tar /tars_again
 
-# This tar has some directories that should be whitelisted inside it.
+# This tar has some directories that should be ignored inside it.
 
 ADD context/tars/sys.tar.gz /
 

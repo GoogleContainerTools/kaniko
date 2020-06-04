@@ -39,14 +39,14 @@ var snapshotPathPrefix = config.KanikoDir
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
-	l         *LayeredMap
-	directory string
-	whitelist []util.WhitelistEntry
+	l          *LayeredMap
+	directory  string
+	ignorelist []util.IgnoreListEntry
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
 func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
-	return &Snapshotter{l: l, directory: d, whitelist: util.Whitelist()}
+	return &Snapshotter{l: l, directory: d, ignorelist: util.IgnoreList()}
 }
 
 // Init initializes a new snapshotter
@@ -60,7 +60,7 @@ func (s *Snapshotter) Key() (string, error) {
 	return s.l.Key()
 }
 
-// TakeSnapshot takes a snapshot of the specified files, avoiding directories in the whitelist, and creates
+// TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	f, err := ioutil.TempFile(config.KanikoDir, "")
@@ -75,7 +75,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 		return "", nil
 	}
 
-	filesToAdd, err := filesystem.ResolvePaths(files, s.whitelist)
+	filesToAdd, err := filesystem.ResolvePaths(files, s.ignorelist)
 	if err != nil {
 		return "", nil
 	}
@@ -100,7 +100,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	return f.Name(), nil
 }
 
-// TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the whitelist, and creates
+// TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files.
 func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	f, err := ioutil.TempFile(snapshotPathPrefix, "")
@@ -139,9 +139,9 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	godirwalk.Walk(s.directory, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
-			if util.IsInWhitelist(path) {
+			if util.IsInIgnoreList(path) {
 				if util.IsDestDir(path) {
-					logrus.Tracef("Skipping paths under %s, as it is a whitelisted directory", path)
+					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
 
 					return filepath.SkipDir
 				}
@@ -158,7 +158,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	)
 	timing.DefaultRun.Stop(timer)
 
-	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.whitelist)
+	timer = timing.Start("Resolving Paths")
+	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.ignorelist)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -192,8 +193,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	filesToAdd := []string{}
 	for path := range resolvedMemFs {
-		if util.CheckWhitelist(path) {
-			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
+		if util.CheckIgnoreList(path) {
+			logrus.Tracef("Not adding %s to layer, as it's ignored", path)
 			continue
 		}
 		// Only add changed files.
@@ -207,6 +208,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 
+	timing.DefaultRun.Stop(timer)
 	sort.Strings(filesToAdd)
 	// Add files to the layered map
 	for _, file := range filesToAdd {

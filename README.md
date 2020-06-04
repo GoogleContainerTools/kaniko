@@ -1,5 +1,7 @@
 # kaniko - Build Images In Kubernetes
 
+`NOTE: Kaniko is not an officially supported Google product`
+
 [![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/GoogleContainerTools/kaniko)](https://goreportcard.com/report/github.com/GoogleContainerTools/kaniko)
 
 ![kaniko logo](logo/Kaniko-Logo.png)
@@ -15,7 +17,6 @@ We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kuber
 
 :mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
 
-Kaniko is not an officially supported Google project.
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
 
@@ -61,6 +62,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--log-format](#--log-format)
     - [--log-timestamp](#--log-timestamp)
     - [--no-push](#--no-push)
+    - [--registry-certificate](#--registry-certificate)
     - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
@@ -173,6 +175,9 @@ If you are using Azure Blob Storage for context file, you will need to pass [Azu
 ### Using Private Git Repository
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
+You can either pass this in as part of the git URL (e.g., `git://TOKEN@github.com/acme/myproject.git#refs/heads/mybranch`)
+or using the environment variable `GIT_USERNAME`.
+
 ### Using Standard Input
 If running kaniko and using Standard Input build context, you will need to add the docker or kubernetes `-i, --interactive` flag.
 Once running, kaniko will then get the data from `STDIN` and create the build context as a compressed tar.
@@ -185,6 +190,48 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
   --interactive -v $(pwd):/workspace gcr.io/kaniko-project/executor:latest \
   --context tar://stdin \
   --destination=<gcr.io/$project/$image:$tag>
+```
+
+Complete example of how to interactively run kaniko with `.tar.gz` Standard Input data, using Kubernetes command line with a temporary container and completely dockerless:
+```shell
+echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | kubectl run kaniko \
+--rm --stdin=true \
+--image=gcr.io/kaniko-project/executor:latest --restart=Never \
+--overrides='{ 
+  "apiVersion": "v1",
+  "spec": {
+    "containers": [
+    {
+      "name": "kaniko",
+      "image": "gcr.io/kaniko-project/executor:latest",
+      "stdin": true,
+      "stdinOnce": true,
+      "args": [
+  	"--dockerfile=Dockerfile",
+  	"--context=tar://stdin",
+  	"--destination=gcr.io/my-repo/my-image" ],
+      "volumeMounts": [
+        { 
+          "name": "cabundle",
+          "mountPath": "/kaniko/ssl/certs/"
+        },
+        { 
+          "name": "docker-config", 
+          "mountPath": "/kaniko/.docker/"
+      }]
+    }],
+    "volumes": [
+    {
+      "name": "cabundle",
+      "configMap": {
+        "name": "cabundle"}},
+    { 
+      "name": "docker-config",
+      "configMap": { 
+        "name": "docker-config" }}
+    ]
+  }
+}'
 ```
 
 ### Running kaniko
@@ -514,6 +561,12 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 #### --no-push
 
 Set this flag if you only want to build the image, without pushing to a registry.
+
+#### --registry-certificate
+
+Set this flag to provide a certificate for TLS communication with a given registry.
+
+Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
 #### --registry-mirror
 

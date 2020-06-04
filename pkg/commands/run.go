@@ -65,7 +65,8 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	logrus.Infof("args: %s", newCommand[1:])
 
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
-	cmd.Dir = config.WorkingDir
+
+	cmd.Dir = setWorkDirIfExists(config.WorkingDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
@@ -235,4 +236,11 @@ func (cr *CachingRunCommand) String() string {
 
 func (cr *CachingRunCommand) MetadataOnly() bool {
 	return false
+}
+
+func setWorkDirIfExists(workdir string) string {
+	if _, err := os.Lstat(workdir); err == nil {
+		return workdir
+	}
+	return ""
 }

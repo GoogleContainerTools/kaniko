@@ -23,14 +23,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
 
 	"github.com/minio/highwayhash"
-
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
@@ -126,14 +123,6 @@ func SHA256(r io.Reader) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size()))), nil
-}
-
-// CurrentPlatform returns the v1.Platform on which the code runs
-func currentPlatform() v1.Platform {
-	return v1.Platform{
-		OS:           runtime.GOOS,
-		Architecture: runtime.GOARCH,
-	}
 }
 
 // GetInputFrom returns Reader content

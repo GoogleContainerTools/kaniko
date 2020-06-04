@@ -556,7 +556,7 @@ func checkContainerDiffOutput(t *testing.T, diff []byte, expected string) {
 		t.Error(err)
 	}
 
-	// Some differences (whitelisted paths, etc.) are known and expected.
+	// Some differences (ignored paths, etc.) are known and expected.
 	fdr := diffInt[0].Diff.(*fileDiffResult)
 	fdr.Adds = filterFileDiff(fdr.Adds)
 	fdr.Dels = filterFileDiff(fdr.Dels)
@@ -588,14 +588,14 @@ func filterMetaDiff(metaDiff []string) []string {
 func filterFileDiff(f []fileDiff) []fileDiff {
 	var newDiffs []fileDiff
 	for _, diff := range f {
-		isWhitelisted := false
+		isIgnored := false
 		for _, p := range allowedDiffPaths {
 			if util.HasFilepathPrefix(diff.Name, p, false) {
-				isWhitelisted = true
+				isIgnored = true
 				break
 			}
 		}
-		if !isWhitelisted {
+		if !isIgnored {
 			newDiffs = append(newDiffs, diff)
 		}
 	}
