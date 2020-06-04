@@ -306,7 +306,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 
 func TestBuildViaRegistryMirror(t *testing.T) {
 	repo := getGitRepo()
-	dockerfile := "integration/dockerfiles/Dockerfile_registry_mirror"
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
@@ -345,7 +345,7 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 
 func TestBuildWithLabels(t *testing.T) {
 	repo := getGitRepo()
-	dockerfile := "integration/dockerfiles/Dockerfile_test_label"
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_label", integrationPath, dockerfilesPath)
 
 	testLabel := "mylabel=myvalue"
 
@@ -556,7 +556,7 @@ func checkContainerDiffOutput(t *testing.T, diff []byte, expected string) {
 		t.Error(err)
 	}
 
-	// Some differences (whitelisted paths, etc.) are known and expected.
+	// Some differences (ignored paths, etc.) are known and expected.
 	fdr := diffInt[0].Diff.(*fileDiffResult)
 	fdr.Adds = filterFileDiff(fdr.Adds)
 	fdr.Dels = filterFileDiff(fdr.Dels)
@@ -588,14 +588,14 @@ func filterMetaDiff(metaDiff []string) []string {
 func filterFileDiff(f []fileDiff) []fileDiff {
 	var newDiffs []fileDiff
 	for _, diff := range f {
-		isWhitelisted := false
+		isIgnored := false
 		for _, p := range allowedDiffPaths {
 			if util.HasFilepathPrefix(diff.Name, p, false) {
-				isWhitelisted = true
+				isIgnored = true
 				break
 			}
 		}
-		if !isWhitelisted {
+		if !isIgnored {
 			newDiffs = append(newDiffs, diff)
 		}
 	}
