@@ -26,24 +26,24 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ResolvePaths takes a slice of file paths and a slice of whitelist entries. It resolve each
+// ResolvePaths takes a slice of file paths and a list of skipped file paths. It resolve each
 // file path according to a set of rules and then returns a slice of resolved paths or error.
 // File paths are resolved according to the following rules:
-// * If path is whitelisted, skip it.
+// * If path is in ignorelist, skip it.
 // * If path is a symlink, resolve it's ancestor link and add it to the output set.
-// * If path is a symlink, resolve it's target. If the target is not whitelisted add it to the
+// * If path is a symlink, resolve it's target. If the target is not ignored add it to the
 // output set.
 // * Add all ancestors of each path to the output set.
-func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string, err error) {
+func ResolvePaths(paths []string, wl []util.IgnoreListEntry) (pathsToAdd []string, err error) {
 	logrus.Infof("Resolving %d paths", len(paths))
 	logrus.Tracef("Resolving paths %s", paths)
 
 	fileSet := make(map[string]bool)
 
 	for _, f := range paths {
-		// If the given path is part of the whitelist ignore it
-		if util.IsInProvidedWhitelist(f, wl) {
-			logrus.Debugf("path %s is whitelisted, ignoring it", f)
+		// If the given path is part of the ignorelist ignore it
+		if util.IsInProvidedIgnoreList(f, wl) {
+			logrus.Debugf("path %s is in list to ignore, ignoring it", f)
 			continue
 		}
 
@@ -76,10 +76,10 @@ func ResolvePaths(paths []string, wl []util.WhitelistEntry) (pathsToAdd []string
 			continue
 		}
 
-		// If the given path is a symlink and the target is part of the whitelist
+		// If the given path is a symlink and the target is part of the ignorelist
 		// ignore the target
-		if util.IsInProvidedWhitelist(evaled, wl) {
-			logrus.Debugf("path %s is whitelisted, ignoring it", evaled)
+		if util.IsInProvidedIgnoreList(evaled, wl) {
+			logrus.Debugf("path %s is ignored, ignoring it", evaled)
 			continue
 		}
 

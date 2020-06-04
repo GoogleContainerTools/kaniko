@@ -69,7 +69,7 @@ func (s *CompositeCache) AddPath(p, context string) error {
 		}
 
 		// Only add the hash of this directory to the key
-		// if there is any whitelisted content.
+		// if there is any ignored content.
 		if !empty || !util.ExcludeFile(p, context) {
 			s.keys = append(s.keys, k)
 		}

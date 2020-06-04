@@ -565,7 +565,7 @@ func Test_SkipingUnusedStages(t *testing.T) {
 			# Make sure that we snapshot intermediate images correctly
 			RUN date > /date
 			ENV foo bar
-			# This base image contains symlinks with relative paths to whitelisted directories
+			# This base image contains symlinks with relative paths to ignored directories
 			# We need to test they're extracted correctly
 			FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5aa48
 			FROM fourth

@@ -62,6 +62,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--log-format](#--log-format)
     - [--log-timestamp](#--log-timestamp)
     - [--no-push](#--no-push)
+    - [--registry-certificate](#--registry-certificate)
     - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
     - [--single-snapshot](#--single-snapshot)
@@ -189,6 +190,48 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
   --interactive -v $(pwd):/workspace gcr.io/kaniko-project/executor:latest \
   --context tar://stdin \
   --destination=<gcr.io/$project/$image:$tag>
+```
+
+Complete example of how to interactively run kaniko with `.tar.gz` Standard Input data, using Kubernetes command line with a temporary container and completely dockerless:
+```shell
+echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | kubectl run kaniko \
+--rm --stdin=true \
+--image=gcr.io/kaniko-project/executor:latest --restart=Never \
+--overrides='{ 
+  "apiVersion": "v1",
+  "spec": {
+    "containers": [
+    {
+      "name": "kaniko",
+      "image": "gcr.io/kaniko-project/executor:latest",
+      "stdin": true,
+      "stdinOnce": true,
+      "args": [
+  	"--dockerfile=Dockerfile",
+  	"--context=tar://stdin",
+  	"--destination=gcr.io/my-repo/my-image" ],
+      "volumeMounts": [
+        { 
+          "name": "cabundle",
+          "mountPath": "/kaniko/ssl/certs/"
+        },
+        { 
+          "name": "docker-config", 
+          "mountPath": "/kaniko/.docker/"
+      }]
+    }],
+    "volumes": [
+    {
+      "name": "cabundle",
+      "configMap": {
+        "name": "cabundle"}},
+    { 
+      "name": "docker-config",
+      "configMap": { 
+        "name": "docker-config" }}
+    ]
+  }
+}'
 ```
 
 ### Running kaniko
@@ -518,6 +561,12 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 #### --no-push
 
 Set this flag if you only want to build the image, without pushing to a registry.
+
+#### --registry-certificate
+
+Set this flag to provide a certificate for TLS communication with a given registry.
+
+Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
 #### --registry-mirror
 
