@@ -306,7 +306,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 
 func TestBuildViaRegistryMirror(t *testing.T) {
 	repo := getGitRepo()
-	dockerfile := "integration/dockerfiles/Dockerfile_registry_mirror"
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
 
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
@@ -345,7 +345,7 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 
 func TestBuildWithLabels(t *testing.T) {
 	repo := getGitRepo()
-	dockerfile := "integration/dockerfiles/Dockerfile_test_label"
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_label", integrationPath, dockerfilesPath)
 
 	testLabel := "mylabel=myvalue"
 
