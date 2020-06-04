@@ -69,7 +69,7 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	}
 
 	if len(metaArgs) != 5 {
-		t.Fatalf("length of stage meta args expected to be 2, but was %d", len(metaArgs))
+		t.Fatalf("length of stage meta args expected to be 5, but was %d", len(metaArgs))
 	}
 
 	for i, expectedVal := range []string{"ubuntu:16.04", "bar", "Hello", "World", "Hello World"} {
