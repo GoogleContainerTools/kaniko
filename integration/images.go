@@ -430,7 +430,7 @@ func buildKanikoImage(
 
 	kanikoDockerfilePath := path.Join(buildContextPath, dockerfilesPath, dockerfile)
 	if dockerfilesPath == "" {
-		kanikoDockerfilePath = path.Join(buildContextPath, dockerfile)
+		kanikoDockerfilePath = path.Join(buildContextPath, "Dockerfile")
 	}
 
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
