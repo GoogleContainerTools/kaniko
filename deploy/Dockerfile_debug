@@ -33,21 +33,16 @@ RUN mkdir -p /kaniko/.docker
 COPY . .
 RUN make GOARCH=${GOARCH} && make out/warmer
 
-# Stage 1: Get the busybox shell
-FROM gcr.io/cloud-builders/bazel:latest
-RUN git clone https://github.com/GoogleContainerTools/distroless.git
-WORKDIR /distroless
-RUN bazel build //experimental/busybox:busybox_tar
-RUN tar -C /distroless/bazel-bin/experimental/busybox/ -xf /distroless/bazel-bin/experimental/busybox/busybox.tar
-
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
-COPY --from=1 /distroless/bazel-bin/experimental/busybox/busybox/ /busybox/
+COPY --from=amd64/busybox:1.31.1 /bin /busybox
+
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
+
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
