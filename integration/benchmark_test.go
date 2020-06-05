@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -32,6 +33,7 @@ type result struct {
 	totalBuildTime float64
 	resolvingFiles float64
 	walkingFiles   float64
+	hashingFiles   float64
 }
 
 func TestSnapshotBenchmark(t *testing.T) {
@@ -44,7 +46,7 @@ func TestSnapshotBenchmark(t *testing.T) {
 	}
 	contextDir := filepath.Join(cwd, "benchmark_fs")
 
-	nums := []int{10000, 50000, 100000, 200000, 300000, 500000, 700000, 800000}
+	nums := []int{10000, 50000, 100000, 200000, 300000, 500000, 700000}
 
 	var timeMap sync.Map
 	var wg sync.WaitGroup
@@ -53,7 +55,7 @@ func TestSnapshotBenchmark(t *testing.T) {
 			wg.Add(1)
 			var err error
 			go func(num int, err *error) {
-				dockerfile := "Dockerfile_fs_benchmark"
+				dockerfile := "Dockerfile"
 				kanikoImage := fmt.Sprintf("%s_%d", GetKanikoImage(config.imageRepo, dockerfile), num)
 				buildArgs := []string{"--build-arg", fmt.Sprintf("NUM=%d", num)}
 				var benchmarkDir string
@@ -106,5 +108,71 @@ func newResult(t *testing.T, f string) result {
 	if c, ok := current["Total Build Time"]; ok {
 		r.totalBuildTime = c.Seconds()
 	}
+	if c, ok := current["Hashing files"]; ok {
+		r.hashingFiles = c.Seconds()
+	}
+	fmt.Println(r)
 	return r
+}
+
+func TestSnapshotBenchmarkGcloud(t *testing.T) {
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err != nil || !b {
+		t.SkipNow()
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	contextDir := filepath.Join(cwd, "benchmark_fs")
+
+	nums := []int{10000, 50000, 100000, 200000, 300000, 500000, 700000}
+
+	var wg sync.WaitGroup
+	fmt.Println("Number of Files,Total Build Time,Walking Filesystem, Resolving Files")
+	for _, num := range nums {
+		t.Run(fmt.Sprintf("test_benchmark_%d", num), func(t *testing.T) {
+			wg.Add(1)
+			var err error
+			go func(num int, err error) {
+				dir, err := runInGcloud(contextDir, num)
+				if err != nil {
+					return
+				}
+				r := newResult(t, filepath.Join(dir, "results"))
+				fmt.Println(fmt.Sprintf("%d,%f,%f,%f, %f", num, r.totalBuildTime, r.walkingFiles, r.resolvingFiles, r.hashingFiles))
+				wg.Done()
+				defer os.Remove(dir)
+				defer os.Chdir(cwd)
+			}(num, err)
+			if err != nil {
+				t.Errorf("could not run benchmark results for num %d due to %s", num, err)
+			}
+		})
+	}
+	wg.Wait()
+}
+
+func runInGcloud(dir string, num int) (string, error) {
+	os.Chdir(dir)
+	cmd := exec.Command("gcloud", "builds",
+		"submit", "--config=cloudbuild.yaml",
+		fmt.Sprintf("--substitutions=_COUNT=%d", num))
+	_, err := RunCommandWithoutTest(cmd)
+	if err != nil {
+		return "", err
+	}
+
+	// grab gcs and to temp dir and return
+	tmpDir, err := ioutil.TempDir("", fmt.Sprintf("%d", num))
+	if err != nil {
+		return "", err
+	}
+	src := fmt.Sprintf("gs://tejal-test/redo_gcb/benchmark_file_%d", num)
+	dest := filepath.Join(tmpDir, "results")
+	copyCommand := exec.Command("gsutil", "cp", src, dest)
+	_, err = RunCommandWithoutTest(copyCommand)
+	if err != nil {
+		return "", fmt.Errorf("failed to download file to GCS bucket %s: %s", src, err)
+	}
+	return tmpDir, nil
 }

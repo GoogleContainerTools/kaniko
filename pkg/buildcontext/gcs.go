@@ -17,8 +17,10 @@ limitations under the License.
 package buildcontext
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"cloud.google.com/go/storage"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -35,6 +37,25 @@ type GCS struct {
 func (g *GCS) UnpackTarFromBuildContext() (string, error) {
 	bucket, item := util.GetBucketAndItem(g.context)
 	return constants.BuildContextDir, unpackTarFromGCSBucket(bucket, item, constants.BuildContextDir)
+}
+
+func UploadToBucket(r io.Reader, dest string) error {
+	ctx := context.Background()
+	context := strings.SplitAfter(dest, "://")[1]
+	bucketName, item := util.GetBucketAndItem(context)
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	bucket := client.Bucket(bucketName)
+	w := bucket.Object(item).NewWriter(ctx)
+	if _, err := io.Copy(w, r); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // unpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory

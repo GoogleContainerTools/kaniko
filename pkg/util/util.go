@@ -126,7 +126,7 @@ func RedoHasher() func(string) (string, error) {
 		}
 		h.Write([]byte(fi.Mode().String()))
 		h.Write([]byte(fi.ModTime().String()))
-		h.Write([]byte(strconv.FormatInt(fi.Size(), 64)))
+		h.Write([]byte(strconv.FormatInt(fi.Size(), 16)))
 		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Uid), 36)))
 		h.Write([]byte(","))
 		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Gid), 36)))
@@ -135,7 +135,6 @@ func RedoHasher() func(string) (string, error) {
 	}
 	return hasher
 }
-
 
 // SHA256 returns the shasum of the contents of r
 func SHA256(r io.Reader) (string, error) {
