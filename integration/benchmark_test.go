@@ -167,7 +167,7 @@ func runInGcloud(dir string, num int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	src := fmt.Sprintf("gs://tejal-test/redo_gcb/benchmark_file_%d", num)
+	src := fmt.Sprintf("%s/gcb/benchmark_file_%d", config.gcsBucket, num)
 	dest := filepath.Join(tmpDir, "results")
 	copyCommand := exec.Command("gsutil", "cp", src, dest)
 	_, err = RunCommandWithoutTest(copyCommand)

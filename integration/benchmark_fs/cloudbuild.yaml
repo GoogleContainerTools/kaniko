@@ -5,7 +5,7 @@ steps:
   - --no-push
   - --snapshotMode=redo
   env:
-  - 'BENCHMARK_FILE=gs://tejal-test/redo_gcb/benchmark_file_${_COUNT}'
+  - 'BENCHMARK_FILE=gs://$PROJECT_ID/gcb/benchmark_file_${_COUNT}'
   timeout: 2400s
 timeout: 2400s
 substitutions:
