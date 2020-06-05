@@ -132,11 +132,10 @@ func TestSnapshotBenchmarkGcloud(t *testing.T) {
 	for _, num := range nums {
 		t.Run(fmt.Sprintf("test_benchmark_%d", num), func(t *testing.T) {
 			wg.Add(1)
-			var err error
-			go func(num int, err error) {
-				var dir string
-				dir, err = runInGcloud(contextDir, num)
+			go func(num int) {
+				dir, err := runInGcloud(contextDir, num)
 				if err != nil {
+					t.Errorf("error when running in gcloud %v", err)
 					return
 				}
 				r := newResult(t, filepath.Join(dir, "results"))
@@ -144,10 +143,7 @@ func TestSnapshotBenchmarkGcloud(t *testing.T) {
 				wg.Done()
 				defer os.Remove(dir)
 				defer os.Chdir(cwd)
-			}(num, err)
-			if err != nil {
-				t.Errorf("could not run benchmark results for num %d due to %s", num, err)
-			}
+			}(num)
 		})
 	}
 	wg.Wait()
