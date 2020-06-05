@@ -174,6 +174,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
 	RootCmd.PersistentFlags().VarP(&opts.Labels, "label", "", "Set metadata for an image. Set it repeatedly for multiple labels.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipUnusedStages, "skip-unused-stages", "", false, "Build only used stages if defined to true. Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile")
+	RootCmd.PersistentFlags().BoolVarP(&opts.RunV2, "use-new-run", "", false, "Experimental run command to detect file system changes. This new run command does no rely on snapshotting to detect changes.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text

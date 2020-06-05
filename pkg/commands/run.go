@@ -46,8 +46,12 @@ var (
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	return runCommandInExec(config, buildArgs, r.cmd)
+}
+
+func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand) error {
 	var newCommand []string
-	if r.cmd.PrependShell {
+	if cmdRun.PrependShell {
 		// This is the default shell on Linux
 		var shell []string
 		if len(config.Shell) > 0 {
@@ -56,9 +60,9 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			shell = append(shell, "/bin/sh", "-c")
 		}
 
-		newCommand = append(shell, strings.Join(r.cmd.CmdLine, " "))
+		newCommand = append(shell, strings.Join(cmdRun.CmdLine, " "))
 	} else {
-		newCommand = r.cmd.CmdLine
+		newCommand = cmdRun.CmdLine
 	}
 
 	logrus.Infof("cmd: %s", newCommand[0])
@@ -111,7 +115,6 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil && err.Error() != "no such process" {
 		return err
 	}
-
 	return nil
 }
 

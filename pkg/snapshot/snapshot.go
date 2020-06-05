@@ -62,7 +62,7 @@ func (s *Snapshotter) Key() (string, error) {
 
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
+func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string, error) {
 	f, err := ioutil.TempFile(config.KanikoDir, "")
 	if err != nil {
 		return "", err
@@ -92,9 +92,30 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 		}
 	}
 
+	// Get whiteout paths
+	filesToWhiteout := []string{}
+	if shdCheckDelete {
+		existingPaths := s.l.getFlattenedPathsForWhiteOut()
+		foundFiles := walkFS(s.directory)
+		for _, file := range foundFiles {
+			delete(existingPaths, file)
+		}
+		// The paths left here are the ones that have been deleted in this layer.
+		filesToWhiteOut := []string{}
+		for path := range existingPaths {
+			// Only add the whiteout if the directory for the file still exists.
+			dir := filepath.Dir(path)
+			if _, ok := existingPaths[dir]; !ok {
+				if s.l.MaybeAddWhiteout(path) {
+					logrus.Debugf("Adding whiteout for %s", path)
+					filesToWhiteOut = append(filesToWhiteOut, path)
+				}
+			}
+		}
+	}
 	t := util.NewTar(f)
 	defer t.Close()
-	if err := writeToTar(t, filesToAdd, nil); err != nil {
+	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -133,31 +154,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	s.l.Snapshot()
 
-	timer := timing.Start("Walking filesystem")
-
-	foundPaths := make([]string, 0)
-
-	godirwalk.Walk(s.directory, &godirwalk.Options{
-		Callback: func(path string, ent *godirwalk.Dirent) error {
-			if util.IsInIgnoreList(path) {
-				if util.IsDestDir(path) {
-					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
-
-					return filepath.SkipDir
-				}
-
-				return nil
-			}
-
-			foundPaths = append(foundPaths, path)
-
-			return nil
-		},
-		Unsorted: true,
-	},
-	)
-	timing.DefaultRun.Stop(timer)
-	timer = timing.Start("Resolving Paths")
+	foundPaths := walkFS(s.directory)
+	timer := timing.Start("Resolving Paths")
 	// First handle whiteouts
 	//   Get a list of all the files that existed before this layer
 	existingPaths := s.l.getFlattenedPathsForWhiteOut()
@@ -266,4 +264,30 @@ func filesWithLinks(path string) ([]string, error) {
 		return []string{path}, nil
 	}
 	return []string{path, link}, nil
+}
+
+func walkFS(dir string) []string {
+	foundPaths := make([]string, 0)
+	timer := timing.Start("Walking filesystem")
+	godirwalk.Walk(dir, &godirwalk.Options{
+		Callback: func(path string, ent *godirwalk.Dirent) error {
+			if util.IsInIgnoreList(path) {
+				if util.IsDestDir(path) {
+					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
+
+					return filepath.SkipDir
+				}
+
+				return nil
+			}
+
+			foundPaths = append(foundPaths, path)
+
+			return nil
+		},
+		Unsorted: true,
+	},
+	)
+	timing.DefaultRun.Stop(timer)
+	return foundPaths
 }

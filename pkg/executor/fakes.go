@@ -73,6 +73,9 @@ func (m MockDockerCommand) RequiresUnpackedFS() bool {
 func (m MockDockerCommand) ShouldCacheOutput() bool {
 	return true
 }
+func (m MockDockerCommand) ShouldDetectDeletedFiles() bool {
+	return false
+}
 
 type MockCachedDockerCommand struct {
 	contextFiles []string
@@ -92,6 +95,9 @@ func (m MockCachedDockerCommand) ProvidesFilesToSnapshot() bool {
 }
 func (m MockCachedDockerCommand) CacheCommand(image v1.Image) commands.DockerCommand {
 	return nil
+}
+func (m MockCachedDockerCommand) ShouldDetectDeletedFiles() bool {
+	return false
 }
 func (m MockCachedDockerCommand) FilesUsedFromContext(c *v1.Config, args *dockerfile.BuildArgs) ([]string, error) {
 	return m.contextFiles, nil

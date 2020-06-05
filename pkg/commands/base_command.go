@@ -51,3 +51,7 @@ func (b *BaseCommand) RequiresUnpackedFS() bool {
 func (b *BaseCommand) ShouldCacheOutput() bool {
 	return false
 }
+
+func (a *BaseCommand) ShouldDetectDeletedFiles() bool {
+	return false
+}

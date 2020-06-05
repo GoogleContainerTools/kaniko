@@ -1246,6 +1246,7 @@ func getCommands(dir string, cmds []instructions.Command) []commands.DockerComma
 		cmd, err := commands.GetCommand(
 			c,
 			dir,
+			false,
 		)
 		if err != nil {
 			panic(err)

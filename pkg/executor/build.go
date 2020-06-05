@@ -62,7 +62,7 @@ type cachePusher func(*config.KanikoOptions, string, string, string) error
 type snapShotter interface {
 	Init() error
 	TakeSnapshotFS() (string, error)
-	TakeSnapshot([]string) (string, error)
+	TakeSnapshot([]string, bool) (string, error)
 }
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
@@ -127,7 +127,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	}
 
 	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, opts.SrcContext)
+		command, err := commands.GetCommand(cmd, opts.SrcContext, opts.RunV2)
 		if err != nil {
 			return nil, err
 		}
@@ -382,7 +382,7 @@ func (s *stageBuilder) build() error {
 				return errors.Wrap(err, "failed to save layer")
 			}
 		} else {
-			tarPath, err := s.takeSnapshot(files)
+			tarPath, err := s.takeSnapshot(files, command.ShouldDetectDeletedFiles())
 			if err != nil {
 				return errors.Wrap(err, "failed to take snapshot")
 			}
@@ -416,7 +416,7 @@ func (s *stageBuilder) build() error {
 	return nil
 }
 
-func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
+func (s *stageBuilder) takeSnapshot(files []string, shdDelete bool) (string, error) {
 	var snapshot string
 	var err error
 
@@ -426,7 +426,7 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	} else {
 		// Volumes are very weird. They get snapshotted in the next command.
 		files = append(files, util.Volumes()...)
-		snapshot, err = s.snapshotter.TakeSnapshot(files)
+		snapshot, err = s.snapshotter.TakeSnapshot(files, shdDelete)
 	}
 	timing.DefaultRun.Stop(t)
 	return snapshot, err
