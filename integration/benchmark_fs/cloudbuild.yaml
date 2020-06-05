@@ -1,5 +1,5 @@
 steps:
-- name: 'gcr.io/kaniko-project/executor:perf-latest'
+- name: 'gcr.io/kaniko-project/executor:latest'
   args:
   - --build-arg=NUM=${_COUNT}
   - --no-push
