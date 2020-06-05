@@ -134,7 +134,8 @@ func TestSnapshotBenchmarkGcloud(t *testing.T) {
 			wg.Add(1)
 			var err error
 			go func(num int, err error) {
-				dir, err := runInGcloud(contextDir, num)
+				var dir string
+				dir, err = runInGcloud(contextDir, num)
 				if err != nil {
 					return
 				}
