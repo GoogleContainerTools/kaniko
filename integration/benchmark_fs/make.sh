@@ -17,7 +17,8 @@
 mkdir /workdir
 
 i=1
-while [ $i -le $1 ]
+targetCnt=$(( $1 + 0 ))
+while [ $i -le $targetCnt ]
 do
   cat context.txt >  /workdir/somefile$i
   i=$(( $i + 1 ))

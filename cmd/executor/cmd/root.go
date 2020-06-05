@@ -115,16 +115,27 @@ var RootCmd = &cobra.Command{
 		benchmarkFile := os.Getenv("BENCHMARK_FILE")
 		// false is a keyword for integration tests to turn off benchmarking
 		if benchmarkFile != "" && benchmarkFile != "false" {
-			f, err := os.Create(benchmarkFile)
-			if err != nil {
-				logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
-			}
-			defer f.Close()
 			s, err := timing.JSON()
 			if err != nil {
 				logrus.Warnf("Unable to write benchmark file: %s", err)
+				return
 			}
-			f.WriteString(s)
+			if strings.HasPrefix(benchmarkFile, "gs://") {
+				logrus.Info("uploading to gcs")
+				if err := buildcontext.UploadToBucket(strings.NewReader(s), benchmarkFile); err != nil {
+					logrus.Infof("Unable to upload %s due to %v", benchmarkFile, err)
+				}
+				logrus.Infof("benchmark file written at %s", benchmarkFile)
+			} else {
+				f, err := os.Create(benchmarkFile)
+				if err != nil {
+					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
+					return
+				}
+				defer f.Close()
+				f.WriteString(s)
+				logrus.Infof("benchmark file written at %s", benchmarkFile)
+			}
 		}
 	},
 }
