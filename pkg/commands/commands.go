@@ -53,7 +53,7 @@ type DockerCommand interface {
 
 	ShouldCacheOutput() bool
 
-	// ShouldDetectDeletedFiles turns true if the command could delete files.
+	// ShouldDetectDeletedFiles returns true if the command could delete files.
 	ShouldDetectDeletedFiles() bool
 }
 
