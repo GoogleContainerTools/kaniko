@@ -142,26 +142,26 @@ func buildRequiredImages() error {
 			name:    "Building kaniko image",
 			command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
 		},
-		//{
-		//	name:    "Building cache warmer image",
-		//	command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
-		//},
-		//{
-		//	name:    "Building onbuild base image",
-		//	command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
-		//},
-		//{
-		//	name:    "Pushing onbuild base image",
-		//	command: []string{"docker", "push", config.onbuildBaseImage},
-		//},
-		//{
-		//	name:    "Building hardlink base image",
-		//	command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
-		//},
-		//{
-		//	name:    "Pushing hardlink base image",
-		//	command: []string{"docker", "push", config.hardlinkBaseImage},
-		//},
+		{
+			name:    "Building cache warmer image",
+			command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
+		},
+		{
+			name:    "Building onbuild base image",
+			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
+		},
+		{
+			name:    "Pushing onbuild base image",
+			command: []string{"docker", "push", config.onbuildBaseImage},
+		},
+		{
+			name:    "Building hardlink base image",
+			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
+		},
+		{
+			name:    "Pushing hardlink base image",
+			command: []string{"docker", "push", config.hardlinkBaseImage},
+		},
 	}
 
 	for _, setupCmd := range setupCommands {
@@ -294,7 +294,6 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 	out, err = RunCommandWithoutTest(kanikoCmd)
-	fmt.Println(out)
 	if err != nil {
 		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
 	}

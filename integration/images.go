@@ -273,13 +273,11 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	timer = timing.Start(dockerfile + "_kaniko")
-	out, err := buildKanikoImage(dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
-		contextDir, gcsBucket, serviceAccount, true)
-	if err != nil {
+	if _, err := buildKanikoImage(dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
+		contextDir, gcsBucket, serviceAccount, true); err != nil {
 		return err
 	}
 	timing.DefaultRun.Stop(timer)
-	fmt.Println(out)
 
 	d.filesBuilt[dockerfile] = struct{}{}
 
@@ -454,6 +452,5 @@ func buildKanikoImage(
 			return "", fmt.Errorf("Output check failed for image %s with kaniko command : %s %s", kanikoImage, err, string(out))
 		}
 	}
-	fmt.Println("kaniko command\n", string(out))
 	return benchmarkDir, nil
 }
