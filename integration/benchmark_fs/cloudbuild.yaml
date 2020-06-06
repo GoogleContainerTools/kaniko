@@ -1,9 +1,9 @@
 steps:
-- name: 'gcr.io/kaniko-project/executor:latest'
+- name: 'gcr.io/kaniko-project/executor:perf-latest'
   args:
   - --build-arg=NUM=${_COUNT}
   - --no-push
-  - --snapshotMode=redo
+  - --use-new-run=true
   env:
   - 'BENCHMARK_FILE=gs://$PROJECT_ID/gcb/benchmark_file_${_COUNT}'
   timeout: 2400s

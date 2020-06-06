@@ -17,16 +17,15 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
 
 type RunMarkerCommand struct {
@@ -37,32 +36,32 @@ type RunMarkerCommand struct {
 
 func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// run command `touch filemarker`
+	logrus.Debugf("using new RunMarker command")
 	markerFile, err := ioutil.TempFile("", "marker")
+	if err != nil {
+		return fmt.Errorf("could not place a marker file")
+	}
 	defer func() {
 		os.Remove(markerFile.Name())
 	}()
-
+	markerInfo, err := os.Stat(markerFile.Name())
+	if err != nil {
+		return fmt.Errorf("could not place a marker file")
+	}
 	if err := runCommandInExec(config, buildArgs, r.cmd); err != nil {
 		return err
 	}
 
-	// run command find to find all new files generated
-	find := exec.Command("find", "/", "-newer", markerFile.Name())
-	out, err := find.Output()
-	if err != nil {
-		r.Files = []string{}
-		return nil
-	}
-
-	r.Files = []string{}
-	s := strings.Split(string(out), "\n")
-	for _, path := range s {
-		path = filepath.Clean(path)
-		if util.IsDestDir(path) || util.CheckIgnoreList(path) {
-			continue
+	// run command find to find all new files generate
+	isNewer := func(p string) (bool, error) {
+		fi, err := os.Stat(p)
+		if err != nil {
+			return false, err
 		}
-		r.Files = append(r.Files, path)
+		return fi.ModTime().After(markerInfo.ModTime()), nil
 	}
+	r.Files = util.WalkFS("/", isNewer)
+	logrus.Debugf("files changed %s", r.Files)
 	return nil
 }
 
@@ -72,11 +71,11 @@ func (r *RunMarkerCommand) String() string {
 }
 
 func (r *RunMarkerCommand) FilesToSnapshot() []string {
-	return nil
+	return r.Files
 }
 
 func (r *RunMarkerCommand) ProvidesFilesToSnapshot() bool {
-	return false
+	return true
 }
 
 // CacheCommand returns true since this command should be cached
@@ -101,6 +100,6 @@ func (r *RunMarkerCommand) ShouldCacheOutput() bool {
 	return true
 }
 
-func (b *BaseCommand) ShouldDetectDelete() bool {
+func (r *RunMarkerCommand) ShouldDetectDeletedFiles() bool {
 	return true
 }

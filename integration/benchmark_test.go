@@ -125,7 +125,7 @@ func TestSnapshotBenchmarkGcloud(t *testing.T) {
 	}
 	contextDir := filepath.Join(cwd, "benchmark_fs")
 
-	nums := []int{10000, 50000, 100000, 200000, 300000, 500000, 700000}
+	nums := []int{10000} //, 50000, 100000, 200000, 300000, 500000, 700000}
 
 	var wg sync.WaitGroup
 	fmt.Println("Number of Files,Total Build Time,Walking Filesystem, Resolving Files")

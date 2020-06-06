@@ -31,14 +31,16 @@ import (
 	"syscall"
 	"time"
 
-	otiai10Cpy "github.com/otiai10/copy"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/karrick/godirwalk"
+	otiai10Cpy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 )
 
 const DoNotChangeUID = -1
@@ -874,4 +876,31 @@ func UpdateInitialIgnoreList(ignoreVarRun bool) {
 		Path:            "/var/run",
 		PrefixMatchOnly: false,
 	})
+}
+
+func WalkFS(dir string, f func(string) (bool, error)) []string {
+	foundPaths := make([]string, 0)
+	timer := timing.Start("Walking filesystem")
+	godirwalk.Walk(dir, &godirwalk.Options{
+		Callback: func(path string, ent *godirwalk.Dirent) error {
+			if IsInIgnoreList(path) {
+				if IsDestDir(path) {
+					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
+					return filepath.SkipDir
+				}
+
+				return nil
+			}
+			if t, err := f(path); err != nil {
+				return err
+			} else if t {
+				foundPaths = append(foundPaths, path)
+			}
+			return nil
+		},
+		Unsorted: true,
+	},
+	)
+	timing.DefaultRun.Stop(timer)
+	return foundPaths
 }

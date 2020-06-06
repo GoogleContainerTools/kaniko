@@ -76,6 +76,7 @@ var additionalDockerFlagsMap = map[string][]string{
 var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_add":        {"--single-snapshot"},
 	"Dockerfile_test_run_new":    {"--use-new-run=true"},
+	"Dockerfile_test_run":        {"-v=debug"},
 	"Dockerfile_test_scratch":    {"--single-snapshot"},
 	"Dockerfile_test_maintainer": {"--single-snapshot"},
 	"Dockerfile_test_target":     {"--target=second"},
@@ -272,11 +273,13 @@ func (d *DockerFileBuilder) BuildImageWithContext(config *integrationTestConfig,
 
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	timer = timing.Start(dockerfile + "_kaniko")
-	if _, err := buildKanikoImage(dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
-		contextDir, gcsBucket, serviceAccount, true); err != nil {
+	out, err := buildKanikoImage(dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
+		contextDir, gcsBucket, serviceAccount, true)
+	if err != nil {
 		return err
 	}
 	timing.DefaultRun.Stop(timer)
+	fmt.Println(out)
 
 	d.filesBuilt[dockerfile] = struct{}{}
 
@@ -451,5 +454,6 @@ func buildKanikoImage(
 			return "", fmt.Errorf("Output check failed for image %s with kaniko command : %s %s", kanikoImage, err, string(out))
 		}
 	}
+	fmt.Println("kaniko command\n", string(out))
 	return benchmarkDir, nil
 }
