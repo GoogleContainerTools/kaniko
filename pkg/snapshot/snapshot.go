@@ -142,14 +142,16 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			if util.IsInIgnoreList(path) {
 				if util.IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
-
 					return filepath.SkipDir
 				}
 
 				return nil
 			}
-
-			foundPaths = append(foundPaths, path)
+			if ok, err := s.l.CheckFileChange(path); err != nil {
+				return err
+			} else if ok {
+				foundPaths = append(foundPaths, path)
+			}
 
 			return nil
 		},
@@ -163,32 +165,15 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	existingPaths := s.l.getFlattenedPathsForWhiteOut()
 
 	filesToAdd := []string{}
-	resolvedMemFs := make(map[string]bool)
-
-	for _, path := range foundPaths {
+	resolvedFiles, err := filesystem.ResolvePaths(foundPaths, s.ignorelist)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, path := range resolvedFiles {
 		delete(existingPaths, path)
-		resolvedFiles, err := filesystem.ResolvePaths([]string{path}, s.ignorelist)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, path := range resolvedFiles {
-			// Continue if this path is already processed
-			if _, ok := resolvedMemFs[path]; ok {
-				continue
-			}
-			if util.CheckIgnoreList(path) {
-				logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
-				continue
-			}
-			// Only add changed files.
-			fileChanged, err := s.l.CheckFileChange(path)
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not check if file has changed %s %s", path, err)
-			}
-			if fileChanged {
-				logrus.Tracef("Adding file %s to layer, because it was changed.", path)
-				filesToAdd = append(filesToAdd, path)
-			}
+		if util.CheckIgnoreList(path) {
+			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
+			filesToAdd = append(filesToAdd, path)
 		}
 	}
 
