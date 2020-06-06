@@ -22,10 +22,10 @@ import (
 
 var RootDir string
 var KanikoDir string
-var WhitelistPath string
+var IgnoreListPath string
 
 func init() {
 	RootDir = constants.RootDir
 	KanikoDir = constants.KanikoDir
-	WhitelistPath = constants.WhitelistPath
+	IgnoreListPath = constants.IgnoreListPath
 }

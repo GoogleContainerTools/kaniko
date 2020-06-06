@@ -83,8 +83,8 @@ var RootCmd = &cobra.Command{
 			if len(opts.Destinations) == 0 && opts.ImageNameDigestFile != "" {
 				return errors.New("You must provide --destination if setting ImageNameDigestFile")
 			}
-			// Update whitelisted paths
-			util.UpdateWhitelist(opts.WhitelistVarRun)
+			// Update ignored paths
+			util.UpdateInitialIgnoreList(opts.IgnoreVarRun)
 		}
 		return nil
 	},
@@ -115,16 +115,27 @@ var RootCmd = &cobra.Command{
 		benchmarkFile := os.Getenv("BENCHMARK_FILE")
 		// false is a keyword for integration tests to turn off benchmarking
 		if benchmarkFile != "" && benchmarkFile != "false" {
-			f, err := os.Create(benchmarkFile)
-			if err != nil {
-				logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
-			}
-			defer f.Close()
 			s, err := timing.JSON()
 			if err != nil {
 				logrus.Warnf("Unable to write benchmark file: %s", err)
+				return
 			}
-			f.WriteString(s)
+			if strings.HasPrefix(benchmarkFile, "gs://") {
+				logrus.Info("uploading to gcs")
+				if err := buildcontext.UploadToBucket(strings.NewReader(s), benchmarkFile); err != nil {
+					logrus.Infof("Unable to upload %s due to %v", benchmarkFile, err)
+				}
+				logrus.Infof("benchmark file written at %s", benchmarkFile)
+			} else {
+				f, err := os.Create(benchmarkFile)
+				if err != nil {
+					logrus.Warnf("Unable to create benchmarking file %s: %s", benchmarkFile, err)
+					return
+				}
+				defer f.Close()
+				f.WriteString(s)
+				logrus.Infof("benchmark file written at %s", benchmarkFile)
+			}
 		}
 	},
 }
@@ -160,7 +171,7 @@ func addKanikoOptionsFlags() {
 	opts.RegistriesCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().StringVarP(&opts.RegistryMirror, "registry-mirror", "", "", "Registry mirror to use has pull-through cache instead of docker.io.")
-	RootCmd.PersistentFlags().BoolVarP(&opts.WhitelistVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
+	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
 	RootCmd.PersistentFlags().VarP(&opts.Labels, "label", "", "Set metadata for an image. Set it repeatedly for multiple labels.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipUnusedStages, "skip-unused-stages", "", false, "Build only used stages if defined to true. Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile")
 }

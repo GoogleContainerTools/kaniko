@@ -44,31 +44,31 @@ import (
 const DoNotChangeUID = -1
 const DoNotChangeGID = -1
 
-type WhitelistEntry struct {
+type IgnoreListEntry struct {
 	Path            string
 	PrefixMatchOnly bool
 }
 
-var initialWhitelist = []WhitelistEntry{
+var initialIgnoreList = []IgnoreListEntry{
 	{
 		Path:            config.KanikoDir,
 		PrefixMatchOnly: false,
 	},
 	{
-		// similarly, we whitelist /etc/mtab, since there is no way to know if the file was mounted or came
+		// similarly, we ignore /etc/mtab, since there is no way to know if the file was mounted or came
 		// from the base image
 		Path:            "/etc/mtab",
 		PrefixMatchOnly: false,
 	},
 	{
-		// we whitelist /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
+		// we ingore /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
 		// from the base image
 		Path:            "/tmp/apt-key-gpghome",
 		PrefixMatchOnly: true,
 	},
 }
 
-var whitelist = initialWhitelist
+var ignorelist = initialIgnoreList
 
 var volumes = []string{}
 
@@ -84,8 +84,8 @@ type FSConfig struct {
 
 type FSOpt func(*FSConfig)
 
-func Whitelist() []WhitelistEntry {
-	return whitelist
+func IgnoreList() []IgnoreListEntry {
+	return ignorelist
 }
 
 func IncludeWhiteout() FSOpt {
@@ -126,11 +126,11 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 		return nil, errors.New("must supply an extract function")
 	}
 
-	if err := DetectFilesystemWhitelist(config.WhitelistPath); err != nil {
+	if err := DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
 		return nil, err
 	}
 
-	logrus.Debugf("Mounted directories: %v", whitelist)
+	logrus.Debugf("Mounted directories: %v", ignorelist)
 
 	extractedFiles := []string{}
 	for i, l := range layers {
@@ -195,19 +195,19 @@ func DeleteFilesystem() error {
 			return nil
 		}
 
-		if CheckWhitelist(path) {
+		if CheckIgnoreList(path) {
 			if !isExist(path) {
-				logrus.Debugf("Path %s whitelisted, but not exists", path)
+				logrus.Debugf("Path %s ignored, but not exists", path)
 				return nil
 			}
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
-			logrus.Debugf("Not deleting %s, as it's whitelisted", path)
+			logrus.Debugf("Not deleting %s, as it's ignored", path)
 			return nil
 		}
-		if childDirInWhitelist(path) {
-			logrus.Debugf("Not deleting %s, as it contains a whitelisted path", path)
+		if childDirInIgnoreList(path) {
+			logrus.Debugf("Not deleting %s, as it contains a ignored path", path)
 			return nil
 		}
 		if path == config.RootDir {
@@ -225,9 +225,9 @@ func isExist(path string) bool {
 	return false
 }
 
-// ChildDirInWhitelist returns true if there is a child file or directory of the path in the whitelist
-func childDirInWhitelist(path string) bool {
-	for _, d := range whitelist {
+// childDirInIgnoreList returns true if there is a child file or directory of the path in the ignorelist
+func childDirInIgnoreList(path string) bool {
+	for _, d := range ignorelist {
 		if HasFilepathPrefix(d.Path, path, d.PrefixMatchOnly) {
 			return true
 		}
@@ -268,8 +268,8 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		return err
 	}
 
-	if CheckWhitelist(abs) && !checkWhitelistRoot(dest) {
-		logrus.Debugf("Not adding %s because it is whitelisted", path)
+	if CheckIgnoreList(abs) && !checkIgnoreListRoot(dest) {
+		logrus.Debugf("Not adding %s because it is ignored", path)
 		return nil
 	}
 	switch hdr.Typeflag {
@@ -325,8 +325,8 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		if err != nil {
 			return err
 		}
-		if CheckWhitelist(abs) {
-			logrus.Tracef("skipping symlink from %s to %s because %s is whitelisted", hdr.Linkname, path, hdr.Linkname)
+		if CheckIgnoreList(abs) {
+			logrus.Tracef("skipping symlink from %s to %s because %s is ignored", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
 		// The base directory for a link may not exist before it is created.
@@ -365,11 +365,11 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	return nil
 }
 
-func IsInWhitelist(path string) bool {
-	return IsInProvidedWhitelist(path, whitelist)
+func IsInIgnoreList(path string) bool {
+	return IsInProvidedIgnoreList(path, ignorelist)
 }
 
-func IsInProvidedWhitelist(path string, wl []WhitelistEntry) bool {
+func IsInProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
 	for _, entry := range wl {
 		if !entry.PrefixMatchOnly && path == entry.Path {
 			return true
@@ -378,8 +378,8 @@ func IsInProvidedWhitelist(path string, wl []WhitelistEntry) bool {
 	return false
 }
 
-func CheckWhitelist(path string) bool {
-	for _, wl := range whitelist {
+func CheckIgnoreList(path string) bool {
+	for _, wl := range ignorelist {
 		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
 			return true
 		}
@@ -388,21 +388,21 @@ func CheckWhitelist(path string) bool {
 	return false
 }
 
-func checkWhitelistRoot(root string) bool {
+func checkIgnoreListRoot(root string) bool {
 	if root == config.RootDir {
 		return false
 	}
-	return CheckWhitelist(root)
+	return CheckIgnoreList(root)
 }
 
-// Get whitelist from roots of mounted files
+// Get ignorelist from roots of mounted files
 // Each line of /proc/self/mountinfo is in the form:
 // 36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw,errors=continue
 // (1)(2)(3)   (4)   (5)      (6)      (7)   (8) (9)   (10)         (11)
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
-func DetectFilesystemWhitelist(path string) error {
-	whitelist = initialWhitelist
+func DetectFilesystemIgnoreList(path string) error {
+	ignorelist = initialIgnoreList
 	volumes = []string{}
 	f, err := os.Open(path)
 	if err != nil {
@@ -426,7 +426,7 @@ func DetectFilesystemWhitelist(path string) error {
 		}
 		if lineArr[4] != config.RootDir {
 			logrus.Tracef("Appending %s from line: %s", lineArr[4], line)
-			whitelist = append(whitelist, WhitelistEntry{
+			ignorelist = append(ignorelist, IgnoreListEntry{
 				Path:            lineArr[4],
 				PrefixMatchOnly: false,
 			})
@@ -448,7 +448,7 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if CheckWhitelist(path) && !HasFilepathPrefix(path, root, false) {
+		if CheckIgnoreList(path) && !HasFilepathPrefix(path, root, false) {
 			return nil
 		}
 		relPath, err := filepath.Rel(root, path)
@@ -522,10 +522,10 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	return setFilePermissions(path, perm, int(uid), int(gid))
 }
 
-// AddVolumePath adds the given path to the volume whitelist.
-func AddVolumePathToWhitelist(path string) {
-	logrus.Infof("adding volume %s to whitelist", path)
-	whitelist = append(whitelist, WhitelistEntry{
+// AddVolumePath adds the given path to the volume ignorelist.
+func AddVolumePathToIgnoreList(path string) {
+	logrus.Infof("adding volume %s to ignorelist", path)
+	ignorelist = append(ignorelist, IgnoreListEntry{
 		Path:            path,
 		PrefixMatchOnly: true,
 	})
@@ -861,13 +861,13 @@ func createParentDirectory(path string) error {
 	return nil
 }
 
-// UpdateInitialWhitelist will add /var/run to whitelisted paths if
-func UpdateWhitelist(whitelistVarRun bool) {
-	if !whitelistVarRun {
+// UpdateInitialIgnoreList will add /var/run to ignored paths if
+func UpdateInitialIgnoreList(ignoreVarRun bool) {
+	if !ignoreVarRun {
 		return
 	}
-	logrus.Trace("Adding /var/run to initialWhitelist ")
-	initialWhitelist = append(initialWhitelist, WhitelistEntry{
+	logrus.Trace("Adding /var/run to initialIgnoreList ")
+	initialIgnoreList = append(initialIgnoreList, IgnoreListEntry{
 		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
 		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 		// in the image with no way to tell if it came from the base image or not.

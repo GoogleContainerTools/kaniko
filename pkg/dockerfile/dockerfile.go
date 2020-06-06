@@ -58,6 +58,11 @@ func ParseStages(opts *config.KanikoOptions) ([]instructions.Stage, []instructio
 		return nil, nil, errors.Wrap(err, "parsing dockerfile")
 	}
 
+	metaArgs, err = expandNested(metaArgs, opts.BuildArgs)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "expanding meta ARGs")
+	}
+
 	return stages, metaArgs, nil
 }
 
@@ -95,6 +100,25 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	}
 
 	return stages, metaArgs, nil
+}
+
+// expandNestedArgs tries to resolve nested ARG value against the previously defined ARGs
+func expandNested(metaArgs []instructions.ArgCommand, buildArgs []string) ([]instructions.ArgCommand, error) {
+	prevArgs := make([]string, 0)
+	for i := range metaArgs {
+		arg := metaArgs[i]
+		v := arg.Value
+		if v != nil {
+			val, err := util.ResolveEnvironmentReplacement(*v, append(prevArgs, buildArgs...), false)
+			if err != nil {
+				return nil, err
+			}
+			prevArgs = append(prevArgs, arg.Key+"="+val)
+			arg.Value = &val
+			metaArgs[i] = arg
+		}
+	}
+	return metaArgs, nil
 }
 
 // stripEnclosingQuotes removes quotes enclosing the value of each instructions.ArgCommand in a slice

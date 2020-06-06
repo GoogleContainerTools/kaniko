@@ -33,6 +33,9 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	dockerfile := `
 	ARG IMAGE="ubuntu:16.04"
 	ARG FOO=bar
+	ARG HELLO="Hello"
+	ARG WORLD="World"
+	ARG NESTED="$HELLO $WORLD"
 	FROM ${IMAGE}
 	RUN echo hi > /hi
 
@@ -65,11 +68,11 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 		t.Fatal("length of stages expected to be greater than zero, but was zero")
 	}
 
-	if len(metaArgs) != 2 {
-		t.Fatalf("length of stage meta args expected to be 2, but was %d", len(metaArgs))
+	if len(metaArgs) != 5 {
+		t.Fatalf("length of stage meta args expected to be 5, but was %d", len(metaArgs))
 	}
 
-	for i, expectedVal := range []string{"ubuntu:16.04", "bar"} {
+	for i, expectedVal := range []string{"ubuntu:16.04", "bar", "Hello", "World", "Hello World"} {
 		if metaArgs[i].ValueString() != expectedVal {
 			t.Fatalf("expected metaArg %d val to be %s but was %s", i, expectedVal, metaArgs[i].ValueString())
 		}
@@ -565,7 +568,7 @@ func Test_SkipingUnusedStages(t *testing.T) {
 			# Make sure that we snapshot intermediate images correctly
 			RUN date > /date
 			ENV foo bar
-			# This base image contains symlinks with relative paths to whitelisted directories
+			# This base image contains symlinks with relative paths to ignored directories
 			# We need to test they're extracted correctly
 			FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5aa48
 			FROM fourth
