@@ -30,9 +30,10 @@ import (
 )
 
 type LayeredMap struct {
-	layers    []map[string]string
-	whiteouts []map[string]string
-	hasher    func(string) (string, error)
+	layers         []map[string]string
+	whiteouts      []map[string]string
+	layerHashCache map[string]string
+	hasher         func(string) (string, error)
 	// cacheHasher doesn't include mtime in it's hash so that filesystem cache keys are stable
 	cacheHasher func(string) (string, error)
 }
@@ -43,6 +44,7 @@ func NewLayeredMap(h func(string) (string, error), c func(string) (string, error
 		cacheHasher: c,
 	}
 	l.layers = []map[string]string{}
+	l.layerHashCache = map[string]string{}
 	return &l
 }
 
@@ -103,7 +105,14 @@ func (l *LayeredMap) MaybeAddWhiteout(s string) bool {
 // Add will add the specified file s to the layered map.
 func (l *LayeredMap) Add(s string) error {
 	// Use hash function and add to layers
-	newV, err := l.hasher(s)
+	newV, err := func(s string) (string, error) {
+		if v, ok := l.layerHashCache[s]; ok {
+			// clear it cache for next layer.
+			delete(l.layerHashCache, s)
+			return v, nil
+		}
+		return l.hasher(s)
+	}(s)
 	if err != nil {
 		return fmt.Errorf("error creating hash for %s: %v", s, err)
 	}
@@ -126,6 +135,7 @@ func (l *LayeredMap) CheckFileChange(s string) (bool, error) {
 		}
 		return false, err
 	}
+	l.layerHashCache[s] = newV
 	oldV, ok := l.Get(s)
 	if ok && newV == oldV {
 		return false, nil

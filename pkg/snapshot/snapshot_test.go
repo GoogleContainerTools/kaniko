@@ -66,6 +66,7 @@ func TestSnapshotFSFileChange(t *testing.T) {
 	}
 	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
 		if path == "/" {
+			snapshotFiles["/"] = ""
 			continue
 		}
 		snapshotFiles[path+"/"] = ""
@@ -164,6 +165,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	}
 	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPathWithoutLeadingSlash) {
 		if path == "/" {
+			snapshotFiles["/"] = ""
 			continue
 		}
 		snapshotFiles[path+"/"] = ""
