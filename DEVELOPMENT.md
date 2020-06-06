@@ -166,6 +166,21 @@ Additionally, the integration tests can output benchmarking information to a `be
 BENCHMARK=true go test -v --bucket $GCS_BUCKET --repo $IMAGE_REPO
 ```
 
+#### Benchmarking your GCB runs
+If you are GCB builds are slow, you can check which phases in kaniko are bottlenecks or taking more time.
+To do this, add "BENCHMARK_ENV" to your cloudbuild.yaml like this.
+```shell script
+steps:
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --build-arg=NUM=${_COUNT}
+  - --no-push
+  - --snapshotMode=redo
+  env:
+  - 'BENCHMARK_FILE=gs://$PROJECT_ID/gcb/benchmark_file'
+```
+You can download the file `gs://$PROJECT_ID/gcb/benchmark_file` using `gsutil cp` command.
+
 ## Creating a PR
 
 When you have changes you would like to propose to kaniko, you will need to:
