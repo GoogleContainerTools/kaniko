@@ -204,7 +204,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 				opts:  tt.fields.opts,
 				cmds:  tt.fields.cmds,
 			}
-			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files, tt.args.hasFiles); got != tt.want {
+			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files, tt.args.hasFiles, false); got != tt.want {
 				t.Errorf("stageBuilder.shouldTakeSnapshot() = %v, want %v", got, tt.want)
 			}
 		})

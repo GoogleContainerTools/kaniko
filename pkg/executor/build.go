@@ -372,7 +372,8 @@ func (s *stageBuilder) build() error {
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot()) {
+		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot(),
+			command.ShouldDetectDeletedFiles()) {
 			continue
 		}
 		if isCacheCommand {
@@ -432,7 +433,7 @@ func (s *stageBuilder) takeSnapshot(files []string, shdDelete bool) (string, err
 	return snapshot, err
 }
 
-func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
+func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool, detectDeletion bool) bool {
 	isLastCommand := index == len(s.cmds)-1
 
 	// We only snapshot the very end with single snapshot mode on.
@@ -450,6 +451,9 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFile
 		return true
 	}
 
+	if detectDeletion {
+		return true
+	}
 	// Don't snapshot an empty list.
 	if len(files) == 0 {
 		return false
