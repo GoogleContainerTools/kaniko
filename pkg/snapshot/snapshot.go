@@ -152,7 +152,6 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 			} else if ok {
 				foundPaths = append(foundPaths, path)
 			}
-
 			return nil
 		},
 		Unsorted: true,
@@ -173,8 +172,9 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		delete(existingPaths, path)
 		if util.CheckIgnoreList(path) {
 			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
-			filesToAdd = append(filesToAdd, path)
+			continue
 		}
+		filesToAdd = append(filesToAdd, path)
 	}
 
 	// The paths left here are the ones that have been deleted in this layer.
