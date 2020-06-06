@@ -115,6 +115,27 @@ func MtimeHasher() func(string) (string, error) {
 	return hasher
 }
 
+// RedoHasher returns a hash function, which looks at mtime, size, filemode, owner uid and gid
+// Note that the mtime can lag, so it's possible that a file will have changed but the mtime may look the same.
+func RedoHasher() func(string) (string, error) {
+	hasher := func(p string) (string, error) {
+		h := md5.New()
+		fi, err := os.Lstat(p)
+		if err != nil {
+			return "", err
+		}
+		h.Write([]byte(fi.Mode().String()))
+		h.Write([]byte(fi.ModTime().String()))
+		h.Write([]byte(strconv.FormatInt(fi.Size(), 16)))
+		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Uid), 36)))
+		h.Write([]byte(","))
+		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Gid), 36)))
+
+		return hex.EncodeToString(h.Sum(nil)), nil
+	}
+	return hasher
+}
+
 // SHA256 returns the shasum of the contents of r
 func SHA256(r io.Reader) (string, error) {
 	hasher := sha256.New()
