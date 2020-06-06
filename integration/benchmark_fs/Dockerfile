@@ -1,6 +1,4 @@
-#!/usr/local/bin/bash
-
-# Copyright 2020 Google LLC
+# Copyright 2020 Google, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+FROM bash:4.4
 
-mkdir /workdir
-
-i=1
-targetCnt=$(( $1 + 0 ))
-while [ $i -le $targetCnt ]
-do
-  cat context.txt >  /workdir/somefile$i
-  i=$(( $i + 1 ))
-done
+ARG NUM
+COPY context.txt .
+COPY make.sh .
+SHELL ["/usr/local/bin/bash", "-c"]
+RUN ./make.sh $NUM
+RUN ls -al /workdir | wc

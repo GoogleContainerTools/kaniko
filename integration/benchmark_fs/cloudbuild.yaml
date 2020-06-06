@@ -1,0 +1,12 @@
+steps:
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --build-arg=NUM=${_COUNT}
+  - --no-push
+  - --snapshotMode=redo
+  env:
+  - 'BENCHMARK_FILE=gs://$PROJECT_ID/gcb/benchmark_file_${_COUNT}'
+  timeout: 2400s
+timeout: 2400s
+substitutions:
+  _COUNT: "10000" # default value
