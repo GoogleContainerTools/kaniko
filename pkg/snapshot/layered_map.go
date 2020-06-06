@@ -44,6 +44,7 @@ func NewLayeredMap(h func(string) (string, error), c func(string) (string, error
 		cacheHasher: c,
 	}
 	l.layers = []map[string]string{}
+	l.layerHashCache = map[string]string{}
 	return &l
 }
 
