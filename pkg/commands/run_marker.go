@@ -60,7 +60,7 @@ func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfi
 		}
 		return fi.ModTime().After(markerInfo.ModTime()), nil
 	}
-	r.Files = util.WalkFS("/", isNewer)
+	r.Files, _ = util.WalkFS("/", map[string]struct{}{}, isNewer)
 	logrus.Debugf("files changed %s", r.Files)
 	return nil
 }

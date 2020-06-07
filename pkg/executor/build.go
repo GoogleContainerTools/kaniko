@@ -799,14 +799,17 @@ func saveStageAsTarball(path string, image v1.Image) error {
 }
 
 func getHasher(snapshotMode string) (func(string) (string, error), error) {
-	if snapshotMode == constants.SnapshotModeTime {
+	switch snapshotMode {
+	case constants.SnapshotModeTime:
 		logrus.Info("Only file modification time will be considered when snapshotting")
 		return util.MtimeHasher(), nil
-	}
-	if snapshotMode == constants.SnapshotModeFull {
+	case constants.SnapshotModeFull:
 		return util.Hasher(), nil
+	case constants.SnapshotModeRedo:
+		return util.RedoHasher(), nil
+	default:
+		return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 	}
-	return nil, fmt.Errorf("%s is not a valid snapshot mode", snapshotMode)
 }
 
 func resolveOnBuild(stage *config.KanikoStage, config *v1.Config, stageNameToIdx map[string]string) error {

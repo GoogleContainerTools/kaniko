@@ -878,7 +878,7 @@ func UpdateInitialIgnoreList(ignoreVarRun bool) {
 	})
 }
 
-func WalkFS(dir string, f func(string) (bool, error)) []string {
+func WalkFS(dir string, existingPaths map[string]struct{}, f func(string) (bool, error)) ([]string, map[string]struct{}) {
 	foundPaths := make([]string, 0)
 	timer := timing.Start("Walking filesystem")
 	godirwalk.Walk(dir, &godirwalk.Options{
@@ -891,6 +891,7 @@ func WalkFS(dir string, f func(string) (bool, error)) []string {
 
 				return nil
 			}
+			delete(existingPaths, path)
 			if t, err := f(path); err != nil {
 				return err
 			} else if t {
@@ -902,5 +903,5 @@ func WalkFS(dir string, f func(string) (bool, error)) []string {
 	},
 	)
 	timing.DefaultRun.Stop(timer)
-	return foundPaths
+	return foundPaths, existingPaths
 }

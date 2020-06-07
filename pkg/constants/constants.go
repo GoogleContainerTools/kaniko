@@ -47,6 +47,7 @@ const (
 	// Various snapshot modes:
 	SnapshotModeTime = "time"
 	SnapshotModeFull = "full"
+	SnapshotModeRedo = "redo"
 
 	// NoBaseImage is the scratch image
 	NoBaseImage = "scratch"
