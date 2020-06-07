@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -48,6 +49,8 @@ func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfi
 	if err != nil {
 		return fmt.Errorf("could not place a marker file")
 	}
+	// introduce a delay
+	time.Sleep(time.Second)
 	if err := runCommandInExec(config, buildArgs, r.cmd); err != nil {
 		return err
 	}

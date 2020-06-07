@@ -372,7 +372,7 @@ func (s *stageBuilder) build() error {
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files, command.MetadataOnly()) {
+		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) {
 			continue
 		}
 		if isCacheCommand {
@@ -432,7 +432,7 @@ func (s *stageBuilder) takeSnapshot(files []string, shdDelete bool) (string, err
 	return snapshot, err
 }
 
-func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, isMetadatCmd bool) bool {
+func (s *stageBuilder) shouldTakeSnapshot(index int, isMetadatCmd bool) bool {
 	isLastCommand := index == len(s.cmds)-1
 
 	// We only snapshot the very end with single snapshot mode on.
