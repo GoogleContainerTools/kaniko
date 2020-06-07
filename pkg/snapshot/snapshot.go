@@ -111,7 +111,6 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string,
 			}
 		}
 	}
-	logrus.Infof("whiteouts %s", filesToWhiteout)
 	t := util.NewTar(f)
 	defer t.Close()
 	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {

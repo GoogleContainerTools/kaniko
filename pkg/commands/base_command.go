@@ -52,6 +52,6 @@ func (b *BaseCommand) ShouldCacheOutput() bool {
 	return false
 }
 
-func (a *BaseCommand) ShouldDetectDeletedFiles() bool {
+func (b *BaseCommand) ShouldDetectDeletedFiles() bool {
 	return false
 }

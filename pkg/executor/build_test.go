@@ -103,9 +103,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 		cmds  []commands.DockerCommand
 	}
 	type args struct {
-		index    int
-		files    []string
-		hasFiles bool
+		index        int
+		files        []string
+		metadataOnly bool
 	}
 	tests := []struct {
 		name   string
@@ -158,9 +158,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 				stage: config.KanikoStage{},
 			},
 			args: args{
-				index:    0,
-				files:    []string{},
-				hasFiles: true,
+				index:        0,
+				files:        []string{},
+				metadataOnly: true,
 			},
 			want: false,
 		},
@@ -172,9 +172,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 				},
 			},
 			args: args{
-				index:    0,
-				files:    nil,
-				hasFiles: false,
+				index:        0,
+				files:        nil,
+				metadataOnly: false,
 			},
 			want: true,
 		},
@@ -204,7 +204,7 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 				opts:  tt.fields.opts,
 				cmds:  tt.fields.cmds,
 			}
-			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files, tt.args.hasFiles, false); got != tt.want {
+			if got := s.shouldTakeSnapshot(tt.args.index, tt.args.files, !tt.args.metadataOnly); got != tt.want {
 				t.Errorf("stageBuilder.shouldTakeSnapshot() = %v, want %v", got, tt.want)
 			}
 		})
