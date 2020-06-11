@@ -19,6 +19,10 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -88,7 +92,45 @@ var (
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
-// CheckPushPermissions checks that the configured credentials can be used to
+func AttemptCreateRepos(opts *config.KanikoOptions) error {
+	sess := session.Must(session.NewSession(aws.NewConfig()))
+	resp, err := sts.New(sess).GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	if err != nil {
+		return nil
+	}
+
+	var paths []string
+
+	accountId := resp.Account
+	for _, dest := range opts.Destinations {
+		dest = strings.Split(dest, ":")[0] // Remove tag
+		parts := strings.Split(dest, "/")
+
+		if !strings.HasSuffix( parts[0], "amazonaws.com") { // Remove port
+			return errors.New("unable to create this type of repo: " + dest)
+		}
+		if !strings.HasPrefix(parts[0], *accountId) {
+			return errors.New("ecr repo is not owned by us, skipping create: " + dest)
+		}
+
+		paths = append(paths, strings.Join(parts[1:], "/"))
+	}
+
+	client := ecr.New(sess)
+	for _, path := range paths {
+		resp, err := client.CreateRepository(&ecr.CreateRepositoryInput{
+			RepositoryName:             aws.String(path),
+		})
+		if err != nil {
+			return err
+		}
+		logrus.Info(fmt.Sprintf("Created repository %s", *resp.Repository.RepositoryUri))
+	}
+	return CheckPushPermissions(opts)
+}
+
+
+	// CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	if opts.NoPush {

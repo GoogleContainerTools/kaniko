@@ -42,6 +42,7 @@ var (
 	opts         = &config.KanikoOptions{}
 	ctxSubPath   string
 	force        bool
+	create       bool
 	logLevel     string
 	logFormat    string
 	logTimestamp bool
@@ -51,6 +52,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "verbosity", "v", logging.DefaultLevel, "Log level (trace, debug, info, warn, error, fatal, panic)")
 	RootCmd.PersistentFlags().StringVar(&logFormat, "log-format", logging.FormatColor, "Log format (text, color, json)")
 	RootCmd.PersistentFlags().BoolVar(&logTimestamp, "log-timestamp", logging.DefaultLogTimestamp, "Timestamp in log output")
+	RootCmd.PersistentFlags().BoolVarP(&create, "create", "", false, "Attempt to create repo if it doesn't exist (only ECR supported)")
 	RootCmd.PersistentFlags().BoolVarP(&force, "force", "", false, "Force building outside of a container")
 
 	addKanikoOptionsFlags()
@@ -95,9 +97,15 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
-		if err := executor.CheckPushPermissions(opts); err != nil {
+
+		err := executor.CheckPushPermissions(opts)
+		if err != nil && create {
+			err = executor.AttemptCreateRepos(opts)
+		}
+		if err != nil {
 			exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
 		}
+
 		if err := resolveRelativePaths(); err != nil {
 			exit(errors.Wrap(err, "error resolving relative paths to absolute paths"))
 		}
