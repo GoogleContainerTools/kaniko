@@ -1,6 +1,5 @@
-FROM alpine:latest as source
-RUN echo 'HELLO' > /dontignore
+FROM scratch as src
+COPY . /
 
-FROM alpine:latest as dest
-COPY --from=source /dontignore /dontignore
-RUN cat /dontignore | grep -q HELLO
+FROM scratch as dest
+COPY --from=source / .
