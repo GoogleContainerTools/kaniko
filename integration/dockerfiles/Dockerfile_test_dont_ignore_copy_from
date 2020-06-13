@@ -2,4 +2,4 @@ FROM scratch as src
 COPY . /
 
 FROM scratch as dest
-COPY --from=source / .
+COPY --from=src / .
