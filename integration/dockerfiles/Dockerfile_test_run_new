@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright 2020 Google LLC
+# Copyright 2020 Google, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs all integration tests except for
-# TestRun and TestLayers
-set -e
+FROM debian:9.11
+RUN echo "hey" > /etc/foo
+RUN echo "baz" > /etc/baz
+RUN cp /etc/baz /etc/bar
+RUN rm /etc/baz
 
-TESTS=$(./scripts/integration-test.sh -list=Test -mod=vendor)
+# Test with ARG
+ARG file
+RUN echo "run" > $file
 
-TESTS=$(echo $TESTS | tr ' ' '\n' | grep 'Test'| grep -v 'TestRun' | grep -v 'TestLayers' | grep -v 'TestK8s' | grep -v 'TestSnapshotBenchmark')
-
-RUN_ARG=''
-count=0
-for i in $TESTS; do
-  if [ "$count" -gt "0" ]; then
-    RUN_ARG="$RUN_ARG|$i"
-  else
-    RUN_ARG="$RUN_ARG$i"
-  fi
-  count=$((count+1))
-done
-
-echo $RUN_ARG
+RUN echo "test home" > $HOME/file
+COPY context/foo $HOME/foo

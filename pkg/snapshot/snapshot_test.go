@@ -214,7 +214,7 @@ func TestSnapshotFiles(t *testing.T) {
 	filesToSnapshot := []string{
 		filepath.Join(testDir, "foo"),
 	}
-	tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot)
+	tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +361,7 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 		}
 
 		// Take a snapshot
-		tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot)
+		tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot, false)
 
 		if err != nil {
 			t.Fatalf("Error taking snapshot of fs: %s", err)

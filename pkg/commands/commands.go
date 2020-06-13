@@ -52,11 +52,17 @@ type DockerCommand interface {
 	RequiresUnpackedFS() bool
 
 	ShouldCacheOutput() bool
+
+	// ShouldDetectDeletedFiles returns true if the command could delete files.
+	ShouldDetectDeletedFiles() bool
 }
 
-func GetCommand(cmd instructions.Command, buildcontext string) (DockerCommand, error) {
+func GetCommand(cmd instructions.Command, buildcontext string, useNewRun bool) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
+		if useNewRun {
+			return &RunMarkerCommand{cmd: c}, nil
+		}
 		return &RunCommand{cmd: c}, nil
 	case *instructions.CopyCommand:
 		return &CopyCommand{cmd: c, buildcontext: buildcontext}, nil

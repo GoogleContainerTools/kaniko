@@ -24,13 +24,11 @@ import (
 	"sort"
 	"syscall"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/filesystem"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
-	"github.com/karrick/godirwalk"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -62,7 +60,7 @@ func (s *Snapshotter) Key() (string, error) {
 
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
+func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string, error) {
 	f, err := ioutil.TempFile(config.KanikoDir, "")
 	if err != nil {
 		return "", err
@@ -81,7 +79,7 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 	}
 
 	logrus.Info("Taking snapshot of files...")
-	logrus.Debugf("Taking snapshot of files %v", files)
+	logrus.Debugf("Taking snapshot of files %v", filesToAdd)
 
 	sort.Strings(filesToAdd)
 
@@ -92,9 +90,27 @@ func (s *Snapshotter) TakeSnapshot(files []string) (string, error) {
 		}
 	}
 
+	// Get whiteout paths
+	filesToWhiteout := []string{}
+	if shdCheckDelete {
+		_, deletedFiles := util.WalkFS(s.directory, s.l.getFlattenedPathsForWhiteOut(), func(s string) (bool, error) {
+			return true, nil
+		})
+		// The paths left here are the ones that have been deleted in this layer.
+		for path := range deletedFiles {
+			// Only add the whiteout if the directory for the file still exists.
+			dir := filepath.Dir(path)
+			if _, ok := deletedFiles[dir]; !ok {
+				if s.l.MaybeAddWhiteout(path) {
+					logrus.Debugf("Adding whiteout for %s", path)
+					filesToWhiteout = append(filesToWhiteout, path)
+				}
+			}
+		}
+	}
 	t := util.NewTar(f)
 	defer t.Close()
-	if err := writeToTar(t, filesToAdd, nil); err != nil {
+	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -133,36 +149,8 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	s.l.Snapshot()
 
-	timer := timing.Start("Walking filesystem")
-
-	changedPaths := make([]string, 0)
-
-	//   Get a list of all the files that existed before this layer
-	existingPaths := s.l.getFlattenedPathsForWhiteOut()
-
-	godirwalk.Walk(s.directory, &godirwalk.Options{
-		Callback: func(path string, ent *godirwalk.Dirent) error {
-			if util.IsInIgnoreList(path) {
-				if util.IsDestDir(path) {
-					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
-					return filepath.SkipDir
-				}
-
-				return nil
-			}
-			if ok, err := s.l.CheckFileChange(path); err != nil {
-				return err
-			} else if ok {
-				changedPaths = append(changedPaths, path)
-			}
-			delete(existingPaths, path)
-			return nil
-		},
-		Unsorted: true,
-	},
-	)
-	timing.DefaultRun.Stop(timer)
-	timer = timing.Start("Resolving Paths")
+	changedPaths, deletedPaths := util.WalkFS(s.directory, s.l.getFlattenedPathsForWhiteOut(), s.l.CheckFileChange)
+	timer := timing.Start("Resolving Paths")
 
 	filesToAdd := []string{}
 	resolvedFiles, err := filesystem.ResolvePaths(changedPaths, s.ignorelist)
@@ -179,10 +167,10 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	// The paths left here are the ones that have been deleted in this layer.
 	filesToWhiteOut := []string{}
-	for path := range existingPaths {
+	for path := range deletedPaths {
 		// Only add the whiteout if the directory for the file still exists.
 		dir := filepath.Dir(path)
-		if _, ok := existingPaths[dir]; !ok {
+		if _, ok := deletedPaths[dir]; !ok {
 			if s.l.MaybeAddWhiteout(path) {
 				logrus.Debugf("Adding whiteout for %s", path)
 				filesToWhiteOut = append(filesToWhiteOut, path)

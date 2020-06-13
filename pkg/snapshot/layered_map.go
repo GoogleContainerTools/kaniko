@@ -31,7 +31,7 @@ import (
 
 type LayeredMap struct {
 	layers         []map[string]string
-	whiteouts      []map[string]string
+	whiteouts      []map[string]struct{}
 	layerHashCache map[string]string
 	hasher         func(string) (string, error)
 	// cacheHasher doesn't include mtime in it's hash so that filesystem cache keys are stable
@@ -49,7 +49,7 @@ func NewLayeredMap(h func(string) (string, error), c func(string) (string, error
 }
 
 func (l *LayeredMap) Snapshot() {
-	l.whiteouts = append(l.whiteouts, map[string]string{})
+	l.whiteouts = append(l.whiteouts, map[string]struct{}{})
 	l.layers = append(l.layers, map[string]string{})
 }
 
@@ -84,21 +84,21 @@ func (l *LayeredMap) Get(s string) (string, bool) {
 	return "", false
 }
 
-func (l *LayeredMap) GetWhiteout(s string) (string, bool) {
+func (l *LayeredMap) GetWhiteout(s string) bool {
 	for i := len(l.whiteouts) - 1; i >= 0; i-- {
-		if v, ok := l.whiteouts[i][s]; ok {
-			return v, ok
+		if _, ok := l.whiteouts[i][s]; ok {
+			return ok
 		}
 	}
-	return "", false
+	return false
 }
 
 func (l *LayeredMap) MaybeAddWhiteout(s string) bool {
-	whiteout, ok := l.GetWhiteout(s)
-	if ok && whiteout == s {
+	ok := l.GetWhiteout(s)
+	if ok {
 		return false
 	}
-	l.whiteouts[len(l.whiteouts)-1][s] = s
+	l.whiteouts[len(l.whiteouts)-1][s] = struct{}{}
 	return true
 }
 

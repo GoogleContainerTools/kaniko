@@ -62,7 +62,7 @@ type cachePusher func(*config.KanikoOptions, string, string, string) error
 type snapShotter interface {
 	Init() error
 	TakeSnapshotFS() (string, error)
-	TakeSnapshot([]string) (string, error)
+	TakeSnapshot([]string, bool) (string, error)
 }
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
@@ -127,7 +127,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	}
 
 	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, opts.SrcContext)
+		command, err := commands.GetCommand(cmd, opts.SrcContext, opts.RunV2)
 		if err != nil {
 			return nil, err
 		}
@@ -319,7 +319,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	initSnapshotTaken := false
-	if s.opts.SingleSnapshot {
+	if s.opts.SingleSnapshot || s.opts.RunV2 {
 		if err := s.initSnapshotWithTimings(); err != nil {
 			return err
 		}
@@ -372,7 +372,7 @@ func (s *stageBuilder) build() error {
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, files, command.ProvidesFilesToSnapshot()) {
+		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) {
 			continue
 		}
 		if isCacheCommand {
@@ -382,7 +382,7 @@ func (s *stageBuilder) build() error {
 				return errors.Wrap(err, "failed to save layer")
 			}
 		} else {
-			tarPath, err := s.takeSnapshot(files)
+			tarPath, err := s.takeSnapshot(files, command.ShouldDetectDeletedFiles())
 			if err != nil {
 				return errors.Wrap(err, "failed to take snapshot")
 			}
@@ -416,7 +416,7 @@ func (s *stageBuilder) build() error {
 	return nil
 }
 
-func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
+func (s *stageBuilder) takeSnapshot(files []string, shdDelete bool) (string, error) {
 	var snapshot string
 	var err error
 
@@ -426,13 +426,13 @@ func (s *stageBuilder) takeSnapshot(files []string) (string, error) {
 	} else {
 		// Volumes are very weird. They get snapshotted in the next command.
 		files = append(files, util.Volumes()...)
-		snapshot, err = s.snapshotter.TakeSnapshot(files)
+		snapshot, err = s.snapshotter.TakeSnapshot(files, shdDelete)
 	}
 	timing.DefaultRun.Stop(t)
 	return snapshot, err
 }
 
-func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFiles bool) bool {
+func (s *stageBuilder) shouldTakeSnapshot(index int, isMetadatCmd bool) bool {
 	isLastCommand := index == len(s.cmds)-1
 
 	// We only snapshot the very end with single snapshot mode on.
@@ -445,17 +445,8 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, files []string, provideFile
 		return true
 	}
 
-	// if command does not provide files, snapshot everything.
-	if !provideFiles {
-		return true
-	}
-
-	// Don't snapshot an empty list.
-	if len(files) == 0 {
-		return false
-	}
-
-	return true
+	// if command is a metadata command, do not snapshot.
+	return !isMetadatCmd
 }
 
 func (s *stageBuilder) saveSnapshotToImage(createdBy string, tarPath string) error {
