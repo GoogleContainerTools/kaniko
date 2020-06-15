@@ -58,6 +58,13 @@ type KanikoOptions struct {
 	IgnoreVarRun            bool
 	SkipUnusedStages        bool
 	RunV2                   bool
+	Git                     KanikoGitOptions
+}
+
+type KanikoGitOptions struct {
+	Branch            string
+	SingleBranch      bool
+	RecurseSubmodules bool
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
