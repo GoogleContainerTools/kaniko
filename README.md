@@ -176,7 +176,9 @@ If you are using Azure Blob Storage for context file, you will need to pass [Azu
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
 You can either pass this in as part of the git URL (e.g., `git://TOKEN@github.com/acme/myproject.git#refs/heads/mybranch`)
-or using the environment variable `GIT_USERNAME`.
+or using the environment variable `GIT_TOKEN`.
+
+You can also pass `GIT_USERNAME` and `GIT_PASSWORD` (password being the token) if you want to be explicit about the username.
 
 ### Using Standard Input
 If running kaniko and using Standard Input build context, you will need to add the docker or kubernetes `-i, --interactive` flag.
@@ -197,7 +199,7 @@ Complete example of how to interactively run kaniko with `.tar.gz` Standard Inpu
 echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | kubectl run kaniko \
 --rm --stdin=true \
 --image=gcr.io/kaniko-project/executor:latest --restart=Never \
---overrides='{ 
+--overrides='{
   "apiVersion": "v1",
   "spec": {
     "containers": [
@@ -211,12 +213,12 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
   	"--context=tar://stdin",
   	"--destination=gcr.io/my-repo/my-image" ],
       "volumeMounts": [
-        { 
+        {
           "name": "cabundle",
           "mountPath": "/kaniko/ssl/certs/"
         },
-        { 
-          "name": "docker-config", 
+        {
+          "name": "docker-config",
           "mountPath": "/kaniko/.docker/"
       }]
     }],
@@ -225,9 +227,9 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
       "name": "cabundle",
       "configMap": {
         "name": "cabundle"}},
-    { 
+    {
       "name": "docker-config",
-      "configMap": { 
+      "configMap": {
         "name": "docker-config" }}
     ]
   }

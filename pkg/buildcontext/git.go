@@ -34,6 +34,7 @@ const (
 
 	gitAuthUsernameEnvKey = "GIT_USERNAME"
 	gitAuthPasswordEnvKey = "GIT_PASSWORD"
+	gitAuthTokenEnvKey    = "GIT_TOKEN"
 )
 
 var (
@@ -64,6 +65,11 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 func getGitAuth() transport.AuthMethod {
 	username := os.Getenv(gitAuthUsernameEnvKey)
 	password := os.Getenv(gitAuthPasswordEnvKey)
+	token := os.Getenv(gitAuthTokenEnvKey)
+	if token != "" {
+		username = token
+		password = ""
+	}
 	if username != "" || password != "" {
 		return &http.BasicAuth{
 			Username: username,
