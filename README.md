@@ -197,7 +197,7 @@ Complete example of how to interactively run kaniko with `.tar.gz` Standard Inpu
 echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | tar -cf - Dockerfile | gzip -9 | kubectl run kaniko \
 --rm --stdin=true \
 --image=gcr.io/kaniko-project/executor:latest --restart=Never \
---overrides='{ 
+--overrides='{
   "apiVersion": "v1",
   "spec": {
     "containers": [
@@ -211,12 +211,12 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
   	"--context=tar://stdin",
   	"--destination=gcr.io/my-repo/my-image" ],
       "volumeMounts": [
-        { 
+        {
           "name": "cabundle",
           "mountPath": "/kaniko/ssl/certs/"
         },
-        { 
-          "name": "docker-config", 
+        {
+          "name": "docker-config",
           "mountPath": "/kaniko/.docker/"
       }]
     }],
@@ -225,9 +225,9 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
       "name": "cabundle",
       "configMap": {
         "name": "cabundle"}},
-    { 
+    {
       "name": "docker-config",
-      "configMap": { 
+      "configMap": {
         "name": "docker-config" }}
     ]
   }
@@ -613,7 +613,7 @@ Set this flag as `--log-format=<text|color|json>` to set the log format. Default
 
 #### --log-timestamp
 
-Set this flag as `--log-format=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
+Set this flag as `--log-timestamp=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
 
 #### --whitelist-var-run
 
