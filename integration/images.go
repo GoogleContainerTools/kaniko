@@ -167,6 +167,7 @@ type DockerFileBuilder struct {
 func NewDockerFileBuilder() *DockerFileBuilder {
 	d := DockerFileBuilder{filesBuilt: map[string]struct{}{}}
 	d.DockerfilesToIgnore = map[string]struct{}{
+		"Dockerfile_test_add_404": {},
 		// TODO: remove test_user_run from this when https://github.com/GoogleContainerTools/container-diff/issues/237 is fixed
 		"Dockerfile_test_user_run": {},
 	}
