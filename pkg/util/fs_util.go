@@ -547,7 +547,7 @@ func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("%s failed with %d", rawurl, resp.StatusCode)
+		return fmt.Errorf("invalid response status %d", resp.StatusCode)
 	}
 
 	if err := CreateFile(dest, resp.Body, 0600, uint32(uid), uint32(gid)); err != nil {

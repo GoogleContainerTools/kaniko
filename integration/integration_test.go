@@ -397,9 +397,9 @@ func TestBuildWithHTTPError(t *testing.T) {
 			"-t", dockerImage,
 			"-f", dockerfile,
 			repo})...)
-	out, err := RunCommandWithoutTest(dockerCmd)
-	if err != nil {
-		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	_, err := RunCommandWithoutTest(dockerCmd)
+	if err == nil {
+		t.Fatalf("an error was expected")
 	}
 
 	// Build with kaniko
@@ -414,15 +414,10 @@ func TestBuildWithHTTPError(t *testing.T) {
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
-	out, err = RunCommandWithoutTest(kanikoCmd)
-	if err != nil {
-		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+	_, err = RunCommandWithoutTest(kanikoCmd)
+	if err == nil {
+		t.Fatalf("an error was expected")
 	}
-
-	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
-
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
-	checkContainerDiffOutput(t, diff, expected)
 }
 
 func TestLayers(t *testing.T) {
