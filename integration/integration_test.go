@@ -397,9 +397,9 @@ func TestBuildWithHTTPError(t *testing.T) {
 			"-t", dockerImage,
 			"-f", dockerfile,
 			repo})...)
-	_, err := RunCommandWithoutTest(dockerCmd)
+	out, err := RunCommandWithoutTest(dockerCmd)
 	if err == nil {
-		t.Fatalf("an error was expected")
+		t.Errorf("an error was expected, got %s", string(out))
 	}
 
 	// Build with kaniko
@@ -414,9 +414,9 @@ func TestBuildWithHTTPError(t *testing.T) {
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
-	_, err = RunCommandWithoutTest(kanikoCmd)
+	out, err = RunCommandWithoutTest(kanikoCmd)
 	if err == nil {
-		t.Fatalf("an error was expected")
+		t.Errorf("an error was expected, got %s", string(out))
 	}
 }
 
