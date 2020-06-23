@@ -50,9 +50,10 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	directory := constants.BuildContextDir
 	parts := strings.Split(g.context, "#")
 	options := git.CloneOptions{
-		URL:      getGitPullMethod() + "://" + parts[0],
-		Auth:     getGitAuth(),
-		Progress: os.Stdout,
+		URL:               getGitPullMethod() + "://" + parts[0],
+		Auth:              getGitAuth(),
+		Progress:          os.Stdout,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 	}
 	if len(parts) > 1 {
 		options.ReferenceName = plumbing.ReferenceName(parts[1])
