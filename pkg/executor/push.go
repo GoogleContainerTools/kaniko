@@ -105,19 +105,20 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 			continue
 		}
 
+		registryName := destRef.Repository.Registry.Name()
 		// Historically kaniko was pre-configured by default with gcr credential helper,
 		// in here we keep the backwards compatibility by enabling the GCR helper only
-		// when gcr.io is in one of the destinations.
-		if strings.Contains(destRef.RegistryStr(), "gcr.io") {
+		// when gcr.io (or pkg.dev) is in one of the destinations.
+		if registryName == "gcr.io" || strings.HasSuffix(registryName, ".gcr.io") || strings.HasSuffix(registryName, ".pkg.dev") {
 			// Checking for existence of docker.config as it's normally required for
 			// authenticated registries and prevent overwriting user provided docker conf
 			if _, err := fs.Stat(DockerConfLocation()); os.IsNotExist(err) {
-				if err := execCommand("docker-credential-gcr", "configure-docker").Run(); err != nil {
+				flags := fmt.Sprintf("--registries=%s", registryName)
+				if err := execCommand("docker-credential-gcr", "configure-docker", flags).Run(); err != nil {
 					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
 				}
 			}
 		}
-		registryName := destRef.Repository.Registry.Name()
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
 			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
