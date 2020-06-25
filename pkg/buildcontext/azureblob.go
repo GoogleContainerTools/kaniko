@@ -71,7 +71,7 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 		return parts.Host, err
 	}
 
-	if err := util.UnpackCompressedTar(tarPath, directory); err != nil {
+	if _, err := util.UnpackCompressedTar(tarPath, directory, false); err != nil {
 		return tarPath, err
 	}
 	// Remove the tar so it doesn't interfere with subsequent commands

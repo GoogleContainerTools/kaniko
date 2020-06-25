@@ -52,6 +52,9 @@ func GetBuildContext(srcContext string) (BuildContext, error) {
 		case constants.GitBuildContextPrefix:
 			return &Git{context: context}, nil
 		case constants.HTTPSBuildContextPrefix:
+			if strings.HasPrefix(srcContext, constants.GitHubArchiveContextHost) {
+				return &GitHubArchive{context: context}, nil
+			}
 			if util.ValidAzureBlobStorageHost(srcContext) {
 				return &AzureBlob{context: srcContext}, nil
 			}

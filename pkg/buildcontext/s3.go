@@ -74,5 +74,6 @@ func (s *S3) UnpackTarFromBuildContext() (string, error) {
 		return directory, err
 	}
 
-	return directory, util.UnpackCompressedTar(tarPath, directory)
+	_, err = util.UnpackCompressedTar(tarPath, directory, false)
+	return directory, err
 }
