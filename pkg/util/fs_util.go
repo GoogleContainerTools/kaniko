@@ -236,7 +236,9 @@ func childDirInIgnoreList(path string) bool {
 }
 
 // unTar returns a list of files that have been extracted from the tar archive at r to the path at dest
-func unTar(r io.Reader, dest string) ([]string, error) {
+// If prefixed is set to true all files move up a directory when being extracted.
+func unTar(r io.Reader, dest string, prefixed bool) ([]string, error) {
+	var lastPrefix string
 	var extractedFiles []string
 	tr := tar.NewReader(r)
 	for {
@@ -247,6 +249,29 @@ func unTar(r io.Reader, dest string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if prefixed {
+			path := strings.Split(filepath.Clean(hdr.Name), string(filepath.Separator))
+
+			switch hdr.Typeflag {
+			case tar.TypeXGlobalHeader, tar.TypeXHeader:
+				continue
+			case tar.TypeDir:
+				// Append an empty item so we can treat directories the same as files
+				path = append(path, "")
+			}
+
+			if len(path) < 2 {
+				return nil, errors.New(fmt.Sprintf("%s exists above tar extraction prefixed %s", hdr.Name, lastPrefix))
+			}
+			if lastPrefix == "" {
+				lastPrefix = path[0]
+			} else if lastPrefix != path[0] {
+				return nil, errors.New(fmt.Sprintf("%s exists outside tar extraction prefixed %s", hdr.Name, lastPrefix))
+			}
+			hdr.Name = filepath.Join(path[1:]...)
+		}
+
 		if err := ExtractFile(dest, hdr, tr); err != nil {
 			return nil, err
 		}

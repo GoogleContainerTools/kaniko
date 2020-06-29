@@ -57,6 +57,7 @@ const (
 	LocalDirBuildContextPrefix = "dir://"
 	GitBuildContextPrefix      = "git://"
 	HTTPSBuildContextPrefix    = "https://"
+	GitHubArchiveContextHost   = "https://codeload.github.com/"
 
 	HOME = "HOME"
 	// DefaultHOMEValue is the default value Docker sets for $HOME

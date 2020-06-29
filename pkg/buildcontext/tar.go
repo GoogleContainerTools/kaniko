@@ -57,5 +57,6 @@ func (t *Tar) UnpackTarFromBuildContext() (string, error) {
 		}
 	}
 
-	return directory, util.UnpackCompressedTar(t.context, directory)
+	_, err := util.UnpackCompressedTar(t.context, directory, false)
+	return directory, err
 }

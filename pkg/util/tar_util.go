@@ -173,10 +173,10 @@ func UnpackLocalTarArchive(path, dest string) ([]string, error) {
 		}
 		defer file.Close()
 		if compressionLevel == archive.Gzip {
-			return nil, UnpackCompressedTar(path, dest)
+			return UnpackCompressedTar(path, dest, false)
 		} else if compressionLevel == archive.Bzip2 {
 			bzr := bzip2.NewReader(file)
-			return unTar(bzr, dest)
+			return unTar(bzr, dest, false)
 		}
 	}
 	if fileIsUncompressedTar(path) {
@@ -185,7 +185,7 @@ func UnpackLocalTarArchive(path, dest string) ([]string, error) {
 			return nil, err
 		}
 		defer file.Close()
-		return unTar(file, dest)
+		return unTar(file, dest, false)
 	}
 	return nil, errors.New("path does not lead to local tar archive")
 }
@@ -233,17 +233,17 @@ func fileIsUncompressedTar(src string) bool {
 }
 
 // UnpackCompressedTar unpacks the compressed tar at path to dir
-func UnpackCompressedTar(path, dir string) error {
+// If prefixed is set all files move up a directory.
+func UnpackCompressedTar(path, dir string, prefixed bool) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	gzr, err := gzip.NewReader(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer gzr.Close()
-	_, err = unTar(gzr, dir)
-	return err
+	return unTar(gzr, dir, prefixed)
 }

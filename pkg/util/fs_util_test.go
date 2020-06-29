@@ -616,9 +616,11 @@ func Test_unTar(t *testing.T) {
 		setupTarContents map[string]string
 		tarFileName      string
 		destination      string
+		prefix      	 bool
 		expectedFileList []string
 		errorExpected    bool
 	}{
+		// Prefix = 0 covers util.unTar
 		{
 			name: "multfile tar",
 			setupTarContents: map[string]string{
@@ -629,6 +631,7 @@ func Test_unTar(t *testing.T) {
 			},
 			tarFileName:      "test.tar",
 			destination:      "/",
+			prefix:      	  false,
 			expectedFileList: []string{"foo/file1", "bar/file1", "bar/file2", "file1"},
 			errorExpected:    false,
 		},
@@ -637,8 +640,55 @@ func Test_unTar(t *testing.T) {
 			setupTarContents: map[string]string{},
 			tarFileName:      "test.tar",
 			destination:      "/",
+			prefix:      	  false,
 			expectedFileList: nil,
 			errorExpected:    false,
+		},
+		{
+			name: "removing one prefix dir from a multifile tar",
+			setupTarContents: map[string]string{
+				"prefix/bar/file1": "hello World",
+				"prefix/bar/file2": "hello World",
+				"prefix/file1":     "hello World",
+			},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			prefix:      	  true,
+			expectedFileList: []string{"bar/file1", "bar/file2", "file1"},
+			errorExpected:    false,
+		},
+		{
+			name:             "removing one prefix dir from an empty tar",
+			setupTarContents: map[string]string{},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			prefix:      	  true,
+			expectedFileList: nil,
+			errorExpected:    false,
+		},
+		{
+			name: "removing one prefix dir from a tar with an un-prefixed file",
+			setupTarContents: map[string]string{
+				"bar/file1": "hello World",
+				"bar/file2": "hello World",
+				"should_fail":     "hello World",
+			},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			prefix:      	  true,
+			errorExpected:    true,
+		},
+		{
+			name: "removing one prefix dir from an tar with multiple prefixes",
+			setupTarContents: map[string]string{
+				"foo/file1": "hello World",
+				"foo/file2": "hello World",
+				"bar/should_fail": "hello World",
+			},
+			tarFileName:      "test.tar",
+			destination:      "/",
+			prefix:      	  true,
+			errorExpected:    true,
 		},
 	}
 	for _, tc := range tcs {
@@ -648,6 +698,9 @@ func Test_unTar(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(testDir)
+
+			// update config.RootDir so the files in the tar don't include the testDir path
+			config.RootDir = testDir
 			if err := createUncompressedTar(tc.setupTarContents, tc.tarFileName, testDir); err != nil {
 				t.Fatal(err)
 			}
@@ -655,8 +708,8 @@ func Test_unTar(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fileList, err := unTar(file, tc.destination)
-			if err != nil {
+			fileList, err := unTar(file, filepath.Join(testDir, tc.destination), tc.prefix)
+			if !tc.errorExpected && err != nil {
 				t.Fatal(err)
 			}
 			// update expectedFileList to take into factor temp directory

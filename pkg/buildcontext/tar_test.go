@@ -127,7 +127,7 @@ func TestBuildWithLocalTar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.dockerfile, func(t *testing.T) {
-			err := util.UnpackCompressedTar(filepath.Join(cwd, tt.srcContext), dirUnpack)
+			_, err := util.UnpackCompressedTar(filepath.Join(cwd, tt.srcContext), dirUnpack, false)
 			testutil.CheckError(t, tt.unpackShouldErr, err)
 			srcSHA, err := getSHAFromFilePath(tt.dockerfile)
 			testutil.CheckError(t, tt.srcShaShouldErr, err)

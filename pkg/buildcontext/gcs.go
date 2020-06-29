@@ -66,7 +66,7 @@ func unpackTarFromGCSBucket(bucketName, item, directory string) error {
 		return err
 	}
 	logrus.Debug("Unpacking source context tar...")
-	if err := util.UnpackCompressedTar(tarPath, directory); err != nil {
+	if _, err := util.UnpackCompressedTar(tarPath, directory, false); err != nil {
 		return err
 	}
 	// Remove the tar so it doesn't interfere with subsequent commands
