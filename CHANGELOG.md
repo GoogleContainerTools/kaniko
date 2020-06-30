@@ -1,3 +1,77 @@
+# v0.24.0 Release 2020-07-01
+This is the 24th release of Kaniko!
+
+New features:
+* Add a new run command along with a new flag [#1300](https://github.com/GoogleContainerTools/kaniko/pull/1300)
+* Add redo snapshotter.  [#1301](https://github.com/GoogleContainerTools/kaniko/pull/1301)
+* Add pkg.dev to automagic config file population [#1328](https://github.com/GoogleContainerTools/kaniko/pull/1328)
+* kaniko now clone git repositories recursing submodules by default [#1320](https://github.com/GoogleContainerTools/kaniko/pull/1320)
+
+Bug fixes:
+* Fix README.md [#1323](https://github.com/GoogleContainerTools/kaniko/pull/1323)
+* Fix docker-credential-gcr owner and group id [#1307](https://github.com/GoogleContainerTools/kaniko/pull/1307)
+
+Refactors:
+* check file changed in loop [#1302](https://github.com/GoogleContainerTools/kaniko/pull/1302)
+* ADD GCB benchmark code [#1299](https://github.com/GoogleContainerTools/kaniko/pull/1299)
+* benchmark FileSystem snapshot project added [#1288](https://github.com/GoogleContainerTools/kaniko/pull/1288)
+* [Perf] Reduce loops over files when taking FS snapshot. [#1283](https://github.com/GoogleContainerTools/kaniko/pull/1283)
+* Fix README.md [#1323](https://github.com/GoogleContainerTools/kaniko/pull/1323)
+* Fix docker-credential-gcr owner and group id [#1307](https://github.com/GoogleContainerTools/kaniko/pull/1307)
+* benchmark FileSystem snapshot project added [#1288](https://github.com/GoogleContainerTools/kaniko/pull/1288)
+* [Perf] Reduce loops over files when taking FS snapshot. [#1283](https://github.com/GoogleContainerTools/kaniko/pull/1283)
+
+Huge thank you for this release towards our contributors:
+- Alexander Sharov
+- Alex Szakaly
+- Anthony Davies
+- Art Begolli
+- Batuhan Apaydın
+- Ben Einaudi
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Chris Sng
+- Cole Wippern
+- cvgw
+- Daniel Marks
+- Dani Raznikov
+- David Dooling
+- DracoBlue
+- Gábor Lipták
+- Gabriel Virga
+- Gilbert Gilb's
+- Giovan Isa Musthofa
+- James Ravn
+- Jon Henrik Bjørnstad
+- Jon Johnson
+- Jordan Goasdoué
+- Liubov Grinkevich
+- Logan.Price
+- Lukasz Jakimczuk
+- Mehdi Abaakouk
+- Michel Hollands
+- Mitchell Friedman
+- Moritz Wanzenböck
+- ohchang-kwon
+- Or Sela
+- PhoenixMage
+- priyawadhwa
+- Sam Stoelinga
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Stromberg
+- Thomas Strömberg
+- tinkerborg
+- Tom Prince
+- Vincent Latombe
+- Wietse Muizelaar
+- xanonid
+- Yoan Blanc
+- Yoriyasu Yano
+- Yuheng Zhang
+- yw-liu
+
+
 # v0.23.0 Release 2020-06-04
 This is the 23rd release of Kaniko! 
 
