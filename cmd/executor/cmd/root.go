@@ -171,10 +171,13 @@ func addKanikoOptionsFlags() {
 	opts.RegistriesCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().StringVarP(&opts.RegistryMirror, "registry-mirror", "", "", "Registry mirror to use has pull-through cache instead of docker.io.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "ignore-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
 	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
+	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "please use --ingore-var-run instead")
 	RootCmd.PersistentFlags().VarP(&opts.Labels, "label", "", "Set metadata for an image. Set it repeatedly for multiple labels.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipUnusedStages, "skip-unused-stages", "", false, "Build only used stages if defined to true. Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile")
 	RootCmd.PersistentFlags().BoolVarP(&opts.RunV2, "use-new-run", "", false, "Experimental run command to detect file system changes. This new run command does no rely on snapshotting to detect changes.")
+
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text

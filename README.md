@@ -615,7 +615,7 @@ Set this flag as `--log-format=<text|color|json>` to set the log format. Default
 
 Set this flag as `--log-timestamp=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
 
-#### --whitelist-var-run
+#### --ignore-var-run
 
 Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
 
