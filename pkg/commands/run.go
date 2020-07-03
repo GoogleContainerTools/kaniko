@@ -65,7 +65,7 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 		newCommand = cmdRun.CmdLine
 		// Find and set absolute path of executable by setting PATH temporary
 		replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-		for _, v := range replacementEnvs{
+		for _, v := range replacementEnvs {
 			entry := strings.SplitN(v, "=", 2)
 			if entry[0] != "PATH" {
 				continue
