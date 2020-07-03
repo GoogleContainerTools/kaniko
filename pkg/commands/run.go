@@ -63,6 +63,21 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 		newCommand = append(shell, strings.Join(cmdRun.CmdLine, " "))
 	} else {
 		newCommand = cmdRun.CmdLine
+		// Find and set absolute path of executable by setting PATH temporary
+		replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+		for _, v := range replacementEnvs{
+			entry := strings.SplitN(v, "=", 2)
+			if entry[0] != "PATH" {
+				continue
+			}
+			oldPath := os.Getenv("PATH")
+			os.Setenv("PATH", entry[1])
+			path, err := exec.LookPath(newCommand[0])
+			if err == nil {
+				newCommand[0] = path
+			}
+			os.Setenv("PATH", oldPath)
+		}
 	}
 
 	logrus.Infof("cmd: %s", newCommand[0])
