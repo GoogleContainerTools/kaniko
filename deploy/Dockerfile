@@ -14,6 +14,7 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
+
 FROM golang:1.14
 ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
@@ -26,26 +27,30 @@ RUN make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper linux-amd64
 # ACR docker credential helper
 ADD https://aadacr.blob.core.windows.net/acr-docker-credential-helper/docker-credential-acr-linux-amd64.tar.gz /usr/local/bin
 RUN tar --no-same-owner -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-acr-linux-amd64.tar.gz
-# Add .docker config dir
-RUN mkdir -p /kaniko/.docker
 
 COPY . .
 RUN make GOARCH=${GOARCH}
 
+FROM scratch as empty
+
 FROM scratch
-COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
-COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
-COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
-COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
-COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY --from=0 /kaniko/.docker /kaniko/.docker
+# Path to install kaniko into (for use with `--kaniko-bootsrap-path`)
+ARG KANIKO_PATH=/kaniko 
+
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor $KANIKO_PATH/executor
+COPY --from=0 /usr/local/bin/docker-credential-gcr $KANIKO_PATH/docker-credential-gcr
+COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login $KANIKO_PATH/docker-credential-ecr-login
+COPY --from=0 /usr/local/bin/docker-credential-acr-linux $KANIKO_PATH/docker-credential-acr
+COPY files/ca-certificates.crt $KANIKO_PATH/ssl/certs/
+COPY --from=empty / $KANIKO_PATH/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
 ENV USER /root
+ENV DOCKER_CONFIG /kaniko/.docker/
+ENV PATH /usr/local/bin:$KANIKO_PATH
+RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENV PATH /usr/local/bin:/kaniko
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
-ENV DOCKER_CONFIG /kaniko/.docker/
 ENV DOCKER_CREDENTIAL_GCR_CONFIG /kaniko/.config/gcloud/docker_credential_gcr_config.json
 WORKDIR /workspace
-RUN ["docker-credential-gcr", "config", "--token-source=env"]
 ENTRYPOINT ["/kaniko/executor"]
