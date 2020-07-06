@@ -342,6 +342,42 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 	return layer, nil
 }
 
+// Squash squashes the image to a single layer
+func Squash(img v1.Image) (v1.Image, error) {
+	newImage := empty.Image
+
+	tar := Extract(img)
+	layer, err := tarball.LayerFromReader(tar)
+	if err != nil {
+		return nil, fmt.Errorf("error squashing layers: %v", err)
+	}
+
+	newImage, err = AppendLayers(newImage, layer)
+	if err != nil {
+		return nil, fmt.Errorf("appending layers: %v", err)
+	}
+
+	ocf, err := img.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("getting original config file: %v", err)
+	}
+
+	cf, err := newImage.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("setting config file: %v", err)
+	}
+
+	cfg := cf.DeepCopy()
+
+	// Copy basic config over
+	cfg.Architecture = ocf.Architecture
+	cfg.OS = ocf.OS
+	cfg.OSVersion = ocf.OSVersion
+	cfg.Config = ocf.Config
+
+	return ConfigFile(newImage, cfg)
+}
+
 // Canonical is a helper function to combine Time and configFile
 // to remove any randomness during a docker build.
 func Canonical(img v1.Image) (v1.Image, error) {
