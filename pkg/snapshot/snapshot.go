@@ -37,14 +37,15 @@ var snapshotPathPrefix = config.KanikoDir
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
-	l          *LayeredMap
-	directory  string
-	ignorelist []util.IgnoreListEntry
+	l             *LayeredMap
+	directory     string
+	ignorelist    []util.IgnoreListEntry
+	bootstrapPath string
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
-func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
-	return &Snapshotter{l: l, directory: d, ignorelist: util.IgnoreList()}
+func NewSnapshotter(l *LayeredMap, d string, bootstrapPath string) *Snapshotter {
+	return &Snapshotter{l: l, directory: d, ignorelist: util.IgnoreList(), bootstrapPath: bootstrapPath}
 }
 
 // Init initializes a new snapshotter
@@ -108,7 +109,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string,
 			}
 		}
 	}
-	t := util.NewTar(f)
+	t := util.NewTar(f, s.bootstrapPath)
 	defer t.Close()
 	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
 		return "", err
@@ -124,7 +125,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	t := util.NewTar(f)
+	t := util.NewTar(f, s.bootstrapPath)
 	defer t.Close()
 
 	filesToAdd, filesToWhiteOut, err := s.scanFullFilesystem()

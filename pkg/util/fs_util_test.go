@@ -599,7 +599,7 @@ func createUncompressedTar(fileContents map[string]string, tarFileName, testDir 
 	if err != nil {
 		return err
 	}
-	t := NewTar(tarFile)
+	t := NewTar(tarFile, "")
 	defer t.Close()
 	for file := range fileContents {
 		filePath := filepath.Join(testDir, file)

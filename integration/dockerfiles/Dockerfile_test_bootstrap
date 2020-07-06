@@ -1,0 +1,3 @@
+FROM scratch
+ARG KANIKO_PATH=/kaniko
+ADD foo.txt $KANIKO_PATH/

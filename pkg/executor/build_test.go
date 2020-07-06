@@ -209,6 +209,9 @@ func Test_stageBuilder_shouldTakeSnapshot(t *testing.T) {
 }
 
 func TestCalculateDependencies(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping testing in short mode")
+	}
 	type args struct {
 		dockerfile     string
 		mockInitConfig func(partial.WithConfigFile, *config.KanikoOptions) (*v1.ConfigFile, error)

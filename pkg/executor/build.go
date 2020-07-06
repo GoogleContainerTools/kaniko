@@ -104,7 +104,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 	l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
-	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
+	snapshotter := snapshot.NewSnapshotter(l, config.RootDir, opts.KanikoBootstrapPath)
 
 	digest, err := sourceImage.Digest()
 	if err != nil {

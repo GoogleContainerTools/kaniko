@@ -81,6 +81,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_scratch":    {"--single-snapshot"},
 	"Dockerfile_test_maintainer": {"--single-snapshot"},
 	"Dockerfile_test_target":     {"--target=second"},
+	"Dockerfile_test_boostrap":   {"--kaniko-bootstrap-path=/kaniko-bootsrap", "KANIKO_PATH=/kaniko-bootstrap"},
 }
 
 // output check to do when building with kaniko

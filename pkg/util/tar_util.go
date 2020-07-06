@@ -36,16 +36,18 @@ import (
 
 // Tar knows how to write files to a tar file.
 type Tar struct {
-	hardlinks map[uint64]string
-	w         *tar.Writer
+	hardlinks     map[uint64]string
+	w             *tar.Writer
+	bootstrapPath string
 }
 
 // NewTar will create an instance of Tar that can write files to the writer at f.
-func NewTar(f io.Writer) Tar {
+func NewTar(f io.Writer, bootstrapPath string) Tar {
 	w := tar.NewWriter(f)
 	return Tar{
-		w:         w,
-		hardlinks: map[uint64]string{},
+		w:             w,
+		hardlinks:     map[uint64]string{},
+		bootstrapPath: bootstrapPath,
 	}
 }
 
@@ -81,8 +83,14 @@ func (t *Tar) AddFileToTar(p string) error {
 		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
 		hdr.Name = "/"
 	} else {
+		hdr.Name = p
+		if t.bootstrapPath != "" {
+			if rel, err := filepath.Rel(t.bootstrapPath, p); err == nil {
+				hdr.Name = filepath.Join(config.KanikoDir, rel)
+			}
+		}
 		// Docker uses no leading / in the tarball
-		hdr.Name = strings.TrimPrefix(p, config.RootDir)
+		hdr.Name = strings.TrimPrefix(hdr.Name, config.RootDir)
 		hdr.Name = strings.TrimLeft(hdr.Name, "/")
 	}
 	if hdr.Typeflag == tar.TypeDir && !strings.HasSuffix(hdr.Name, "/") {

@@ -71,7 +71,7 @@ func TestBuildWithStdin(t *testing.T) {
 		gw := gzip.NewWriter(tarFile)
 		defer gw.Close()
 
-		tw := util.NewTar(gw)
+		tw := util.NewTar(gw, "")
 		defer tw.Close()
 
 		if err := tw.AddFileToTar(dockerfile); err != nil {

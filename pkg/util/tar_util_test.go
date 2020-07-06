@@ -91,7 +91,7 @@ func setUpFilesAndTars(testDir string) error {
 }
 
 func createTar(testdir string, writer io.Writer) error {
-	t := NewTar(writer)
+	t := NewTar(writer, "")
 	defer t.Close()
 	for _, regFile := range regularFiles {
 		filePath := filepath.Join(testdir, regFile)

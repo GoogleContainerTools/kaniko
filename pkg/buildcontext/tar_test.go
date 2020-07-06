@@ -84,7 +84,7 @@ func TestBuildWithLocalTar(t *testing.T) {
 		gw := gzip.NewWriter(validTarFile)
 		defer gw.Close()
 
-		tw := util.NewTar(gw)
+		tw := util.NewTar(gw, "")
 		defer tw.Close()
 
 		if err := tw.AddFileToTar(validDockerfile); err != nil {

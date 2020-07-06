@@ -58,6 +58,7 @@ type KanikoOptions struct {
 	IgnoreVarRun            bool
 	SkipUnusedStages        bool
 	RunV2                   bool
+	KanikoBootstrapPath     string
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
