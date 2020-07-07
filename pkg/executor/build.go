@@ -632,6 +632,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
 			if err != nil {
 				return nil, err
+			if opts.Squash {
+				sourceImage, err = mutate.Squash(sourceImage)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if opts.Reproducible {
 				sourceImage, err = mutate.Canonical(sourceImage)

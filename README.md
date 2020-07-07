@@ -594,6 +594,10 @@ You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko w
 If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
 [limitations related to mtime](#mtime-and-snapshotting)).
 
+#### --squash
+
+Set this flag to build an image with a single layer (including the base image).
+
 #### --target
 
 Set this flag to indicate which build stage is the target build stage.

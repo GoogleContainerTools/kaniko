@@ -1,0 +1,3 @@
+FROM scratch
+ADD context/foo foo
+ADD context/bar/b* bar/
