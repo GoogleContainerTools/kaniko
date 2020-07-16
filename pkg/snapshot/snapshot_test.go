@@ -391,6 +391,160 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 	}
 }
 
+func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
+	newFiles := map[string]string{
+		"foo":     "newbaz1",
+		"bar/bat": "baz",
+		"bar/qux": "quuz",
+		"qux":     "quuz",
+		"corge":   "grault",
+		"garply":  "waldo",
+		"fred":    "plugh",
+		"xyzzy":   "thud",
+	}
+
+	newFileNames := []string{}
+
+	for fileName := range newFiles {
+		newFileNames = append(newFileNames, fileName)
+	}
+
+	filesInTars := [][]string{}
+
+	for i := 0; i <= 2; i++ {
+		testDir, snapshotter, cleanup, err := setUpTest()
+		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+		defer cleanup()
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Make some changes to the filesystem
+		if err := testutil.SetupFiles(testDir, newFiles); err != nil {
+			t.Fatalf("Error setting up fs: %s", err)
+		}
+
+		filesToSnapshot := []string{}
+		for _, file := range newFileNames {
+			filesToSnapshot = append(filesToSnapshot, filepath.Join(testDir, file))
+		}
+
+		// Take a snapshot
+		_, err = snapshotter.TakeSnapshot(filesToSnapshot, false)
+		if err != nil {
+			t.Fatalf("Error taking snapshot of fs: %s", err)
+		}
+
+		// Delete all files
+		for p := range newFiles {
+			err := os.Remove(filepath.Join(testDir, p))
+			if err != nil {
+				t.Fatalf("Error deleting file: %s", err)
+			}
+		}
+
+		// Take a snapshot again
+		tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot, true)
+		if err != nil {
+			t.Fatalf("Error taking snapshot of fs: %s", err)
+		}
+
+		f, err := os.Open(tarPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tr := tar.NewReader(f)
+		filesInTars = append(filesInTars, []string{})
+		for {
+			hdr, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(hdr.Name, testDirWithoutLeadingSlash))
+		}
+	}
+
+	// Check contents of all snapshots, make sure files appear in consistent order
+	for i := 1; i < len(filesInTars); i++ {
+		testutil.CheckErrorAndDeepEqual(t, false, nil, filesInTars[0], filesInTars[i])
+	}
+}
+
+
+func TestSnasphotFSPreservesWhiteoutOrder(t *testing.T) {
+	newFiles := map[string]string{
+		"foo":     "newbaz1",
+		"bar/bat": "baz",
+		"bar/qux": "quuz",
+		"qux":     "quuz",
+		"corge":   "grault",
+		"garply":  "waldo",
+		"fred":    "plugh",
+		"xyzzy":   "thud",
+	}
+
+	filesInTars := [][]string{}
+
+	for i := 0; i <= 2; i++ {
+		testDir, snapshotter, cleanup, err := setUpTest()
+		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+		defer cleanup()
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Make some changes to the filesystem
+		if err := testutil.SetupFiles(testDir, newFiles); err != nil {
+			t.Fatalf("Error setting up fs: %s", err)
+		}
+
+		// Take a snapshot
+		_, err = snapshotter.TakeSnapshotFS()
+		if err != nil {
+			t.Fatalf("Error taking snapshot of fs: %s", err)
+		}
+
+		// Delete all files
+		for p := range newFiles {
+			err := os.Remove(filepath.Join(testDir, p))
+			if err != nil {
+				t.Fatalf("Error deleting file: %s", err)
+			}
+		}
+
+		// Take a snapshot again
+		tarPath, err := snapshotter.TakeSnapshotFS()
+		if err != nil {
+			t.Fatalf("Error taking snapshot of fs: %s", err)
+		}
+
+		f, err := os.Open(tarPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tr := tar.NewReader(f)
+		filesInTars = append(filesInTars, []string{})
+		for {
+			hdr, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(hdr.Name, testDirWithoutLeadingSlash))
+		}
+	}
+
+	// Check contents of all snapshots, make sure files appear in consistent order
+	for i := 1; i < len(filesInTars); i++ {
+		testutil.CheckErrorAndDeepEqual(t, false, nil, filesInTars[0], filesInTars[i])
+	}
+}
+
 func TestSnapshotOmitsUnameGname(t *testing.T) {
 	_, snapshotter, cleanup, err := setUpTest()
 
