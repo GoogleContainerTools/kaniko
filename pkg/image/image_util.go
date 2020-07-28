@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -117,6 +118,11 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 
+		ref, err = normalizeReference(ref, image)
+		if err != nil {
+			return nil, err
+		}
+
 		toSet = true
 	}
 
@@ -134,14 +140,29 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 			tag.Repository.Registry = newReg
 			ref = tag
 		}
+
 		if digest, ok := ref.(name.Digest); ok {
 			digest.Repository.Registry = newReg
 			ref = digest
 		}
 	}
 
+	logrus.Infof("Retrieving image %s", ref)
+
 	rOpts := remoteOptions(registryName, opts)
 	return remote.Image(ref, rOpts...)
+}
+
+// normalizeReference adds the library/ prefix to images without it.
+//
+// It is mostly useful when using a registry mirror that is not able to perform
+// this fix automatically.
+func normalizeReference(ref name.Reference, image string) (name.Reference, error) {
+	if !strings.ContainsRune(image, '/') {
+		return name.ParseReference("library/"+image, name.WeakValidation)
+	}
+
+	return ref, nil
 }
 
 func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {
