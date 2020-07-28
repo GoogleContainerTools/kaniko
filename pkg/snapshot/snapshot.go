@@ -108,6 +108,9 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string,
 			}
 		}
 	}
+
+	sort.Strings(filesToWhiteout)
+
 	t := util.NewTar(f)
 	defer t.Close()
 	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
@@ -185,7 +188,10 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 	timing.DefaultRun.Stop(timer)
+
 	sort.Strings(filesToAdd)
+	sort.Strings(filesToWhiteOut)
+
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
