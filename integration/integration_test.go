@@ -386,6 +386,40 @@ func TestBuildWithLabels(t *testing.T) {
 	checkContainerDiffOutput(t, diff, expected)
 }
 
+func TestBuildWithHTTPError(t *testing.T) {
+	repo := getGitRepo()
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_add_404", integrationPath, dockerfilesPath)
+
+	// Build with docker
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_add_404")
+	dockerCmd := exec.Command("docker",
+		append([]string{"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			repo})...)
+	out, err := RunCommandWithoutTest(dockerCmd)
+	if err == nil {
+		t.Errorf("an error was expected, got %s", string(out))
+	}
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_add_404")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"-c", fmt.Sprintf("git://%s", repo),
+	)
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	out, err = RunCommandWithoutTest(kanikoCmd)
+	if err == nil {
+		t.Errorf("an error was expected, got %s", string(out))
+	}
+}
+
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
 		"Dockerfile_test_add":     12,
