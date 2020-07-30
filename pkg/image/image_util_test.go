@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -107,6 +108,25 @@ func Test_ScratchImageFromMirror(t *testing.T) {
 	})
 	expected := empty.Image
 	testutil.CheckErrorAndDeepEqual(t, false, err, expected, actual)
+}
+
+func Test_normalizeReference(t *testing.T) {
+	image := "debian"
+	expected := "index.docker.io/library/debian:latest"
+
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ref2, err := normalizeReference(ref, image)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ref2.Name() != ref.Name() || ref2.Name() != expected {
+		t.Errorf("%s should have been normalized to %s, got %s", ref2.Name(), expected, ref.Name())
+	}
 }
 
 // parse parses the contents of a Dockerfile and returns a list of commands

@@ -299,8 +299,12 @@ func TestCheckPushPermissions(t *testing.T) {
 	}{
 		{"gcr.io/test-image", true, false},
 		{"gcr.io/test-image", false, true},
+		{"us-docker.pkg.dev/test-image", true, false},
+		{"us-docker.pkg.dev/test-image", false, true},
 		{"localhost:5000/test-image", false, false},
 		{"localhost:5000/test-image", false, true},
+		{"notgcr.io/test-image", false, false},
+		{"notgcr.io/test-image", false, true},
 	}
 
 	execCommand = fakeExecCommand

@@ -615,7 +615,7 @@ Set this flag as `--log-format=<text|color|json>` to set the log format. Default
 
 #### --log-timestamp
 
-Set this flag as `--log-format=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
+Set this flag as `--log-timestamp=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
 
 #### --whitelist-var-run
 

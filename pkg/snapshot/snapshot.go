@@ -33,7 +33,7 @@ import (
 )
 
 // For testing
-var snapshotPathPrefix = config.KanikoDir
+var snapshotPathPrefix = ""
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
@@ -108,6 +108,9 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string,
 			}
 		}
 	}
+
+	sort.Strings(filesToWhiteout)
+
 	t := util.NewTar(f)
 	defer t.Close()
 	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
@@ -119,7 +122,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string,
 // TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files.
 func (s *Snapshotter) TakeSnapshotFS() (string, error) {
-	f, err := ioutil.TempFile(snapshotPathPrefix, "")
+	f, err := ioutil.TempFile(s.getSnashotPathPrefix(), "")
 	if err != nil {
 		return "", err
 	}
@@ -136,6 +139,13 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		return "", err
 	}
 	return f.Name(), nil
+}
+
+func (s *Snapshotter) getSnashotPathPrefix() string {
+	if snapshotPathPrefix == "" {
+		return config.KanikoDir
+	}
+	return snapshotPathPrefix
 }
 
 func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
@@ -178,7 +188,10 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 	timing.DefaultRun.Stop(timer)
+
 	sort.Strings(filesToAdd)
+	sort.Strings(filesToWhiteOut)
+
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
