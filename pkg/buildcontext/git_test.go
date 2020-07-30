@@ -161,7 +161,7 @@ func TestGetGitAuth(t *testing.T) {
 		{
 			testName: "withTokenUsernamePassword",
 			setEnv: func() (expectedValue transport.AuthMethod) {
-				username := "foo"
+				username := "foo-user"
 				token := "some-token-45678"
 				pass := "some-password-12345"
 				_ = os.Setenv(gitAuthUsernameEnvKey, username)
