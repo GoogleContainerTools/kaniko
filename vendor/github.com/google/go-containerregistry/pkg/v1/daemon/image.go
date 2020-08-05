@@ -54,8 +54,6 @@ func (i *imageOpener) Open() (v1.Image, error) {
 		return nil, err
 	}
 
-	i.client.NegotiateAPIVersion(context.Background())
-
 	tb, err := tarball.Image(opener, nil)
 	if err != nil {
 		return nil, err
@@ -117,6 +115,7 @@ func Image(ref name.Reference, options ...ImageOption) (v1.Image, error) {
 			return nil, err
 		}
 	}
+	i.client.NegotiateAPIVersion(context.Background())
 
 	return i.Open()
 }

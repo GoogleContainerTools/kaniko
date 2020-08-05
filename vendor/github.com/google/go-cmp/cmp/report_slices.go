@@ -90,7 +90,7 @@ func (opts formatOptions) FormatDiffSlice(v *valueNode) textNode {
 			}
 			if r == '\n' {
 				if maxLineLen < i-lastLineIdx {
-					lastLineIdx = i - lastLineIdx
+					maxLineLen = i - lastLineIdx
 				}
 				lastLineIdx = i + 1
 				numLines++
@@ -172,7 +172,9 @@ func (opts formatOptions) FormatDiffSlice(v *valueNode) textNode {
 					switch t.Elem().Kind() {
 					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 						ss = append(ss, fmt.Sprint(v.Index(i).Int()))
-					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+					case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+						ss = append(ss, fmt.Sprint(v.Index(i).Uint()))
+					case reflect.Uint8, reflect.Uintptr:
 						ss = append(ss, formatHex(v.Index(i).Uint()))
 					case reflect.Bool, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
 						ss = append(ss, fmt.Sprint(v.Index(i).Interface()))
@@ -322,7 +324,7 @@ func coalesceInterveningIdentical(groups []diffStats, windowSize int) []diffStat
 			hadX, hadY := prev.NumRemoved > 0, prev.NumInserted > 0
 			hasX, hasY := next.NumRemoved > 0, next.NumInserted > 0
 			if ((hadX || hasX) && (hadY || hasY)) && curr.NumIdentical <= windowSize {
-				*prev = (*prev).Append(*curr).Append(*next)
+				*prev = prev.Append(*curr).Append(*next)
 				groups = groups[:len(groups)-1] // Truncate off equal group
 				continue
 			}
