@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/creds"
@@ -117,7 +118,10 @@ func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error)
 		return v1.Hash{}, errors.Wrapf(err, "Failed to verify image name: %s", image)
 	}
 
-	rOpts := []remote.Option{remote.WithTransport(http.DefaultTransport.(*http.Transport)), remote.WithAuthFromKeychain(creds.GetKeychain())}
+	transport := http.DefaultTransport.(*http.Transport)
+	platform := currentPlatform()
+
+	rOpts := []remote.Option{remote.WithTransport(transport), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
 	img, err := w.Remote(cacheRef, rOpts...)
 	if err != nil || img == nil {
 		return v1.Hash{}, errors.Wrapf(err, "Failed to retrieve image: %s", image)
@@ -150,4 +154,12 @@ func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error)
 	}
 
 	return digest, nil
+}
+
+// CurrentPlatform returns the v1.Platform on which the code runs.
+func currentPlatform() v1.Platform {
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
 }
