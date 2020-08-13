@@ -59,7 +59,7 @@ func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfi
 	isNewer := func(p string) (bool, error) {
 		fi, err := os.Stat(p)
 		if err != nil {
-			logrus.Warnf("error retrieving stat for file %s: %v", p,err)
+			logrus.Warnf("error retrieving stat for file %s: %v", p, err)
 			return false, nil
 		}
 		return fi.ModTime().After(markerInfo.ModTime()), nil
