@@ -69,7 +69,7 @@ func Image(byteSize, layers int64) (v1.Image, error) {
 			Layer: layer,
 			History: v1.History{
 				Author:    "random.Image",
-				Comment:   fmt.Sprintf("this is a random history %d", i),
+				Comment:   fmt.Sprintf("this is a random history %d of %d", i, layers),
 				CreatedBy: "random",
 				Created:   v1.Time{time.Now()},
 			},
