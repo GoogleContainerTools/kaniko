@@ -28,6 +28,12 @@ const (
 	TarBuildContextPrefix = "tar://"
 )
 
+type BuildOptions struct {
+	GitBranch            string
+	GitSingleBranch      bool
+	GitRecurseSubmodules bool
+}
+
 // BuildContext unifies calls to download and unpack the build context.
 type BuildContext interface {
 	// Unpacks a build context and returns the directory where it resides
@@ -36,7 +42,7 @@ type BuildContext interface {
 
 // GetBuildContext parses srcContext for the prefix and returns related buildcontext
 // parser
-func GetBuildContext(srcContext string) (BuildContext, error) {
+func GetBuildContext(srcContext string, opts BuildOptions) (BuildContext, error) {
 	split := strings.SplitAfter(srcContext, "://")
 	if len(split) > 1 {
 		prefix := split[0]
@@ -50,7 +56,7 @@ func GetBuildContext(srcContext string) (BuildContext, error) {
 		case constants.LocalDirBuildContextPrefix:
 			return &Dir{context: context}, nil
 		case constants.GitBuildContextPrefix:
-			return &Git{context: context}, nil
+			return &Git{context: context, opts: opts}, nil
 		case constants.HTTPSBuildContextPrefix:
 			if util.ValidAzureBlobStorageHost(srcContext) {
 				return &AzureBlob{context: srcContext}, nil

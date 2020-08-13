@@ -17,6 +17,10 @@ limitations under the License.
 package config
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -58,6 +62,47 @@ type KanikoOptions struct {
 	IgnoreVarRun            bool
 	SkipUnusedStages        bool
 	RunV2                   bool
+	Git                     KanikoGitOptions
+}
+
+type KanikoGitOptions struct {
+	Branch            string
+	SingleBranch      bool
+	RecurseSubmodules bool
+}
+
+var ErrInvalidGitFlag = errors.New("invalid git flag, must be in the key=value format")
+
+func (k *KanikoGitOptions) Type() string {
+	return "gitoptions"
+}
+
+func (k *KanikoGitOptions) String() string {
+	return fmt.Sprintf("branch=%s,single-branch=%t,recurse-submodules=%t", k.Branch, k.SingleBranch, k.RecurseSubmodules)
+}
+
+func (k *KanikoGitOptions) Set(s string) error {
+	var parts = strings.SplitN(s, "=", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("%w: %s", ErrInvalidGitFlag, s)
+	}
+	switch parts[0] {
+	case "branch":
+		k.Branch = parts[1]
+	case "single-branch":
+		v, err := strconv.ParseBool(parts[1])
+		if err != nil {
+			return err
+		}
+		k.SingleBranch = v
+	case "recurse-submodules":
+		v, err := strconv.ParseBool(parts[1])
+		if err != nil {
+			return err
+		}
+		k.RecurseSubmodules = v
+	}
+	return nil
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
