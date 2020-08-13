@@ -883,7 +883,10 @@ func UpdateInitialIgnoreList(ignoreVarRun bool) {
 	})
 }
 
-func WalkFS(dir string, existingPaths map[string]struct{}, f func(string) (bool, error)) ([]string, map[string]struct{}) {
+// WalkFS given a directory and list of existing files,
+// returns a list of changed filed determined by changeFunc and a list
+// of deleted files.
+func WalkFS(dir string, existingPaths map[string]struct{}, changeFunc func(string) (bool, error)) ([]string, map[string]struct{}) {
 	foundPaths := make([]string, 0)
 	timer := timing.Start("Walking filesystem")
 	godirwalk.Walk(dir, &godirwalk.Options{
@@ -897,7 +900,7 @@ func WalkFS(dir string, existingPaths map[string]struct{}, f func(string) (bool,
 				return nil
 			}
 			delete(existingPaths, path)
-			if t, err := f(path); err != nil {
+			if t, err := changeFunc(path); err != nil {
 				return err
 			} else if t {
 				foundPaths = append(foundPaths, path)
@@ -909,4 +912,53 @@ func WalkFS(dir string, existingPaths map[string]struct{}, f func(string) (bool,
 	)
 	timing.DefaultRun.Stop(timer)
 	return foundPaths, existingPaths
+}
+
+// GetFSInfoMap given a directory gets a map of FileInfo for all files
+func GetFSInfoMap(dir string, existing map[string]os.FileInfo) (map[string]os.FileInfo, []string) {
+	fileMap := map[string]os.FileInfo{}
+	foundPaths := []string{}
+	timer := timing.Start("Walking filesystem with Stat")
+	godirwalk.Walk(dir, &godirwalk.Options{
+		Callback: func(path string, ent *godirwalk.Dirent) error {
+			if IsInIgnoreList(path) {
+				if IsDestDir(path) {
+					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if fi, err := os.Lstat(path); err == nil {
+				if fiPrevious, ok := existing[path]; ok {
+					// check if file changed
+					if !isSame(fiPrevious, fi) {
+						fileMap[path] = fi
+						foundPaths = append(foundPaths, path)
+					}
+				} else {
+					// new path
+					fileMap[path] = fi
+					foundPaths = append(foundPaths, path)
+				}
+
+			}
+			return nil
+		},
+		Unsorted: true,
+	},
+	)
+	timing.DefaultRun.Stop(timer)
+	return fileMap, foundPaths
+}
+
+func isSame(fi1, fi2 os.FileInfo) bool {
+	return fi1.Mode() == fi2.Mode() &&
+		// file modification time
+		fi1.ModTime() == fi2.ModTime() &&
+		// file size
+		fi1.Size() == fi2.Size() &&
+		// file user id
+		uint64(fi1.Sys().(*syscall.Stat_t).Uid) == uint64(fi2.Sys().(*syscall.Stat_t).Uid) &&
+		// file group id is
+		uint64(fi1.Sys().(*syscall.Stat_t).Gid) == uint64(fi2.Sys().(*syscall.Stat_t).Gid)
 }
