@@ -17,10 +17,7 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
-	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -38,33 +35,12 @@ type RunMarkerCommand struct {
 func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// run command `touch filemarker`
 	logrus.Debugf("using new RunMarker command")
-	markerFile, err := ioutil.TempFile("", "marker")
-	if err != nil {
-		return fmt.Errorf("could not place a marker file")
-	}
-	defer func() {
-		os.Remove(markerFile.Name())
-	}()
-	markerInfo, err := os.Stat(markerFile.Name())
-	if err != nil {
-		return fmt.Errorf("could not place a marker file")
-	}
-	// introduce a delay
-	time.Sleep(time.Second)
+	prevFilesMap, _ := util.GetFSInfoMap("/", map[string]os.FileInfo{})
 	if err := runCommandInExec(config, buildArgs, r.cmd); err != nil {
 		return err
 	}
+	_, r.Files = util.GetFSInfoMap("/", prevFilesMap)
 
-	// run command find to find all new files generate
-	isNewer := func(p string) (bool, error) {
-		fi, err := os.Stat(p)
-		if err != nil {
-			logrus.Warnf("error retrieving stat for file %s: %v", p, err)
-			return false, nil
-		}
-		return fi.ModTime().After(markerInfo.ModTime()), nil
-	}
-	r.Files, _ = util.WalkFS("/", map[string]struct{}{}, isNewer)
 	logrus.Debugf("files changed %s", r.Files)
 	return nil
 }
