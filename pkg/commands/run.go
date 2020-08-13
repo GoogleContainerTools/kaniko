@@ -71,12 +71,13 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 				continue
 			}
 			oldPath := os.Getenv("PATH")
+			defer os.Setenv("PATH", oldPath)
 			os.Setenv("PATH", entry[1])
 			path, err := exec.LookPath(newCommand[0])
 			if err == nil {
 				newCommand[0] = path
 			}
-			os.Setenv("PATH", oldPath)
+			
 		}
 	}
 
