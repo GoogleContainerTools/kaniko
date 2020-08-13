@@ -21,7 +21,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -31,6 +30,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/sirupsen/logrus"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 const (
@@ -69,7 +70,6 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		options.ReferenceName = plumbing.ReferenceName(parts[1])
 	}
 
-
 	if branch := g.opts.GitBranch; branch != "" {
 		ref, err := getGitReferenceName(directory, url, branch)
 		if err != nil {
@@ -79,7 +79,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	}
 
 	logrus.Debugf("Getting source from reference %s", options.ReferenceName)
-	_, err := git.PlainClone(directory, false, &options)
+	r, err := git.PlainClone(directory, false, &options)
 
 	if err == nil && len(parts) > 2 {
 		// ... retrieving the commit being pointed by HEAD
@@ -101,7 +101,6 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 			return directory, err
 		}
 	}
-  
 	return directory, err
 }
 
