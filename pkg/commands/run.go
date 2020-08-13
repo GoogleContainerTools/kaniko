@@ -76,7 +76,7 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 			path, err := exec.LookPath(newCommand[0])
 			if err == nil {
 				newCommand[0] = path
-			}			
+			}
 		}
 	}
 
