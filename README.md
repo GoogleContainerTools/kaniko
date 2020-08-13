@@ -164,7 +164,7 @@ When running kaniko, use the `--context` flag with the appropriate prefix to spe
 | GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
 | S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
 | Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
-| Git Repository    | git://[repository url][#reference]                              | `git://github.com/acme/myproject.git#refs/heads/mybranch`     |
+| Git Repository    | git://[repository url][#reference][#commit-id]                              | `git://github.com/acme/myproject.git#refs/heads/mybranch#<desired-commit-id>`     |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
@@ -176,7 +176,9 @@ If you are using Azure Blob Storage for context file, you will need to pass [Azu
 You can use `Personal Access Tokens` for Build Contexts from Private Repositories from [GitHub](https://blog.github.com/2012-09-21-easier-builds-and-deployments-using-git-over-https-and-oauth/).
 
 You can either pass this in as part of the git URL (e.g., `git://TOKEN@github.com/acme/myproject.git#refs/heads/mybranch`)
-or using the environment variable `GIT_USERNAME`.
+or using the environment variable `GIT_TOKEN`.
+
+You can also pass `GIT_USERNAME` and `GIT_PASSWORD` (password being the token) if you want to be explicit about the username.
 
 ### Using Standard Input
 If running kaniko and using Standard Input build context, you will need to add the docker or kubernetes `-i, --interactive` flag.
@@ -201,34 +203,41 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
   "apiVersion": "v1",
   "spec": {
     "containers": [
-    {
-      "name": "kaniko",
-      "image": "gcr.io/kaniko-project/executor:latest",
-      "stdin": true,
-      "stdinOnce": true,
-      "args": [
-  	"--dockerfile=Dockerfile",
-  	"--context=tar://stdin",
-  	"--destination=gcr.io/my-repo/my-image" ],
-      "volumeMounts": [
-        {
-          "name": "cabundle",
-          "mountPath": "/kaniko/ssl/certs/"
-        },
-        {
-          "name": "docker-config",
-          "mountPath": "/kaniko/.docker/"
-      }]
-    }],
+      {
+        "name": "kaniko",
+        "image": "gcr.io/kaniko-project/executor:latest",
+        "stdin": true,
+        "stdinOnce": true,
+        "args": [
+          "--dockerfile=Dockerfile",
+          "--context=tar://stdin",
+          "--destination=gcr.io/my-repo/my-image"
+        ],
+        "volumeMounts": [
+          {
+            "name": "cabundle",
+            "mountPath": "/kaniko/ssl/certs/"
+          },
+          {
+            "name": "docker-config",
+            "mountPath": "/kaniko/.docker/"
+          }
+        ]
+      }
+    ],
     "volumes": [
-    {
-      "name": "cabundle",
-      "configMap": {
-        "name": "cabundle"}},
-    {
-      "name": "docker-config",
-      "configMap": {
-        "name": "docker-config" }}
+      {
+        "name": "cabundle",
+        "configMap": {
+          "name": "cabundle"
+        }
+      },
+      {
+        "name": "docker-config",
+        "configMap": {
+          "name": "docker-config"
+        }
+      }
     ]
   }
 }'
@@ -278,20 +287,21 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile within the build context>",
-            "--context=gs://<GCS bucket>/<path to .tar.gz>",
-            "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
+    args:
+    - "--dockerfile=<path to Dockerfile within the build context>"
+    - "--context=gs://<GCS bucket>/<path to .tar.gz>"
+    - "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"
     volumeMounts:
-      - name: kaniko-secret
-        mountPath: /secret
+    - name: kaniko-secret
+      mountPath: /secret
     env:
-      - name: GOOGLE_APPLICATION_CREDENTIALS
-        value: /secret/kaniko-secret.json
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: /secret/kaniko-secret.json
   restartPolicy: Never
   volumes:
-    - name: kaniko-secret
-      secret:
-        secretName: kaniko-secret
+  - name: kaniko-secret
+    secret:
+      secretName: kaniko-secret
 ```
 
 This example pulls the build context from a GCS bucket.
@@ -321,10 +331,10 @@ To run kaniko in GCB, add it to your build config as a build step:
 
 ```yaml
 steps:
-  - name: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile within the build context>",
-           "--context=dir://<path to build context>",
-           "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
+- name: gcr.io/kaniko-project/executor:latest
+  args: ["--dockerfile=<path to Dockerfile within the build context>",
+         "--context=dir://<path to build context>",
+         "--destination=<gcr.io/$PROJECT/$IMAGE:$TAG>"]
 ```
 
 kaniko will build and push the final image in this build step.
@@ -459,24 +469,25 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=<path to Dockerfile within the build context>",
-            "--context=s3://<bucket name>/<path to .tar.gz>",
-            "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"]
+    args:
+    - "--dockerfile=<path to Dockerfile within the build context>"
+    - "--context=s3://<bucket name>/<path to .tar.gz>"
+    - "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"
     volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker/
-      # when not using instance role
-      - name: aws-secret
-        mountPath: /root/.aws/
-  restartPolicy: Never
-  volumes:
     - name: docker-config
-      configMap:
-        name: docker-config
+      mountPath: /kaniko/.docker/
     # when not using instance role
     - name: aws-secret
-      secret:
-        secretName: aws-secret
+      mountPath: /root/.aws/
+  restartPolicy: Never
+  volumes:
+  - name: docker-config
+    configMap:
+      name: docker-config
+  # when not using instance role
+  - name: aws-secret
+    secret:
+      secretName: aws-secret
 ```
 
 ### Additional Flags

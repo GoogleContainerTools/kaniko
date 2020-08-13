@@ -149,6 +149,28 @@ func TestGetGitAuth(t *testing.T) {
 				return
 			},
 		},
+		{
+			testName: "withToken",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				token := "some-other-token"
+				_ = os.Setenv(gitAuthTokenEnvKey, token)
+				expectedValue = &http.BasicAuth{Username: token}
+				return
+			},
+		},
+		{
+			testName: "withTokenUsernamePassword",
+			setEnv: func() (expectedValue transport.AuthMethod) {
+				username := "foo-user"
+				token := "some-token-45678"
+				pass := "some-password-12345"
+				_ = os.Setenv(gitAuthUsernameEnvKey, username)
+				_ = os.Setenv(gitAuthPasswordEnvKey, pass)
+				_ = os.Setenv(gitAuthTokenEnvKey, token)
+				expectedValue = &http.BasicAuth{Username: token}
+				return
+			},
+		},
 	}
 
 	for _, tt := range tests {

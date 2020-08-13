@@ -40,6 +40,7 @@ const (
 
 	gitAuthUsernameEnvKey = "GIT_USERNAME"
 	gitAuthPasswordEnvKey = "GIT_PASSWORD"
+	gitAuthTokenEnvKey    = "GIT_TOKEN"
 )
 
 var (
@@ -68,6 +69,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		options.ReferenceName = plumbing.ReferenceName(parts[1])
 	}
 
+
 	if branch := g.opts.GitBranch; branch != "" {
 		ref, err := getGitReferenceName(directory, url, branch)
 		if err != nil {
@@ -78,6 +80,28 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 
 	logrus.Debugf("Getting source from reference %s", options.ReferenceName)
 	_, err := git.PlainClone(directory, false, &options)
+
+	if err == nil && len(parts) > 2 {
+		// ... retrieving the commit being pointed by HEAD
+		_, err := r.Head()
+		if err != nil {
+			return directory, err
+		}
+
+		w, err := r.Worktree()
+		if err != nil {
+			return directory, err
+		}
+
+		// ... checking out to desired commit
+		err = w.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(parts[2]),
+		})
+		if err != nil {
+			return directory, err
+		}
+	}
+  
 	return directory, err
 }
 
@@ -129,6 +153,11 @@ func getRecurseSubmodules(v bool) git.SubmoduleRescursivity {
 func getGitAuth() transport.AuthMethod {
 	username := os.Getenv(gitAuthUsernameEnvKey)
 	password := os.Getenv(gitAuthPasswordEnvKey)
+	token := os.Getenv(gitAuthTokenEnvKey)
+	if token != "" {
+		username = token
+		password = ""
+	}
 	if username != "" || password != "" {
 		return &http.BasicAuth{
 			Username: username,

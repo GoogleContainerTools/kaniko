@@ -16,6 +16,7 @@ package k8schain
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -39,6 +40,11 @@ type Options struct {
 	// Namespace) containing credential data to use for the image pull.
 	ImagePullSecrets []string
 }
+
+var (
+	keyring credentialprovider.DockerKeyring
+	once    sync.Once
+)
 
 // New returns a new authn.Keychain suitable for resolving image references as
 // scoped by the provided Options.  It speaks to Kubernetes through the provided
@@ -83,8 +89,12 @@ func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 		}
 	}
 
+	once.Do(func() {
+		keyring = credentialprovider.NewDockerKeyring()
+	})
+
 	// Third, extend the default keyring with the pull secrets.
-	kr, err := credentialprovidersecrets.MakeDockerKeyring(pullSecrets, credentialprovider.NewDockerKeyring())
+	kr, err := credentialprovidersecrets.MakeDockerKeyring(pullSecrets, keyring)
 	if err != nil {
 		return nil, err
 	}
