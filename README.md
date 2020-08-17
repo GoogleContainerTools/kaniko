@@ -45,6 +45,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [Caching Base Images](#caching-base-images)
   - [Pushing to Different Registries](#pushing-to-different-registries)
     - [Pushing to Docker Hub](#pushing-to-docker-hub)
+    - [Pushing to Google GCR](#pushing-to-google-gcr)
     - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
   - [Additional Flags](#additional-flags)
     - [--build-arg](#--build-arg)
@@ -419,6 +420,20 @@ Create a `config.json` file with your Docker registry url and the previous gener
 Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 
     docker run -ti --rm -v `pwd`:/workspace -v `pwd`/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
+
+#### Pushing to Google GCR
+
+To create a credentials to authenticate to Google Cloud Registry, follow these steps:
+1. Create a [service account](https://console.cloud.google.com/iam-admin/serviceaccounts) or in the Google Cloud Console project you want to push the final image to with `Storage Admin` permissions.
+2. Download a JSON key for this service account
+3. (optional) Rename the key to `kaniko-secret.json`, if you don't rename, you have to change the name used the command(in the volume part)  
+4. Run the container adding the path in GOOGLE_APPLICATION_CREDENTIALS env var   
+
+```shell
+docker run -ti --rm -e GOOGLE_APPLICATION_CREDENTIALS=/kaniko/config.json \
+-v `pwd`:/workspace -v `pwd`/kaniko-secret.json:/kaniko/config.json:ro gcr.io/kaniko-project/executor:latest \ 
+--dockerfile=Dockerfile --destination=yourimagename
+```
 
 #### Pushing to Amazon ECR
 
