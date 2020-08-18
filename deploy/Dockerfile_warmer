@@ -28,6 +28,8 @@ ADD https://aadacr.blob.core.windows.net/acr-docker-credential-helper/docker-cre
 RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-acr-linux-amd64.tar.gz
 # Add .docker config dir
 RUN mkdir -p /kaniko/.docker
+# Create empty directory to use for HOME directory
+RUN mkdir -p /emptydir
 
 COPY . .
 RUN make GOARCH=${GOARCH} out/warmer
@@ -40,6 +42,7 @@ COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credenti
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
+COPY --from=0 /emptydir /root
 ENV HOME /root
 ENV USER /root
 ENV PATH /usr/local/bin:/kaniko
