@@ -1,3 +1,97 @@
+# v1.0.0 Release 2020-08-17
+This is the 25th release of Kaniko!
+
+# New features:
+* Specify advance options for git checkout branch. [#1322](https://github.com/GoogleContainerTools/kaniko/pull/1322)
+  * To specify a branch, use `--git=branch=branchName`
+  * To specify an option to checkout a single branch, use `--git=single-branch=true`
+  * To change submodule recursions behavior while cloning, use `--git=recurse-submodules=true`
+* Checkout a specific git commit [#1153](https://github.com/GoogleContainerTools/kaniko/pull/1153)
+* Add ability to specify GIT_TOKEN for git source repository. [#1318](https://github.com/GoogleContainerTools/kaniko/pull/1318)
+* The experimental `--use-new-run` flag avoid relying on timestamp. [#1383](https://github.com/GoogleContainerTools/kaniko/pull/1383)
+
+# Bug Fixes: 
+* Set correct PATH for exec form [#1342](https://github.com/GoogleContainerTools/kaniko/pull/1342)
+* executor image: fix USER environment variable [#1364](https://github.com/GoogleContainerTools/kaniko/pull/1364)
+* fix use new run marker [#1379](https://github.com/GoogleContainerTools/kaniko/pull/1379)
+* Use current platform when fetching image in warmer [#1374](https://github.com/GoogleContainerTools/kaniko/pull/1374)
+* Bump version number mismatch [#1338](https://github.com/GoogleContainerTools/kaniko/pull/1338)
+* Bugfix: Reproducible layers with whiteout [#1350](https://github.com/GoogleContainerTools/kaniko/pull/1350)
+* prepend image name when using `registry-mirror` so `library/` is inferred [#1264](https://github.com/GoogleContainerTools/kaniko/pull/1264)
+* Add command should fail on 40x when fetching remote file [#1326](https://github.com/GoogleContainerTools/kaniko/pull/1326)
+
+# Refactors & Updates:
+* bump go-containerregistry dep [#1371](https://github.com/GoogleContainerTools/kaniko/pull/1371)
+* feat: upgrade go-git [#1319](https://github.com/GoogleContainerTools/kaniko/pull/1319)
+* Move snapshotPathPrefix into a method [#1359](https://github.com/GoogleContainerTools/kaniko/pull/1359)
+
+# Documentation:
+* Added instructions to use gcr without kubernetes [#1385](https://github.com/GoogleContainerTools/kaniko/pull/1385)
+* Format json & yaml in README [#1358](https://github.com/GoogleContainerTools/kaniko/pull/1358)
+
+
+Huge thank you for this release towards our contributors: 
+- Alex Szakaly
+- Alexander Sharov
+- Anthony Davies
+- Art Begolli
+- Batuhan Apaydın
+- Ben Einaudi
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Chris Sng
+- Christopher Hlubek
+- Cole Wippern
+- Dani Raznikov
+- Daniel Marks
+- David Dooling
+- DracoBlue
+- Gabriel Virga
+- Gilbert Gilb's
+- Giovan Isa Musthofa
+- Gábor Lipták
+- Harmen Stoppels
+- James Ravn
+- Joe Kutner
+- Jon Henrik Bjørnstad
+- Jon Johnson
+- Jordan GOASDOUE
+- Jordan Goasdoue
+- Jordan Goasdoué
+- Josh Chorlton
+- Liubov Grinkevich
+- Logan.Price
+- Lukasz Jakimczuk
+- Mehdi Abaakouk
+- Michel Hollands
+- Mitchell Friedman
+- Moritz Wanzenböck
+- Or Sela
+- PhoenixMage
+- Pierre-Louis Bonicoli
+- Renato Suero
+- Sam Stoelinga
+- Shihab Hasan
+- Takumasa Sakao
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Stromberg
+- Thomas Strömberg
+- Tom Prince
+- Vincent Latombe
+- Wietse Muizelaar
+- Yoan Blanc
+- Yoriyasu Yano
+- Yuheng Zhang
+- aca
+- cvgw
+- ohchang-kwon
+- priyawadhwa
+- tinkerborg
+- tsufeki
+- xanonid
+- yw-liu
+
 # v0.24.0 Release 2020-07-01
 This is the 24th release of Kaniko!
 
