@@ -78,6 +78,17 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, err, expectedSkiplist, actualSkiplist)
 }
 
+func Test_AddToIgnoreList(t *testing.T) {
+	AddToIgnoreList(IgnoreListEntry{
+		Path:            "/tmp",
+		PrefixMatchOnly: false,
+	})
+
+	if !CheckIgnoreList("/tmp") {
+		t.Errorf("CheckIgnoreList() = %v, want %v", false, true)
+	}
+}
+
 var tests = []struct {
 	files         map[string]string
 	directory     string
