@@ -417,10 +417,12 @@ Get your docker registry user and password encoded in base64
 
 Create a `config.json` file with your Docker registry url and the previous generated base64 string
 
+**Note:** Please use v1 endpoint. See #1209 for more details
+
 ```
 {
 	"auths": {
-		"https://index.docker.io/v2/": {
+		"https://index.docker.io/v1/": {
 			"auth": "xxxxxxxxxxxxxxx"
 		}
 	}
