@@ -90,6 +90,10 @@ func IgnoreList() []IgnoreListEntry {
 	return ignorelist
 }
 
+func AddToIgnoreList(entry IgnoreListEntry) {
+	ignorelist = append(ignorelist, entry)
+}
+
 func IncludeWhiteout() FSOpt {
 	return func(opts *FSConfig) {
 		opts.includeWhiteout = true
