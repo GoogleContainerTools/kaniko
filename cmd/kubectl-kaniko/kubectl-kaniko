@@ -1,0 +1,167 @@
+#!/bin/sh
+set -e
+
+context=""
+kubecontext=""
+kubeconfig=""
+generator=""
+node=""
+namespace=""
+digestfile=""
+imagenamewithdigestfile=""
+args="[ "
+while [ $# -gt 0 ]; do
+  key="$1"
+
+  case $key in
+  -c | --context)
+    context="$2"
+    shift
+    shift
+    ;;
+  --context=*)
+    context="${key##*=}"
+    shift
+    ;;
+  --digest-file)
+    digestfile="$2"
+    shift
+    shift
+    ;;
+  --digest-file=*)
+    digestfile="${key##*=}"
+    shift
+    ;;
+  --image-name-with-digest-file)
+    imagenamewithdigestfile="$2"
+    shift
+    shift
+    ;;
+  --image-name-with-digest-file=*)
+    imagenamewithdigestfile="${key##*=}"
+    shift
+    ;;
+  --kubecontext)
+    kubecontext="--context $2"
+    shift
+    shift
+    ;;
+  --kubecontext=*)
+    kubecontext="--context=${key##*=}"
+    shift
+    ;;
+  --kubeconfig)
+    kubeconfig="--kubeconfig $2"
+    shift
+    shift
+    ;;
+  --kubeconfig=*)
+    kubeconfig="--kubeconfig=${key##*=}"
+    shift
+    ;;
+  -n | --namespace)
+    namespace="--namespace $2"
+    shift
+    shift
+    ;;
+  --namespace=*)
+    namespace="--namespace=${key##*=}"
+    shift
+    ;;
+  *)
+    args+="\"$1\", "
+    shift
+    ;;
+  esac
+done
+
+
+if [ -n "$digestfile" ] || [ -n "$imagenamewithdigestfile" ]; then
+  args+="\"--image-name-with-digest-file=/dev/termination-log\""
+else
+  args+="\"--image-name-with-digest-file=\""
+fi
+
+if [ -z "$context" ]; then
+  args+=" ]"
+elif [ -d "$context" ]; then
+  args+=", \"--context=tar://stdin\" ]"
+else
+  args+=", \"--context=$context\" ]"
+fi
+
+image="gcr.io/kaniko-project/executor:v1.0.0"
+name="kaniko-$(env LC_ALL=C tr -dc a-z0-9 < /dev/urandom | head -c 6)"
+
+if [ -f ~/.docker/config.json ]; then
+  volumes="[{\"name\":\"docker-config\", \"secret\":{\"secretName\":\"$name\"}}]"
+  volumemounts="[{\"name\":\"docker-config\", \"mountPath\":\"/kaniko/.docker/\"}]"
+else
+  volumes="[]"
+  volumemounts="[]"
+fi
+
+overrides="$(
+  cat <<EOT
+{
+  "spec": {
+    "nodeName": "$node",
+    "hostPID": true,
+    "hostNetwork": true,
+    "containers": [
+      {
+        "securityContext": {
+          "privileged": true
+        },
+        "image": "$image",
+        "name": "kaniko",
+        "stdin": true,
+        "stdinOnce": true,
+        "terminationMessagePath": "/dev/termination-log",
+        "terminationMessagePolicy": "File",
+        "args": $args,
+        "volumeMounts": $volumemounts
+      }
+    ],
+    "volumes": $volumes
+  }
+}
+EOT
+)"
+
+# Support Kubectl <1.18
+m=$(kubectl version --client -o yaml | awk -F'[ :"]+' '$2 == "minor" {print $3+0}')
+if [ "$m" -lt 18 ]; then
+  generator="--generator=run-pod/v1"
+fi
+
+if [ -n "$context" ] && ( [ ! -d "$context" ] && [ "$context" != "tar://stdin" ] ); then
+  echo "Error: $context: Cannot open: Not a directory" >&2
+  exit 1
+fi
+
+trap "EC=\$?; kubectl delete "secret/$name" "pod/$name" --wait=false $kubecontext $kubeconfig $namespace 2>/dev/null; exit \$EC" EXIT INT TERM
+
+if [ -f ~/.docker/config.json ]; then
+  kubectl create secret generic "$name" --from-file ~/.docker/config.json
+fi
+
+echo "spawning \"$name\""
+if [ -n "$context" ] && [ "$context" != "tar://stdin" ]; then
+  tar --record-size=1M --checkpoint=1 --checkpoint-action='ttyout=Sending build context to Kaniko %{r}T\r' -C "$context" -czf - . | \
+    kubectl run --image "$image" --restart=Never --overrides="$overrides" -i "$name" $generator $kubecontext $kubeconfig $namespace
+else
+    kubectl run --image "$image" --restart=Never --overrides="$overrides" -i "$name" $generator $kubecontext $kubeconfig $namespace
+fi
+
+# Retrieve digest file
+if [ $? -eq 0 ] && ( [ -n "$digestfile" ] || [ -n "$imagenamewithdigestfile" ] ) then
+  imagenamewithdigest=$(kubectl get pod "$name" -o go-template='{{ range .status.containerStatuses }}{{ with .state.terminated.message }}{{ . }}{{ end }}{{ end }}')
+  if [ -z "$imagenamewithdigest" ]; then
+    echo "Error: termination message is missing" >&2
+    exit 2
+  fi
+  digest=${imagenamewithdigest##*@}
+  [ -z "$digestfile" ] || printf "%s" "$digest" > "$digestfile"
+  [ -z "$imagenamewithdigestfile" ] || printf "%s\n" "$imagenamewithdigest" > "$imagenamewithdigestfile"
+fi
