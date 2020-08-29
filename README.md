@@ -25,63 +25,70 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Community](#community)
-- [How does kaniko work?](#how-does-kaniko-work)
-- [Known Issues](#known-issues)
-- [Demo](#demo)
-- [Tutorial](#tutorial)
-- [Using kaniko](#using-kaniko)
-  - [kaniko Build Contexts](#kaniko-build-contexts)
-  - [Using Azure Blob Storage](#using-azure-blob-storage)
-  - [Using Private Git Repository](#using-private-git-repository)
-  - [Running kaniko](#running-kaniko)
-    - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
-      - [Kubernetes secret](#kubernetes-secret)
-    - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-    - [Running kaniko in Docker](#running-kaniko-in-docker)
-  - [Caching](#caching)
-    - [Caching Layers](#caching-layers)
-    - [Caching Base Images](#caching-base-images)
-  - [Pushing to Different Registries](#pushing-to-different-registries)
-    - [Pushing to Docker Hub](#pushing-to-docker-hub)
-    - [Pushing to Google GCR](#pushing-to-google-gcr)
-    - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
-  - [Additional Flags](#additional-flags)
-    - [--build-arg](#--build-arg)
-    - [--cache](#--cache)
-    - [--cache-dir](#--cache-dir)
-    - [--cache-repo](#--cache-repo)
-    - [--context-sub-path](#--context-sub-path)
-    - [--digest-file](#--digest-file)
-    - [--oci-layout-path](#--oci-layout-path)
-    - [--insecure-registry](#--insecure-registry)
-    - [--skip-tls-verify-registry](#--skip-tls-verify-registry)
-    - [--cleanup](#--cleanup)
-    - [--insecure](#--insecure)
-    - [--insecure-pull](#--insecure-pull)
-    - [--log-format](#--log-format)
-    - [--log-timestamp](#--log-timestamp)
-    - [--no-push](#--no-push)
-    - [--registry-certificate](#--registry-certificate)
-    - [--registry-mirror](#--registry-mirror)
-    - [--reproducible](#--reproducible)
-    - [--single-snapshot](#--single-snapshot)
-    - [--skip-tls-verify](#--skip-tls-verify)
-    - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
-    - [--snapshotMode](#--snapshotmode)
-    - [--target](#--target)
-    - [--tarPath](#--tarpath)
-    - [--verbosity](#--verbosity)
-    - [--whitelist-var-run](#--whitelist-var-run)
-    - [--label](#--label)
-    - [--skip-unused-stages](#--skip-unused-stages)
-  - [Debug Image](#debug-image)
-- [Security](#security)
-- [Comparison with Other Tools](#comparison-with-other-tools)
-- [Community](#community-1)
-- [Limitations](#limitations)
-  - [mtime and snapshotting](#mtime-and-snapshotting)
+- [kaniko - Build Images In Kubernetes](#kaniko---build-images-in-kubernetes)
+  - [Community](#community)
+  - [How does kaniko work?](#how-does-kaniko-work)
+  - [Known Issues](#known-issues)
+  - [Demo](#demo)
+  - [Tutorial](#tutorial)
+  - [Using kaniko](#using-kaniko)
+    - [kaniko Build Contexts](#kaniko-build-contexts)
+    - [Using Azure Blob Storage](#using-azure-blob-storage)
+    - [Using Private Git Repository](#using-private-git-repository)
+    - [Using Standard Input](#using-standard-input)
+    - [Running kaniko](#running-kaniko)
+      - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+        - [Kubernetes secret](#kubernetes-secret)
+      - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
+      - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
+      - [Running kaniko in Docker](#running-kaniko-in-docker)
+    - [Caching](#caching)
+      - [Caching Layers](#caching-layers)
+      - [Caching Base Images](#caching-base-images)
+    - [Pushing to Different Registries](#pushing-to-different-registries)
+      - [Pushing to Docker Hub](#pushing-to-docker-hub)
+      - [Pushing to Google GCR](#pushing-to-google-gcr)
+      - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+    - [Additional Flags](#additional-flags)
+      - [--build-arg](#--build-arg)
+      - [--cache](#--cache)
+      - [--cache-dir](#--cache-dir)
+      - [--cache-repo](#--cache-repo)
+      - [--cache-ttl duration](#--cache-ttl-duration)
+      - [--cleanup](#--cleanup)
+      - [--context-sub-path](#--context-sub-path)
+      - [--digest-file](#--digest-file)
+      - [--force](#--force)
+      - [--git](#--git)
+      - [--image-name-with-digest-file](#--image-name-with-digest-file)
+      - [--insecure](#--insecure)
+      - [--insecure-pull](#--insecure-pull)
+      - [--insecure-registry](#--insecure-registry)
+      - [--label](#--label)
+      - [--log-format](#--log-format)
+      - [--log-timestamp](#--log-timestamp)
+      - [--no-push](#--no-push)
+      - [--oci-layout-path](#--oci-layout-path)
+      - [--registry-certificate](#--registry-certificate)
+      - [--registry-mirror](#--registry-mirror)
+      - [--reproducible](#--reproducible)
+      - [--single-snapshot](#--single-snapshot)
+      - [--skip-tls-verify](#--skip-tls-verify)
+      - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
+      - [--skip-tls-verify-registry](#--skip-tls-verify-registry)
+      - [--skip-unused-stages](#--skip-unused-stages)
+      - [--snapshotMode](#--snapshotmode)
+      - [--tarPath](#--tarpath)
+      - [--target](#--target)
+      - [--use-new-run](#--use-new-run)
+      - [--verbosity](#--verbosity)
+      - [--whitelist-var-run](#--whitelist-var-run)
+    - [Debug Image](#debug-image)
+  - [Security](#security)
+  - [Comparison with Other Tools](#comparison-with-other-tools)
+  - [Community](#community-1)
+  - [Limitations](#limitations)
+    - [mtime and snapshotting](#mtime-and-snapshotting)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -157,15 +164,15 @@ gsutil cp context.tar.gz gs://<bucket name>
 
 When running kaniko, use the `--context` flag with the appropriate prefix to specify the location of your build context:
 
-|  Source | Prefix  | Example |
-|---------|---------|---------|
-| Local Directory   | dir://[path to a directory in the kaniko container]             | `dir:///workspace`                                            |
-| Local Tar Gz      | tar://[path to a .tar.gz in the kaniko container]               | `tar://path/to/context.tar.gz`                                            |
-| Standard Input    | tar://[stdin]                                                   | `tar://stdin`                                                 |
-| GCS Bucket        | gs://[bucket name]/[path to .tar.gz]                            | `gs://kaniko-bucket/path/to/context.tar.gz`                   |
-| S3 Bucket         | s3://[bucket name]/[path to .tar.gz]                            | `s3://kaniko-bucket/path/to/context.tar.gz`                   |
-| Azure Blob Storage| https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz` |
-| Git Repository    | git://[repository url][#reference][#commit-id]                              | `git://github.com/acme/myproject.git#refs/heads/mybranch#<desired-commit-id>`     |
+| Source             | Prefix                                                                | Example                                                                       |
+| ------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Local Directory    | dir://[path to a directory in the kaniko container]                   | `dir:///workspace`                                                            |
+| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar://path/to/context.tar.gz`                                                |
+| Standard Input     | tar://[stdin]                                                         | `tar://stdin`                                                                 |
+| GCS Bucket         | gs://[bucket name]/[path to .tar.gz]                                  | `gs://kaniko-bucket/path/to/context.tar.gz`                                   |
+| S3 Bucket          | s3://[bucket name]/[path to .tar.gz]                                  | `s3://kaniko-bucket/path/to/context.tar.gz`                                   |
+| Azure Blob Storage | https://[account].[azureblobhostsuffix]/[container]/[path to .tar.gz] | `https://myaccount.blob.core.windows.net/container/path/to/context.tar.gz`    |
+| Git Repository     | git://[repository url][#reference][#commit-id]                        | `git://github.com/acme/myproject.git#refs/heads/mybranch#<desired-commit-id>` |
 
 If you don't specify a prefix, kaniko will assume a local directory.
 For example, to use a GCS bucket called `kaniko-bucket`, you would pass in `--context=gs://kaniko-bucket/path/to/context.tar.gz`.
@@ -440,12 +447,12 @@ Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
 To create a credentials to authenticate to Google Cloud Registry, follow these steps:
 1. Create a [service account](https://console.cloud.google.com/iam-admin/serviceaccounts) or in the Google Cloud Console project you want to push the final image to with `Storage Admin` permissions.
 2. Download a JSON key for this service account
-3. (optional) Rename the key to `kaniko-secret.json`, if you don't rename, you have to change the name used the command(in the volume part)  
-4. Run the container adding the path in GOOGLE_APPLICATION_CREDENTIALS env var   
+3. (optional) Rename the key to `kaniko-secret.json`, if you don't rename, you have to change the name used the command(in the volume part)
+4. Run the container adding the path in GOOGLE_APPLICATION_CREDENTIALS env var
 
 ```shell
 docker run -ti --rm -e GOOGLE_APPLICATION_CREDENTIALS=/kaniko/config.json \
--v `pwd`:/workspace -v `pwd`/kaniko-secret.json:/kaniko/config.json:ro gcr.io/kaniko-project/executor:latest \ 
+-v `pwd`:/workspace -v `pwd`/kaniko-secret.json:/kaniko/config.json:ro gcr.io/kaniko-project/executor:latest \
 --dockerfile=Dockerfile --destination=yourimagename
 ```
 
@@ -535,6 +542,14 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+#### --cache-ttl duration
+
+Cache timeout in hours. Defaults to two weeks.
+
+#### --cleanup
+
+Set this flag to clean the filesystem at the end of the build.
+
 #### --context-sub-path
 
 Set a sub path within the given `--context`.
@@ -553,6 +568,47 @@ will write the digest to that file, which is picked up by
 Kubernetes automatically as the `{{.state.terminated.message}}`
 of the container.
 
+#### --force
+
+Force building outside of a container
+
+#### --git
+
+Branch to clone if build context is a git repository (default branch=,single-branch=false,recurse-submodules=false)
+
+#### --image-name-with-digest-file
+
+Specify a file to save the image name w/ digest of the built image to.
+
+#### --insecure
+
+Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --insecure-pull
+
+Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
+
+#### --insecure-registry
+
+Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
+You can set it multiple times for multiple registries.
+
+#### --label
+
+Set this flag as `--label key=value` to set some metadata to the final image. This is equivalent as using the `LABEL` within the Dockerfile.
+
+#### --log-format
+
+Set this flag as `--log-format=<text|color|json>` to set the log format. Defaults to `color`.
+
+#### --log-timestamp
+
+Set this flag as `--log-timestamp=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
+
+#### --no-push
+
+Set this flag if you only want to build the image, without pushing to a registry.
+
 #### --oci-layout-path
 
 Set this flag to specify a directory in the container where the OCI image
@@ -566,31 +622,6 @@ this flag should be set to match the image resource `outputImageDir`.
 _Note: Depending on the built image, the media type of the image manifest might be either
 `application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json`._
 
-#### --insecure-registry
-
-Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
-You can set it multiple times for multiple registries.
-
-#### --skip-tls-verify-registry
-
-Set this flag to skip TLS certificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
-You can set it multiple times for multiple registries.
-
-#### --cleanup
-
-Set this flag to clean the filesystem at the end of the build.
-
-#### --insecure
-
-Set this flag if you want to push images to a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
-
-#### --insecure-pull
-
-Set this flag if you want to pull images from a plain HTTP registry. It is supposed to be used for testing purposes only and should not be used in production!
-
-#### --no-push
-
-Set this flag if you only want to build the image, without pushing to a registry.
 
 #### --registry-certificate
 
@@ -598,9 +629,12 @@ Set this flag to provide a certificate for TLS communication with a given regist
 
 Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
+
 #### --registry-mirror
 
 Set this flag if you want to use a registry mirror instead of default `index.docker.io`.
+
+
 
 #### --reproducible
 
@@ -610,6 +644,7 @@ Set this flag to strip timestamps out of the built image and make it reproducibl
 
 This flag takes a single snapshot of the filesystem at the end of the build, so only one layer will be appended to the base image.
 
+
 #### --skip-tls-verify
 
 Set this flag to skip TLS certificate validation when pushing to a registry. It is supposed to be used for testing purposes only and should not be used in production!
@@ -618,45 +653,47 @@ Set this flag to skip TLS certificate validation when pushing to a registry. It 
 
 Set this flag to skip TLS certificate validation when pulling from a registry. It is supposed to be used for testing purposes only and should not be used in production!
 
+#### --skip-tls-verify-registry
+
+Set this flag to skip TLS certificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
+You can set it multiple times for multiple registries.
+
+#### --skip-unused-stages
+
+This flag builds only used stages if defined to `true`.
+Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile
+
 #### --snapshotMode
 
-You can set the `--snapshotMode=<full (default), time>` flag to set how kaniko will snapshot the filesystem.
-If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
+You can set the `--snapshotMode=<full (default), redo, time>` flag to set how kaniko will snapshot the filesystem.
+
+* If `--snapshot=full` is set, the full file contents and metadata are considered when snapshotting. This is the least performant option, but also the most robust.
+
+* If `--snapshotMode=redo` is set, the file mtime, size, mode, owner uid and gid will be considered when snapshotting. This may be up to 50% faster than "full", particularly if your project has a large number files.
+
+* If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
 [limitations related to mtime](#mtime-and-snapshotting)).
-
-#### --target
-
-Set this flag to indicate which build stage is the target build stage.
 
 #### --tarPath
 
 Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
 You need to set `--destination` as well (for example `--destination=image`).
 
+#### --target
+
+Set this flag to indicate which build stage is the target build stage.
+
+#### --use-new-run
+
+Use the experimental run implementation for detecting changes without requiring file system snapshots. In some cases, this may improve build performance by 75%.
+
 #### --verbosity
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set the logging level. Defaults to `info`.
 
-#### --log-format
-
-Set this flag as `--log-format=<text|color|json>` to set the log format. Defaults to `color`.
-
-#### --log-timestamp
-
-Set this flag as `--log-timestamp=<true|false>` to add timestamps to `<text|color>` log format. Defaults to `false`.
-
 #### --whitelist-var-run
 
 Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
-
-#### --label
-
-Set this flag as `--label key=value` to set some metadata to the final image. This is equivalent as using the `LABEL` within the Dockerfile.
-
-#### --skip-unused-stages
-
-This flag builds only used stages if defined to `true`.
-Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile
 
 ### Debug Image
 
