@@ -57,21 +57,33 @@ func TestDockerConfLocation(t *testing.T) {
 	if unset != unsetExpected {
 		t.Errorf("Unexpected default Docker configuration file location: expected:'%s' got:'%s'", unsetExpected, unset)
 	}
+	tmpDir, err := ioutil.TempDir("", "*")
+	if err != nil {
+		t.Fatalf("could not create temp dir: %s", err)
+	}
+	defer os.RemoveAll(tmpDir)
 
-	if err := os.Setenv(dcfg, "/kaniko/.docker"); err != nil {
+	dir := filepath.Join(tmpDir, "/kaniko/.docker")
+	os.MkdirAll(dir, os.ModePerm)
+	if err := os.Setenv(dcfg, dir); err != nil {
 		t.Fatalf("Failed to set DOCKER_CONFIG: %v", err)
 	}
 	kanikoDefault := DockerConfLocation()
-	kanikoDefaultExpected := "/kaniko/.docker/config.json" // will fail on Windows
+	kanikoDefaultExpected := filepath.Join(tmpDir, "/kaniko/.docker/config.json") // will fail on Windows
 	if kanikoDefault != kanikoDefaultExpected {
 		t.Errorf("Unexpected kaniko default Docker conf file location: expected:'%s' got:'%s'", kanikoDefaultExpected, kanikoDefault)
 	}
 
-	if err := os.Setenv(dcfg, "/a/different/path"); err != nil {
+	differentPath, err := ioutil.TempDir("", "differentPath")
+	if err != nil {
+		t.Fatalf("could not create temp dir: %s", err)
+	}
+	defer os.RemoveAll(differentPath)
+	if err := os.Setenv(dcfg, differentPath); err != nil {
 		t.Fatalf("Failed to set DOCKER_CONFIG: %v", err)
 	}
 	set := DockerConfLocation()
-	setExpected := "/a/different/path/config.json" // will fail on Windows
+	setExpected := filepath.Join(differentPath, "config.json") // will fail on Windows ?
 	if set != setExpected {
 		t.Errorf("Unexpected DOCKER_CONF-based file location: expected:'%s' got:'%s'", setExpected, set)
 	}

@@ -66,8 +66,11 @@ const (
 // "/kaniko/.docker/config.json".
 func DockerConfLocation() string {
 	configFile := "config.json"
-	if dockerConfDir := os.Getenv("DOCKER_CONFIG"); dockerConfDir != "" {
-		return filepath.Join(dockerConfDir, configFile)
+	if dockerConfig := os.Getenv("DOCKER_CONFIG"); dockerConfig != "" {
+		if file, err := os.Stat(dockerConfig); err == nil && file.IsDir() {
+			return filepath.Join(dockerConfig, configFile)
+		}
+		return filepath.Clean(dockerConfig)
 	}
 	return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
 }
