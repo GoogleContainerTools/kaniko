@@ -185,8 +185,6 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 	switch v := command.(type) {
 	case *commands.CopyCommand:
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
-	case *commands.CachingCopyCommand:
-		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
 	}
 
 	srcCtx := s.opts.SrcContext

@@ -51,6 +51,8 @@ type DockerCommand interface {
 
 	RequiresUnpackedFS() bool
 
+	// Whether the output layer of this command should be cached in and
+	// retrieved from the layer cache.
 	ShouldCacheOutput() bool
 
 	// ShouldDetectDeletedFiles returns true if the command could delete files.

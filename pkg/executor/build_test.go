@@ -797,89 +797,6 @@ func Test_stageBuilder_build(t *testing.T) {
 		func() testcase {
 			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
-			filepath := filepath.Join(dir, filename)
-
-			tarContent := generateTar(t, dir, filename)
-
-			ch := NewCompositeCache("", "")
-			ch.AddPath(filepath, "")
-
-			hash, err := ch.Hash()
-			if err != nil {
-				t.Errorf("couldn't create hash %v", err)
-			}
-			copyCommandCacheKey := hash
-			return testcase{
-				description: "copy command cache enabled and key in cache",
-				opts:        &config.KanikoOptions{Cache: true},
-				layerCache: &fakeLayerCache{
-					retrieve: true,
-					img: fakeImage{
-						ImageLayers: []v1.Layer{
-							fakeLayer{
-								TarContent: tarContent,
-							},
-						},
-					},
-				},
-				rootDir:           dir,
-				expectedCacheKeys: []string{copyCommandCacheKey},
-				// CachingCopyCommand is not pushed to the cache
-				pushedCacheKeys: []string{},
-				commands: getCommands(dir, []instructions.Command{
-					&instructions.CopyCommand{
-						SourcesAndDest: []string{
-							filename, "foo.txt",
-						},
-					},
-				}),
-				fileName: filename,
-			}
-		}(),
-		func() testcase {
-			dir, filenames := tempDirAndFile(t)
-			filename := filenames[0]
-			tarContent := []byte{}
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
-			filePath := filepath.Join(dir, filename)
-			ch := NewCompositeCache("", "")
-			ch.AddPath(filePath, "")
-
-			hash, err := ch.Hash()
-			if err != nil {
-				t.Errorf("couldn't create hash %v", err)
-			}
-			return testcase{
-				description: "copy command cache enabled and key is not in cache",
-				opts:        &config.KanikoOptions{Cache: true},
-				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
-				layerCache:  &fakeLayerCache{},
-				image: fakeImage{
-					ImageLayers: []v1.Layer{
-						fakeLayer{
-							TarContent: tarContent,
-						},
-					},
-				},
-				rootDir:           dir,
-				expectedCacheKeys: []string{hash},
-				pushedCacheKeys:   []string{hash},
-				commands: getCommands(dir, []instructions.Command{
-					&instructions.CopyCommand{
-						SourcesAndDest: []string{
-							filename, "foo.txt",
-						},
-					},
-				}),
-				fileName: filename,
-			}
-		}(),
-		func() testcase {
-			dir, filenames := tempDirAndFile(t)
-			filename := filenames[0]
 			tarContent := generateTar(t, filename)
 
 			destDir, err := ioutil.TempDir("", "baz")
@@ -887,25 +804,12 @@ func Test_stageBuilder_build(t *testing.T) {
 				t.Errorf("could not create temp dir %v", err)
 			}
 
-			filePath := filepath.Join(dir, filename)
-
 			ch := NewCompositeCache("", fmt.Sprintf("RUN foobar"))
 
 			hash1, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
-
-			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, "")
-
-			hash2, err := ch.Hash()
-			if err != nil {
-				t.Errorf("couldn't create hash %v", err)
-			}
-			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
-			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, "")
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -940,7 +844,7 @@ COPY %s bar.txt
 
 			cmds := stage.Commands
 			return testcase{
-				description: "cached run command followed by uncached copy command result in consistent read and write hashes",
+				description: "cached run command followed by copy command results in consistent read and write hashes",
 				opts:        &config.KanikoOptions{Cache: true},
 				rootDir:     dir,
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
@@ -950,9 +854,8 @@ COPY %s bar.txt
 				},
 				image: image,
 				// hash1 is the read cachekey for the first layer
-				// hash2 is the read cachekey for the second layer
-				expectedCacheKeys: []string{hash1, hash2},
-				pushedCacheKeys:   []string{hash2},
+				expectedCacheKeys: []string{hash1},
+				pushedCacheKeys:   []string{},
 				commands:          getCommands(dir, cmds),
 			}
 		}(),
@@ -960,28 +863,30 @@ COPY %s bar.txt
 			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
 			tarContent := generateTar(t, filename)
+
 			destDir, err := ioutil.TempDir("", "baz")
 			if err != nil {
 				t.Errorf("could not create temp dir %v", err)
 			}
+
 			filePath := filepath.Join(dir, filename)
-			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
+
+			ch := NewCompositeCache("", fmt.Sprintf("COPY %s bar.txt", filename))
 			ch.AddPath(filePath, "")
 
-			hash1, err := ch.Hash()
+			// copy hash
+			_, err = ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
-			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, "")
 
-			hash2, err := ch.Hash()
+			ch.AddKey(fmt.Sprintf("RUN foobar"))
+
+			// run hash
+			runHash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
-			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
-			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, "")
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -993,9 +898,9 @@ COPY %s bar.txt
 
 			dockerFile := fmt.Sprintf(`
 FROM ubuntu:16.04
-COPY %s foo.txt
 COPY %s bar.txt
-`, filename, filename)
+RUN foobar
+`, filename)
 			f, _ := ioutil.TempFile("", "")
 			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
 			opts := &config.KanikoOptions{
@@ -1012,24 +917,21 @@ COPY %s bar.txt
 				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
 			}
 			_ = ResolveCrossStageInstructions(kanikoStages)
-
 			stage := kanikoStages[0]
 
 			cmds := stage.Commands
 			return testcase{
-				description: "cached copy command followed by uncached copy command result in consistent read and write hashes",
+				description: "copy command followed by cached run command results in consistent read and write hashes",
 				opts:        &config.KanikoOptions{Cache: true},
 				rootDir:     dir,
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
 				layerCache: &fakeLayerCache{
-					keySequence: []string{hash1},
+					keySequence: []string{runHash},
 					img:         image,
 				},
-				image: image,
-				// hash1 is the read cachekey for the first layer
-				// hash2 is the read cachekey for the second layer
-				expectedCacheKeys: []string{hash1, hash2},
-				pushedCacheKeys:   []string{hash2},
+				image:             image,
+				expectedCacheKeys: []string{runHash},
+				pushedCacheKeys:   []string{},
 				commands:          getCommands(dir, cmds),
 			}
 		}(),
