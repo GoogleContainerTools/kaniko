@@ -39,15 +39,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/cache"
-	"github.com/GoogleContainerTools/kaniko/pkg/commands"
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	image_util "github.com/GoogleContainerTools/kaniko/pkg/image"
-	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
-	"github.com/GoogleContainerTools/kaniko/pkg/timing"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/kopwei/kaniko/pkg/cache"
+	"github.com/kopwei/kaniko/pkg/commands"
+	"github.com/kopwei/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/dockerfile"
+	image_util "github.com/kopwei/kaniko/pkg/image"
+	"github.com/kopwei/kaniko/pkg/snapshot"
+	"github.com/kopwei/kaniko/pkg/timing"
+	"github.com/kopwei/kaniko/pkg/util"
 )
 
 // This is the size of an empty tar in Go

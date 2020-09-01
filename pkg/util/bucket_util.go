@@ -19,7 +19,7 @@ package util
 import (
 	"strings"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/constants"
 )
 
 func GetBucketAndItem(context string) (string, string) {

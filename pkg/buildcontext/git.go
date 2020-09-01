@@ -31,7 +31,7 @@ import (
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/sirupsen/logrus"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/constants"
 )
 
 const (

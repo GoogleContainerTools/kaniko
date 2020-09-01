@@ -1,4 +1,4 @@
-module github.com/GoogleContainerTools/kaniko
+module github.com/kopwei/kaniko
 
 go 1.14
 

@@ -2,7 +2,7 @@
 
 `NOTE: Kaniko is not an officially supported Google product`
 
-[![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/GoogleContainerTools/kaniko)](https://goreportcard.com/report/github.com/GoogleContainerTools/kaniko)
+[![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/kopwei/kaniko)](https://goreportcard.com/report/github.com/kopwei/kaniko)
 
 ![kaniko logo](logo/Kaniko-Logo.png)
 
@@ -758,4 +758,4 @@ file are made and when the `mtime` is updated. This means:
   which will still be correct, but it does affect the number of layers.
 
 _Note that these issues are currently theoretical only. If you see this issue occur, please
-[open an issue](https://github.com/GoogleContainerTools/kaniko/issues)._
+[open an issue](https://github.com/kopwei/kaniko/issues)._

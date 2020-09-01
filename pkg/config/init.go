@@ -17,7 +17,7 @@ limitations under the License.
 package config
 
 import (
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/constants"
 )
 
 var RootDir string

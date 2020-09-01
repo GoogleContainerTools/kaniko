@@ -22,7 +22,7 @@ When you're ready, you can [create a PR](#creating-a-pr)!
 
 ## Checkout your fork
 
-The Go tools require that you clone the repository to the `src/github.com/GoogleContainerTools/kaniko` directory
+The Go tools require that you clone the repository to the `src/github.com/kopwei/kaniko` directory
 in your [`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 
 To check out this repository:

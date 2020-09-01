@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/kopwei/kaniko/testutil"
 )
 
 func TestGetInputFrom(t *testing.T) {

@@ -19,7 +19,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/kopwei/kaniko/testutil"
 )
 
 func TestSkipPath(t *testing.T) {

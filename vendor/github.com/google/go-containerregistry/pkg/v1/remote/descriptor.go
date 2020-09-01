@@ -265,7 +265,7 @@ func (f *fetcher) fetchManifest(ref name.Reference, acceptable []types.MediaType
 	// but so many registries implement this incorrectly that it's not worth checking.
 	//
 	// For reference:
-	// https://github.com/GoogleContainerTools/kaniko/issues/298
+	// https://github.com/kopwei/kaniko/issues/298
 
 	// Return all this info since we have to calculate it anyway.
 	desc := v1.Descriptor{

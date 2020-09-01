@@ -92,7 +92,7 @@ Yes, it should be added.
 
 \<Adding ancestor directories\>
 
-According to [this comment](https://github.com/GoogleContainerTools/kaniko/blob/1e9f525509d4e6a066a6e07ab9afbef69b3a3b2c/pkg/snapshot/snapshot.go#L193)
+According to [this comment](https://github.com/kopwei/kaniko/blob/1e9f525509d4e6a066a6e07ab9afbef69b3a3b2c/pkg/snapshot/snapshot.go#L193)
 the ancestor directories (parent, grandparent, etc) must also be added to the
 layer to preserve the permissions on those directories. This brings into
 question whether any filtering needs to happen on these ancestors. IIUC the

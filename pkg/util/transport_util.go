@@ -23,7 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 

@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/kopwei/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )

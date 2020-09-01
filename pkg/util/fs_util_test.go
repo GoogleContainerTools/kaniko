@@ -30,9 +30,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
-	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/kopwei/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/mocks/go-containerregistry/mockv1"
+	"github.com/kopwei/kaniko/testutil"
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"

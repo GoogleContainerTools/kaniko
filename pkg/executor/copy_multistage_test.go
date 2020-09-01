@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/kopwei/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/testutil"
 )
 
 func TestCopyCommand_Multistage(t *testing.T) {

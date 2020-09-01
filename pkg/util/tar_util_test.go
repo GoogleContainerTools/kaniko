@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/kopwei/kaniko/testutil"
 )
 
 var regularFiles = []string{"file", "file.tar", "file.tar.gz"}

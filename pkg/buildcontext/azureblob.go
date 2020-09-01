@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/kopwei/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/util"
 )
 
 // AzureBlob struct for Azure Blob Storage processing

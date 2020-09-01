@@ -16,7 +16,7 @@
 
 FROM golang:1.14
 ARG GOARCH=amd64
-WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
+WORKDIR /go/src/github.com/kopwei/kaniko
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v2.0.1/docker-credential-gcr_linux_amd64-2.0.1.tar.gz /usr/local/bin/
 RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-2.0.1.tar.gz
@@ -33,7 +33,7 @@ COPY . .
 RUN make GOARCH=${GOARCH} out/warmer
 
 FROM scratch
-COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
+COPY --from=0 /go/src/github.com/kopwei/kaniko/out/warmer /kaniko/warmer
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr

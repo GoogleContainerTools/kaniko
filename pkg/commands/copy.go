@@ -22,13 +22,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
+	kConfig "github.com/kopwei/kaniko/pkg/config"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/kopwei/kaniko/pkg/dockerfile"
+	"github.com/kopwei/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 

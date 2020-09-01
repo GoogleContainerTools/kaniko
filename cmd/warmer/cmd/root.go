@@ -21,9 +21,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/cache"
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/logging"
+	"github.com/kopwei/kaniko/pkg/cache"
+	"github.com/kopwei/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

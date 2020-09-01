@@ -39,8 +39,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+	"github.com/kopwei/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/timing"
 )
 
 const DoNotChangeUID = -1

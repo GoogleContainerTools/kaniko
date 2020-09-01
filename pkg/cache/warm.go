@@ -25,8 +25,8 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/creds"
+	"github.com/kopwei/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/creds"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -98,7 +98,7 @@ func writeBufsToFile(cachePath string, tarBuf, manifestBuf *bytes.Buffer) error 
 type FetchRemoteImage func(name.Reference, ...remote.Option) (v1.Image, error)
 
 // FetchLocalSource retrieves a Docker image manifest from a local source.
-// github.com/GoogleContainerTools/kaniko/cache.LocalSource can be used as
+// github.com/kopwei/kaniko/cache.LocalSource can be used as
 // this type.
 type FetchLocalSource func(*config.CacheOptions, string) (v1.Image, error)
 

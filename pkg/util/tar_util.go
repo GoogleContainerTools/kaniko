@@ -28,7 +28,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/config"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

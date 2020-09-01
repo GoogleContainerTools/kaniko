@@ -19,7 +19,7 @@ package util
 import (
 	"regexp"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/kopwei/kaniko/pkg/constants"
 )
 
 // Validate if the host url provided is with correct suffix for AzureCloud, AzureChinaCloud, AzureGermanCloud and AzureUSGovernment

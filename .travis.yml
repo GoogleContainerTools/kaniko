@@ -6,7 +6,7 @@ env:
     - IMAGE_REPO=localhost:5000 REGISTRY=localhost:5000
 go:
   - "1.14"
-go_import_path: github.com/GoogleContainerTools/kaniko
+go_import_path: github.com/kopwei/kaniko
 jobs:
   include:
     - name: unit-test

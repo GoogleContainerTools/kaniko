@@ -19,7 +19,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/version"
+	"github.com/kopwei/kaniko/pkg/version"
 	"github.com/spf13/cobra"
 )
 

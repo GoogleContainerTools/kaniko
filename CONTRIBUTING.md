@@ -65,6 +65,6 @@ Thanks so much for considering contributing to our project!! We hope very much y
 interesting to work on:
 
 - To find issues that we particularly would like contributors to tackle, look for
-  [issues with the "help wanted" label](https://github.com/GoogleContainerTools/kaniko/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
+  [issues with the "help wanted" label](https://github.com/kopwei/kaniko/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
 - Issues that are good for new folks will additionally be marked with
-  ["good first issue"](https://github.com/GoogleContainerTools/kaniko/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+  ["good first issue"](https://github.com/kopwei/kaniko/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).

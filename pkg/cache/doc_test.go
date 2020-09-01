@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/kopwei/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
