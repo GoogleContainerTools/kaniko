@@ -10,23 +10,20 @@ replace (
 )
 
 require (
-	cloud.google.com/go v0.57.0 // indirect
 	cloud.google.com/go/storage v1.8.0
-	github.com/Azure/azure-pipeline-go v0.2.2 // indirect
 	github.com/Azure/azure-storage-blob-go v0.8.0
 	github.com/aws/aws-sdk-go v1.31.6
-	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
+	github.com/docker/docker v17.12.0-ce-rc1.0.20190319215453-e7b5f7dbe98c+incompatible
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
 	github.com/docker/swarmkit v1.12.1-0.20180726190244-7567d47988d8 // indirect
 	github.com/genuinetools/amicontained v0.4.3
+	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/golang/mock v1.4.3
 	github.com/google/go-cmp v0.4.1
 	github.com/google/go-containerregistry v0.1.2-0.20200804170047-b0d31a182cf0
 	github.com/google/go-github v17.0.0+incompatible
-	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/hashicorp/go-memdb v0.0.0-20180223233045-1289e7fffe71 // indirect
-	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/karrick/godirwalk v1.7.7
 	github.com/minio/highwayhash v1.0.0
 	github.com/moby/buildkit v0.0.0-20191111154543-00bfbab0390c
