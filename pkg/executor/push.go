@@ -101,7 +101,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
-		if checked[destRef.Context().RepositoryStr()] {
+		if checked[destRef.Context().String()] {
 			continue
 		}
 
@@ -130,7 +130,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if err := checkRemotePushPermission(destRef, creds.GetKeychain(), tr); err != nil {
 			return errors.Wrapf(err, "checking push permission for %q", destRef)
 		}
-		checked[destRef.Context().RepositoryStr()] = true
+		checked[destRef.Context().String()] = true
 	}
 	return nil
 }
