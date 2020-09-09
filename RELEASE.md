@@ -1,0 +1,76 @@
+# Kaniko Release Process
+
+This document explains the Kaniko release process.
+
+Kaniko is not an officially supported Google product. Kaniko is maintained by Google.
+
+## Getting write access to the Kaniko Project
+In order to kick off kaniko release, you need to write access to Kaniko project.
+
+To get write access, please ping one of the [Kaniko Mantainers](https://github.com/orgs/GoogleContainerTools/teams/kaniko-maintainers/members). 
+
+Once you have the correct access, you can kick off a release.
+
+
+## Kicking of a release.
+
+1. Create a release PR and update Changelog.
+
+    In order to release a new version of Kaniko, you will need to first
+
+    a. Create a new branch and bump the kaniko version in [Makefile](https://github.com/GoogleContainerTools/kaniko/blob/master/Makefile#L16)
+
+
+    In most cases, you will need to bump the `VERSION_MINOR` number.
+    In case you are doing a patch release for a hot fix, bump the `VERSION_BUILD` number.
+
+    b. Run the [script](https://github.com/GoogleContainerTools/kaniko/blob/master/hack/release.sh) to create release notes.
+    ```
+    ./hack/release.sh
+    Collecting pull request that were merged since the last release: v1.0.0 (2020-08-18 02:53:46 +0000 UTC)
+    * change repo string to just string [#1417](https://github.com/GoogleContainerTools/kaniko/pull/1417)
+    * Improve --use-new-run help text, update README with missing flags [#1405](https://github.com/GoogleContainerTools/kaniko/pull/1405)
+    ...
+    Huge thank you for this release towards our contributors: 
+    - Alex Szakaly
+    - Alexander Sharov
+    ```
+    Copy the release notes and update the [CHANGELOG.md](https://github.com/GoogleContainerTools/kaniko/blob/master/CHANGELOG.md) at the root of the repository. 
+
+    c. Create a pull request like [this](https://github.com/GoogleContainerTools/kaniko/pull/1388) and get it approved from Kaniko maintainers.
+
+2. Once the PR is approved and merged, create a release tag with name `vX.Y.Z` where
+    ```
+    X corresponds to VERSION_MAJOR
+    Y corresponds to VERSION_MINOR
+    Z corresponds to VERSION_BUILD
+    ```
+    E.g. to release 1.2.0 version of kaniko, please create a tag v1.2.0 like this
+    ```
+    git pull remote master
+    git tag v1.2.0
+    git push remote v1.2.0
+    ```
+3.  Pushing a tag to remote with above naming convention will trigger the Google Cloud Build release trigger set up for [`kaniko-project`](https://pantheon.corp.google.com/cloud-build/triggers/edit/762dd3f7-fac0-41a0-812a-539a2d1ff7e1?project=kaniko-project)
+If you are not a member of this projects no need to worry. This trigger will take about 10-15 mins to execute and create 6 new images
+```
+gcr.io/kaniko-project/executor:latest
+gcr.io/kaniko-project/executor:vX.Y.Z
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:debug-vX.Y.Z
+gcr.io/kaniko-project/executor:warmer
+gcr.io/kaniko-project/executor:warmer-vX.Y.Z
+```
+You could verify if the images are published using the `docker pull` command
+```
+docker pull gcr.io/kaniko-project/executor:warmer-vX.Y.Z
+```
+In case the images are still not published, ping one of the kaniko manintainers and they will provide the cloud build trigger logs.
+You can also request read access to the Google `kaniko-project`.
+
+4. Finally, once the images are published, create a release for the newly created [tag](https://github.com/GoogleContainerTools/kaniko/tags) and publish it. 
+Summarize the change log to mention, 
+- new features added if any
+- bug fixes, 
+- refactors and 
+- documentation changes
