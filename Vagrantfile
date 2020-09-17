@@ -16,6 +16,7 @@ Vagrant.configure("2") do |config|
       python \
       wget \
       ca-certificates \
+      jq \
       software-properties-common
     curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
     add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
@@ -44,5 +45,6 @@ Vagrant.configure("2") do |config|
     docker run --rm  -d -p 5000:5000 --name registry -e DEBUG=true registry:2
     echo 'export IMAGE_REPO=localhost:5000' > /etc/profile.d/local-registry.sh
     chmod a+x /etc/profile.d/local-registry.sh
+    go get github.com/google/go-containerregistry/cmd/crane
   SHELL
 end
