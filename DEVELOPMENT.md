@@ -55,6 +55,9 @@ While you iterate on kaniko, you can verify images built with kaniko by:
 
 kaniko has both [unit tests](#unit-tests) and [integration tests](#integration-tests).
 
+Please note that the tests require a Linux machine - use Vagrant to quickly set
+up the test environment needed if you work with macOS or Windows.
+
 ### Unit Tests
 
 The unit tests live with the code they test and can be run with:
