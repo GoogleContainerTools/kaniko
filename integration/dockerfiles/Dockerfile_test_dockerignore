@@ -7,5 +7,13 @@ COPY ignore/* /foo
 From base as first
 COPY --from=base /foo ignore/bar
 
-FROM first
+# Make sure that .dockerignore also applies for later stages
+FROM scratch as base2
+COPY ignore/* /foo
+
+From base2 as second
+COPY --from=base2 /foo ignore/bar
+
+FROM scratch
 COPY --from=first ignore/* /fooAnother/
+COPY --from=second ignore/* /fooAnother2/
