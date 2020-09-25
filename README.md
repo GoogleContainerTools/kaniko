@@ -1,6 +1,6 @@
 # kaniko - Build Images In Kubernetes
 
-`NOTE: Kaniko is not an officially supported Google product`
+`NOTE: kaniko is not an officially supported Google product`
 
 [![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/GoogleContainerTools/kaniko)](https://goreportcard.com/report/github.com/GoogleContainerTools/kaniko)
 
@@ -15,7 +15,7 @@ kaniko is meant to be run as an image: `gcr.io/kaniko-project/executor`. We do *
 
 We'd love to hear from you!  Join us on [#kaniko Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
 
-:mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with Kaniko, and what improvements we should make. Thank you! :dancers:
+:mega: **Please fill out our [quick 5-question survey](https://forms.gle/HhZGEM33x4FUz9Qa6)** so that we can learn how satisfied you are with kaniko, and what improvements we should make. Thank you! :dancers:
 
 
 _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md)._
@@ -354,7 +354,7 @@ Requirements:
 
 We can run the kaniko executor image locally in a Docker daemon to build and push an image from a Dockerfile.
 
-For example, when using gcloud and GCR you could run Kaniko as follows:
+For example, when using gcloud and GCR you could run kaniko as follows:
 ```shell
 docker run \
     -v "$HOME"/.config/gcloud:/root/.config/gcloud \
@@ -560,7 +560,7 @@ and you want to build one of its subfolders instead of the root folder.
 
 Set this flag to specify a file in the container. This file will
 receive the digest of a built image. This can be used to
-automatically track the exact image built by Kaniko.
+automatically track the exact image built by kaniko.
 
 For example, setting the flag to `--digest-file=/dev/termination-log`
 will write the digest to that file, which is picked up by
@@ -612,7 +612,7 @@ Set this flag if you only want to build the image, without pushing to a registry
 
 Set this flag to specify a directory in the container where the OCI image
 layout of a built image will be placed. This can be used to automatically
-track the exact image built by Kaniko.
+track the exact image built by kaniko.
 
 For example, to surface the image digest built in a
 [Tekton task](https://github.com/tektoncd/pipeline/blob/v0.6.0/docs/resources.md#surfacing-the-image-digest-built-in-a-task),
@@ -718,9 +718,9 @@ The minimum permissions kaniko needs inside your container are governed by a few
 
 If you have a minimal base image (SCRATCH or similar) that doesn't require
 permissions to unpack, and your Dockerfile doesn't execute any commands as the
-root user, you can run Kaniko without root permissions. It should be noted that
+root user, you can run kaniko without root permissions. It should be noted that
 Docker runs as root by default, so you still require (in a sense) privileges to
-use Kaniko.
+use kaniko.
 
 You may be able to achieve the same default seccomp profile that Docker uses in your Pod by setting [seccomp](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp) profiles with annotations on a [PodSecurityPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/pod-security-policies) to create or update security policies on your cluster.
 
