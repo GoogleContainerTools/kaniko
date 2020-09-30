@@ -333,16 +333,16 @@ func TestImageNameDigestFile(t *testing.T) {
 
 }
 
-var calledExecCommand = false
+var calledExecCommand = []bool{}
 var calledCheckPushPermission = false
 
 func setCalledFalse() {
-	calledExecCommand = false
+	calledExecCommand = []bool{}
 	calledCheckPushPermission = false
 }
 
 func fakeExecCommand(command string, args ...string) *exec.Cmd {
-	calledExecCommand = true
+	calledExecCommand = append(calledExecCommand, true)
 	cs := []string{"-test.run=TestHelperProcess", "--", command}
 	cs = append(cs, args...)
 	cmd := exec.Command(os.Args[0], cs...)
@@ -357,39 +357,61 @@ func fakeCheckPushPermission(ref name.Reference, kc authn.Keychain, t http.Round
 
 func TestCheckPushPermissions(t *testing.T) {
 	tests := []struct {
-		Destination           string
-		ShouldCallExecCommand bool
+		description           string
+		Destination           []string
+		ShouldCallExecCommand []bool
 		ExistingConfig        bool
 	}{
-		{"gcr.io/test-image", true, false},
-		{"gcr.io/test-image", false, true},
-		{"us-docker.pkg.dev/test-image", true, false},
-		{"us-docker.pkg.dev/test-image", false, true},
-		{"localhost:5000/test-image", false, false},
-		{"localhost:5000/test-image", false, true},
-		{"notgcr.io/test-image", false, false},
-		{"notgcr.io/test-image", false, true},
+		{"a gcr image without config", []string{"gcr.io/test-image"}, []bool{true}, false},
+		{"a gcr image with config", []string{"gcr.io/test-image"}, []bool{false}, true},
+		{"a pkg.dev image without config", []string{"us-docker.pkg.dev/test-image"}, []bool{true}, false},
+		{"a pkg.dev image with config", []string{"us-docker.pkg.dev/test-image"}, []bool{false}, true},
+		{"localhost registry with config", []string{"localhost:5000/test-image"}, []bool{false}, false},
+		{"localhost registry without config", []string{"localhost:5000/test-image"}, []bool{false}, true},
+		{"any other registry", []string{"notgcr.io/test-image"}, []bool{false}, false},
+		{"multiple destinations pushed to different registry",
+			[]string{
+				"us-central1-docker.pkg.dev/prj/test-image",
+				"us-west-docker.pkg.dev/prj/test-image",
+			},
+			[]bool{true, true}, false,
+		},
+		{"same image names with different tags",
+			[]string{
+				"us-central1-docker.pkg.dev/prj/test-image:tag1",
+				"us-central1-docker.pkg.dev/prj/test-image:tag2",
+			},
+			[]bool{true, true}, false,
+		},
+		{"same destination image multiple times",
+			[]string{
+				"us-central1-docker.pkg.dev/prj/test-image",
+				"us-central1-docker.pkg.dev/prj/test-image",
+			},
+			[]bool{true, false}, false,
+		},
 	}
 
 	execCommand = fakeExecCommand
 	checkRemotePushPermission = fakeCheckPushPermission
 	for _, test := range tests {
-		testName := fmt.Sprintf("%s_ExistingDockerConf_%v", test.Destination, test.ExistingConfig)
-		t.Run(testName, func(t *testing.T) {
+		t.Run(test.description, func(t *testing.T) {
+			setCalledFalse()
 			fs = afero.NewMemMapFs()
 			opts := config.KanikoOptions{
-				Destinations: []string{test.Destination},
+				Destinations: test.Destination,
 			}
 			if test.ExistingConfig {
 				afero.WriteFile(fs, DockerConfLocation(), []byte(""), os.FileMode(0644))
 				defer fs.Remove(DockerConfLocation())
 			}
 			CheckPushPermissions(&opts)
-			if test.ShouldCallExecCommand != calledExecCommand {
-				t.Errorf("Expected calledExecCommand to be %v however it was %v",
-					calledExecCommand, test.ShouldCallExecCommand)
+			for i, shdCall := range test.ShouldCallExecCommand {
+				if i < len(calledExecCommand) && shdCall != calledExecCommand[i] {
+					t.Errorf("Expected calledExecCommand to be %v however it was %v",
+						calledExecCommand, shdCall)
+				}
 			}
-			setCalledFalse()
 		})
 	}
 }
