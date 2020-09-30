@@ -17,6 +17,7 @@ limitations under the License.
 package executor
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -96,6 +97,8 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	}
 
 	checked := map[string]bool{}
+	_, err := fs.Stat(DockerConfLocation())
+	dockerConfNotExists := os.IsNotExist(err)
 	for _, destination := range opts.Destinations {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
@@ -112,11 +115,16 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		if registryName == "gcr.io" || strings.HasSuffix(registryName, ".gcr.io") || strings.HasSuffix(registryName, ".pkg.dev") {
 			// Checking for existence of docker.config as it's normally required for
 			// authenticated registries and prevent overwriting user provided docker conf
-			if _, err := fs.Stat(DockerConfLocation()); os.IsNotExist(err) {
+			if dockerConfNotExists {
 				flags := fmt.Sprintf("--registries=%s", registryName)
-				if err := execCommand("docker-credential-gcr", "configure-docker", flags).Run(); err != nil {
-					return errors.Wrap(err, "error while configuring docker-credential-gcr helper")
+				cmd := execCommand("docker-credential-gcr", "configure-docker", flags)
+				var out bytes.Buffer
+				cmd.Stderr = &out
+				if err := cmd.Run(); err != nil {
+					return errors.Wrap(err, fmt.Sprintf("error while configuring docker-credential-gcr helper: %s : %s", cmd.String(), out.String()))
 				}
+			} else {
+				logrus.Warnf("\nSkip running docker-credentials-gcr as user provided docker configuration exists at %s", DockerConfLocation())
 			}
 		}
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
