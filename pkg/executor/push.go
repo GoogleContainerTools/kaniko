@@ -124,7 +124,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 					return errors.Wrap(err, fmt.Sprintf("error while configuring docker-credential-gcr helper: %s : %s", cmd.String(), out.String()))
 				}
 			} else {
-				logrus.Warnf("\nSkip running docker-credentials-gcr as user provided docker configuration exists at %s", DockerConfLocation())
+				logrus.Warnf("\nSkip running docker-credential-gcr as user provided docker configuration exists at %s", DockerConfLocation())
 			}
 		}
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
