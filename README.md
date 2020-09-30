@@ -666,7 +666,7 @@ Otherwise it builds by default all stages, even the unnecessaries ones until it 
 
 You can set the `--snapshotMode=<full (default), redo, time>` flag to set how kaniko will snapshot the filesystem.
 
-* If `--snapshot=full` is set, the full file contents and metadata are considered when snapshotting. This is the least performant option, but also the most robust.
+* If `--snapshotMode=full` is set, the full file contents and metadata are considered when snapshotting. This is the least performant option, but also the most robust.
 
 * If `--snapshotMode=redo` is set, the file mtime, size, mode, owner uid and gid will be considered when snapshotting. This may be up to 50% faster than "full", particularly if your project has a large number files.
 
