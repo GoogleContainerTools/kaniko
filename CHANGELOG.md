@@ -1,3 +1,96 @@
+# v1.1.0 Release 2020-08-17
+This is the 26th release of Kaniko!
+
+# New features
+* Add support for Vagrant [#1428](https://github.com/GoogleContainerTools/kaniko/pull/1428)
+* Allow DOCKER_CONFIG to be a filename [#1409](https://github.com/GoogleContainerTools/kaniko/pull/1409)
+
+# Bug fixes
+* Fix docker-credential-gcr helper being called for multiple registries [#1439](https://github.com/GoogleContainerTools/kaniko/pull/1439)
+* Fix docker-credential-gcr not configured across regions[#1417](https://github.com/GoogleContainerTools/kaniko/pull/1417)
+
+# Updates and Refactors
+* add tests for configuring docker credentials across regions. [#1426](https://github.com/GoogleContainerTools/kaniko/pull/1426)
+
+# Documentation
+* Update README.md [#1437](https://github.com/GoogleContainerTools/kaniko/pull/1437)
+* spelling: storage [#1425](https://github.com/GoogleContainerTools/kaniko/pull/1425)
+* Readme.md : Kaniko -> kaniko [#1435](https://github.com/GoogleContainerTools/kaniko/pull/1435)
+* initial release instructions [#1419](https://github.com/GoogleContainerTools/kaniko/pull/1419)
+* Improve --use-new-run help text, update README with missing flags [#1405](https://github.com/GoogleContainerTools/kaniko/pull/1405)
+* Add func to append to ignorelist [#1397](https://github.com/GoogleContainerTools/kaniko/pull/1397)
+* Update README.md re: layer cache behavior [#1394](https://github.com/GoogleContainerTools/kaniko/pull/1394)
+* Fix links on README [#1398](https://github.com/GoogleContainerTools/kaniko/pull/1398)
+
+Huge thank you for this release towards our contributors: 
+- aca
+- Akram Ben Aissi
+- Alexander Sharov
+- Alex Szakaly
+- Anthony Davies
+- Art Begolli
+- Batuhan Apaydın
+- Ben Einaudi
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Chris Sng
+- Christopher Hlubek
+- Cole Wippern
+- cvgw
+- Daniel Marks
+- Dani Raznikov
+- David Dooling
+- Didier Durand
+- DracoBlue
+- Gábor Lipták
+- Gabriel Virga
+- Gilbert Gilb's
+- Giovan Isa Musthofa
+- Harmen Stoppels
+- Ian Kerins
+- James Ravn
+- Joe Kutner
+- Jon Henrik Bjørnstad
+- Jon Johnson
+- Jordan Goasdoue
+- Jordan GOASDOUE
+- Jordan Goasdoué
+- Josh Chorlton
+- Josh Soref
+- Keisuke Umegaki
+- Liubov Grinkevich
+- Logan.Price
+- Lukasz Jakimczuk
+- Martin Treusch von Buttlar
+- Mehdi Abaakouk
+- Michel Hollands
+- Mitchell Friedman
+- Moritz Wanzenböck
+- ohchang-kwon
+- Or Sela
+- PhoenixMage
+- Pierre-Louis Bonicoli
+- priyawadhwa
+- Renato Suero
+- Sam Stoelinga
+- Shihab Hasan
+- Takumasa Sakao
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Stromberg
+- Thomas Strömberg
+- tinkerborg
+- Tom Prince
+- tsufeki
+- Vincent Latombe
+- Wietse Muizelaar
+- xanonid
+- Yoan Blanc
+- Yoriyasu Yano
+- Yuheng Zhang
+- yw-liu
+- 好风
+
 # v1.0.0 Release 2020-08-17
 This is the 25th release of Kaniko!
 
