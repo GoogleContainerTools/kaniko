@@ -1,4 +1,13 @@
-# v1.1.0 Release 2020-08-17
+# v1.2.0 Release 2020-09-30
+This is 27th release of Kaniko!
+
+In this release, Copy layers are not cached there by making builds faster!! 
+* Stop caching COPY layers [#1408](https://github.com/GoogleContainerTools/kaniko/pull/1408)
+
+Huge thank you for this release towards our contributors: 
+- Ian Kerins
+
+# v1.1.0 Release 2020-09-30
 This is the 26th release of Kaniko!
 
 # New features
