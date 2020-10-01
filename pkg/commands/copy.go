@@ -17,7 +17,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,88 +141,8 @@ func (c *CopyCommand) RequiresUnpackedFS() bool {
 	return true
 }
 
-func (c *CopyCommand) ShouldCacheOutput() bool {
-	return true
-}
-
-// CacheCommand returns true since this command should be cached
-func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
-
-	return &CachingCopyCommand{
-		img:          img,
-		cmd:          c.cmd,
-		buildcontext: c.buildcontext,
-		extractFn:    util.ExtractFile,
-	}
-}
-
 func (c *CopyCommand) From() string {
 	return c.cmd.From
-}
-
-type CachingCopyCommand struct {
-	BaseCommand
-	caching
-	img            v1.Image
-	extractedFiles []string
-	cmd            *instructions.CopyCommand
-	buildcontext   string
-	extractFn      util.ExtractFunction
-}
-
-func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Infof("Found cached layer, extracting to filesystem")
-	var err error
-
-	if cr.img == nil {
-		return errors.New(fmt.Sprintf("cached command image is nil %v", cr.String()))
-	}
-
-	layers, err := cr.img.Layers()
-	if err != nil {
-		return errors.Wrapf(err, "retrieve image layers")
-	}
-
-	if len(layers) != 1 {
-		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
-	}
-
-	cr.layer = layers[0]
-	cr.extractedFiles, err = util.GetFSFromLayers(kConfig.RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
-
-	logrus.Debugf("extractedFiles: %s", cr.extractedFiles)
-	if err != nil {
-		return errors.Wrap(err, "extracting fs from image")
-	}
-
-	return nil
-}
-
-func (cr *CachingCopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
-	return copyCmdFilesUsedFromContext(config, buildArgs, cr.cmd, cr.buildcontext)
-}
-
-func (cr *CachingCopyCommand) FilesToSnapshot() []string {
-	f := cr.extractedFiles
-	logrus.Debugf("%d files extracted by caching copy command", len(f))
-	logrus.Tracef("Extracted files: %s", f)
-
-	return f
-}
-
-func (cr *CachingCopyCommand) MetadataOnly() bool {
-	return false
-}
-
-func (cr *CachingCopyCommand) String() string {
-	if cr.cmd == nil {
-		return "nil command"
-	}
-	return cr.cmd.String()
-}
-
-func (cr *CachingCopyCommand) From() string {
-	return cr.cmd.From
 }
 
 func resolveIfSymlink(destPath string) (string, error) {

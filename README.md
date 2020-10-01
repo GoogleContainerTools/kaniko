@@ -384,7 +384,7 @@ as a remote image destination:
 ### Caching
 
 #### Caching Layers
-kaniko can cache layers created by `RUN` and `COPY` commands in a remote repository.
+kaniko can cache layers created by `RUN` commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
