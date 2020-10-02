@@ -102,14 +102,17 @@ var (
 // CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
+	var targets = opts.Destinations
+	// When no push is set, whe want to check permissions for the cache repo
+	// instead of the destinations
 	if opts.NoPush {
-		return nil
+		targets = []string{opts.CacheRepo}
 	}
 
 	checked := map[string]bool{}
 	_, err := fs.Stat(DockerConfLocation())
 	dockerConfNotExists := os.IsNotExist(err)
-	for _, destination := range opts.Destinations {
+	for _, destination := range targets {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
