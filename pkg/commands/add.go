@@ -32,7 +32,7 @@ import (
 type AddCommand struct {
 	BaseCommand
 	cmd           *instructions.AddCommand
-	buildcontext  string
+	fileContext   util.FileContext
 	snapshotFiles []string
 }
 
@@ -52,7 +52,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 		return errors.Wrap(err, "getting user group from chown")
 	}
 
-	srcs, dest, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
+	srcs, dest, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.fileContext, replacementEnvs)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	//	1. Download and copy it to the specified dest
 	// Else, add to the list of unresolved sources
 	for _, src := range srcs {
-		fullPath := filepath.Join(a.buildcontext, src)
+		fullPath := filepath.Join(a.fileContext.Root, src)
 		if util.IsSrcRemoteFileURL(src) {
 			urlDest, err := util.URLDestinationFilepath(src, dest, config.WorkingDir, replacementEnvs)
 			if err != nil {
@@ -101,7 +101,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			SourcesAndDest: append(unresolvedSrcs, dest),
 			Chown:          a.cmd.Chown,
 		},
-		buildcontext: a.buildcontext,
+		fileContext: a.fileContext,
 	}
 
 	if err := copyCmd.ExecuteCommand(config, buildArgs); err != nil {
@@ -124,7 +124,7 @@ func (a *AddCommand) String() string {
 func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, _, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.buildcontext, replacementEnvs)
+	srcs, _, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.fileContext, replacementEnvs)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfi
 		if util.IsFileLocalTarArchive(src) {
 			continue
 		}
-		fullPath := filepath.Join(a.buildcontext, src)
+		fullPath := filepath.Join(a.fileContext.Root, src)
 		files = append(files, fullPath)
 	}
 

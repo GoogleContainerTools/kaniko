@@ -74,8 +74,10 @@ var ignorelist = initialIgnoreList
 
 var volumes = []string{}
 
-var excluded []string
-var IsFirstStage = true
+type FileContext struct {
+	Root          string
+	ExcludedFiles []string
+}
 
 type ExtractFunction func(string, *tar.Header, io.Reader) error
 
@@ -581,7 +583,7 @@ func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64)
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
+func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, errors.Wrap(err, "copying dir")
@@ -593,7 +595,7 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "copying dir")
 		}
-		if ExcludeFile(fullPath, buildcontext) {
+		if context.ExcludesFile(fullPath) {
 			logrus.Debugf("%s found in .dockerignore, ignoring", src)
 			continue
 		}
@@ -608,12 +610,12 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 			}
 		} else if IsSymlink(fi) {
 			// If file is a symlink, we want to create the same relative symlink
-			if _, err := CopySymlink(fullPath, destPath, buildcontext); err != nil {
+			if _, err := CopySymlink(fullPath, destPath, context); err != nil {
 				return nil, err
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if _, err := CopyFile(fullPath, destPath, buildcontext, uid, gid); err != nil {
+			if _, err := CopyFile(fullPath, destPath, context, uid, gid); err != nil {
 				return nil, err
 			}
 		}
@@ -623,8 +625,8 @@ func CopyDir(src, dest, buildcontext string, uid, gid int64) ([]string, error) {
 }
 
 // CopySymlink copies the symlink at src to dest.
-func CopySymlink(src, dest, buildcontext string) (bool, error) {
-	if ExcludeFile(src, buildcontext) {
+func CopySymlink(src, dest string, context FileContext) (bool, error) {
+	if context.ExcludesFile(src) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
@@ -644,8 +646,8 @@ func CopySymlink(src, dest, buildcontext string) (bool, error) {
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
-	if ExcludeFile(src, buildcontext) {
+func CopyFile(src, dest string, context FileContext, uid, gid int64) (bool, error) {
+	if context.ExcludesFile(src) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
 	}
@@ -669,40 +671,46 @@ func CopyFile(src, dest, buildcontext string, uid, gid int64) (bool, error) {
 	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
 }
 
-// GetExcludedFiles gets a list of files to exclude from the .dockerignore
-func GetExcludedFiles(dockerfilepath string, buildcontext string) error {
-	path := dockerfilepath + ".dockerignore"
+func NewFileContextFromDockerfile(dockerfilePath, buildcontext string) (FileContext, error) {
+	fileContext := FileContext{Root: buildcontext}
+	excludedFiles, err := getExcludedFiles(dockerfilePath, buildcontext)
+	if err != nil {
+		return fileContext, err
+	}
+	fileContext.ExcludedFiles = excludedFiles
+	return fileContext, nil
+}
+
+// getExcludedFiles returns a list of files to exclude from the .dockerignore
+func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
+	path := dockerfilePath + ".dockerignore"
 	if !FilepathExists(path) {
 		path = filepath.Join(buildcontext, ".dockerignore")
 	}
 	if !FilepathExists(path) {
-		return nil
+		return nil, nil
 	}
 	logrus.Infof("Using dockerignore file: %v", path)
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
-		return errors.Wrap(err, "parsing .dockerignore")
+		return nil, errors.Wrap(err, "parsing .dockerignore")
 	}
 	reader := bytes.NewBuffer(contents)
-	excluded, err = dockerignore.ReadAll(reader)
-	return err
+	return dockerignore.ReadAll(reader)
 }
 
-// ExcludeFile returns true if the .dockerignore specified this file should be ignored
-func ExcludeFile(path, buildcontext string) bool {
-	// Apply dockerfile excludes for first stage only
-	if !IsFirstStage {
-		return false
-	}
-	if HasFilepathPrefix(path, buildcontext, false) {
+// ExcludesFile returns true if the file context specified this file should be ignored.
+// Usually this is specified via .dockerignore
+func (c FileContext) ExcludesFile(path string) bool {
+	if HasFilepathPrefix(path, c.Root, false) {
 		var err error
-		path, err = filepath.Rel(buildcontext, path)
+		path, err = filepath.Rel(c.Root, path)
 		if err != nil {
 			logrus.Errorf("unable to get relative path, including %s in build: %v", path, err)
 			return false
 		}
 	}
-	match, err := fileutils.Matches(path, excluded)
+	match, err := fileutils.Matches(path, c.ExcludedFiles)
 	if err != nil {
 		logrus.Errorf("error matching, including %s in build: %v", path, err)
 		return false

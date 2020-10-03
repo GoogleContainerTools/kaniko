@@ -80,7 +80,7 @@ func Test_CompositeCache_AddPath_dir(t *testing.T) {
 
 	fn := func() string {
 		r := NewCompositeCache()
-		if err := r.AddPath(tmpDir, ""); err != nil {
+		if err := r.AddPath(tmpDir, util.FileContext{}); err != nil {
 			t.Errorf("expected error to be nil but was %v", err)
 		}
 
@@ -118,7 +118,7 @@ func Test_CompositeCache_AddPath_file(t *testing.T) {
 	p := tmpfile.Name()
 	fn := func() string {
 		r := NewCompositeCache()
-		if err := r.AddPath(p, ""); err != nil {
+		if err := r.AddPath(p, util.FileContext{}); err != nil {
 			t.Errorf("expected error to be nil but was %v", err)
 		}
 
@@ -158,26 +158,23 @@ func createFilesystemStructure(root string, directories, files []string) error {
 	return nil
 }
 
-func setIgnoreContext(content string) error {
+func setIgnoreContext(content string) (util.FileContext, error) {
+	var fileContext util.FileContext
 	dockerIgnoreDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return err
+		return fileContext, err
 	}
 	defer os.RemoveAll(dockerIgnoreDir)
 	err = ioutil.WriteFile(dockerIgnoreDir+".dockerignore", []byte(content), 0644)
 	if err != nil {
-		return err
+		return fileContext, err
 	}
-	err = util.GetExcludedFiles(dockerIgnoreDir, "")
-	if err != nil {
-		return err
-	}
-	return nil
+	return util.NewFileContextFromDockerfile(dockerIgnoreDir, "")
 }
 
-func hashDirectory(dirpath string) (string, error) {
+func hashDirectory(dirpath string, fileContext util.FileContext) (string, error) {
 	cache1 := NewCompositeCache()
-	err := cache1.AddPath(dirpath, dirpath)
+	err := cache1.AddPath(dirpath, fileContext)
 	if err != nil {
 		return "", err
 	}
@@ -217,6 +214,8 @@ func Test_CompositeKey_AddPath_Works(t *testing.T) {
 		},
 	}
 
+	fileContext := util.FileContext{}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testDir1, err := ioutil.TempDir("", "")
@@ -239,11 +238,11 @@ func Test_CompositeKey_AddPath_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			hash1, err := hashDirectory(testDir1)
+			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
-			hash2, err := hashDirectory(testDir2)
+			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
@@ -288,6 +287,8 @@ func Test_CompositeKey_AddPath_WithExtraFile_Works(t *testing.T) {
 		},
 	}
 
+	fileContext := util.FileContext{}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testDir1, err := ioutil.TempDir("", "")
@@ -315,11 +316,11 @@ func Test_CompositeKey_AddPath_WithExtraFile_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			hash1, err := hashDirectory(testDir1)
+			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
-			hash2, err := hashDirectory(testDir2)
+			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
@@ -364,6 +365,8 @@ func Test_CompositeKey_AddPath_WithExtraDir_Works(t *testing.T) {
 		},
 	}
 
+	fileContext := util.FileContext{}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testDir1, err := ioutil.TempDir("", "")
@@ -391,11 +394,11 @@ func Test_CompositeKey_AddPath_WithExtraDir_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			hash1, err := hashDirectory(testDir1)
+			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
-			hash2, err := hashDirectory(testDir2)
+			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
@@ -440,7 +443,7 @@ func Test_CompositeKey_AddPath_WithExtraFilIgnored_Works(t *testing.T) {
 		},
 	}
 
-	err := setIgnoreContext("**/extra")
+	fileContext, err := setIgnoreContext("**/extra")
 	if err != nil {
 		t.Fatalf("Error setting exlusion context: %s", err)
 	}
@@ -472,11 +475,11 @@ func Test_CompositeKey_AddPath_WithExtraFilIgnored_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			hash1, err := hashDirectory(testDir1)
+			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
-			hash2, err := hashDirectory(testDir2)
+			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
@@ -521,7 +524,7 @@ func Test_CompositeKey_AddPath_WithExtraDirIgnored_Works(t *testing.T) {
 		},
 	}
 
-	err := setIgnoreContext("**/extra")
+	fileContext, err := setIgnoreContext("**/extra")
 	if err != nil {
 		t.Fatalf("Error setting exlusion context: %s", err)
 	}
@@ -553,11 +556,11 @@ func Test_CompositeKey_AddPath_WithExtraDirIgnored_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			hash1, err := hashDirectory(testDir1)
+			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
-			hash2, err := hashDirectory(testDir2)
+			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}

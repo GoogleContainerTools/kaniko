@@ -39,14 +39,14 @@ var (
 type CopyCommand struct {
 	BaseCommand
 	cmd           *instructions.CopyCommand
-	buildcontext  string
+	fileContext   util.FileContext
 	snapshotFiles []string
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// Resolve from
 	if c.cmd.From != "" {
-		c.buildcontext = filepath.Join(kConfig.KanikoDir, c.cmd.From)
+		c.fileContext = util.FileContext{Root: filepath.Join(kConfig.KanikoDir, c.cmd.From)}
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
@@ -55,14 +55,14 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		return errors.Wrap(err, "getting user group from chown")
 	}
 
-	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.buildcontext, replacementEnvs)
+	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.fileContext, replacementEnvs)
 	if err != nil {
 		return errors.Wrap(err, "resolving src")
 	}
 
 	// For each source, iterate through and copy it over
 	for _, src := range srcs {
-		fullPath := filepath.Join(c.buildcontext, src)
+		fullPath := filepath.Join(c.fileContext.Root, src)
 
 		fi, err := os.Lstat(fullPath)
 		if err != nil {
@@ -89,14 +89,14 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath, c.buildcontext, uid, gid)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.fileContext, uid, gid)
 			if err != nil {
 				return errors.Wrap(err, "copying dir")
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if util.IsSymlink(fi) {
 			// If file is a symlink, we want to copy the target file to destPath
-			exclude, err := util.CopySymlink(fullPath, destPath, c.buildcontext)
+			exclude, err := util.CopySymlink(fullPath, destPath, c.fileContext)
 			if err != nil {
 				return errors.Wrap(err, "copying symlink")
 			}
@@ -106,7 +106,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			exclude, err := util.CopyFile(fullPath, destPath, c.buildcontext, uid, gid)
+			exclude, err := util.CopyFile(fullPath, destPath, c.fileContext, uid, gid)
 			if err != nil {
 				return errors.Wrap(err, "copying file")
 			}
@@ -130,7 +130,7 @@ func (c *CopyCommand) String() string {
 }
 
 func (c *CopyCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
-	return copyCmdFilesUsedFromContext(config, buildArgs, c.cmd, c.buildcontext)
+	return copyCmdFilesUsedFromContext(config, buildArgs, c.cmd, c.fileContext)
 }
 
 func (c *CopyCommand) MetadataOnly() bool {
@@ -186,7 +186,7 @@ func resolveIfSymlink(destPath string) (string, error) {
 
 func copyCmdFilesUsedFromContext(
 	config *v1.Config, buildArgs *dockerfile.BuildArgs, cmd *instructions.CopyCommand,
-	buildcontext string,
+	fileContext util.FileContext,
 ) ([]string, error) {
 	// We don't use the context if we're performing a copy --from.
 	if cmd.From != "" {
@@ -196,7 +196,7 @@ func copyCmdFilesUsedFromContext(
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
 	srcs, _, err := util.ResolveEnvAndWildcards(
-		cmd.SourcesAndDest, buildcontext, replacementEnvs,
+		cmd.SourcesAndDest, fileContext, replacementEnvs,
 	)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func copyCmdFilesUsedFromContext(
 
 	files := []string{}
 	for _, src := range srcs {
-		fullPath := filepath.Join(buildcontext, src)
+		fullPath := filepath.Join(fileContext.Root, src)
 		files = append(files, fullPath)
 	}
 

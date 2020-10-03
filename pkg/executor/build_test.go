@@ -31,6 +31,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -679,7 +680,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			sb := &stageBuilder{opts: &config.KanikoOptions{SrcContext: "workspace"}}
+			sb := &stageBuilder{fileContext: util.FileContext{Root: "workspace"}}
 			ck := CompositeCache{}
 
 			ck1, err := sb.populateCompositeKey(tc.cmd1.command, []string{}, ck, tc.cmd1.args, tc.cmd1.env)
@@ -720,7 +721,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath, "")
+			ch.AddPath(filePath, util.FileContext{})
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
@@ -753,7 +754,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath, "")
+			ch.AddPath(filePath, util.FileContext{})
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
@@ -856,7 +857,7 @@ COPY %s bar.txt
 				// hash1 is the read cachekey for the first layer
 				expectedCacheKeys: []string{hash1},
 				pushedCacheKeys:   []string{},
-				commands:          getCommands(dir, cmds),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds),
 			}
 		}(),
 		func() testcase {
@@ -872,7 +873,7 @@ COPY %s bar.txt
 			filePath := filepath.Join(dir, filename)
 
 			ch := NewCompositeCache("", fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, "")
+			ch.AddPath(filePath, util.FileContext{})
 
 			// copy hash
 			_, err = ch.Hash()
@@ -932,7 +933,7 @@ RUN foobar
 				image:             image,
 				expectedCacheKeys: []string{runHash},
 				pushedCacheKeys:   []string{},
-				commands:          getCommands(dir, cmds),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds),
 			}
 		}(),
 		func() testcase {
@@ -1139,12 +1140,12 @@ func assertCacheKeys(t *testing.T, expectedCacheKeys, actualCacheKeys []string, 
 	}
 }
 
-func getCommands(dir string, cmds []instructions.Command) []commands.DockerCommand {
+func getCommands(fileContext util.FileContext, cmds []instructions.Command) []commands.DockerCommand {
 	outCommands := make([]commands.DockerCommand, 0)
 	for _, c := range cmds {
 		cmd, err := commands.GetCommand(
 			c,
-			dir,
+			fileContext,
 			false,
 		)
 		if err != nil {
