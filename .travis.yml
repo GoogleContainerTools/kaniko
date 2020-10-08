@@ -48,11 +48,11 @@ jobs:
       script: &script_multiarch
         # Generate BUILD.bazel files (we do not check them in)
         - bazel run //:gazelle
-        - bazel build --cpu=${CPU} --curses=no //cmd/executor:all
+        - bazel build --cpu=${CPU} --curses=no //integration:all
         # Build all targets tagged with our architecture:
         - bazel build --cpu=${CPU} --curses=no $(bazel query 'attr("tags", "'${GOARCH}'", "//...")')
         # Run all tests not tagged as "manual":
-        - bazel test  --cpu=${CPU} --curses=no --test_output=errors --test_timeout=900 //cmd/executor:all
+        - bazel test  --cpu=${CPU} --curses=no --test_output=errors --test_timeout=900 //integration:all
         # Run all tests tagged with our architecture:
         - bazel test  --cpu=${CPU} --curses=no --test_output=errors --test_timeout=900 $(bazel query 'attr("tags", "'${GOARCH}'", "//...")')
 

@@ -53,72 +53,8 @@ ARCHITECTURES = [
         symlinks = {
             "/kaniko/executor": "/kaniko/executor_" + arch,
         },
+        visibility = ["//visibility:public"],
         workdir = "/workspace",
-    )
-    for arch in ARCHITECTURES
-]
-
-# Image with testdata
-[
-    container_image(
-        name = "buildtest_image_" + arch,
-        architecture = arch,
-        base = ":image_" + arch,
-        directory = "/workspace",
-        files = [
-            ":testdata/Dockerfile.trivial",
-        ],
-    )
-    for arch in ARCHITECTURES
-]
-
-load("@io_bazel_rules_docker//contrib:test.bzl", "container_test")
-
-# Non-executable tests can run on any architecture,
-# so do not tag them.
-[
-    container_test(
-        name = "image_files_" + arch + "_test",
-        configs = ["testdata/files.yaml"],
-        image = ":image_" + arch,
-    )
-    for arch in ARCHITECTURES
-]
-
-[
-    container_test(
-        name = "buildtest_image_" + arch + "_test",
-        configs = [
-            "testdata/files.yaml",
-            "testdata/testfiles.yaml",
-        ],
-        image = ":buildtest_image_" + arch,
-    )
-    for arch in ARCHITECTURES
-]
-
-[
-    container_test(
-        name = "image_exec_" + arch + "_test",
-        configs = ["testdata/exec.yaml"],
-        image = ":image_" + arch,
-        tags = [
-            "manual",
-            arch,
-        ],
-    )
-    for arch in ARCHITECTURES
-]
-
-[
-    container_test(
-        name = "image_build_" + arch + "_test",
-        configs = ["testdata/build.yaml"],
-        image = ":buildtest_image_" + arch,
-        tags = [
-            "manual",
-            arch,
-        ],
     )
     for arch in ARCHITECTURES
 ]
