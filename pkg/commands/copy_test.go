@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -113,6 +114,7 @@ func TestCopyExecuteCmd(t *testing.T) {
 		Env:        []string{},
 		WorkingDir: tempDir,
 	}
+	fileContext := util.FileContext{Root: tempDir}
 
 	for _, test := range copyTests {
 		t.Run(test.name, func(t *testing.T) {
@@ -122,7 +124,7 @@ func TestCopyExecuteCmd(t *testing.T) {
 				cmd: &instructions.CopyCommand{
 					SourcesAndDest: test.sourcesAndDest,
 				},
-				buildcontext: tempDir,
+				fileContext: fileContext,
 			}
 
 			buildArgs := copySetUpBuildArgs()
@@ -275,7 +277,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{srcDir, "dest"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -307,7 +309,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{filepath.Join(srcDir, "bam.txt"), "dest/"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -334,7 +336,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{filepath.Join(srcDir, "bam.txt"), "dest"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -363,7 +365,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{filepath.Join(srcDir, "bam.txt"), "dest"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -392,7 +394,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{filepath.Join(srcDir, "sym.link"), "dest/"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -437,7 +439,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{filepath.Join(srcDir, "dead.link"), "dest/"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -478,7 +480,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{"another", "dest"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -524,7 +526,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{srcDir, "dest"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -568,7 +570,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{"another", "dest"},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -611,7 +613,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{srcDir, linkedDest},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -656,7 +658,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), linkedDest},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -705,7 +707,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), testDir},
 				Chown:          "alice:group",
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -750,7 +752,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), testDir},
 				Chown:          "missing:missing",
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{
@@ -781,7 +783,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			cmd: &instructions.CopyCommand{
 				SourcesAndDest: []string{srcDir, dest},
 			},
-			buildcontext: testDir,
+			fileContext: util.FileContext{Root: testDir},
 		}
 
 		cfg := &v1.Config{

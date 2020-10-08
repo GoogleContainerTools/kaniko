@@ -18,6 +18,7 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
@@ -59,7 +60,7 @@ type DockerCommand interface {
 	ShouldDetectDeletedFiles() bool
 }
 
-func GetCommand(cmd instructions.Command, buildcontext string, useNewRun bool) (DockerCommand, error) {
+func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
 		if useNewRun {
@@ -67,7 +68,7 @@ func GetCommand(cmd instructions.Command, buildcontext string, useNewRun bool) (
 		}
 		return &RunCommand{cmd: c}, nil
 	case *instructions.CopyCommand:
-		return &CopyCommand{cmd: c, buildcontext: buildcontext}, nil
+		return &CopyCommand{cmd: c, fileContext: fileContext}, nil
 	case *instructions.ExposeCommand:
 		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
@@ -75,7 +76,7 @@ func GetCommand(cmd instructions.Command, buildcontext string, useNewRun bool) (
 	case *instructions.WorkdirCommand:
 		return &WorkdirCommand{cmd: c}, nil
 	case *instructions.AddCommand:
-		return &AddCommand{cmd: c, buildcontext: buildcontext}, nil
+		return &AddCommand{cmd: c, fileContext: fileContext}, nil
 	case *instructions.CmdCommand:
 		return &CmdCommand{cmd: c}, nil
 	case *instructions.EntrypointCommand:

@@ -85,7 +85,7 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	return fp, nil
 }
 
-func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string, envs []string) ([]string, string, error) {
+func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, fileContext FileContext, envs []string) ([]string, string, error) {
 	// First, resolve any environment replacement
 	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
 	if err != nil {
@@ -96,11 +96,11 @@ func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, buildcontext string,
 	}
 	dest := resolvedEnvs[len(resolvedEnvs)-1]
 	// Resolve wildcards and get a list of resolved sources
-	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], buildcontext)
+	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], fileContext.Root)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve sources")
 	}
-	err = IsSrcsValid(sd, srcs, buildcontext)
+	err = IsSrcsValid(sd, srcs, fileContext)
 	return srcs, dest, err
 }
 
@@ -220,14 +220,14 @@ func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, er
 	return destPath, nil
 }
 
-func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, root string) error {
+func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, fileContext FileContext) error {
 	srcs := srcsAndDest[:len(srcsAndDest)-1]
 	dest := srcsAndDest[len(srcsAndDest)-1]
 
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
 		for _, src := range srcs {
-			if ExcludeFile(src, root) {
+			if fileContext.ExcludesFile(src) {
 				continue
 			}
 			totalSrcs++
@@ -242,7 +242,7 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 		if IsSrcRemoteFileURL(resolvedSources[0]) {
 			return nil
 		}
-		path := filepath.Join(root, resolvedSources[0])
+		path := filepath.Join(fileContext.Root, resolvedSources[0])
 		fi, err := os.Lstat(path)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to get fileinfo for %v", path))
@@ -259,12 +259,12 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 			continue
 		}
 		src = filepath.Clean(src)
-		files, err := RelativeFiles(src, root)
+		files, err := RelativeFiles(src, fileContext.Root)
 		if err != nil {
 			return errors.Wrap(err, "failed to get relative files")
 		}
 		for _, file := range files {
-			if ExcludeFile(file, root) {
+			if fileContext.ExcludesFile(file) {
 				continue
 			}
 			totalFiles++

@@ -73,6 +73,7 @@ type stageBuilder struct {
 	baseImageDigest  string
 	finalCacheKey    string
 	opts             *config.KanikoOptions
+	fileContext      util.FileContext
 	cmds             []commands.DockerCommand
 	args             *dockerfile.BuildArgs
 	crossStageDeps   map[int][]string
@@ -84,7 +85,7 @@ type stageBuilder struct {
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string) (*stageBuilder, error) {
+func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string, fileContext util.FileContext) (*stageBuilder, error) {
 	sourceImage, err := image_util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
@@ -117,6 +118,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		snapshotter:      snapshotter,
 		baseImageDigest:  digest.String(),
 		opts:             opts,
+		fileContext:      fileContext,
 		crossStageDeps:   crossStageDeps,
 		digestToCacheKey: dcm,
 		stageIdxToDigest: sid,
@@ -127,7 +129,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	}
 
 	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, opts.SrcContext, opts.RunV2)
+		command, err := commands.GetCommand(cmd, fileContext, opts.RunV2)
 		if err != nil {
 			return nil, err
 		}
@@ -187,10 +189,8 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
 	}
 
-	srcCtx := s.opts.SrcContext
-
 	for _, f := range files {
-		if err := compositeKey.AddPath(f, srcCtx); err != nil {
+		if err := compositeKey.AddPath(f, s.fileContext); err != nil {
 			return compositeKey, err
 		}
 	}
@@ -572,7 +572,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 	stageNameToIdx := ResolveCrossStageInstructions(kanikoStages)
 
-	if err := util.GetExcludedFiles(opts.DockerfilePath, opts.SrcContext); err != nil {
+	fileContext, err := util.NewFileContextFromDockerfile(opts.DockerfilePath, opts.SrcContext)
+	if err != nil {
 		return nil, err
 	}
 
@@ -586,16 +587,14 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
-	util.IsFirstStage = true
 	for index, stage := range kanikoStages {
-		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx)
+		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx, fileContext)
 		if err != nil {
 			return nil, err
 		}
 		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
-		util.IsFirstStage = false
 
 		reviewConfig(stage, &sb.cf.Config)
 

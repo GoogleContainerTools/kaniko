@@ -478,10 +478,11 @@ var isSrcValidTests = []struct {
 func Test_IsSrcsValid(t *testing.T) {
 	for _, test := range isSrcValidTests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := GetExcludedFiles("", buildContextPath); err != nil {
-				t.Fatalf("error getting excluded files: %v", err)
+			fileContext, err := NewFileContextFromDockerfile("", buildContextPath)
+			if err != nil {
+				t.Fatalf("error creating file context: %v", err)
 			}
-			err := IsSrcsValid(test.srcsAndDest, test.resolvedSources, buildContextPath)
+			err = IsSrcsValid(test.srcsAndDest, test.resolvedSources, fileContext)
 			testutil.CheckError(t, test.shouldErr, err)
 		})
 	}

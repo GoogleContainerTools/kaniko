@@ -880,7 +880,7 @@ func TestCopySymlink(t *testing.T) {
 			if err := os.Symlink(tc.linkTarget, link); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := CopySymlink(link, dest, ""); err != nil {
+			if _, err := CopySymlink(link, dest, FileContext{}); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := os.Lstat(dest); err != nil {
@@ -966,19 +966,20 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if err := GetExcludedFiles(tt.args.dockerfilepath, tt.args.buildcontext); err != nil {
+		fileContext, err := NewFileContextFromDockerfile(tt.args.dockerfilepath, tt.args.buildcontext)
+		if err != nil {
 			t.Fatal(err)
 		}
 		for _, excl := range tt.args.excluded {
 			t.Run(tt.name+" to exclude "+excl, func(t *testing.T) {
-				if !ExcludeFile(excl, tt.args.buildcontext) {
+				if !fileContext.ExcludesFile(excl) {
 					t.Errorf("'%v' not excluded", excl)
 				}
 			})
 		}
 		for _, incl := range tt.args.included {
 			t.Run(tt.name+" to include "+incl, func(t *testing.T) {
-				if ExcludeFile(incl, tt.args.buildcontext) {
+				if fileContext.ExcludesFile(incl) {
 					t.Errorf("'%v' not included", incl)
 				}
 			})
@@ -1004,7 +1005,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ignored, err := CopyFile(tempFile, tempFile, "", DoNotChangeUID, DoNotChangeGID)
+	ignored, err := CopyFile(tempFile, tempFile, FileContext{}, DoNotChangeUID, DoNotChangeGID)
 	if err != nil {
 		t.Fatal(err)
 	}
