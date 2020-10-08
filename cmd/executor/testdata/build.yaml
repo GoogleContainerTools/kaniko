@@ -1,0 +1,5 @@
+schemaVersion: "1.0.0"
+commandTests:
+- name: Trivial build
+  command: ["/kaniko/executor", "--no-push", "--dockerfile", "./Dockerfile.trivial"]
+  exitCode: 0

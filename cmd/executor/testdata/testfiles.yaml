@@ -1,0 +1,6 @@
+schemaVersion: "1.0.0"
+fileExistenceTests:
+# Basic FS sanity checks.
+- name: trivial testdata Dockerfile
+  path: '/workspace/Dockerfile.trivial'
+  shouldExist: true
