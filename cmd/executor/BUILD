@@ -81,7 +81,6 @@ load("@io_bazel_rules_docker//contrib:test.bzl", "container_test")
         name = "image_files_" + arch + "_test",
         configs = ["testdata/files.yaml"],
         image = ":image_" + arch,
-        # tags = ["manual", arch],
     )
     for arch in ARCHITECTURES
 ]
@@ -94,7 +93,6 @@ load("@io_bazel_rules_docker//contrib:test.bzl", "container_test")
             "testdata/testfiles.yaml",
         ],
         image = ":buildtest_image_" + arch,
-        # tags = ["manual", arch],
     )
     for arch in ARCHITECTURES
 ]
