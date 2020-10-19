@@ -12,7 +12,7 @@ steps:
            "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug-${COMMIT_SHA}", "."]
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_debug",
-           "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug", "."]
+           "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}-debug", "."]
   # Then, we want to build the cache warmer
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_warmer",
