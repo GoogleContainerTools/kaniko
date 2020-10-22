@@ -16,7 +16,10 @@ steps:
            "-t", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", "."]
   - name: "gcr.io/cloud-builders/docker"
     args: ["tag", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", 
-           "gcr.io/kaniko-project/executor:debug"]
+           "gcr.io/kaniko-project/executor:$TAG_NAME-debug"]
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["tag", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", 
+           "gcr.io/kaniko-project/executor:debug"]       
   # Then, we want to build the cache warmer
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-f", "deploy/Dockerfile_warmer",
@@ -96,4 +99,5 @@ images: ["gcr.io/kaniko-project/executor:$TAG_NAME",
          "gcr.io/kaniko-project/executor:debug-$TAG_NAME",
          "gcr.io/kaniko-project/executor:debug",
          "gcr.io/kaniko-project/warmer:$TAG_NAME",
-         "gcr.io/kaniko-project/warmer:latest"]
+         "gcr.io/kaniko-project/warmer:latest",
+         "gcr.io/kaniko-project/executor:$TAG_NAME-debug"]
