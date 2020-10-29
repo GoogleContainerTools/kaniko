@@ -1,3 +1,116 @@
+# v1.3.0 Release 2020-10-22
+
+This release publishes, multi-arch image kaniko executor images. 
+
+Note: The muti-arch images are **only** available for executor images. Contributions Welcome!!
+
+The executor images in this release are:
+
+```
+gcr.io/kaniko-project/executor:v1.3.0 
+gcr.io/kaniko-project/executor:latest
+
+gcr.io/kaniko-project/executor:arm64
+gcr.io/kaniko-project/executor:arm64-v1.3.0
+
+gcr.io/kaniko-project/executor:amd64
+gcr.io/kaniko-project/executor:amd64-v1.3.0
+
+gcr.io/kaniko-project/executor:multi-arch
+gcr.io/kaniko-project/executor:multi-arch-v1.3.0
+
+```
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:v1.3.0-debug
+gcr.io/kaniko-project/executor:debug-v1.3.0 and
+gcr.io/kaniko-project/executor:debug
+```
+
+# New features
+* Added in docker cred helper for Azure Container Registry sourcing auth tokens directly from environment to debug image [#1458](https://github.com/GoogleContainerTools/kaniko/pull/1458)
+* Add multi-arch image via Bazel [#1452](https://github.com/GoogleContainerTools/kaniko/pull/1452)
+
+# Bug fixes
+* Fix docker build tag [#1460](https://github.com/GoogleContainerTools/kaniko/pull/1460)
+* Fix .dockerignore for build context copies in later stages [#1447](https://github.com/GoogleContainerTools/kaniko/pull/1447)
+* Fix permissions on cache when --no-push is set [#1445](https://github.com/GoogleContainerTools/kaniko/pull/1445)
+
+
+Huge thank you for this release towards our contributors:
+
+- Akram Ben Aissi
+- Alex Szakaly
+- Alexander Sharov
+- Anthony Davies
+- Art Begolli
+- Batuhan Apaydın
+- Ben Einaudi
+- Carlos Alexandro Becker
+- Carlos Sanchez
+- Chris Mellard
+- Chris Sng
+- Christopher Hlubek
+- Cole Wippern
+- Dani Raznikov
+- Daniel Marks
+- David Dooling
+- Didier Durand
+- DracoBlue
+- Gabriel Virga
+- Gilbert Gilb's
+- Giovan Isa Musthofa
+- Gábor Lipták
+- Harmen Stoppels
+- Ian Kerins
+- James Ravn
+- Joe Kutner
+- Jon Henrik Bjørnstad
+- Jon Johnson
+- Jordan GOASDOUE
+- Jordan Goasdoue
+- Jordan Goasdoué
+- Josh Chorlton
+- Josh Soref
+- Keisuke Umegaki
+- Liubov Grinkevich
+- Logan.Price
+- Lukasz Jakimczuk
+- Martin Treusch von Buttlar
+- Matt Moore
+- Mehdi Abaakouk
+- Michel Hollands
+- Mitchell Friedman
+- Moritz Wanzenböck
+- Or Sela
+- PhoenixMage
+- Pierre-Louis Bonicoli
+- Renato Suero
+- Sam Stoelinga
+- Shihab Hasan
+- Sladyn
+- Takumasa Sakao
+- Tejal Desai
+- Thomas Bonfort
+- Thomas Stromberg
+- Tinjo Schöni
+- Tom Prince
+- Vincent Latombe
+- Wietse Muizelaar
+- Yoan Blanc
+- Yoriyasu Yano
+- Yuheng Zhang
+- aca
+- cvgw
+- ejose19
+- ohchang-kwon
+- priyawadhwa
+- tinkerborg
+- tsufeki
+- xanonid
+- yw-liu
+- 好风
+
 # v1.2.0 Release 2020-09-30
 This is 27th release of Kaniko!
 
