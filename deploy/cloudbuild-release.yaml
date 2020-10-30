@@ -42,6 +42,7 @@ steps:
       bazel run //:gazelle
       bazel run --host_force_python=PY2 //cmd/executor:image_amd64
       bazel run --host_force_python=PY2 //cmd/executor:image_arm64
+      bazel run --host_force_python=PY2 //cmd/executor:image_s390x
 
   # Publish the individual container images
   - name: docker
@@ -57,11 +58,15 @@ steps:
       docker tag bazel/cmd/executor:image_amd64     gcr.io/kaniko-project/executor:amd64-$TAG_NAME
       docker tag bazel/cmd/executor:image_arm64     gcr.io/kaniko-project/executor:arm64
       docker tag bazel/cmd/executor:image_arm64     gcr.io/kaniko-project/executor:arm64-$TAG_NAME
+      docker tag bazel/cmd/executor:image_arm64     gcr.io/kaniko-project/executor:s390x
+      docker tag bazel/cmd/executor:image_arm64     gcr.io/kaniko-project/executor:s390x-$TAG_NAME
 
       docker push gcr.io/kaniko-project/executor:amd64
       docker push gcr.io/kaniko-project/executor:amd64-$TAG_NAME
       docker push gcr.io/kaniko-project/executor:arm64
       docker push gcr.io/kaniko-project/executor:arm64-$TAG_NAME
+      docker push gcr.io/kaniko-project/executor:s390x
+      docker push gcr.io/kaniko-project/executor:s390x-$TAG_NAME
 
   # Enable "manifest list" support in docker, and publish one covering the per-architecture
   # images published above.
@@ -85,12 +90,14 @@ steps:
 
       docker manifest create gcr.io/kaniko-project/executor:multi-arch \
          gcr.io/kaniko-project/executor:amd64 \
-         gcr.io/kaniko-project/executor:arm64
+         gcr.io/kaniko-project/executor:arm64 \
+         gcr.io/kaniko-project/executor:s390x
       docker manifest push gcr.io/kaniko-project/executor:multi-arch
 
       docker manifest create gcr.io/kaniko-project/executor:multi-arch-$TAG_NAME \
          gcr.io/kaniko-project/executor:amd64-$TAG_NAME \
-         gcr.io/kaniko-project/executor:arm64-$TAG_NAME
+         gcr.io/kaniko-project/executor:arm64-$TAG_NAME \
+         gcr.io/kaniko-project/executor:s390x-$TAG_NAME
       docker manifest push gcr.io/kaniko-project/executor:multi-arch-$TAG_NAME
 
 

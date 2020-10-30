@@ -19,6 +19,7 @@ go_binary(
 ARCHITECTURES = [
     "amd64",
     "arm64",
+    "s390x",
 ]
 
 [

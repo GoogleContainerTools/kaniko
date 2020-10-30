@@ -32,6 +32,7 @@ steps:
       bazel run //:gazelle
       bazel run --host_force_python=PY2 //cmd/executor:image_amd64
       bazel run --host_force_python=PY2 //cmd/executor:image_arm64
+      bazel run --host_force_python=PY2 //cmd/executor:image_s390x
 
   # Publish the individual container images
   - name: docker
@@ -45,9 +46,11 @@ steps:
 
       docker tag bazel/cmd/executor:image_amd64     gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:amd64-${COMMIT_SHA}
       docker tag bazel/cmd/executor:image_arm64     gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:arm64-${COMMIT_SHA}
+      docker tag bazel/cmd/executor:image_s390x     gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:s390x-${COMMIT_SHA}
 
       docker push gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:amd64-${COMMIT_SHA}
       docker push gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:arm64-${COMMIT_SHA}
+      docker push gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:s390x-${COMMIT_SHA}
 
   # Enable "manifest list" support in docker, and publish one covering the per-architecture
   # images published above.
@@ -71,7 +74,8 @@ steps:
 
       docker manifest create gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:multi-arch-${COMMIT_SHA} \
          gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:amd64-${COMMIT_SHA} \
-         gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:arm64-${COMMIT_SHA}
+         gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:arm64-${COMMIT_SHA} \
+         gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:s390x-${COMMIT_SHA}
       docker manifest push gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:multi-arch-${COMMIT_SHA}
 
 
