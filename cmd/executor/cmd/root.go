@@ -95,7 +95,7 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
-		if !opts.NoPush {
+		if !opts.NoPush || opts.CacheRepo != "" {
 			if err := executor.CheckPushPermissions(opts); err != nil {
 				exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
 			}

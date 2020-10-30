@@ -102,7 +102,7 @@ var (
 // CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
-	var targets = opts.Destinations
+	targets := opts.Destinations
 	// When no push is set, whe want to check permissions for the cache repo
 	// instead of the destinations
 	if opts.NoPush {
