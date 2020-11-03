@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	reflect "reflect"
 	"strconv"
 	"strings"
 
@@ -368,6 +369,10 @@ func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32,
 	var groupStr string
 	if len(userAndGroup) > 1 {
 		groupStr = userAndGroup[1]
+	}
+
+	if reflect.TypeOf(userStr).String() == "int" {
+		return 0, 0, nil 
 	}
 
 	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
