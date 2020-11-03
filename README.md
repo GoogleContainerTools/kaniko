@@ -455,6 +455,8 @@ docker run -ti --rm -e GOOGLE_APPLICATION_CREDENTIALS=/kaniko/config.json \
 --dockerfile=Dockerfile --destination=yourimagename
 ```
 
+#### Pushing to GCR using Workload Identity
+
 #### Pushing to Amazon ECR
 
 The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built into the kaniko executor image.
