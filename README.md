@@ -466,7 +466,7 @@ To authenticate using workload identity you need to run the kaniko pod using the
 Please follow the detailed steps [here](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#authenticating_to) to create a Kubernetes Service Account, Google Service Account and create an IAM policy binding between the two to allow the Kubernetes Service account to act as the Google service account.
 
 
-To grant the Google Service account has the right permission to push to GCR, run the following GCR command
+To grant the Google Service account the right permission to push to GCR, run the following GCR command
 ```
 gcloud projects add-iam-policy-binding $PROJECT \
   --member=serviceAccount:[gsa-name]@${PROJECT}.iam.gserviceaccount.com \
