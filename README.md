@@ -47,6 +47,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
   - [Pushing to Different Registries](#pushing-to-different-registries)
     - [Pushing to Docker Hub](#pushing-to-docker-hub)
     - [Pushing to Google GCR](#pushing-to-google-gcr)
+    - [Pushing to Google GCR - Workload Identity](#pushing-to-google-gcr-using-workload-identity)
     - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
   - [Additional Flags](#additional-flags)
     - [--build-arg](#--build-arg)
@@ -454,6 +455,26 @@ docker run -ti --rm -e GOOGLE_APPLICATION_CREDENTIALS=/kaniko/config.json \
 -v `pwd`:/workspace -v `pwd`/kaniko-secret.json:/kaniko/config.json:ro gcr.io/kaniko-project/executor:latest \
 --dockerfile=Dockerfile --destination=yourimagename
 ```
+
+#### Pushing to GCR using Workload Identity
+If you have enabled Workload Indentity on your GKE cluster then you can use the workload identity to push built images to GCR without adding a `GOOGLE_APPLICATION_CREDENTIALS` in your kaniko pod specification. 
+
+Learn more on how to [enable](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster) and [migrate existing apps](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#migrate_applications_to) to workload identity. 
+
+To authenticate using workload identity you need to run the kaniko pod using the Kubernetes Service Account (KSA) bound to Google Service Account (GSA) which as `Storage.Admin` permissions to push images to Google Container registry.
+
+Please follow the detailed steps [here](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#authenticating_to) to create a Kubernetes Service Account, Google Service Account and create an IAM policy binding between the two to allow the Kubernetes Service account to act as the Google service account.
+
+
+To grant the Google Service account the right permission to push to GCR, run the following GCR command
+```
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member=serviceAccount:[gsa-name]@${PROJECT}.iam.gserviceaccount.com \
+  --role=roles/storage.objectAdmin
+```
+
+Please ensure, kaniko pod is running in the namespace and with Kubernetest Service Account.
+
 
 #### Pushing to Amazon ECR
 
