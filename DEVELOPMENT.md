@@ -70,15 +70,15 @@ _These tests will not run correctly unless you have [checked out your fork into 
 
 ### Lint Checks
 
-The helper script to install and run lint is placed here at the root of project `hack/linter.sh`.
+The helper script to install and run lint is placed here at the root of project.
 
-``shell
+```shell
 ./hack/linter.sh
 ``` 
 
 To fix any `gofmt` issues, you can simply run `gofmt` with `-w` flag like this
 
-```
+```shell
 find . -name "*.go" | grep -v vendor/ | xargs gofmt -l -s -w
 ```
 
