@@ -68,6 +68,20 @@ make test
 
 _These tests will not run correctly unless you have [checked out your fork into your `$GOPATH`](#checkout-your-fork)._
 
+### Lint Checks
+
+The helper script to install and run lint is placed here at the root of project.
+
+```shell
+./hack/linter.sh
+``` 
+
+To fix any `gofmt` issues, you can simply run `gofmt` with `-w` flag like this
+
+```shell
+find . -name "*.go" | grep -v vendor/ | xargs gofmt -l -s -w
+```
+
 ### Integration tests
 
 Currently the integration tests that live in [`integration`](./integration) can be run against your own gcloud space or a local registry.
