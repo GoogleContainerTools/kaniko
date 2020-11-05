@@ -372,7 +372,7 @@ func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32,
 	}
 
 	if reflect.TypeOf(userStr).String() == "int" {
-		return 0, 0, nil 
+		return 0, 0, nil
 	}
 
 	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
