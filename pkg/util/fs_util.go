@@ -755,7 +755,6 @@ func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) erro
 		logrus.Tracef("removing file because it needs to be a directory %s", path)
 		if err := os.Remove(path); err != nil {
 			return errors.Wrapf(err, "error removing %s to make way for new directory.", path)
-
 		}
 	}
 
