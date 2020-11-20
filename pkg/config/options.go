@@ -30,40 +30,45 @@ type CacheOptions struct {
 	CacheTTL time.Duration
 }
 
-// KanikoOptions are options that are set by command line arguments
-type KanikoOptions struct {
-	CacheOptions
-	DockerfilePath          string
-	SrcContext              string
-	SnapshotMode            string
-	CustomPlatform          string
-	Bucket                  string
-	TarPath                 string
-	Target                  string
-	CacheRepo               string
-	DigestFile              string
-	ImageNameDigestFile     string
-	OCILayoutPath           string
+// RegistryOptions are all the options related to the registries, set by command line arguments.
+type RegistryOptions struct {
 	RegistryMirrors         multiArg
-	Destinations            multiArg
-	BuildArgs               multiArg
 	InsecureRegistries      multiArg
-	Labels                  multiArg
 	SkipTLSVerifyRegistries multiArg
 	RegistriesCertificates  keyValueArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool
 	SkipTLSVerifyPull       bool
-	SingleSnapshot          bool
-	Reproducible            bool
-	NoPush                  bool
-	Cache                   bool
-	Cleanup                 bool
-	IgnoreVarRun            bool
-	SkipUnusedStages        bool
-	RunV2                   bool
-	Git                     KanikoGitOptions
+}
+
+// KanikoOptions are options that are set by command line arguments
+type KanikoOptions struct {
+	CacheOptions
+	RegistryOptions
+	DockerfilePath      string
+	SrcContext          string
+	SnapshotMode        string
+	CustomPlatform      string
+	Bucket              string
+	TarPath             string
+	Target              string
+	CacheRepo           string
+	DigestFile          string
+	ImageNameDigestFile string
+	OCILayoutPath       string
+	Destinations        multiArg
+	BuildArgs           multiArg
+	Labels              multiArg
+	SingleSnapshot      bool
+	Reproducible        bool
+	NoPush              bool
+	Cache               bool
+	Cleanup             bool
+	IgnoreVarRun        bool
+	SkipUnusedStages    bool
+	RunV2               bool
+	Git                 KanikoGitOptions
 }
 
 type KanikoGitOptions struct {
@@ -109,6 +114,8 @@ func (k *KanikoGitOptions) Set(s string) error {
 // WarmerOptions are options that are set by command line arguments to the cache warmer.
 type WarmerOptions struct {
 	CacheOptions
-	Images multiArg
-	Force  bool
+	RegistryOptions
+	CustomPlatform string
+	Images         multiArg
+	Force          bool
 }

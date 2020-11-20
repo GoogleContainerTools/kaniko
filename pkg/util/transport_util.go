@@ -62,7 +62,7 @@ func init() {
 	}
 }
 
-func MakeTransport(opts *config.KanikoOptions, registryName string) http.RoundTripper {
+func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundTripper {
 	// Create a transport to set our user-agent.
 	var tr http.RoundTripper = http.DefaultTransport.(*http.Transport).Clone()
 	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {

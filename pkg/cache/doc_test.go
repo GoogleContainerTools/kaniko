@@ -21,14 +21,14 @@ import (
 	"log"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/GoogleContainerTools/kaniko/pkg/image/remote"
 )
 
 func ExampleWarmer_Warm() {
 	tarBuf := new(bytes.Buffer)
 	manifestBuf := new(bytes.Buffer)
 	w := &Warmer{
-		Remote:         remote.Image,
+		Remote:         remote.RetrieveRemoteImage,
 		Local:          LocalSource,
 		TarWriter:      tarBuf,
 		ManifestWriter: manifestBuf,
