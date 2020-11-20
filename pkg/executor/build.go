@@ -670,7 +670,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 
 		// Delete the filesystem
 		if err := util.DeleteFilesystem(); err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after satge %d", index))
+			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after stage %d", index))
 		}
 	}
 
