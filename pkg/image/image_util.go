@@ -106,51 +106,45 @@ func remoteImage(image string, opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
+	if ref.Context().RegistryStr() == name.DefaultRegistry {
+		ref, err := normalizeReference(ref, image)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, registryMirror := range opts.RegistryMirrors {
+			var newReg name.Registry
+			if opts.InsecurePull || opts.InsecureRegistries.Contains(registryMirror) {
+				newReg, err = name.NewRegistry(registryMirror, name.WeakValidation, name.Insecure)
+			} else {
+				newReg, err = name.NewRegistry(registryMirror, name.StrictValidation)
+			}
+			if err != nil {
+				return nil, err
+			}
+			ref := setNewRegistry(ref, newReg)
+
+			logrus.Infof("Retrieving image %s from registry mirror %s", ref, registryMirror)
+			remoteImage, err := remote.Image(ref, remoteOptions(registryMirror, opts)...)
+			if err != nil {
+				logrus.Warnf("Failed to retrieve image %s from registry mirror %s: %s. Will try with the next mirror, or fallback to the default registry.", ref, registryMirror, err)
+				continue
+			}
+			return remoteImage, nil
+		}
+	}
+
 	registryName := ref.Context().RegistryStr()
-	var newReg name.Registry
-	toSet := false
-
-	if opts.RegistryMirror != "" && registryName == name.DefaultRegistry {
-		registryName = opts.RegistryMirror
-
-		newReg, err = name.NewRegistry(opts.RegistryMirror, name.StrictValidation)
-		if err != nil {
-			return nil, err
-		}
-
-		ref, err = normalizeReference(ref, image)
-		if err != nil {
-			return nil, err
-		}
-
-		toSet = true
-	}
-
 	if opts.InsecurePull || opts.InsecureRegistries.Contains(registryName) {
-		newReg, err = name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
+		newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 		if err != nil {
 			return nil, err
 		}
-
-		toSet = true
+		ref = setNewRegistry(ref, newReg)
 	}
 
-	if toSet {
-		if tag, ok := ref.(name.Tag); ok {
-			tag.Repository.Registry = newReg
-			ref = tag
-		}
-
-		if digest, ok := ref.(name.Digest); ok {
-			digest.Repository.Registry = newReg
-			ref = digest
-		}
-	}
-
-	logrus.Infof("Retrieving image %s", ref)
-
-	rOpts := remoteOptions(registryName, opts)
-	return remote.Image(ref, rOpts...)
+	logrus.Infof("Retrieving image %s from registry %s", ref, registryName)
+	return remote.Image(ref, remoteOptions(registryName, opts)...)
 }
 
 // normalizeReference adds the library/ prefix to images without it.
@@ -163,6 +157,19 @@ func normalizeReference(ref name.Reference, image string) (name.Reference, error
 	}
 
 	return ref, nil
+}
+
+func setNewRegistry(ref name.Reference, newReg name.Registry) name.Reference {
+	switch r := ref.(type) {
+	case name.Tag:
+		r.Repository.Registry = newReg
+		return r
+	case name.Digest:
+		r.Repository.Registry = newReg
+		return r
+	default:
+		return ref
+	}
 }
 
 func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Option {

@@ -304,7 +304,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 	checkContainerDiffOutput(t, diff, expected)
 }
 
-func TestBuildViaRegistryMirror(t *testing.T) {
+func TestBuildViaRegistryMirrors(t *testing.T) {
 	repo := getGitRepo()
 	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
 
@@ -327,6 +327,7 @@ func TestBuildViaRegistryMirror(t *testing.T) {
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
+		"--registry-mirror", "doesnotexist.example.com",
 		"--registry-mirror", "us-mirror.gcr.io",
 		"-c", fmt.Sprintf("git://%s", repo))
 
