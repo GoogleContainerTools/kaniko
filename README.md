@@ -57,6 +57,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-ttl duration](#--cache-ttl-duration)
     - [--cleanup](#--cleanup)
     - [--context-sub-path](#--context-sub-path)
+    - [--customPlatform](#--customPlatform)
     - [--digest-file](#--digest-file)
     - [--force](#--force)
     - [--git](#--git)
@@ -576,6 +577,13 @@ Set a sub path within the given `--context`.
 
 Its particularly useful when your context is, for example, a git repository,
 and you want to build one of its subfolders instead of the root folder.
+
+#### --customPlatform
+
+Allows to build with another default platform than the host, similarly to docker build --platform xxx
+the value has to be on the form `--customPlatform=linux/arm` , with acceptable values listed here: [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63)
+
+_This is not virtualization and cannot help to build an architecture not natively supported by the build host. This is used to build i386 on an amd64 Host for example, or arm32 on an arm64 host._
 
 #### --digest-file
 

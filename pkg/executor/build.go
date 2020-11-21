@@ -607,8 +607,13 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, err
 		}
-		configFile.OS = runtime.GOOS
-		configFile.Architecture = runtime.GOARCH
+		if opts.CustomPlatform == "" {
+			configFile.OS = runtime.GOOS
+			configFile.Architecture = runtime.GOARCH
+		} else {
+			configFile.OS = strings.Split(opts.CustomPlatform, "/")[0]
+			configFile.Architecture = strings.Split(opts.CustomPlatform, "/")[1]
+		}
 		sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
 		if err != nil {
 			return nil, err
