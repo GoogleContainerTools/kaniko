@@ -241,9 +241,9 @@ github.com/emirpasic/gods/trees/binaryheap
 github.com/emirpasic/gods/utils
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
-# github.com/genuinetools/amicontained v0.4.3
+# github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 ## explicit
-github.com/genuinetools/amicontained/container
+github.com/genuinetools/bpfd/proc
 # github.com/go-git/gcfg v1.5.0
 github.com/go-git/gcfg
 github.com/go-git/gcfg/scanner

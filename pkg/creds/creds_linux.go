@@ -19,7 +19,7 @@ package creds
 import (
 	"sync"
 
-	"github.com/genuinetools/amicontained/container"
+	"github.com/genuinetools/bpfd/proc"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/sirupsen/logrus"
@@ -36,12 +36,7 @@ func GetKeychain() authn.Keychain {
 		keyChain = authn.NewMultiKeychain(authn.DefaultKeychain)
 
 		// Add the Kubernetes keychain if we're on Kubernetes
-		r, err := container.DetectRuntime()
-		if err != nil {
-			logrus.Warnf("Error detecting container runtime. Using default keychain: %s", err)
-			return
-		}
-		if r == container.RuntimeKubernetes {
+		if proc.GetContainerRuntime(0, 0) == proc.RuntimeKubernetes {
 			k8sc, err := k8schain.NewNoClient()
 			if err != nil {
 				logrus.Warnf("Error setting up k8schain. Using default keychain %s", err)
