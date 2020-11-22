@@ -200,15 +200,14 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 
 // CurrentPlatform returns the v1.Platform on which the code runs
 func currentPlatform(opts *config.KanikoOptions) v1.Platform {
-	if opts.CustomPlatform == "" {
-		return v1.Platform{
-			OS:           runtime.GOOS,
-			Architecture: runtime.GOARCH,
-		}
-	} else {
+	if opts.CustomPlatform != "" {
 		return v1.Platform{
 			OS:           strings.Split(opts.CustomPlatform, "/")[0],
 			Architecture: strings.Split(opts.CustomPlatform, "/")[1],
 		}
+	}
+	return v1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
 	}
 }
