@@ -696,8 +696,9 @@ You can set the `--snapshotMode=<full (default), redo, time>` flag to set how ka
 
 #### --tarPath
 
-Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+Set this flag as `--tarPath=<path>` to save the image as a tarball at path.
 You need to set `--destination` as well (for example `--destination=image`).
+If you want to save the image as tarball only you also need to set `--no-push`.
 
 #### --target
 
