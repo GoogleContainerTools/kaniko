@@ -44,9 +44,11 @@ type CopyCommand struct {
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	ignoreExcludes := false
 	// Resolve from
 	if c.cmd.From != "" {
 		c.fileContext = util.FileContext{Root: filepath.Join(kConfig.KanikoDir, c.cmd.From)}
+		ignoreExcludes = true
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
@@ -89,14 +91,14 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath, c.fileContext, uid, gid)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.fileContext, uid, gid, ignoreExcludes)
 			if err != nil {
 				return errors.Wrap(err, "copying dir")
 			}
 			c.snapshotFiles = append(c.snapshotFiles, copiedFiles...)
 		} else if util.IsSymlink(fi) {
 			// If file is a symlink, we want to copy the target file to destPath
-			exclude, err := util.CopySymlink(fullPath, destPath, c.fileContext)
+			exclude, err := util.CopySymlink(fullPath, destPath, c.fileContext, ignoreExcludes)
 			if err != nil {
 				return errors.Wrap(err, "copying symlink")
 			}
@@ -106,12 +108,19 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			exclude, err := util.CopyFile(fullPath, destPath, c.fileContext, uid, gid)
-			if err != nil {
-				return errors.Wrap(err, "copying file")
-			}
-			if exclude {
-				continue
+			if !ignoreExcludes {
+				exclude, err := util.CopyFile(fullPath, destPath, c.fileContext, uid, gid)
+				if err != nil {
+					return errors.Wrap(err, "copying file")
+				}
+				if exclude {
+					continue
+				}
+			} else {
+				err = util.CopyFileIgnoreExclude(fullPath, destPath, c.fileContext, uid, gid)
+				if err != nil {
+					return errors.Wrap(err, "copying file")
+				}
 			}
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		}

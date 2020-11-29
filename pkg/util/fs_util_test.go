@@ -880,7 +880,7 @@ func TestCopySymlink(t *testing.T) {
 			if err := os.Symlink(tc.linkTarget, link); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := CopySymlink(link, dest, FileContext{}); err != nil {
+			if _, err := CopySymlink(link, dest, FileContext{}, false); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := os.Lstat(dest); err != nil {

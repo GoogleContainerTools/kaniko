@@ -1,0 +1,5 @@
+FROM scratch as src
+COPY . /
+
+FROM scratch as dest
+COPY --from=src / .
