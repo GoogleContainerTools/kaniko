@@ -169,7 +169,7 @@ func remoteOptions(registryName string, opts *config.KanikoOptions) []remote.Opt
 	tr := util.MakeTransport(opts, registryName)
 
 	// on which v1.Platform is this currently running?
-	platform := currentPlatform()
+	platform := currentPlatform(opts)
 
 	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
 }
@@ -199,7 +199,13 @@ func cachedImage(opts *config.KanikoOptions, image string) (v1.Image, error) {
 }
 
 // CurrentPlatform returns the v1.Platform on which the code runs
-func currentPlatform() v1.Platform {
+func currentPlatform(opts *config.KanikoOptions) v1.Platform {
+	if opts.CustomPlatform != "" {
+		return v1.Platform{
+			OS:           strings.Split(opts.CustomPlatform, "/")[0],
+			Architecture: strings.Split(opts.CustomPlatform, "/")[1],
+		}
+	}
 	return v1.Platform{
 		OS:           runtime.GOOS,
 		Architecture: runtime.GOARCH,
