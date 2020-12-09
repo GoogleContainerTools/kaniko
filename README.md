@@ -654,7 +654,11 @@ Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
 Set this flag if you want to use a registry mirror instead of default `index.docker.io`.
 
+Note that you can't specify a URL with scheme for this flag. Some valid options are:
 
+* `mirror.gcr.io`
+* `127.0.0.1`
+* `192.168.0.1:5000`
 
 #### --reproducible
 
