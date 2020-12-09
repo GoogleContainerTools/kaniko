@@ -129,7 +129,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 	}
 
 	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, fileContext, opts.RunV2)
+		command, err := commands.GetCommand(cmd, fileContext, opts.RunV2, opts.CacheCopyLayers)
 		if err != nil {
 			return nil, err
 		}
@@ -186,6 +186,7 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 	compositeKey.AddKey(resolvedCmd)
 	switch v := command.(type) {
 	case *commands.CopyCommand:
+	case *commands.CachingCopyCommand:
 		compositeKey = s.populateCopyCmdCompositeKey(command, v.From(), compositeKey)
 	}
 

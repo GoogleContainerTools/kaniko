@@ -798,6 +798,89 @@ func Test_stageBuilder_build(t *testing.T) {
 		func() testcase {
 			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
+			filepath := filepath.Join(dir, filename)
+
+			tarContent := generateTar(t, dir, filename)
+
+			ch := NewCompositeCache("", "")
+			ch.AddPath(filepath, util.FileContext{})
+
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			copyCommandCacheKey := hash
+			return testcase{
+				description: "copy command cache enabled and key in cache",
+				opts:        &config.KanikoOptions{Cache: true},
+				layerCache: &fakeLayerCache{
+					retrieve: true,
+					img: fakeImage{
+						ImageLayers: []v1.Layer{
+							fakeLayer{
+								TarContent: tarContent,
+							},
+						},
+					},
+				},
+				rootDir:           dir,
+				expectedCacheKeys: []string{copyCommandCacheKey},
+				// CachingCopyCommand is not pushed to the cache
+				pushedCacheKeys: []string{},
+				commands: getCommands(util.FileContext{Root: dir}, []instructions.Command{
+					&instructions.CopyCommand{
+						SourcesAndDest: []string{
+							filename, "foo.txt",
+						},
+					},
+				}),
+				fileName: filename,
+			}
+		}(),
+		func() testcase {
+			dir, filenames := tempDirAndFile(t)
+			filename := filenames[0]
+			tarContent := []byte{}
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			filePath := filepath.Join(dir, filename)
+			ch := NewCompositeCache("", "")
+			ch.AddPath(filePath, util.FileContext{})
+
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			return testcase{
+				description: "copy command cache enabled and key is not in cache",
+				opts:        &config.KanikoOptions{Cache: true},
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				layerCache:  &fakeLayerCache{},
+				image: fakeImage{
+					ImageLayers: []v1.Layer{
+						fakeLayer{
+							TarContent: tarContent,
+						},
+					},
+				},
+				rootDir:           dir,
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{hash},
+				commands: getCommands(util.FileContext{Root: dir}, []instructions.Command{
+					&instructions.CopyCommand{
+						SourcesAndDest: []string{
+							filename, "foo.txt",
+						},
+					},
+				}),
+				fileName: filename,
+			}
+		}(),
+		func() testcase {
+			dir, filenames := tempDirAndFile(t)
+			filename := filenames[0]
 			tarContent := generateTar(t, filename)
 
 			destDir, err := ioutil.TempDir("", "baz")
@@ -1146,6 +1229,7 @@ func getCommands(fileContext util.FileContext, cmds []instructions.Command) []co
 		cmd, err := commands.GetCommand(
 			c,
 			fileContext,
+			false,
 			false,
 		)
 		if err != nil {
