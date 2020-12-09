@@ -812,7 +812,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			copyCommandCacheKey := hash
 			return testcase{
 				description: "copy command cache enabled and key in cache",
-				opts:        &config.KanikoOptions{Cache: true},
+				opts:        &config.KanikoOptions{Cache: true, CacheCopyLayers: true},
 				layerCache: &fakeLayerCache{
 					retrieve: true,
 					img: fakeImage{
@@ -887,6 +887,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			if err != nil {
 				t.Errorf("could not create temp dir %v", err)
 			}
+			filePath := filepath.Join(dir, filename)
 
 			ch := NewCompositeCache("", fmt.Sprintf("RUN foobar"))
 
@@ -894,6 +895,17 @@ func Test_stageBuilder_build(t *testing.T) {
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
+
+			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
+			ch.AddPath(filePath, util.FileContext{})
+
+			hash2, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
+			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
+			ch.AddPath(filePath, util.FileContext{})
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -928,8 +940,8 @@ COPY %s bar.txt
 
 			cmds := stage.Commands
 			return testcase{
-				description: "cached run command followed by copy command results in consistent read and write hashes",
-				opts:        &config.KanikoOptions{Cache: true},
+				description: "cached run command followed by uncached copy command results in consistent read and write hashes",
+				opts:        &config.KanikoOptions{Cache: true, CacheCopyLayers: true},
 				rootDir:     dir,
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
 				layerCache: &fakeLayerCache{
@@ -938,8 +950,8 @@ COPY %s bar.txt
 				},
 				image: image,
 				// hash1 is the read cachekey for the first layer
-				expectedCacheKeys: []string{hash1},
-				pushedCacheKeys:   []string{},
+				expectedCacheKeys: []string{hash1, hash2},
+				pushedCacheKeys:   []string{hash2},
 				commands:          getCommands(util.FileContext{Root: dir}, cmds),
 			}
 		}(),
