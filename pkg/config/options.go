@@ -44,7 +44,7 @@ type KanikoOptions struct {
 	DigestFile              string
 	ImageNameDigestFile     string
 	OCILayoutPath           string
-	RegistryMirror          string
+	RegistryMirrors         multiArg
 	Destinations            multiArg
 	BuildArgs               multiArg
 	InsecureRegistries      multiArg
