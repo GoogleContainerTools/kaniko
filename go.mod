@@ -18,7 +18,7 @@ require (
 	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
 	github.com/docker/swarmkit v1.12.1-0.20180726190244-7567d47988d8 // indirect
-	github.com/genuinetools/amicontained v0.4.3
+	github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/golang/mock v1.4.3
 	github.com/google/go-cmp v0.4.1

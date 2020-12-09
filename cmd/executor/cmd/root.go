@@ -31,7 +31,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/genuinetools/amicontained/container"
+	"github.com/genuinetools/bpfd/proc"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -190,8 +190,7 @@ func addHiddenFlags(cmd *cobra.Command) {
 }
 
 func checkContained() bool {
-	_, err := container.DetectRuntime()
-	return err == nil
+	return proc.GetContainerRuntime(0, 0) != proc.RuntimeNotFound
 }
 
 // cacheFlagsValid makes sure the flags passed in related to caching are valid
