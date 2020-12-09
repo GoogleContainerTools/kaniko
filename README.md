@@ -57,6 +57,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-ttl duration](#--cache-ttl-duration)
     - [--cleanup](#--cleanup)
     - [--context-sub-path](#--context-sub-path)
+    - [--customPlatform](#--customPlatform)
     - [--digest-file](#--digest-file)
     - [--force](#--force)
     - [--git](#--git)
@@ -577,6 +578,13 @@ Set a sub path within the given `--context`.
 Its particularly useful when your context is, for example, a git repository,
 and you want to build one of its subfolders instead of the root folder.
 
+#### --customPlatform
+
+Allows to build with another default platform than the host, similarly to docker build --platform xxx
+the value has to be on the form `--customPlatform=linux/arm` , with acceptable values listed here: [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63)
+
+_This is not virtualization and cannot help to build an architecture not natively supported by the build host. This is used to build i386 on an amd64 Host for example, or arm32 on an arm64 host._
+
 #### --digest-file
 
 Set this flag to specify a file in the container. This file will
@@ -656,6 +664,14 @@ Set this flag if you want to use a registry mirror instead of the default `index
 
 Expected format is `mirror.gcr.io` for example.
 
+
+Note that you can't specify a URL with scheme for this flag. Some valid options are:
+
+* `mirror.gcr.io`
+* `127.0.0.1`
+* `192.168.0.1:5000`
+
+
 #### --reproducible
 
 Set this flag to strip timestamps out of the built image and make it reproducible.
@@ -696,8 +712,9 @@ You can set the `--snapshotMode=<full (default), redo, time>` flag to set how ka
 
 #### --tarPath
 
-Set this flag as `--tarPath=<path>` to save the image as a tarball at path instead of pushing the image.
+Set this flag as `--tarPath=<path>` to save the image as a tarball at path.
 You need to set `--destination` as well (for example `--destination=image`).
+If you want to save the image as tarball only you also need to set `--no-push`.
 
 #### --target
 

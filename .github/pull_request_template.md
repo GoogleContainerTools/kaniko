@@ -1,7 +1,7 @@
 <!-- 🎉🎉🎉 Thank you for the PR!!! 🎉🎉🎉 -->
 
 
-Fixes `#<issue number>`. _in case of a bug fix, this should point to a bug and any other related issue(s)_
+Fixes #<issue number> _in case of a bug fix, this should point to a bug and any other related issue(s)_
 
 **Description**
 

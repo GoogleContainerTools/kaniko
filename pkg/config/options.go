@@ -36,6 +36,7 @@ type KanikoOptions struct {
 	DockerfilePath          string
 	SrcContext              string
 	SnapshotMode            string
+	CustomPlatform          string
 	Bucket                  string
 	TarPath                 string
 	Target                  string

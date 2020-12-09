@@ -20,9 +20,6 @@ const (
 	// RootDir is the path to the root directory
 	RootDir = "/"
 
-	// WorkspaceDir is the path to the workspace directory
-	WorkspaceDir = "/workspace"
-
 	//KanikoDir is the path to the Kaniko directory
 	KanikoDir = "/kaniko"
 
