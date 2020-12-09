@@ -42,7 +42,7 @@ type CopyCommand struct {
 	cmd           *instructions.CopyCommand
 	fileContext   util.FileContext
 	snapshotFiles []string
-	shdCache 			bool
+	shdCache      bool
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -154,14 +154,12 @@ func (c *CopyCommand) ShouldCacheOutput() bool {
 // CacheCommand returns true since this command should be cached
 func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
 	return &CachingCopyCommand{
-		img:          img,
-		cmd:          c.cmd,
+		img:         img,
+		cmd:         c.cmd,
 		fileContext: c.fileContext,
-		extractFn:    util.ExtractFile,
+		extractFn:   util.ExtractFile,
 	}
 }
-
-
 
 type CachingCopyCommand struct {
 	BaseCommand
@@ -169,7 +167,7 @@ type CachingCopyCommand struct {
 	img            v1.Image
 	extractedFiles []string
 	cmd            *instructions.CopyCommand
-	fileContext     util.FileContext
+	fileContext    util.FileContext
 	extractFn      util.ExtractFunction
 }
 

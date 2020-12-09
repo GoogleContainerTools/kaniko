@@ -53,18 +53,18 @@ type KanikoOptions struct {
 	RegistriesCertificates  keyValueArg
 	Insecure                bool
 	SkipTLSVerify           bool
-	InsecurePull      bool
-	SkipTLSVerifyPull bool
-	SingleSnapshot    bool
-	Reproducible      bool
-	NoPush            bool
-	Cache             bool
-	Cleanup           bool
-	IgnoreVarRun      bool
-	SkipUnusedStages  bool
-	RunV2             bool
-	CacheCopyLayers   bool
-	Git               KanikoGitOptions
+	InsecurePull            bool
+	SkipTLSVerifyPull       bool
+	SingleSnapshot          bool
+	Reproducible            bool
+	NoPush                  bool
+	Cache                   bool
+	Cleanup                 bool
+	IgnoreVarRun            bool
+	SkipUnusedStages        bool
+	RunV2                   bool
+	CacheCopyLayers         bool
+	Git                     KanikoGitOptions
 }
 
 type KanikoGitOptions struct {
