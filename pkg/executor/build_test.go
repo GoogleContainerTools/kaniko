@@ -802,7 +802,7 @@ func Test_stageBuilder_build(t *testing.T) {
 
 			tarContent := generateTar(t, dir, filename)
 
-			ch := NewCompositeCache("", "")
+			ch := NewCompositeCache(fmt.Sprintf("COPY %s foo.txt", filename))
 			ch.AddPath(filepath, util.FileContext{})
 
 			hash, err := ch.Hash()
@@ -889,7 +889,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			}
 			filePath := filepath.Join(dir, filename)
 
-			ch := NewCompositeCache("", fmt.Sprintf("RUN foobar"))
+			ch := NewCompositeCache("", "RUN foobar")
 
 			hash1, err := ch.Hash()
 			if err != nil {
