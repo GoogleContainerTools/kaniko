@@ -308,7 +308,7 @@ func populateVolumeCache() error {
 }
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
-func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cacheRepo, dockerfilesPath string, version int) error {
+func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cacheRepo, dockerfilesPath string, version int, args []string) error {
 	imageRepo, serviceAccount := config.imageRepo, config.serviceAccount
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
@@ -334,6 +334,9 @@ func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cac
 			cacheFlag,
 			"--cache-repo", cacheRepo,
 			"--cache-dir", cacheDir)
+		for _, v := range args {
+			dockerRunFlags = append(dockerRunFlags, v)
+		}
 		kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 		_, err := RunCommandWithoutTest(kanikoCmd)

@@ -252,6 +252,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 	}
 	timing.DefaultRun.Stop(t)
+	logrus.Infof("Pushed images to %d destinations", len(destRefs))
 	return writeImageOutputs(image, destRefs)
 }
 
