@@ -14,8 +14,10 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
-FROM golang:1.14
-ARG GOARCH=amd64
+ARG BUILDPLATFORM
+FROM --platform=${BUILDPLATFORM} golang:1.14
+ARG TARGETARCH
+
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v2.0.2/docker-credential-gcr_linux_amd64-2.0.2.tar.gz /usr/local/bin/
@@ -34,7 +36,7 @@ RUN tar --no-same-owner -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credentia
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-RUN make GOARCH=${GOARCH}
+RUN make GOARCH=${TARGETARCH}
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
