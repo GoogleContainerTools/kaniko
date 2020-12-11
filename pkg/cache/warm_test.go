@@ -22,9 +22,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/fakes"
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 const (
@@ -36,7 +34,7 @@ func Test_Warmer_Warm_not_in_cache(t *testing.T) {
 	manifestBuf := new(bytes.Buffer)
 
 	cw := &Warmer{
-		Remote: func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+		Remote: func(_ string, _ config.RegistryOptions, _ string) (v1.Image, error) {
 			return fakes.FakeImage{}, nil
 		},
 		Local: func(_ *config.CacheOptions, _ string) (v1.Image, error) {
@@ -64,7 +62,7 @@ func Test_Warmer_Warm_in_cache_not_expired(t *testing.T) {
 	manifestBuf := new(bytes.Buffer)
 
 	cw := &Warmer{
-		Remote: func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+		Remote: func(_ string, _ config.RegistryOptions, _ string) (v1.Image, error) {
 			return fakes.FakeImage{}, nil
 		},
 		Local: func(_ *config.CacheOptions, _ string) (v1.Image, error) {
@@ -92,7 +90,7 @@ func Test_Warmer_Warm_in_cache_expired(t *testing.T) {
 	manifestBuf := new(bytes.Buffer)
 
 	cw := &Warmer{
-		Remote: func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+		Remote: func(_ string, _ config.RegistryOptions, _ string) (v1.Image, error) {
 			return fakes.FakeImage{}, nil
 		},
 		Local: func(_ *config.CacheOptions, _ string) (v1.Image, error) {

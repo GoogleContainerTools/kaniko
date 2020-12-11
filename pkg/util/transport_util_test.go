@@ -44,12 +44,12 @@ func Test_makeTransport(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		opts  *config.KanikoOptions
+		opts  config.RegistryOptions
 		check func(*tls.Config, *mockedCertPool)
 	}{
 		{
 			name: "SkipTLSVerify set",
-			opts: &config.KanikoOptions{SkipTLSVerify: true},
+			opts: config.RegistryOptions{SkipTLSVerify: true},
 			check: func(config *tls.Config, pool *mockedCertPool) {
 				if !config.InsecureSkipVerify {
 					t.Errorf("makeTransport().TLSClientConfig.InsecureSkipVerify not set while SkipTLSVerify set")
@@ -58,7 +58,7 @@ func Test_makeTransport(t *testing.T) {
 		},
 		{
 			name: "SkipTLSVerifyRegistries set with expected registry",
-			opts: &config.KanikoOptions{SkipTLSVerifyRegistries: []string{registryName}},
+			opts: config.RegistryOptions{SkipTLSVerifyRegistries: []string{registryName}},
 			check: func(config *tls.Config, pool *mockedCertPool) {
 				if !config.InsecureSkipVerify {
 					t.Errorf("makeTransport().TLSClientConfig.InsecureSkipVerify not set while SkipTLSVerifyRegistries set with registry name")
@@ -67,7 +67,7 @@ func Test_makeTransport(t *testing.T) {
 		},
 		{
 			name: "SkipTLSVerifyRegistries set with other registry",
-			opts: &config.KanikoOptions{SkipTLSVerifyRegistries: []string{fmt.Sprintf("other.%s", registryName)}},
+			opts: config.RegistryOptions{SkipTLSVerifyRegistries: []string{fmt.Sprintf("other.%s", registryName)}},
 			check: func(config *tls.Config, pool *mockedCertPool) {
 				if config.InsecureSkipVerify {
 					t.Errorf("makeTransport().TLSClientConfig.InsecureSkipVerify set while SkipTLSVerifyRegistries not set with registry name")
@@ -76,7 +76,7 @@ func Test_makeTransport(t *testing.T) {
 		},
 		{
 			name: "RegistriesCertificates set for registry",
-			opts: &config.KanikoOptions{RegistriesCertificates: map[string]string{registryName: "/path/to/the/certificate.cert"}},
+			opts: config.RegistryOptions{RegistriesCertificates: map[string]string{registryName: "/path/to/the/certificate.cert"}},
 			check: func(config *tls.Config, pool *mockedCertPool) {
 				if len(pool.certificatesPath) != 1 || pool.certificatesPath[0] != "/path/to/the/certificate.cert" {
 					t.Errorf("makeTransport().RegistriesCertificates certificate not appended to system certificates")
@@ -85,7 +85,7 @@ func Test_makeTransport(t *testing.T) {
 		},
 		{
 			name: "RegistriesCertificates set for another registry",
-			opts: &config.KanikoOptions{RegistriesCertificates: map[string]string{fmt.Sprintf("other.%s=", registryName): "/path/to/the/certificate.cert"}},
+			opts: config.RegistryOptions{RegistriesCertificates: map[string]string{fmt.Sprintf("other.%s=", registryName): "/path/to/the/certificate.cert"}},
 			check: func(config *tls.Config, pool *mockedCertPool) {
 				if len(pool.certificatesPath) != 0 {
 					t.Errorf("makeTransport().RegistriesCertificates certificate appended to system certificates while added for other registry")
