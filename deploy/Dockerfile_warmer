@@ -14,9 +14,9 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
-FROM golang:1.14
-ARG GOARCH=amd64
-WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
+FROM --platform=${BUILDPLATFORM} golang:1.14 AS builder
+ARG TARGETARCH
+
 # Get GCR credential helper
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v2.0.1/docker-credential-gcr_linux_amd64-2.0.1.tar.gz /usr/local/bin/
 RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-gcr_linux_amd64-2.0.1.tar.gz
@@ -30,15 +30,15 @@ RUN tar -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-acr-linux-amd6
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-RUN make GOARCH=${GOARCH} out/warmer
+RUN make GOARCH=${TARGETARCH}  out/warmer
 
 FROM scratch
-COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
-COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
-COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
-COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
+COPY --from=builder /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
+COPY --from=builder /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
+COPY --from=builder /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
+COPY --from=builder /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY --from=0 /kaniko/.docker /kaniko/.docker
+COPY --from=builder /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
 ENV USER /root
