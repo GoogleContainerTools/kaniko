@@ -68,6 +68,7 @@ type KanikoOptions struct {
 	IgnoreVarRun        bool
 	SkipUnusedStages    bool
 	RunV2               bool
+	CacheCopyLayers     bool
 	Git                 KanikoGitOptions
 }
 

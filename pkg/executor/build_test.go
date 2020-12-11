@@ -798,19 +798,160 @@ func Test_stageBuilder_build(t *testing.T) {
 		func() testcase {
 			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
+			filepath := filepath.Join(dir, filename)
+
+			tarContent := generateTar(t, dir, filename)
+
+			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
+			ch.AddPath(filepath, util.FileContext{})
+
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			copyCommandCacheKey := hash
+			dockerFile := fmt.Sprintf(`
+FROM ubuntu:16.04
+COPY %s foo.txt
+`, filename)
+			f, _ := ioutil.TempFile("", "")
+			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
+			opts := &config.KanikoOptions{
+				DockerfilePath:  f.Name(),
+				Cache:           true,
+				CacheCopyLayers: true,
+			}
+
+			testStages, metaArgs, err := dockerfile.ParseStages(opts)
+			if err != nil {
+				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
+			}
+
+			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
+			if err != nil {
+				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
+			}
+			_ = ResolveCrossStageInstructions(kanikoStages)
+			stage := kanikoStages[0]
+
+			cmds := stage.Commands
+
+			return testcase{
+				description: "copy command cache enabled and key in cache",
+				opts:        opts,
+				image: fakeImage{
+					ImageLayers: []v1.Layer{
+						fakeLayer{
+							TarContent: tarContent,
+						},
+					},
+				},
+				layerCache: &fakeLayerCache{
+					retrieve: true,
+					img: fakeImage{
+						ImageLayers: []v1.Layer{
+							fakeLayer{
+								TarContent: tarContent,
+							},
+						},
+					},
+				},
+				rootDir:           dir,
+				expectedCacheKeys: []string{copyCommandCacheKey},
+				// CachingCopyCommand is not pushed to the cache
+				pushedCacheKeys: []string{},
+				commands:        getCommands(util.FileContext{Root: dir}, cmds, true),
+				fileName:        filename,
+			}
+		}(),
+		func() testcase {
+			dir, filenames := tempDirAndFile(t)
+			filename := filenames[0]
+			tarContent := []byte{}
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			filePath := filepath.Join(dir, filename)
+			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
+			ch.AddPath(filePath, util.FileContext{})
+
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			dockerFile := fmt.Sprintf(`
+FROM ubuntu:16.04
+COPY %s foo.txt
+`, filename)
+			f, _ := ioutil.TempFile("", "")
+			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
+			opts := &config.KanikoOptions{
+				DockerfilePath:  f.Name(),
+				Cache:           true,
+				CacheCopyLayers: true,
+			}
+
+			testStages, metaArgs, err := dockerfile.ParseStages(opts)
+			if err != nil {
+				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
+			}
+
+			kanikoStages, err := dockerfile.MakeKanikoStages(opts, testStages, metaArgs)
+			if err != nil {
+				t.Errorf("Failed to parse stages to Kaniko Stages: %s", err)
+			}
+			_ = ResolveCrossStageInstructions(kanikoStages)
+			stage := kanikoStages[0]
+
+			cmds := stage.Commands
+			return testcase{
+				description: "copy command cache enabled and key is not in cache",
+				opts:        opts,
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				layerCache:  &fakeLayerCache{},
+				image: fakeImage{
+					ImageLayers: []v1.Layer{
+						fakeLayer{
+							TarContent: tarContent,
+						},
+					},
+				},
+				rootDir:           dir,
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{hash},
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, true),
+				fileName:          filename,
+			}
+		}(),
+		func() testcase {
+			dir, filenames := tempDirAndFile(t)
+			filename := filenames[0]
 			tarContent := generateTar(t, filename)
 
 			destDir, err := ioutil.TempDir("", "baz")
 			if err != nil {
 				t.Errorf("could not create temp dir %v", err)
 			}
+			filePath := filepath.Join(dir, filename)
 
-			ch := NewCompositeCache("", fmt.Sprintf("RUN foobar"))
+			ch := NewCompositeCache("", "RUN foobar")
 
 			hash1, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
+
+			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
+			ch.AddPath(filePath, util.FileContext{})
+
+			hash2, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
+			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
+			ch.AddPath(filePath, util.FileContext{})
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -845,8 +986,8 @@ COPY %s bar.txt
 
 			cmds := stage.Commands
 			return testcase{
-				description: "cached run command followed by copy command results in consistent read and write hashes",
-				opts:        &config.KanikoOptions{Cache: true},
+				description: "cached run command followed by uncached copy command results in consistent read and write hashes",
+				opts:        &config.KanikoOptions{Cache: true, CacheCopyLayers: true},
 				rootDir:     dir,
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
 				layerCache: &fakeLayerCache{
@@ -855,9 +996,9 @@ COPY %s bar.txt
 				},
 				image: image,
 				// hash1 is the read cachekey for the first layer
-				expectedCacheKeys: []string{hash1},
-				pushedCacheKeys:   []string{},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds),
+				expectedCacheKeys: []string{hash1, hash2},
+				pushedCacheKeys:   []string{hash2},
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, true),
 			}
 		}(),
 		func() testcase {
@@ -933,7 +1074,7 @@ RUN foobar
 				image:             image,
 				expectedCacheKeys: []string{runHash},
 				pushedCacheKeys:   []string{},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, false),
 			}
 		}(),
 		func() testcase {
@@ -1107,7 +1248,7 @@ RUN foobar
 			if err != nil {
 				t.Errorf("Expected error to be nil but was %v", err)
 			}
-
+			fmt.Println(lc.receivedKeys)
 			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
 			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
 
@@ -1140,13 +1281,14 @@ func assertCacheKeys(t *testing.T, expectedCacheKeys, actualCacheKeys []string, 
 	}
 }
 
-func getCommands(fileContext util.FileContext, cmds []instructions.Command) []commands.DockerCommand {
+func getCommands(fileContext util.FileContext, cmds []instructions.Command, cacheCopy bool) []commands.DockerCommand {
 	outCommands := make([]commands.DockerCommand, 0)
 	for _, c := range cmds {
 		cmd, err := commands.GetCommand(
 			c,
 			fileContext,
 			false,
+			cacheCopy,
 		)
 		if err != nil {
 			panic(err)

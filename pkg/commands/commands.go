@@ -60,7 +60,7 @@ type DockerCommand interface {
 	ShouldDetectDeletedFiles() bool
 }
 
-func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool) (DockerCommand, error) {
+func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool, cacheCopy bool) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
 		if useNewRun {
@@ -68,7 +68,7 @@ func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRu
 		}
 		return &RunCommand{cmd: c}, nil
 	case *instructions.CopyCommand:
-		return &CopyCommand{cmd: c, fileContext: fileContext}, nil
+		return &CopyCommand{cmd: c, fileContext: fileContext, shdCache: cacheCopy}, nil
 	case *instructions.ExposeCommand:
 		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
