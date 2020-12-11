@@ -20,16 +20,13 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
-	"runtime"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/creds"
+	"github.com/GoogleContainerTools/kaniko/pkg/image/remote"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -42,18 +39,18 @@ func WarmCache(opts *config.WarmerOptions) error {
 	logrus.Debugf("%s\n", cacheDir)
 	logrus.Debugf("%s\n", images)
 
-	for _, image := range images {
+	for _, img := range images {
 		tarBuf := new(bytes.Buffer)
 		manifestBuf := new(bytes.Buffer)
 
 		cw := &Warmer{
-			Remote:         remote.Image,
+			Remote:         remote.RetrieveRemoteImage,
 			Local:          LocalSource,
 			TarWriter:      tarBuf,
 			ManifestWriter: manifestBuf,
 		}
 
-		digest, err := cw.Warm(image, opts)
+		digest, err := cw.Warm(img, opts)
 		if err != nil {
 			if !IsAlreadyCached(err) {
 				return err
@@ -68,7 +65,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 			return err
 		}
 
-		logrus.Debugf("Wrote %s to cache", image)
+		logrus.Debugf("Wrote %s to cache", img)
 	}
 	return nil
 }
@@ -93,9 +90,9 @@ func writeBufsToFile(cachePath string, tarBuf, manifestBuf *bytes.Buffer) error 
 }
 
 // FetchRemoteImage retrieves a Docker image manifest from a remote source.
-// github.com/google/go-containerregistry/pkg/v1/remote.Image can be used as
+// github.com/GoogleContainerTools/kaniko/image/remote.RetrieveRemoteImage can be used as
 // this type.
-type FetchRemoteImage func(name.Reference, ...remote.Option) (v1.Image, error)
+type FetchRemoteImage func(image string, opts config.RegistryOptions, customPlatform string) (v1.Image, error)
 
 // FetchLocalSource retrieves a Docker image manifest from a local source.
 // github.com/GoogleContainerTools/kaniko/cache.LocalSource can be used as
@@ -118,11 +115,7 @@ func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error)
 		return v1.Hash{}, errors.Wrapf(err, "Failed to verify image name: %s", image)
 	}
 
-	transport := http.DefaultTransport.(*http.Transport)
-	platform := currentPlatform()
-
-	rOpts := []remote.Option{remote.WithTransport(transport), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
-	img, err := w.Remote(cacheRef, rOpts...)
+	img, err := w.Remote(image, opts.RegistryOptions, opts.CustomPlatform)
 	if err != nil || img == nil {
 		return v1.Hash{}, errors.Wrapf(err, "Failed to retrieve image: %s", image)
 	}
@@ -154,12 +147,4 @@ func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error)
 	}
 
 	return digest, nil
-}
-
-// CurrentPlatform returns the v1.Platform on which the code runs.
-func currentPlatform() v1.Platform {
-	return v1.Platform{
-		OS:           runtime.GOOS,
-		Architecture: runtime.GOARCH,
-	}
 }

@@ -25,19 +25,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/v1/partial"
-
-	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-
-	"golang.org/x/sync/errgroup"
-
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
@@ -45,9 +41,11 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	image_util "github.com/GoogleContainerTools/kaniko/pkg/image"
+	"github.com/GoogleContainerTools/kaniko/pkg/image/remote"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // This is the size of an empty tar in Go
@@ -746,7 +744,7 @@ func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) e
 
 			// This must be an image name, fetch it.
 			logrus.Debugf("Found extra base image stage %s", c.From)
-			sourceImage, err := image_util.RetrieveRemoteImage(c.From, opts)
+			sourceImage, err := remote.RetrieveRemoteImage(c.From, opts.RegistryOptions, opts.CustomPlatform)
 			if err != nil {
 				return err
 			}

@@ -61,7 +61,7 @@ func GetBuildContext(srcContext string, opts BuildOptions) (BuildContext, error)
 			if util.ValidAzureBlobStorageHost(srcContext) {
 				return &AzureBlob{context: srcContext}, nil
 			}
-			return nil, errors.New("url provided for https context is not in a supported format, please use the https url for Azure Blob Storage")
+			return &HTTPSTar{context: srcContext}, nil
 		case TarBuildContextPrefix:
 			return &Tar{context: context}, nil
 		}
