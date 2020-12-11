@@ -2,94 +2,40 @@
 timeout: 1800s
 
 steps:
-
+  # Set up builder for muti-arch builds.
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
+    id: 'initialize-qemu'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'create', '--name', 'mybuilder']
+    id: 'create-builder'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'use', 'mybuilder']
+    id: 'select-builder'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'inspect', '--bootstrap']
+    id: 'show-target-build-platforms'
   # First, build kaniko
   - name: "gcr.io/cloud-builders/docker"
-    args: ["build", "-f", "deploy/Dockerfile",
+    args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile",
            "-t", "gcr.io/kaniko-project/executor:$TAG_NAME", "."]
   - name: "gcr.io/cloud-builders/docker"
     args: ["tag", "gcr.io/kaniko-project/executor:$TAG_NAME", 
            "gcr.io/kaniko-project/executor:latest"]
   # Then, we want to build kaniko:debug
   - name: "gcr.io/cloud-builders/docker"
-    args: ["build", "-f", "deploy/Dockerfile_debug",
+    args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_debug",
            "-t", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", "."]
   - name: "gcr.io/cloud-builders/docker"
     args: ["tag", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", 
            "gcr.io/kaniko-project/executor:debug"]
   # Then, we want to build the cache warmer
   - name: "gcr.io/cloud-builders/docker"
-    args: ["build", "-f", "deploy/Dockerfile_warmer",
+    args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_warmer",
            "-t", "gcr.io/kaniko-project/warmer:$TAG_NAME", "."]
   - name: "gcr.io/cloud-builders/docker"
     args: ["tag", "gcr.io/kaniko-project/warmer:$TAG_NAME", 
            "gcr.io/kaniko-project/warmer:latest"]
-
-
-  # Build each of the multi-arch images with Bazel and load them into the Docker daemon.
-  - name: gcr.io/cloud-marketplace-containers/google/bazel:3.4.1
-    entrypoint: sh
-    args:
-    - -c
-    - |
-      #!/bin/sh
-      set -o errexit
-      set -o xtrace
-
-      bazel run //:gazelle
-      bazel run --host_force_python=PY2 //cmd/executor:image_amd64
-      bazel run --host_force_python=PY2 //cmd/executor:image_arm64
-
-  # Publish the individual container images
-  - name: docker
-    entrypoint: sh
-    args:
-    - -c
-    - |
-      #!/bin/sh
-      set -o errexit
-      set -o xtrace
-
-      docker tag bazel/cmd/executor:image_amd64     gcr.io/kaniko-project/executor:amd64
-      docker tag bazel/cmd/executor:image_amd64     gcr.io/kaniko-project/executor:amd64-$TAG_NAME
-      docker tag bazel/cmd/executor:image_arm64     gcr.io/kaniko-project/executor:arm64
-      docker tag bazel/cmd/executor:image_arm64     gcr.io/kaniko-project/executor:arm64-$TAG_NAME
-
-      docker push gcr.io/kaniko-project/executor:amd64
-      docker push gcr.io/kaniko-project/executor:amd64-$TAG_NAME
-      docker push gcr.io/kaniko-project/executor:arm64
-      docker push gcr.io/kaniko-project/executor:arm64-$TAG_NAME
-
-  # Enable "manifest list" support in docker, and publish one covering the per-architecture
-  # images published above.
-  - name: docker
-    entrypoint: sh
-    args:
-    - -c
-    - |
-      #!/bin/sh
-      set -o errexit
-      set -o xtrace
-
-      # Publish manifest lists second, after all of the binary material
-      # has been uploaded, so that it is fast.  We want fast because enabling
-      # the experimental features in docker changes ~/.docker/config.json, which
-      # GCB periodically tramples.
-      #
-      # Enable support for 'docker manifest create'
-      # https://docs.docker.com/engine/reference/commandline/manifest_create/
-      sed -i 's/^{/{"experimental": "enabled",/g' ~/.docker/config.json
-
-      docker manifest create gcr.io/kaniko-project/executor:multi-arch \
-         gcr.io/kaniko-project/executor:amd64 \
-         gcr.io/kaniko-project/executor:arm64
-      docker manifest push gcr.io/kaniko-project/executor:multi-arch
-
-      docker manifest create gcr.io/kaniko-project/executor:multi-arch-$TAG_NAME \
-         gcr.io/kaniko-project/executor:amd64-$TAG_NAME \
-         gcr.io/kaniko-project/executor:arm64-$TAG_NAME
-      docker manifest push gcr.io/kaniko-project/executor:multi-arch-$TAG_NAME
-
 
 images: ["gcr.io/kaniko-project/executor:$TAG_NAME",
          "gcr.io/kaniko-project/executor:latest",
@@ -97,3 +43,9 @@ images: ["gcr.io/kaniko-project/executor:$TAG_NAME",
          "gcr.io/kaniko-project/executor:debug",
          "gcr.io/kaniko-project/warmer:$TAG_NAME",
          "gcr.io/kaniko-project/warmer:latest"]
+
+options:
+  env:
+  - 'DOCKER_CLI_EXPERIMENTAL=enabled'
+substitutions:
+  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64,linux/s390x'
