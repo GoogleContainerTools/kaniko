@@ -668,7 +668,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 		for _, p := range filesToSave {
 			logrus.Infof("Saving file %s for later use", p)
-			if err := util.CopyFileOrSymlink(p, dstDir, config.RootDir); err != nil {
+			if err := util.CopyFileOrSymlink(p, dstDir, fileContext.Root); err != nil {
 				return nil, errors.Wrap(err, "could not save file")
 			}
 		}
