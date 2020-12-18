@@ -21,6 +21,7 @@ import (
 	"errors"
 	"hash"
 	"io"
+	"os"
 	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -216,7 +217,9 @@ func newMultiCloser(c ...io.Closer) multiCloser { return multiCloser(c) }
 
 func (m multiCloser) Close() error {
 	for _, c := range m {
-		if err := c.Close(); err != nil {
+		// NOTE: net/http will call close on success, so if we've already
+		// closed the inner rc, it's not an error.
+		if err := c.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
 			return err
 		}
 	}

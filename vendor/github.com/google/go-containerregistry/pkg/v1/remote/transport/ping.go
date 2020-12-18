@@ -15,12 +15,15 @@
 package transport
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
+	authchallenge "github.com/docker/distribution/registry/client/auth/challenge"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -65,7 +68,7 @@ func parseChallenge(suffix string) map[string]string {
 	return kv
 }
 
-func ping(reg name.Registry, t http.RoundTripper) (*pingResp, error) {
+func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingResp, error) {
 	client := http.Client{Transport: t}
 
 	// This first attempts to use "https" for every request, falling back to http
@@ -76,12 +79,16 @@ func ping(reg name.Registry, t http.RoundTripper) (*pingResp, error) {
 		schemes = append(schemes, "http")
 	}
 
-	var connErr error
+	var errs []string
 	for _, scheme := range schemes {
 		url := fmt.Sprintf("%s://%s/v2/", scheme, reg.Name())
-		resp, err := client.Get(url)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
-			connErr = err
+			return nil, err
+		}
+		resp, err := client.Do(req.WithContext(ctx))
+		if err != nil {
+			errs = append(errs, err.Error())
 			// Potentially retry with http.
 			continue
 		}
@@ -100,23 +107,23 @@ func ping(reg name.Registry, t http.RoundTripper) (*pingResp, error) {
 				scheme:    scheme,
 			}, nil
 		case http.StatusUnauthorized:
-			wac := resp.Header.Get("WWW-Authenticate")
-			if parts := strings.SplitN(wac, " ", 2); len(parts) == 2 {
-				// If there are two parts, then parse the challenge parameters.
+			if challenges := authchallenge.ResponseChallenges(resp); len(challenges) != 0 {
+				// If we hit more than one, I'm not even sure what to do.
+				wac := challenges[0]
 				return &pingResp{
-					challenge:  challenge(parts[0]).Canonical(),
-					parameters: parseChallenge(parts[1]),
+					challenge:  challenge(wac.Scheme).Canonical(),
+					parameters: wac.Parameters,
 					scheme:     scheme,
 				}, nil
 			}
 			// Otherwise, just return the challenge without parameters.
 			return &pingResp{
-				challenge: challenge(wac).Canonical(),
+				challenge: challenge(resp.Header.Get("WWW-Authenticate")).Canonical(),
 				scheme:    scheme,
 			}, nil
 		default:
 			return nil, CheckError(resp, http.StatusOK, http.StatusUnauthorized)
 		}
 	}
-	return nil, connErr
+	return nil, errors.New(strings.Join(errs, "; "))
 }

@@ -37,7 +37,7 @@ func CatalogPage(target name.Registry, last string, n int, options ...Option) ([
 	}
 
 	scopes := []string{target.Scope(transport.PullScope)}
-	tr, err := transport.New(target, o.auth, o.transport, scopes)
+	tr, err := transport.NewWithContext(o.context, target, o.auth, o.transport, scopes)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func Catalog(ctx context.Context, target name.Registry, options ...Option) ([]st
 	}
 
 	scopes := []string{target.Scope(transport.PullScope)}
-	tr, err := transport.New(target, o.auth, o.transport, scopes)
+	tr, err := transport.NewWithContext(o.context, target, o.auth, o.transport, scopes)
 	if err != nil {
 		return nil, err
 	}

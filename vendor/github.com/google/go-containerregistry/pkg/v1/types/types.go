@@ -51,3 +51,21 @@ func (m MediaType) IsDistributable() bool {
 	}
 	return true
 }
+
+// IsImage returns true if the mediaType represents an image manifest, as opposed to something else, like an index.
+func (m MediaType) IsImage() bool {
+	switch m {
+	case OCIManifestSchema1, DockerManifestSchema2:
+		return true
+	}
+	return false
+}
+
+// IsIndex returns true if the mediaType represents an index, as opposed to something else, like an image.
+func (m MediaType) IsIndex() bool {
+	switch m {
+	case OCIImageIndex, DockerManifestList:
+		return true
+	}
+	return false
+}

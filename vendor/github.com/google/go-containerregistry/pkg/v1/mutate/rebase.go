@@ -60,22 +60,41 @@ func Rebase(orig, oldBase, newBase v1.Image) (v1.Image, error) {
 		return nil, fmt.Errorf("failed to get config for original: %v", err)
 	}
 
+	newConfig, err := newBase.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("could not get config for new base: %v", err)
+	}
+
 	// Stitch together an image that contains:
 	// - original image's config
+	// - new base image's os/arch properties
 	// - new base image's layers + top of original image's layers
 	// - new base image's history + top of original image's history
 	rebasedImage, err := Config(empty.Image, *origConfig.Config.DeepCopy())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create empty image with original config: %v", err)
 	}
+
+	// Add new config properties from existing images.
+	rebasedConfig, err := rebasedImage.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("could not get config for rebased image: %v", err)
+	}
+	// OS/Arch properties from new base
+	rebasedConfig.Architecture = newConfig.Architecture
+	rebasedConfig.OS = newConfig.OS
+	rebasedConfig.OSVersion = newConfig.OSVersion
+
+	// Apply config properties to rebased.
+	rebasedImage, err = ConfigFile(rebasedImage, rebasedConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to replace config for rebased image: %v", err)
+	}
+
 	// Get new base layers and config for history.
 	newBaseLayers, err := newBase.Layers()
 	if err != nil {
 		return nil, fmt.Errorf("could not get new base layers for new base: %v", err)
-	}
-	newConfig, err := newBase.ConfigFile()
-	if err != nil {
-		return nil, fmt.Errorf("could not get config for new base: %v", err)
 	}
 	// Add new base layers.
 	rebasedImage, err = Append(rebasedImage, createAddendums(0, 0, newConfig.History, newBaseLayers)...)

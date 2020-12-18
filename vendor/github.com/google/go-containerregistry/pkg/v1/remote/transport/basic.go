@@ -58,6 +58,5 @@ func (bt *basicTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 			}
 		}
 	}
-	in.Header.Set("User-Agent", transportName)
 	return bt.inner.RoundTrip(in)
 }

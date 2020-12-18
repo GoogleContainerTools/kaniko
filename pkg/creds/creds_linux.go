@@ -17,6 +17,7 @@ limitations under the License.
 package creds
 
 import (
+	"context"
 	"sync"
 
 	"github.com/genuinetools/bpfd/proc"
@@ -37,7 +38,7 @@ func GetKeychain() authn.Keychain {
 
 		// Add the Kubernetes keychain if we're on Kubernetes
 		if proc.GetContainerRuntime(0, 0) == proc.RuntimeKubernetes {
-			k8sc, err := k8schain.NewNoClient()
+			k8sc, err := k8schain.NewNoClient(context.Background())
 			if err != nil {
 				logrus.Warnf("Error setting up k8schain. Using default keychain %s", err)
 				return

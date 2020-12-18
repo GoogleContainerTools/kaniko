@@ -26,9 +26,9 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
 const whiteoutPrefix = ".wh."
@@ -40,6 +40,7 @@ type Addendum struct {
 	History     v1.History
 	URLs        []string
 	Annotations map[string]string
+	MediaType   types.MediaType
 }
 
 // AppendLayers applies layers to a base image.
@@ -174,6 +175,7 @@ func extract(img v1.Image, w io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("reading layer contents: %v", err)
 		}
+		defer layerReader.Close()
 		tarReader := tar.NewReader(layerReader)
 		for {
 			header, err := tarReader.Next()
@@ -299,6 +301,7 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting layer: %v", err)
 	}
+	defer layerReader.Close()
 	w := new(bytes.Buffer)
 	tarWriter := tar.NewWriter(w)
 	defer tarWriter.Close()
@@ -332,7 +335,7 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 	b := w.Bytes()
 	// gzip the contents, then create the layer
 	opener := func() (io.ReadCloser, error) {
-		return v1util.GzipReadCloser(ioutil.NopCloser(bytes.NewReader(b))), nil
+		return gzip.ReadCloser(ioutil.NopCloser(bytes.NewReader(b))), nil
 	}
 	layer, err = tarball.LayerFromOpener(opener)
 	if err != nil {

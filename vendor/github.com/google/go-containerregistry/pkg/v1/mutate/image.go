@@ -105,6 +105,10 @@ func (i *image) compute() error {
 			desc.URLs = add.URLs
 		}
 
+		if add.MediaType != "" {
+			desc.MediaType = add.MediaType
+		}
+
 		manifestLayers = append(manifestLayers, *desc)
 		digestMap[desc.Digest] = add.Layer
 	}

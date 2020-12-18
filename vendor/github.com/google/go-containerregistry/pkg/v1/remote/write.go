@@ -22,8 +22,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/internal/redact"
 	"github.com/google/go-containerregistry/pkg/internal/retry"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -52,7 +54,7 @@ func Write(ref name.Reference, img v1.Image, options ...Option) error {
 	}
 
 	scopes := scopesForUploadingImage(ref.Context(), ls)
-	tr, err := transport.New(ref.Context().Registry, o.auth, o.transport, scopes)
+	tr, err := transport.NewWithContext(o.context, ref.Context().Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return err
 	}
@@ -92,6 +94,7 @@ func Write(ref name.Reference, img v1.Image, options ...Option) error {
 			uploaded[h] = true
 		}
 
+		// TODO(#803): Pipe through remote.WithJobs and upload these in parallel.
 		g.Go(func() error {
 			return w.uploadOne(l)
 		})
@@ -127,7 +130,7 @@ func Write(ref name.Reference, img v1.Image, options ...Option) error {
 
 	// With all of the constituent elements uploaded, upload the manifest
 	// to commit the image.
-	return w.commitImage(img, ref)
+	return w.commitManifest(img, ref)
 }
 
 // writer writes the elements of an image to a remote image reference.
@@ -260,15 +263,13 @@ func (w *writer) initiateUpload(from, mount string) (location string, mounted bo
 // streamBlob streams the contents of the blob to the specified location.
 // On failure, this will return an error.  On success, this will return the location
 // header indicating how to commit the streamed blob.
-func (w *writer) streamBlob(blob io.ReadCloser, streamLocation string) (commitLocation string, err error) {
-	defer blob.Close()
-
+func (w *writer) streamBlob(ctx context.Context, blob io.ReadCloser, streamLocation string) (commitLocation string, err error) {
 	req, err := http.NewRequest(http.MethodPatch, streamLocation, blob)
 	if err != nil {
 		return "", err
 	}
 
-	resp, err := w.client.Do(req.WithContext(w.context))
+	resp, err := w.client.Do(req.WithContext(ctx))
 	if err != nil {
 		return "", err
 	}
@@ -331,6 +332,8 @@ func (w *writer) uploadOne(l v1.Layer) error {
 		}
 	}
 
+	ctx := w.context
+
 	tryUpload := func() error {
 		location, mounted, err := w.initiateUpload(from, mount)
 		if err != nil {
@@ -344,11 +347,22 @@ func (w *writer) uploadOne(l v1.Layer) error {
 			return nil
 		}
 
+		// Only log layers with +json or +yaml. We can let through other stuff if it becomes popular.
+		// TODO(opencontainers/image-spec#791): Would be great to have an actual parser.
+		mt, err := l.MediaType()
+		if err != nil {
+			return err
+		}
+		smt := string(mt)
+		if !(strings.HasSuffix(smt, "+json") || strings.HasSuffix(smt, "+yaml")) {
+			ctx = redact.NewContext(ctx, "omitting binary blobs from logs")
+		}
+
 		blob, err := l.Compressed()
 		if err != nil {
 			return err
 		}
-		location, err = w.streamBlob(blob, location)
+		location, err = w.streamBlob(ctx, blob, location)
 		if err != nil {
 			return err
 		}
@@ -377,6 +391,53 @@ func (w *writer) uploadOne(l v1.Layer) error {
 	return retry.Retry(tryUpload, retry.IsTemporary, backoff)
 }
 
+func (w *writer) writeIndex(ref name.Reference, ii v1.ImageIndex, options ...Option) error {
+	index, err := ii.IndexManifest()
+	if err != nil {
+		return err
+	}
+
+	// TODO(#803): Pipe through remote.WithJobs and upload these in parallel.
+	for _, desc := range index.Manifests {
+		ref := ref.Context().Digest(desc.Digest.String())
+		exists, err := w.checkExistingManifest(desc.Digest, desc.MediaType)
+		if err != nil {
+			return err
+		}
+		if exists {
+			logs.Progress.Print("existing manifest: ", desc.Digest)
+			continue
+		}
+
+		switch desc.MediaType {
+		case types.OCIImageIndex, types.DockerManifestList:
+			ii, err := ii.ImageIndex(desc.Digest)
+			if err != nil {
+				return err
+			}
+
+			if err := w.writeIndex(ref, ii); err != nil {
+				return err
+			}
+		case types.OCIManifestSchema1, types.DockerManifestSchema2:
+			img, err := ii.Image(desc.Digest)
+			if err != nil {
+				return err
+			}
+			// TODO: Ideally we could reuse this writer, but we need to know
+			// scopes before we do the token exchange. To be lazy here, just
+			// re-do the token exchange. MultiWrite fixes this.
+			if err := Write(ref, img, options...); err != nil {
+				return err
+			}
+		}
+	}
+
+	// With all of the constituent elements uploaded, upload the manifest
+	// to commit the image.
+	return w.commitManifest(ii, ref)
+}
+
 type withMediaType interface {
 	MediaType() (types.MediaType, error)
 }
@@ -387,13 +448,13 @@ type withMediaType interface {
 //
 // Use reflection to either pull the v1.Descriptor out of remote.Descriptor or
 // create a descriptor based on the RawManifest and (optionally) MediaType.
-func unpackTaggable(t Taggable) (*v1.Descriptor, error) {
+func unpackTaggable(t Taggable) ([]byte, *v1.Descriptor, error) {
 	if d, ok := t.(*Descriptor); ok {
-		return &d.Descriptor, nil
+		return d.Manifest, &d.Descriptor, nil
 	}
 	b, err := t.RawManifest()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// A reasonable default if Taggable doesn't implement MediaType.
@@ -402,30 +463,26 @@ func unpackTaggable(t Taggable) (*v1.Descriptor, error) {
 	if wmt, ok := t.(withMediaType); ok {
 		m, err := wmt.MediaType()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		mt = m
 	}
 
 	h, sz, err := v1.SHA256(bytes.NewReader(b))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &v1.Descriptor{
+	return b, &v1.Descriptor{
 		MediaType: mt,
 		Size:      sz,
 		Digest:    h,
 	}, nil
 }
 
-// commitImage does a PUT of the image's manifest.
-func (w *writer) commitImage(t Taggable, ref name.Reference) error {
-	raw, err := t.RawManifest()
-	if err != nil {
-		return err
-	}
-	desc, err := unpackTaggable(t)
+// commitManifest does a PUT of the image's manifest.
+func (w *writer) commitManifest(t Taggable, ref name.Reference) error {
+	raw, desc, err := unpackTaggable(t)
 	if err != nil {
 		return err
 	}
@@ -450,7 +507,7 @@ func (w *writer) commitImage(t Taggable, ref name.Reference) error {
 	}
 
 	// The image was successfully pushed!
-	logs.Progress.Printf("%v: digest: %v size: %d", ref, desc.Digest, len(raw))
+	logs.Progress.Printf("%v: digest: %v size: %d", ref, desc.Digest, desc.Size)
 	return nil
 }
 
@@ -483,17 +540,12 @@ func scopesForUploadingImage(repo name.Repository, layers []v1.Layer) []string {
 // WriteIndex will attempt to push all of the referenced manifests before
 // attempting to push the ImageIndex, to retain referential integrity.
 func WriteIndex(ref name.Reference, ii v1.ImageIndex, options ...Option) error {
-	index, err := ii.IndexManifest()
-	if err != nil {
-		return err
-	}
-
 	o, err := makeOptions(ref.Context(), options...)
 	if err != nil {
 		return err
 	}
 	scopes := []string{ref.Scope(transport.PushScope)}
-	tr, err := transport.New(ref.Context().Registry, o.auth, o.transport, scopes)
+	tr, err := transport.NewWithContext(o.context, ref.Context().Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return err
 	}
@@ -502,42 +554,7 @@ func WriteIndex(ref name.Reference, ii v1.ImageIndex, options ...Option) error {
 		client:  &http.Client{Transport: tr},
 		context: o.context,
 	}
-
-	for _, desc := range index.Manifests {
-		ref := ref.Context().Digest(desc.Digest.String())
-		exists, err := w.checkExistingManifest(desc.Digest, desc.MediaType)
-		if err != nil {
-			return err
-		}
-		if exists {
-			logs.Progress.Printf("existing manifest: %v", desc.Digest)
-			continue
-		}
-
-		switch desc.MediaType {
-		case types.OCIImageIndex, types.DockerManifestList:
-			ii, err := ii.ImageIndex(desc.Digest)
-			if err != nil {
-				return err
-			}
-
-			if err := WriteIndex(ref, ii, WithAuth(o.auth), WithTransport(o.transport)); err != nil {
-				return err
-			}
-		case types.OCIManifestSchema1, types.DockerManifestSchema2:
-			img, err := ii.Image(desc.Digest)
-			if err != nil {
-				return err
-			}
-			if err := Write(ref, img, WithAuth(o.auth), WithTransport(o.transport)); err != nil {
-				return err
-			}
-		}
-	}
-
-	// With all of the constituent elements uploaded, upload the manifest
-	// to commit the image.
-	return w.commitImage(ii, ref)
+	return w.writeIndex(ref, ii, options...)
 }
 
 // WriteLayer uploads the provided Layer to the specified repo.
@@ -547,7 +564,7 @@ func WriteLayer(repo name.Repository, layer v1.Layer, options ...Option) error {
 		return err
 	}
 	scopes := scopesForUploadingImage(repo, []v1.Layer{layer})
-	tr, err := transport.New(repo.Registry, o.auth, o.transport, scopes)
+	tr, err := transport.NewWithContext(o.context, repo.Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return err
 	}
@@ -560,7 +577,17 @@ func WriteLayer(repo name.Repository, layer v1.Layer, options ...Option) error {
 	return w.uploadOne(layer)
 }
 
-// Tag adds a tag to the given Taggable.
+// Tag adds a tag to the given Taggable via PUT /v2/.../manifests/<tag>
+//
+// Notable implementations of Taggable are v1.Image, v1.ImageIndex, and
+// remote.Descriptor.
+//
+// If t implements MediaType, we will use that for the Content-Type, otherwise
+// we will default to types.DockerManifestSchema2.
+//
+// Tag does not attempt to write anything other than the manifest, so callers
+// should ensure that all blobs or manifests that are referenced by t exist
+// in the target registry.
 func Tag(tag name.Tag, t Taggable, options ...Option) error {
 	o, err := makeOptions(tag.Context(), options...)
 	if err != nil {
@@ -573,8 +600,8 @@ func Tag(tag name.Tag, t Taggable, options ...Option) error {
 	// * Tag could take a list of tags.
 	// * Allow callers to pass in a transport.Transport, typecheck
 	//   it to allow them to reuse the transport across multiple calls.
-	// * WithTag option to do multiple manifest PUTs in commitImage.
-	tr, err := transport.New(tag.Context().Registry, o.auth, o.transport, scopes)
+	// * WithTag option to do multiple manifest PUTs in commitManifest.
+	tr, err := transport.NewWithContext(o.context, tag.Context().Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return err
 	}
@@ -584,5 +611,5 @@ func Tag(tag name.Tag, t Taggable, options ...Option) error {
 		context: o.context,
 	}
 
-	return w.commitImage(t, tag)
+	return w.commitManifest(t, tag)
 }

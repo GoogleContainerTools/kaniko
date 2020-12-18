@@ -14,79 +14,30 @@
 
 package v1util
 
-import (
-	"bytes"
-	"compress/gzip"
-	"io"
-)
-
-var gzipMagicHeader = []byte{'\x1f', '\x8b'}
+import "github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 
 // GzipReadCloser reads uncompressed input data from the io.ReadCloser and
 // returns an io.ReadCloser from which compressed data may be read.
 // This uses gzip.BestSpeed for the compression level.
-func GzipReadCloser(r io.ReadCloser) io.ReadCloser {
-	return GzipReadCloserLevel(r, gzip.BestSpeed)
-}
+// TODO(#873): Remove this package.
+// Deprecated: please move off of this API
+var GzipReadCloser = gzip.ReadCloser
 
 // GzipReadCloserLevel reads uncompressed input data from the io.ReadCloser and
 // returns an io.ReadCloser from which compressed data may be read.
 // Refer to compress/gzip for the level:
 // https://golang.org/pkg/compress/gzip/#pkg-constants
-func GzipReadCloserLevel(r io.ReadCloser, level int) io.ReadCloser {
-	pr, pw := io.Pipe()
-
-	// Returns err so we can pw.CloseWithError(err)
-	go func() error {
-		// TODO(go1.14): Just defer {pw,gw,r}.Close like you'd expect.
-		// Context: https://golang.org/issue/24283
-		gw, err := gzip.NewWriterLevel(pw, level)
-		if err != nil {
-			return pw.CloseWithError(err)
-		}
-
-		if _, err := io.Copy(gw, r); err != nil {
-			defer r.Close()
-			defer gw.Close()
-			return pw.CloseWithError(err)
-		}
-		defer pw.Close()
-		defer r.Close()
-		defer gw.Close()
-
-		return nil
-	}()
-
-	return pr
-}
+// TODO(#873): Remove this package.
+// Deprecated: please move off of this API
+var GzipReadCloserLevel = gzip.ReadCloserLevel
 
 // GunzipReadCloser reads compressed input data from the io.ReadCloser and
 // returns an io.ReadCloser from which uncompessed data may be read.
-func GunzipReadCloser(r io.ReadCloser) (io.ReadCloser, error) {
-	gr, err := gzip.NewReader(r)
-	if err != nil {
-		return nil, err
-	}
-	return &readAndCloser{
-		Reader: gr,
-		CloseFunc: func() error {
-			if err := gr.Close(); err != nil {
-				return err
-			}
-			return r.Close()
-		},
-	}, nil
-}
+// TODO(#873): Remove this package.
+// Deprecated: please move off of this API
+var GunzipReadCloser = gzip.UnzipReadCloser
 
 // IsGzipped detects whether the input stream is compressed.
-func IsGzipped(r io.Reader) (bool, error) {
-	magicHeader := make([]byte, 2)
-	n, err := r.Read(magicHeader)
-	if n == 0 && err == io.EOF {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return bytes.Equal(magicHeader, gzipMagicHeader), nil
-}
+// TODO(#873): Remove this package.
+// Deprecated: please move off of this API
+var IsGzipped = gzip.Is

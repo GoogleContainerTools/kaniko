@@ -19,7 +19,6 @@ import (
 )
 
 // ImageIndex defines the interface for interacting with an OCI image index.
-//go:generate counterfeiter -o fake/index.go . ImageIndex
 type ImageIndex interface {
 	// MediaType of this image's manifest.
 	MediaType() (types.MediaType, error)

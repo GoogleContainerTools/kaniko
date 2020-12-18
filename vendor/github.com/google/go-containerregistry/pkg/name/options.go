@@ -14,13 +14,29 @@
 
 package name
 
+const (
+	// DefaultRegistry is the registry name that will be used if no registry
+	// provided and the default is not overridden.
+	DefaultRegistry      = "index.docker.io"
+	defaultRegistryAlias = "docker.io"
+
+	// DefaultTag is the tag name that will be used if no tag provided and the
+	// default is not overridden.
+	DefaultTag = "latest"
+)
+
 type options struct {
-	strict   bool // weak by default
-	insecure bool // secure by default
+	strict          bool // weak by default
+	insecure        bool // secure by default
+	defaultRegistry string
+	defaultTag      string
 }
 
 func makeOptions(opts ...Option) options {
-	opt := options{}
+	opt := options{
+		defaultRegistry: DefaultRegistry,
+		defaultTag:      DefaultTag,
+	}
 	for _, o := range opts {
 		o(&opt)
 	}
@@ -46,4 +62,22 @@ func WeakValidation(opts *options) {
 // Insecure is an Option that allows image references to be fetched without TLS.
 func Insecure(opts *options) {
 	opts.insecure = true
+}
+
+// OptionFn is a function that returns an option.
+type OptionFn func() Option
+
+// WithDefaultRegistry sets the default registry that will be used if one is not
+// provided.
+func WithDefaultRegistry(r string) Option {
+	return func(opts *options) {
+		opts.defaultRegistry = r
+	}
+}
+
+// WithDefaultTag sets the default tag that will be used if one is not provided.
+func WithDefaultTag(t string) Option {
+	return func(opts *options) {
+		opts.defaultTag = t
+	}
 }

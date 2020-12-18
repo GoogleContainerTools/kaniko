@@ -15,6 +15,7 @@
 package k8schain
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -49,7 +50,7 @@ var (
 // New returns a new authn.Keychain suitable for resolving image references as
 // scoped by the provided Options.  It speaks to Kubernetes through the provided
 // client interface.
-func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
+func New(ctx context.Context, client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 	if opt.Namespace == "" {
 		opt.Namespace = "default"
 	}
@@ -68,7 +69,7 @@ func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 	var pullSecrets []v1.Secret
 	if client != nil {
 		for _, name := range opt.ImagePullSecrets {
-			ps, err := client.CoreV1().Secrets(opt.Namespace).Get(name, metav1.GetOptions{})
+			ps, err := client.CoreV1().Secrets(opt.Namespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -76,12 +77,12 @@ func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 		}
 
 		// Second, fetch all of the pull secrets attached to our service account.
-		sa, err := client.CoreV1().ServiceAccounts(opt.Namespace).Get(opt.ServiceAccountName, metav1.GetOptions{})
+		sa, err := client.CoreV1().ServiceAccounts(opt.Namespace).Get(ctx, opt.ServiceAccountName, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
 		for _, localObj := range sa.ImagePullSecrets {
-			ps, err := client.CoreV1().Secrets(opt.Namespace).Get(localObj.Name, metav1.GetOptions{})
+			ps, err := client.CoreV1().Secrets(opt.Namespace).Get(ctx, localObj.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -106,7 +107,7 @@ func New(client kubernetes.Interface, opt Options) (authn.Keychain, error) {
 // NewInCluster returns a new authn.Keychain suitable for resolving image references as
 // scoped by the provided Options, constructing a kubernetes.Interface based on in-cluster
 // authentication.
-func NewInCluster(opt Options) (authn.Keychain, error) {
+func NewInCluster(ctx context.Context, opt Options) (authn.Keychain, error) {
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
@@ -116,7 +117,7 @@ func NewInCluster(opt Options) (authn.Keychain, error) {
 	if err != nil {
 		return nil, err
 	}
-	return New(client, opt)
+	return New(ctx, client, opt)
 }
 
 // NewNoClient returns a new authn.Keychain that supports the portions of the K8s keychain
@@ -127,8 +128,8 @@ func NewInCluster(opt Options) (authn.Keychain, error) {
 // for Kubernetes authentication, but this actually targets a different use-case.  What
 // remains is an interesting sweet spot: this variant can serve as a credential provider
 // for all of the major public clouds, but in library form (vs. an executable you exec).
-func NewNoClient() (authn.Keychain, error) {
-	return New(nil, Options{})
+func NewNoClient(ctx context.Context) (authn.Keychain, error) {
+	return New(ctx, nil, Options{})
 }
 
 type lazyProvider struct {

@@ -16,6 +16,7 @@ package remote
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -33,7 +34,16 @@ type options struct {
 	transport http.RoundTripper
 	platform  v1.Platform
 	context   context.Context
+	jobs      int
+	userAgent string
 }
+
+var defaultPlatform = v1.Platform{
+	Architecture: "amd64",
+	OS:           "linux",
+}
+
+const defaultJobs = 4
 
 func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 	o := &options{
@@ -41,6 +51,7 @@ func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 		transport: http.DefaultTransport,
 		platform:  defaultPlatform,
 		context:   context.Background(),
+		jobs:      defaultJobs,
 	}
 
 	for _, option := range opts {
@@ -69,6 +80,11 @@ func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 
 	// Wrap the transport in something that can retry network flakes.
 	o.transport = transport.NewRetry(o.transport)
+
+	// Wrap this last to prevent transport.New from double-wrapping.
+	if o.userAgent != "" {
+		o.transport = transport.NewUserAgent(o.transport, o.userAgent)
+	}
 
 	return o, nil
 }
@@ -128,6 +144,32 @@ func WithPlatform(p v1.Platform) Option {
 func WithContext(ctx context.Context) Option {
 	return func(o *options) error {
 		o.context = ctx
+		return nil
+	}
+}
+
+// WithJobs is a functional option for setting the parallelism of remote
+// operations performed by a given function. Note that not all remote
+// operations support parallelism.
+//
+// The default value is 4.
+func WithJobs(jobs int) Option {
+	return func(o *options) error {
+		if jobs <= 0 {
+			return errors.New("jobs must be greater than zero")
+		}
+		o.jobs = jobs
+		return nil
+	}
+}
+
+// WithUserAgent adds the given string to the User-Agent header for any HTTP
+// requests. This header will also include "go-containerregistry/${version}".
+//
+// If you want to completely overwrite the User-Agent header, use WithTransport.
+func WithUserAgent(ua string) Option {
+	return func(o *options) error {
+		o.userAgent = ua
 		return nil
 	}
 }

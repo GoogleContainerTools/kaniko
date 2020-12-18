@@ -21,12 +21,6 @@ import (
 	"strings"
 )
 
-const (
-	// DefaultRegistry is Docker Hub, assumed when a hostname is omitted.
-	DefaultRegistry      = "index.docker.io"
-	defaultRegistryAlias = "docker.io"
-)
-
 // Detect more complex forms of local references.
 var reLocal = regexp.MustCompile(`.*\.local(?:host)?(?::\d{1,5})?$`)
 
@@ -44,10 +38,7 @@ type Registry struct {
 
 // RegistryStr returns the registry component of the Registry.
 func (r Registry) RegistryStr() string {
-	if r.registry != "" {
-		return r.registry
-	}
-	return DefaultRegistry
+	return r.registry
 }
 
 // Name returns the name from which the Registry was derived.
@@ -124,6 +115,9 @@ func NewRegistry(name string, opts ...Option) (Registry, error) {
 		return Registry{}, err
 	}
 
+	if name == "" {
+		name = opt.defaultRegistry
+	}
 	// Rewrite "docker.io" to "index.docker.io".
 	// See: https://github.com/google/go-containerregistry/issues/68
 	if name == defaultRegistryAlias {

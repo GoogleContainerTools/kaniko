@@ -24,6 +24,7 @@ go_test(
         "integration_with_stdin_test.go",
         "k8s_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":integration"],
     tags = ["manual"],
     deps = [
