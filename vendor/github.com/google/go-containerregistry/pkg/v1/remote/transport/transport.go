@@ -15,6 +15,7 @@
 package transport
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -25,7 +26,16 @@ import (
 // New returns a new RoundTripper based on the provided RoundTripper that has been
 // setup to authenticate with the remote registry "reg", in the capacity
 // laid out by the specified scopes.
+//
+// TODO(jonjohnsonjr): Deprecate this.
 func New(reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scopes []string) (http.RoundTripper, error) {
+	return NewWithContext(context.Background(), reg, auth, t, scopes)
+}
+
+// NewWithContext returns a new RoundTripper based on the provided RoundTripper that has been
+// setup to authenticate with the remote registry "reg", in the capacity
+// laid out by the specified scopes.
+func NewWithContext(ctx context.Context, reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scopes []string) (http.RoundTripper, error) {
 	// The handshake:
 	//  1. Use "t" to ping() the registry for the authentication challenge.
 	//
@@ -40,19 +50,21 @@ func New(reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scope
 
 	// First we ping the registry to determine the parameters of the authentication handshake
 	// (if one is even necessary).
-	pr, err := ping(reg, t)
+	pr, err := ping(ctx, reg, t)
 	if err != nil {
 		return nil, err
 	}
 
-	// Wrap the given transport in transports that use an appropriate scheme,
-	// (based on the ping response) and set the user agent.
-	t = &useragentTransport{
-		inner: &schemeTransport{
-			scheme:   pr.scheme,
-			registry: reg,
-			inner:    t,
-		},
+	// Wrap t with a useragent transport unless we already have one.
+	if _, ok := t.(*userAgentTransport); !ok {
+		t = NewUserAgent(t, "")
+	}
+
+	// Wrap t in a transport that selects the appropriate scheme based on the ping response.
+	t = &schemeTransport{
+		scheme:   pr.scheme,
+		registry: reg,
+		inner:    t,
 	}
 
 	switch pr.challenge.Canonical() {
@@ -81,7 +93,7 @@ func New(reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scope
 			scopes:   scopes,
 			scheme:   pr.scheme,
 		}
-		if err := bt.refresh(); err != nil {
+		if err := bt.refresh(ctx); err != nil {
 			return nil, err
 		}
 		return bt, nil

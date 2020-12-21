@@ -18,8 +18,8 @@ import (
 	"io"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
 // CompressedLayer represents the bare minimum interface a natively
@@ -49,7 +49,7 @@ func (cle *compressedLayerExtender) Uncompressed() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return v1util.GunzipReadCloser(r)
+	return gzip.UnzipReadCloser(r)
 }
 
 // DiffID implements v1.Layer

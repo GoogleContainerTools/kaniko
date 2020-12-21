@@ -163,6 +163,7 @@ func computeLayer(layer v1.Layer) (*computedLayer, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer ur.Close()
 	udiffid, usize, err := v1.SHA256(ur)
 	if err != nil {
 		return nil, err

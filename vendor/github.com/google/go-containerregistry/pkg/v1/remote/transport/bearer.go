@@ -15,6 +15,7 @@
 package transport
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,7 +24,9 @@ import (
 	"net/url"
 	"strings"
 
+	authchallenge "github.com/docker/distribution/registry/client/auth/challenge"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/internal/redact"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -52,6 +55,14 @@ var portMap = map[string]string{
 	"https": "443",
 }
 
+func stringSet(ss []string) map[string]struct{} {
+	set := make(map[string]struct{})
+	for _, s := range ss {
+		set[s] = struct{}{}
+	}
+	return set
+}
+
 // RoundTrip implements http.RoundTripper
 func (bt *bearerTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 	sendRequest := func() (*http.Response, error) {
@@ -72,9 +83,32 @@ func (bt *bearerTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	// Perform a token refresh() and retry the request in case the token has expired
-	if res.StatusCode == http.StatusUnauthorized {
-		if err = bt.refresh(); err != nil {
+	// If we hit a WWW-Authenticate challenge, it might be due to expired tokens or insufficient scope.
+	if challenges := authchallenge.ResponseChallenges(res); len(challenges) != 0 {
+		for _, wac := range challenges {
+			// TODO(jonjohnsonjr): Should we also update "realm" or "service"?
+			if scope, ok := wac.Parameters["scope"]; ok {
+				// From https://tools.ietf.org/html/rfc6750#section-3
+				// The "scope" attribute is defined in Section 3.3 of [RFC6749].  The
+				// "scope" attribute is a space-delimited list of case-sensitive scope
+				// values indicating the required scope of the access token for
+				// accessing the requested resource.
+				scopes := strings.Split(scope, " ")
+
+				// Add any scopes that we don't already request.
+				got := stringSet(bt.scopes)
+				for _, want := range scopes {
+					if _, ok := got[want]; !ok {
+						bt.scopes = append(bt.scopes, want)
+					}
+				}
+			}
+		}
+
+		// TODO(jonjohnsonjr): Teach transport.Error about "error" and "error_description" from challenge.
+
+		// Retry the request to attempt to get a valid token.
+		if err = bt.refresh(in.Context()); err != nil {
 			return nil, err
 		}
 		return sendRequest()
@@ -87,7 +121,7 @@ func (bt *bearerTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 // so we rely on heuristics and fallbacks to support as many registries as possible.
 // The basic token exchange is attempted first, falling back to the oauth flow.
 // If the IdentityToken is set, this indicates that we should start with the oauth flow.
-func (bt *bearerTransport) refresh() error {
+func (bt *bearerTransport) refresh(ctx context.Context) error {
 	auth, err := bt.basic.Authorization()
 	if err != nil {
 		return err
@@ -103,15 +137,15 @@ func (bt *bearerTransport) refresh() error {
 		// If the secret being stored is an identity token,
 		// the Username should be set to <token>, which indicates
 		// we are using an oauth flow.
-		content, err = bt.refreshOauth()
+		content, err = bt.refreshOauth(ctx)
 		if terr, ok := err.(*Error); ok && terr.StatusCode == http.StatusNotFound {
 			// Note: Not all token servers implement oauth2.
 			// If the request to the endpoint returns 404 using the HTTP POST method,
 			// refer to Token Documentation for using the HTTP GET method supported by all token servers.
-			content, err = bt.refreshBasic()
+			content, err = bt.refreshBasic(ctx)
 		}
 	} else {
-		content, err = bt.refreshBasic()
+		content, err = bt.refreshBasic(ctx)
 	}
 	if err != nil {
 		return err
@@ -185,7 +219,7 @@ func canonicalAddress(host, scheme string) (address string) {
 }
 
 // https://docs.docker.com/registry/spec/auth/oauth/
-func (bt *bearerTransport) refreshOauth() ([]byte, error) {
+func (bt *bearerTransport) refreshOauth(ctx context.Context) ([]byte, error) {
 	auth, err := bt.basic.Authorization()
 	if err != nil {
 		return nil, err
@@ -199,7 +233,7 @@ func (bt *bearerTransport) refreshOauth() ([]byte, error) {
 	v := url.Values{}
 	v.Set("scope", strings.Join(bt.scopes, " "))
 	v.Set("service", bt.service)
-	v.Set("client_id", transportName)
+	v.Set("client_id", defaultUserAgent)
 	if auth.IdentityToken != "" {
 		v.Set("grant_type", "refresh_token")
 		v.Set("refresh_token", auth.IdentityToken)
@@ -212,7 +246,16 @@ func (bt *bearerTransport) refreshOauth() ([]byte, error) {
 	}
 
 	client := http.Client{Transport: bt.inner}
-	resp, err := client.PostForm(u.String(), v)
+	req, err := http.NewRequest(http.MethodPost, u.String(), strings.NewReader(v.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// We don't want to log credentials.
+	ctx = redact.NewContext(ctx, "oauth token response contains credentials")
+
+	resp, err := client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +269,7 @@ func (bt *bearerTransport) refreshOauth() ([]byte, error) {
 }
 
 // https://docs.docker.com/registry/spec/auth/token/
-func (bt *bearerTransport) refreshBasic() ([]byte, error) {
+func (bt *bearerTransport) refreshBasic(ctx context.Context) ([]byte, error) {
 	u, err := url.Parse(bt.realm)
 	if err != nil {
 		return nil, err
@@ -238,12 +281,20 @@ func (bt *bearerTransport) refreshBasic() ([]byte, error) {
 	}
 	client := http.Client{Transport: b}
 
-	u.RawQuery = url.Values{
-		"scope":   bt.scopes,
-		"service": []string{bt.service},
-	}.Encode()
+	v := u.Query()
+	v["scope"] = bt.scopes
+	v.Set("service", bt.service)
+	u.RawQuery = v.Encode()
 
-	resp, err := client.Get(u.String())
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// We don't want to log credentials.
+	ctx = redact.NewContext(ctx, "basic token response contains credentials")
+
+	resp, err := client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}

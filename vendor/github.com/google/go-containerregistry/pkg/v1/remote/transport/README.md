@@ -42,7 +42,7 @@ Similar reasons! That ends up pulling in grpc, protobuf, and logrus.
 
 That just uses the the `docker/distribution` client... and more!
 
-![containerd/containerd](../../../../images/containers.dot.svg)
+![containers/image](../../../../images/containers.dot.svg)
 
 > Wow, what about this package?
 

@@ -34,7 +34,7 @@ var layoutFile = `{
 // AppendImage writes a v1.Image to the Path and updates
 // the index.json to reference it.
 func (l Path) AppendImage(img v1.Image, options ...Option) error {
-	if err := l.writeImage(img); err != nil {
+	if err := l.WriteImage(img); err != nil {
 		return err
 	}
 
@@ -71,7 +71,7 @@ func (l Path) AppendImage(img v1.Image, options ...Option) error {
 // AppendIndex writes a v1.ImageIndex to the Path and updates
 // the index.json to reference it.
 func (l Path) AppendIndex(ii v1.ImageIndex, options ...Option) error {
-	if err := l.writeIndex(ii); err != nil {
+	if err := l.WriteIndex(ii); err != nil {
 		return err
 	}
 
@@ -182,7 +182,13 @@ func (l Path) writeLayer(layer v1.Layer) error {
 	return l.WriteBlob(d, r)
 }
 
-func (l Path) writeImage(img v1.Image) error {
+// WriteImage writes an image, including its manifest, config and all of its
+// layers, to the blobs directory. If any blob already exists, as determined by
+// the hash filename, does not write it.
+// This function does *not* update the `index.json` file. If you want to write the
+// image and also update the `index.json`, call AppendImage(), which wraps this
+// and also updates the `index.json`.
+func (l Path) WriteImage(img v1.Image) error {
 	layers, err := img.Layers()
 	if err != nil {
 		return err
@@ -241,7 +247,7 @@ func (l Path) writeIndexToFile(indexFile string, ii v1.ImageIndex) error {
 			if err != nil {
 				return err
 			}
-			if err := l.writeIndex(ii); err != nil {
+			if err := l.WriteIndex(ii); err != nil {
 				return err
 			}
 		case types.OCIManifestSchema1, types.DockerManifestSchema2:
@@ -249,7 +255,7 @@ func (l Path) writeIndexToFile(indexFile string, ii v1.ImageIndex) error {
 			if err != nil {
 				return err
 			}
-			if err := l.writeImage(img); err != nil {
+			if err := l.WriteImage(img); err != nil {
 				return err
 			}
 		default:
@@ -266,7 +272,14 @@ func (l Path) writeIndexToFile(indexFile string, ii v1.ImageIndex) error {
 	return l.WriteFile(indexFile, rawIndex, os.ModePerm)
 }
 
-func (l Path) writeIndex(ii v1.ImageIndex) error {
+// WriteIndex writes an index to the blobs directory. Walks down the children,
+// including its children manifests and/or indexes, and down the tree until all of
+// config and all layers, have been written. If any blob already exists, as determined by
+// the hash filename, does not write it.
+// This function does *not* update the `index.json` file. If you want to write the
+// index and also update the `index.json`, call AppendIndex(), which wraps this
+// and also updates the `index.json`.
+func (l Path) WriteIndex(ii v1.ImageIndex) error {
 	// Always just write oci-layout file, since it's small.
 	if err := l.WriteFile("oci-layout", []byte(layoutFile), os.ModePerm); err != nil {
 		return err

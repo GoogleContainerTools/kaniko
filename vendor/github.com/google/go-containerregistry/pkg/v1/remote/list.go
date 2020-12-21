@@ -44,7 +44,7 @@ func ListWithContext(ctx context.Context, repo name.Repository, options ...Optio
 		return nil, err
 	}
 	scopes := []string{repo.Scope(transport.PullScope)}
-	tr, err := transport.New(repo.Registry, o.auth, o.transport, scopes)
+	tr, err := transport.NewWithContext(o.context, repo.Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return nil, err
 	}

@@ -21,12 +21,13 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/google/go-containerregistry/pkg/internal/redact"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/internal/verify"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
 var acceptableImageMediaTypes = []types.MediaType{
@@ -99,7 +100,7 @@ func (r *remoteImage) RawConfigFile() ([]byte, error) {
 		return nil, err
 	}
 
-	body, err := r.fetchBlob(m.Config.Digest)
+	body, err := r.fetchBlob(r.context, m.Config.Digest)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +143,9 @@ func (rl *remoteImageLayer) Compressed() (io.ReadCloser, error) {
 		return nil, err
 	}
 
+	// We don't want to log binary layers -- this can break terminals.
+	ctx := redact.NewContext(rl.ri.context, "omitting binary blobs from logs")
+
 	for _, s := range d.URLs {
 		u, err := url.Parse(s)
 		if err != nil {
@@ -161,7 +165,7 @@ func (rl *remoteImageLayer) Compressed() (io.ReadCloser, error) {
 			return nil, err
 		}
 
-		resp, err := rl.ri.Client.Do(req.WithContext(rl.ri.context))
+		resp, err := rl.ri.Client.Do(req.WithContext(ctx))
 		if err != nil {
 			lastErr = err
 			continue
@@ -173,7 +177,7 @@ func (rl *remoteImageLayer) Compressed() (io.ReadCloser, error) {
 			continue
 		}
 
-		return v1util.VerifyReadCloser(resp.Body, rl.digest)
+		return verify.ReadCloser(resp.Body, rl.digest)
 	}
 
 	return nil, lastErr

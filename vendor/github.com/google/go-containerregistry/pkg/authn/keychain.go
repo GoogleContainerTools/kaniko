@@ -15,12 +15,10 @@
 package authn
 
 import (
-	"encoding/json"
 	"os"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/types"
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -75,12 +73,6 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 	cfg, err := cf.GetAuthConfig(key)
 	if err != nil {
 		return nil, err
-	}
-	if logs.Enabled(logs.Debug) {
-		b, err := json.Marshal(cfg)
-		if err == nil {
-			logs.Debug.Printf("defaultKeychain.Resolve(%q) = %s", key, string(b))
-		}
 	}
 
 	empty := types.AuthConfig{}
