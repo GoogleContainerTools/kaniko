@@ -921,6 +921,7 @@ type walkFSResult struct {
 func WalkFS(dir string, existingPaths map[string]struct{}, changeFunc func(string) (bool, error)) ([]string, map[string]struct{}) {
 	timeOutStr := os.Getenv(snapshotTimeout)
 	if timeOutStr == "" {
+		logrus.Tracef("%s environment not set. Using default snapshot timeout %s", snapshotTimeout, defaultTimeout)
 		timeOutStr = defaultTimeout
 	}
 	timeOut, err := time.ParseDuration(timeOutStr)
