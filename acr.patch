@@ -1,12 +1,13 @@
 diff --git a/build/build-config-edit.sh b/build/build-config-edit.sh
-index d9fffd0..88b83a9 100755
+index d9fffd0..9484fe6 100755
 --- a/build/build-config-edit.sh
 +++ b/build/build-config-edit.sh
-@@ -13,10 +13,9 @@ if [[ ! -d "$sourcedir" ]]; then
+@@ -13,10 +13,10 @@ if [[ ! -d "$sourcedir" ]]; then
  fi
 
  export CGO_ENABLED=0
 -export GOARCH=amd64
++export GOARCH=$TARGETARCH
  export GOPATH=$PWD
  echo "Go path = $GOPATH"
 -for go_os in "linux" "windows" "darwin"
@@ -15,14 +16,15 @@ index d9fffd0..88b83a9 100755
      if [[ "$go_os" == "windows" ]]; then
          exe_extension=".exe"
 diff --git a/build/build-cred-helper.sh b/build/build-cred-helper.sh
-index 0e88315..d016988 100755
+index 0e88315..5b6eca5 100755
 --- a/build/build-cred-helper.sh
 +++ b/build/build-cred-helper.sh
-@@ -22,9 +22,8 @@ fi
+@@ -22,9 +22,9 @@ fi
 
  export BUILDVERSION=acr-docker-credential-helper`date -u +.%Y%m%d.%H%M%S`
  export CGO_ENABLED=0
 -export GOARCH=amd64
++export GOARCH=$TARGETARCH
  export GOPATH=$PWD
 -for go_os in "linux" "windows" "darwin"
 +for go_os in "linux"
