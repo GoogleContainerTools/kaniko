@@ -6,53 +6,43 @@ steps:
   args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
   id: 'initialize-qemu'
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['buildx', 'create', '--name', 'mybuilder']
+  args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
   id: 'create-builder'
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['buildx', 'use', 'mybuilder']
-  id: 'select-builder'
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['buildx', 'inspect', '--bootstrap']
-  id: 'show-target-build-platforms'
 
 # First, build kaniko
 - name: "gcr.io/cloud-builders/docker"
   args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile",
-         "-t", "gcr.io/kaniko-project/executor:$TAG_NAME", "."]
-- name: "gcr.io/cloud-builders/docker"
-  args: ["tag", "gcr.io/kaniko-project/executor:$TAG_NAME",
-         "gcr.io/kaniko-project/executor:latest"]
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$TAG_NAME",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:latest", "--push", "."]
+  waitFor: ['initialize-qemu', 'create-builder']
 
 # Then, we want to build kaniko:debug
 - name: "gcr.io/cloud-builders/docker"
   args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_debug",
-         "-t", "gcr.io/kaniko-project/executor:debug-$TAG_NAME", "."]
-- name: "gcr.io/cloud-builders/docker"
-  args: ["tag", "gcr.io/kaniko-project/executor:debug-$TAG_NAME",
-         "gcr.io/kaniko-project/executor:debug"]
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$TAG_NAME-debug",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug", "--push", "."]
+  waitFor: ['initialize-qemu', 'create-builder']
 
 # Then, we want to build the cache warmer
 - name: "gcr.io/cloud-builders/docker"
   args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_warmer",
-         "-t", "gcr.io/kaniko-project/warmer:$TAG_NAME", "."]
-- name: "gcr.io/cloud-builders/docker"
-  args: ["tag", "gcr.io/kaniko-project/warmer:$TAG_NAME",
-         "gcr.io/kaniko-project/warmer:latest"]
+         "-t", "gcr.io/$PROJECT_ID/{_WARMER_IMAGE_NAME}:$TAG_NAME",
+         "-t", "gcr.io/$PROJECT_ID/{_WARMER_IMAGE_NAME}:latest", "--push", "."]
+  waitFor: ['initialize-qemu', 'create-builder']
 
 # Finally executor:slim image
 - name: "gcr.io/cloud-builders/docker"
   args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_slim",
-         "-t", "gcr.io/kaniko-project/executor:$TAG_NAME-slim", "."]
-- name: "gcr.io/cloud-builders/docker"
-  args: ["tag", "gcr.io/kaniko-project/executor:$TAG_NAME-slim",
-         "gcr.io/kaniko-project/executor:slim"]
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$TAG_NAME-slim",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:slim", "--push", "."]
+  waitFor: ['initialize-qemu', 'create-builder']
 
 
 images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${TAG_NAME}",
          "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:latest",
          "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${TAG_NAME}-slim",
          "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:slim",
-         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug-${TAG_NAME}",
+         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${TAG_NAME}-debug",
          "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug",
          "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:latest",
          "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:${TAG_NAME}"]

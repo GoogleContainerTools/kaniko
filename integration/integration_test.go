@@ -138,6 +138,7 @@ func TestMain(m *testing.M) {
 func buildRequiredImages() error {
 	dockerBuildArgsForAmd64 := []string{
 		"--build-arg", fmt.Sprintf("BUILDPLATFORM=%s/%s", platform, arch),
+		"--build-arg", fmt.Sprintf("TARGETPLATFORM=%s/%s", platform, arch),
 		"--build-arg", fmt.Sprintf("TARGETARCH=%s", arch)}
 
 	setupCommands := []struct {

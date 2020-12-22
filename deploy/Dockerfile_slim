@@ -12,11 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Builds the static Go image to execute in a Kubernetes job
-
+# Get the BUILDPLATFORM ARG
+FROM alpine
 ARG BUILDPLATFORM
-FROM --platform=${BUILDPLATFORM} golang:1.14
+
+# Builds the static Go image to execute in a Kubernetes job
+FROM --platform=$BUILDPLATFORM golang:1.14
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
 ARG TARGETARCH
+
+#Capture all the args
+RUN echo "I am running on $BUILDPLATFORM building for $TARGETPLATFORM with $TARGETARCH"
 
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 
@@ -24,6 +31,7 @@ COPY . .
 RUN make GOARCH=${TARGETARCH}
 
 FROM scratch
+COPY --from=1 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
 ENV USER root
