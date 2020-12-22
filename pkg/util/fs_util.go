@@ -951,7 +951,7 @@ func gowalkDir(dir string, existingPaths map[string]struct{}, changeFunc func(st
 	foundPaths := make([]string, 0)
 	godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
-			logrus.Tracef("Analyzing path %s", dir)
+			logrus.Tracef("Analyzing path %s", path)
 			if IsInIgnoreList(path) {
 				if IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
