@@ -14,20 +14,14 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
-FROM golang:1.14
-ARG GOARCH=amd64
+ARG BUILDPLATFORM
+FROM --platform=${BUILDPLATFORM} golang:1.14
+ARG TARGETARCH
+
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 
-RUN echo $GOARCH > /goarch
-
-#This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
-ARG TARGETPLATFORM
-
-#Capture ARCH has write to /goarch
-RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,"/"); print a[2]}' > /goarch` || echo "$GOARCH"
-
 # Get GCR credential helper
-RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
+RUN GOARCH=${TARGETARCH} && CGO_ENABLED=0 && \
   (mkdir -p /go/src/github.com/GoogleCloudPlatform || true)                  && \
   cd /go/src/github.com/GoogleCloudPlatform                                  && \
   git clone https://github.com/GoogleCloudPlatform/docker-credential-gcr.git && \
@@ -36,12 +30,12 @@ RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
   go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go  
 
 # Get Amazon ECR credential helper
-RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
+RUN GOARCH=${TARGETARCH} && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
   make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper
 
 # ACR docker credential helper
 COPY ./acr.patch /
-RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/Azure || true)  && \
+RUN GOARCH=${TARGETARCH} && (mkdir -p /go/src/github.com/Azure || true)  && \
   cd /go/src/github.com/Azure                                             && \
   git clone https://github.com/Azure/acr-docker-credential-helper         && \
   cd /go/src/github.com/Azure/acr-docker-credential-helper                && \
@@ -50,7 +44,7 @@ RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/Azure || true)  && \
   make && cp -f bin/linux/${GOARCH}/docker-credential-acr-linux /usr/local/bin/docker-credential-acr-linux
   
 #ACR docker env credential helper
-RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true)   && \
+RUN GOARCH=${TARGETARCH} && (mkdir -p /go/src/github.com/chrismellard || true)   && \
   cd /go/src/github.com/chrismellard                                              && \
   git clone https://github.com/chrismellard/docker-credential-acr-env             && \
   cd  docker-credential-acr-env                                                   && \
@@ -60,7 +54,7 @@ RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true) 
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-RUN make GOARCH=$(cat /goarch.txt) 
+RUN make GOARCH=${TARGETARCH}
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
