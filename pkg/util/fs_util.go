@@ -31,6 +31,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -38,13 +40,15 @@ import (
 	otiai10Cpy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
-	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 )
 
 const DoNotChangeUID = -1
 const DoNotChangeGID = -1
+
+const (
+	snapshotTimeout = "SNAPSHOT_TIMEOUT_DURATION"
+	defaultTimeout  = "90m"
+)
 
 type IgnoreListEntry struct {
 	Path            string
@@ -904,20 +908,55 @@ func UpdateInitialIgnoreList(ignoreVarRun bool) {
 	})
 }
 
+type walkFSResult struct {
+	filesAdded    []string
+	existingPaths map[string]struct{}
+}
+
 // WalkFS given a directory and list of existing files,
 // returns a list of changed filed determined by changeFunc and a list
 // of deleted files.
+// It timesout after 90 mins. Can be configured via setting an environment variable
+// SNAPSHOT_TIMEOUT in the kaniko pod definition.
 func WalkFS(dir string, existingPaths map[string]struct{}, changeFunc func(string) (bool, error)) ([]string, map[string]struct{}) {
+	timeOutStr := os.Getenv(snapshotTimeout)
+	if timeOutStr == "" {
+		logrus.Tracef("%s environment not set. Using default snapshot timeout %s", snapshotTimeout, defaultTimeout)
+		timeOutStr = defaultTimeout
+	}
+	timeOut, err := time.ParseDuration(timeOutStr)
+	if err != nil {
+		logrus.Fatalf("could not parse duration %s", timeOutStr)
+	}
+	timer := timing.Start("Walking filesystem with timeout")
+	ch := make(chan walkFSResult, 1)
+
+	go func() {
+		ch <- gowalkDir(dir, existingPaths, changeFunc)
+	}()
+
+	// Listen on our channel AND a timeout channel - which ever happens first.
+	select {
+	case res := <-ch:
+		timing.DefaultRun.Stop(timer)
+		return res.filesAdded, res.existingPaths
+	case <-time.After(timeOut):
+		timing.DefaultRun.Stop(timer)
+		logrus.Fatalf("timed out snapshotting FS in %s", timeOutStr)
+		return nil, nil
+	}
+}
+
+func gowalkDir(dir string, existingPaths map[string]struct{}, changeFunc func(string) (bool, error)) walkFSResult {
 	foundPaths := make([]string, 0)
-	timer := timing.Start("Walking filesystem")
 	godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
+			logrus.Tracef("Analyzing path %s", dir)
 			if IsInIgnoreList(path) {
 				if IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
 					return filepath.SkipDir
 				}
-
 				return nil
 			}
 			delete(existingPaths, path)
@@ -931,8 +970,7 @@ func WalkFS(dir string, existingPaths map[string]struct{}, changeFunc func(strin
 		Unsorted: true,
 	},
 	)
-	timing.DefaultRun.Stop(timer)
-	return foundPaths, existingPaths
+	return walkFSResult{foundPaths, existingPaths}
 }
 
 // GetFSInfoMap given a directory gets a map of FileInfo for all files

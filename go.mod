@@ -28,9 +28,10 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
+	github.com/google/slowjam v1.0.0
 	github.com/hashicorp/go-memdb v0.0.0-20180223233045-1289e7fffe71 // indirect
 	github.com/hashicorp/go-uuid v1.0.1 // indirect
-	github.com/karrick/godirwalk v1.7.7
+	github.com/karrick/godirwalk v1.16.1
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-shellwords v1.0.10 // indirect
 	github.com/minio/highwayhash v1.0.0
