@@ -32,5 +32,6 @@ docker buildx create --use --platform=linux/amd64
 docker buildx ls
 
 docker run -d -p 5000:5000 --restart always --name registry registry:2.6.2
+docker ps | grep registry
 
 
