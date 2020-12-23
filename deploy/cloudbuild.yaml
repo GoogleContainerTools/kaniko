@@ -5,34 +5,51 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
     id: 'initialize-qemu'
+
   - name: 'gcr.io/cloud-builders/docker'
     args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
-    id: 'create-builder'
+    id: 'create-builder-executor'
+    waitFor: ['initialize-qemu']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
+    id: 'create-builder-warmer'
+    waitFor: ['initialize-qemu']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
+    id: 'create-builder-debug'
+    waitFor: ['initialize-qemu']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
+    id: 'create-builder-slim'
+    waitFor: ['initialize-qemu']
 
   # First, build kaniko
   - name: "gcr.io/cloud-builders/docker"
     args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile",
            "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$COMMIT_SHA", "--push", "." ]
-    waitFor: ['initialize-qemu', 'create-builder']
+    waitFor: ['create-builder-executor']
 
   # Then, we want to build kaniko:debug
   - name: "gcr.io/cloud-builders/docker"
     args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_debug",
            "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$COMMIT_SHA-debug",
            "--push", "."]
-    waitFor: ['initialize-qemu', 'create-builder']
+    waitFor: ['create-builder-debug']
 
   # Then, we want to build the cache warmer
   - name: "gcr.io/cloud-builders/docker"
     args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_warmer",
            "-t", "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:$COMMIT_SHA", "--push", "."]
-    waitFor: ['initialize-qemu', 'create-builder']
+    waitFor: ['create-builder-warmer']
 
   # Finally executor:slim image
   - name: "gcr.io/cloud-builders/docker"
     args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_slim",
            "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$COMMIT_SHA-slim", "--push", "."]
-    waitFor: ['initialize-qemu', 'create-builder']
+    waitFor: ['create-builder-slim']
 
 images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}",
          "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}-slim",

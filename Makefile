@@ -88,9 +88,9 @@ integration-test-misc:
 
 .PHONY: images
 images:
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=BUILDPLATFORM=linux/$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=BUILDPLATFORM=linux/$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=BUILDPLATFORM=linux/$(GOARCH) -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=BUILDPLATFORM=linux/$(GOARCH) --build-arg=TARGETPLATFORM=linux/$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=BUILDPLATFORM=linux/$(GOARCH) --build-arg=TARGETPLATFORM=linux/$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=BUILDPLATFORM=linux/$(GOARCH) --build-arg=TARGETPLATFORM=linux/$(GOARCH) -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 
 .PHONY: push
 push:
