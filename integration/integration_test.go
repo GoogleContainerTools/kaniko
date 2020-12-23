@@ -141,23 +141,19 @@ func buildRequiredImages() error {
 	}{
 		{
 			name:    "Building kaniko image",
-			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64",  "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."}),
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."}),
 		},
 		{
 			name:    "Building cache warmer image",
-			command: append([]string{"docker", "buildx", "build","--platform", "linux/amd64", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."}),
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."}),
 		},
 		{
 			name:    "Building onbuild base image",
-			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."}),
-		},
-		{
-			name:    "Pushing onbuild base image",
-			command: []string{"docker", "push", config.onbuildBaseImage},
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", config.onbuildBaseImage,  "--push", "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."}),
 		},
 		{
 			name:    "Building hardlink base image",
-			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "--push", "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
+			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
 		},
 	}
 
