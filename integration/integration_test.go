@@ -136,10 +136,6 @@ func TestMain(m *testing.M) {
 }
 
 func buildRequiredImages() error {
-	dockerBuildArgsForAmd64 := []string{
-		"--build-arg", fmt.Sprintf("BUILDPLATFORM=%s/%s", platform, arch),
-		"--build-arg", fmt.Sprintf("TARGETPLATFORM=%s/%s", platform, arch),
-		"--build-arg", fmt.Sprintf("TARGETARCH=%s", arch)}
 
 	setupCommands := []struct {
 		name    string
@@ -147,15 +143,15 @@ func buildRequiredImages() error {
 	}{
 		{
 			name:    "Building kaniko image",
-			command: append([]string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."}, dockerBuildArgsForAmd64...),
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64",  "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."}),
 		},
 		{
 			name:    "Building cache warmer image",
-			command: append([]string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."}, dockerBuildArgsForAmd64...),
+			command: append([]string{"docker", "buildx", "build","--platform", "linux/amd64", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."}),
 		},
 		{
 			name:    "Building onbuild base image",
-			command: append([]string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."}, dockerBuildArgsForAmd64...),
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."}),
 		},
 		{
 			name:    "Pushing onbuild base image",

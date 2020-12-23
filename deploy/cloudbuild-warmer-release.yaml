@@ -1,0 +1,27 @@
+timeout: 1800s
+
+steps:
+# Set up builder for muti-arch builds.
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
+  id: 'initialize-qemu'
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
+  id: 'create-builder'
+
+# Build the cache warmer
+- name: "gcr.io/cloud-builders/docker"
+  args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_warmer",
+         "-t", "gcr.io/$PROJECT_ID/{_WARMER_IMAGE_NAME}:$TAG_NAME",
+         "-t", "gcr.io/$PROJECT_ID/{_WARMER_IMAGE_NAME}:latest", "--push", "."]
+
+images: ["gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:latest",
+         "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:${TAG_NAME}"]
+
+options:
+  env:
+  - 'DOCKER_CLI_EXPERIMENTAL=enabled'
+
+substitutions:
+  _WARMER_IMAGE_NAME: warmer
+  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64,linux/s390x'

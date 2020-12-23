@@ -22,5 +22,7 @@ sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 curl -LO https://storage.googleapis.com/container-diff/latest/container-diff-linux-amd64 && chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
 docker run -d -p 5000:5000 --restart always --name registry registry:2
 
+docker buildx create --use --platform=linux/amd64
+
 mkdir -p $HOME/.docker/
 echo '{}' > $HOME/.docker/config.json

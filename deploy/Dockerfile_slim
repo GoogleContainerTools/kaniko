@@ -33,6 +33,7 @@ RUN make GOARCH=${TARGETARCH}
 FROM scratch
 COPY --from=1 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY files/nsswitch.conf /etc/nsswitch.conf
+COPY files/ca-certificates.crt /kaniko/ssl/certs/
 ENV HOME /root
 ENV USER root
 ENV PATH /usr/local/bin:/kaniko

@@ -1,0 +1,36 @@
+timeout: 1800s
+
+steps:
+# Set up builder for muti-arch builds.
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
+  id: 'initialize-qemu'
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['buildx', 'create', '--use', '--platform', '${_DOCKER_BUILDX_PLATFORMS}']
+  id: 'create-builder'
+
+# First, build kaniko
+- name: "gcr.io/cloud-builders/docker"
+  args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$TAG_NAME",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:latest", "--push", "."]
+
+# Finally executor:slim image
+- name: "gcr.io/cloud-builders/docker"
+  args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_slim",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$TAG_NAME-slim",
+         "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:slim", "--push", "."]
+
+
+images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${TAG_NAME}",
+         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:latest",
+         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${TAG_NAME}-slim",
+         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:slim"]
+
+options:
+  env:
+  - 'DOCKER_CLI_EXPERIMENTAL=enabled'
+
+substitutions:
+  _EXECUTOR_IMAGE_NAME: executor
+  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64,linux/s390x'
