@@ -16,8 +16,6 @@ steps:
            "--push", "."]
 
 
-images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}-debug"]
-
 options:
   env:
   - 'DOCKER_CLI_EXPERIMENTAL=enabled'

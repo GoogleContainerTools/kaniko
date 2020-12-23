@@ -19,9 +19,6 @@ steps:
     args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_slim",
            "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$COMMIT_SHA-slim", "--push", "."]
 
-images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}",
-         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${COMMIT_SHA}-slim"]
-
 options:
   env:
   - 'DOCKER_CLI_EXPERIMENTAL=enabled'

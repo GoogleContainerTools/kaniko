@@ -15,9 +15,6 @@ steps:
          "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:$TAG_NAME-debug",
          "-t", "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug", "--push", "."]
 
-images: ["gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:${TAG_NAME}-debug",
-         "gcr.io/$PROJECT_ID/${_EXECUTOR_IMAGE_NAME}:debug"]
-
 options:
   env:
   - 'DOCKER_CLI_EXPERIMENTAL=enabled'

@@ -14,8 +14,6 @@ steps:
     args: ['buildx', 'build', '--platform', '$_DOCKER_BUILDX_PLATFORMS', "-f", "deploy/Dockerfile_warmer",
            "-t", "gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:$COMMIT_SHA", "--push", "."]
 
-images: ["gcr.io/$PROJECT_ID/${_WARMER_IMAGE_NAME}:${COMMIT_SHA}"]
-
 options:
   env:
   - 'DOCKER_CLI_EXPERIMENTAL=enabled'
