@@ -47,8 +47,6 @@ const (
 	daemonPrefix       = "daemon://"
 	integrationPath    = "integration"
 	dockerfilesPath    = "dockerfiles"
-	arch               = "amd64"
-	platform           = "linux"
 	emptyContainerDiff = `[
      {
        "Image1": "%s",
@@ -159,11 +157,7 @@ func buildRequiredImages() error {
 		},
 		{
 			name:    "Building hardlink base image",
-			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
-		},
-		{
-			name:    "Pushing hardlink base image",
-			command: []string{"docker", "push", config.hardlinkBaseImage},
+			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "--push", "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
 		},
 	}
 
