@@ -88,13 +88,7 @@ integration-test-misc:
 
 .PHONY: images
 images:
-	docker buildx create --use
-	docker buildx build ${BUILD_ARG} -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker buildx build ${BUILD_ARG} -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
-	docker buildx build ${BUILD_ARG} -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker buildx build ${BUILD_ARG} --push -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker buildx build ${BUILD_ARG} --push -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug . 
+	docker buildx build ${BUILD_ARG} --push -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 
-.PHONY: push
-push:
-	docker push $(REGISTRY)/executor:latest
-	docker push $(REGISTRY)/executor:debug
-	docker push $(REGISTRY)/warmer:latest

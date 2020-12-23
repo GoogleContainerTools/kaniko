@@ -84,7 +84,10 @@ func getDockerMajorVersion() int {
 	return ver
 }
 func launchTests(m *testing.M) (int, error) {
-
+	if config.localRegistry {
+		ExecutorImage = "localhost:5000/executor-image"
+		WarmerImage = "localhost:5000/warmer-image"
+	}
 	if config.isGcrRepository() {
 		contextFile, err := CreateIntegrationTarball()
 		if err != nil {
@@ -166,7 +169,7 @@ func buildRequiredImages() error {
 	}
 
 	for _, setupCmd := range setupCommands {
-		fmt.Println(setupCmd.name)
+		fmt.Println(setupCmd.name, "-", strings.Join(setupCmd.command, " "))
 		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
 		if out, err := RunCommandWithoutTest(cmd); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("%s failed: %s", setupCmd.name, string(out)))
@@ -711,6 +714,8 @@ func initIntegrationTestConfig() *integrationTestConfig {
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
+	flag.BoolVar(&c.localRegistry, "localRegistry", false, "Build setup images against local registry")
+
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {

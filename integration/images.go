@@ -33,11 +33,6 @@ import (
 )
 
 const (
-	// ExecutorImage is the name of the kaniko executor image
-	ExecutorImage = "executor-image"
-	//WarmerImage is the name of the kaniko cache warmer image
-	WarmerImage = "warmer-image"
-
 	dockerPrefix     = "docker-"
 	kanikoPrefix     = "kaniko-"
 	buildContextPath = "/workspace"
@@ -87,6 +82,13 @@ var additionalKanikoFlagsMap = map[string][]string{
 var outputChecks = map[string]func(string, []byte) error{
 	"Dockerfile_test_arg_secret": checkArgsNotPrinted,
 }
+
+var (
+	// ExecutorImage is the name of the kaniko executor image
+	ExecutorImage = "executor-image"
+	//WarmerImage is the name of the kaniko cache warmer image
+	WarmerImage = "warmer-image"
+)
 
 // Checks if argument are not printed in output.
 // Argument may be passed through --build-arg key=value manner or --build-arg key with key in environment
