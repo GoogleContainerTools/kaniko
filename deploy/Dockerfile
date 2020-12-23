@@ -13,9 +13,7 @@
 # limitations under the License.
 
 # Get the BUILDPLATFORM ARG
-FROM alpine
 ARG BUILDPLATFORM
-
 # Builds the static Go image to execute in a Kubernetes job
 FROM --platform=${BUILDPLATFORM} golang:1.14
 ARG BUILDPLATFORM
@@ -63,13 +61,13 @@ COPY . .
 RUN make GOARCH=${TARGETARCH}
 
 FROM scratch
-COPY --from=1 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
-COPY --from=1 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
-COPY --from=1 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
-COPY --from=1 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
-COPY --from=1 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
+COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
+COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
+COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY --from=1 /kaniko/.docker /kaniko/.docker
+COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
 ENV USER root

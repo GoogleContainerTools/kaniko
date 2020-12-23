@@ -15,24 +15,12 @@
 
 set -ex
 
-curl -LO https://storage.googleapis.com/container-diff/latest/container-diff-linux-amd64 && chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
-
-
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 sudo apt-get update
 sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+curl -LO https://storage.googleapis.com/container-diff/latest/container-diff-linux-amd64 && chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
+docker run -d -p 5000:5000 --restart always --name registry registry:2
+
 mkdir -p $HOME/.docker/
-echo '{"experimental": "enabled"}' > $HOME/.docker/config.json
-mkdir -vp ~/.docker/cli-plugins/
-curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
-chmod a+x ~/.docker/cli-plugins/docker-buildx
-docker buildx version
-
-# This has to be set otherwise the default driver will not work to push to local registry
-docker buildx create --use --name build --node build --driver-opt network=host --platform=linux/amd64
-
-docker run -d -p 5000:5000 --restart always --name registry registry:2.6.2
-docker ps | grep registry
-
-
+echo '{}' > $HOME/.docker/config.json
