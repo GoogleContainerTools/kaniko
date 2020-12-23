@@ -64,7 +64,7 @@ RUN mkdir -p /kaniko/.docker
 COPY . .
 RUN make GOARCH=${TARGETARCH} && make GOARCH=${TARGETARCH} out/warmer
 
-FROM --platform=$TARGETPLATFORM busybox:1.31.1 as busybox-arch
+FROM --platform=$TARGETPLATFORM busybox:1.32.0 as busybox-arch
 ARG $TARGETPLATFORM
 
 FROM scratch
