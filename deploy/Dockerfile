@@ -13,10 +13,9 @@
 # limitations under the License.
 
 # Get the BUILDPLATFORM ARG
-ARG BUILDPLATFORM=linux/amd64
+ARG BUILDPLATFORM
 # Builds the static Go image to execute in a Kubernetes job
 FROM --platform=${BUILDPLATFORM} golang:1.14 as build_env
-ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 ARG TARGETARCH
 

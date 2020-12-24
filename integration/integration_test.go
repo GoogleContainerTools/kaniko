@@ -47,8 +47,6 @@ const (
 	daemonPrefix       = "daemon://"
 	integrationPath    = "integration"
 	dockerfilesPath    = "dockerfiles"
-	arch               = "amd64"
-	platform           = "linux"
 	emptyContainerDiff = `[
      {
        "Image1": "%s",
@@ -86,7 +84,10 @@ func getDockerMajorVersion() int {
 	return ver
 }
 func launchTests(m *testing.M) (int, error) {
-
+	if config.localRegistry {
+		ExecutorImage = "localhost:5000/executor-image"
+		WarmerImage = "localhost:5000/warmer-image"
+	}
 	if config.isGcrRepository() {
 		contextFile, err := CreateIntegrationTarball()
 		if err != nil {
@@ -136,11 +137,6 @@ func TestMain(m *testing.M) {
 }
 
 func buildRequiredImages() error {
-	dockerBuildArgsForAmd64 := []string{
-		"--build-arg", fmt.Sprintf("BUILDPLATFORM=%s/%s", platform, arch),
-		"--build-arg", fmt.Sprintf("TARGETPLATFORM=%s/%s", platform, arch),
-		"--build-arg", fmt.Sprintf("TARGETARCH=%s", arch),
-	}
 
 	setupCommands := []struct {
 		name    string
@@ -148,11 +144,11 @@ func buildRequiredImages() error {
 	}{
 		{
 			name:    "Building kaniko image",
-			command: append([]string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."}, dockerBuildArgsForAmd64...),
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", ExecutorImage, "--push", "-f", "../deploy/Dockerfile", ".."}),
 		},
 		{
 			name:    "Building cache warmer image",
-			command: append([]string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."}, dockerBuildArgsForAmd64...),
+			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", WarmerImage, "--push", "-f", "../deploy/Dockerfile_warmer", ".."}),
 		},
 		{
 			name:    "Building onbuild base image",
@@ -718,6 +714,8 @@ func initIntegrationTestConfig() *integrationTestConfig {
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
+	flag.BoolVar(&c.localRegistry, "localRegistry", false, "Build setup images against local registry")
+
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {
