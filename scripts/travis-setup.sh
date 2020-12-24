@@ -24,7 +24,7 @@ sudo apt-get update
 sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 
 mkdir -p $HOME/.docker/
-echo '{"experimental": "enabled"}' > $HOME/.docker/config.json
+echo '{"experimental": "enabled", "live-restore": true}' > $HOME/.docker/config.json
 echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
 
 mkdir -vp ~/.docker/cli-plugins/
