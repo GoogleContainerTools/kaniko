@@ -169,7 +169,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	}
 	for _, path := range resolvedFiles {
 		if util.CheckIgnoreList(path) {
-			logrus.Tracef("Not adding %s to layer, as it's whitelisted", path)
+			logrus.Tracef("Not adding %s to layer, as it's allowlisted", path)
 			continue
 		}
 		filesToAdd = append(filesToAdd, path)
