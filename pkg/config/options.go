@@ -40,6 +40,7 @@ type RegistryOptions struct {
 	SkipTLSVerify           bool
 	InsecurePull            bool
 	SkipTLSVerifyPull       bool
+	Create                  bool
 }
 
 // KanikoOptions are options that are set by command line arguments

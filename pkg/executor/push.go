@@ -35,6 +35,11 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/pkg/version"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -99,11 +104,61 @@ var (
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
+// CreateECRRepo creates the ECR repository if it doesn't exist
+func CreateECRRepo(opts *config.KanikoOptions) error {
+	targets := opts.Destinations
+	// If no push is set to true, create the cache repos instead
+	if opts.NoPush {
+		targets = []string{opts.CacheRepo}
+	}
+	sess, err := session.NewSession()
+	if err != nil {
+		return errors.Wrap(err, "creating aws session")
+	}
+	svc := ecr.New(sess)
+	checked := map[string]bool{}
+	for _, destination := range targets {
+		destRef, err := name.NewTag(destination, name.WeakValidation)
+		if err != nil {
+			return errors.Wrap(err, "getting tag for destination")
+		}
+		if checked[destRef.Context().String()] {
+			continue
+		}
+
+		registryName := destRef.Repository.Registry.Name()
+		// Check if the registry is AWS ECR, and try to create a repository
+		if strings.HasSuffix(registryName, ".amazonaws.com") {
+			// Extract the repository name
+			repository := destRef.Repository.RepositoryStr()
+			input := &ecr.CreateRepositoryInput{
+				RepositoryName: aws.String(repository),
+			}
+			err := createECRRepo(svc, input)
+			if err != nil {
+				if aerr, ok := err.(awserr.Error); ok {
+					switch aerr.Code() {
+					// If the repository exists, print a message that the repository already exists, do not throw an error
+					case ecr.ErrCodeRepositoryAlreadyExistsException:
+						logrus.Infof("\nRepository %s already exists, skipping creation", registryName)
+					default:
+						return errors.Wrap(aerr, "creating ecr repository")
+					}
+				} else {
+					return errors.Wrap(err, "creating ecr repository")
+				}
+			}
+		}
+		checked[destRef.Context().String()] = true
+	}
+	return nil
+}
+
 // CheckPushPermissions checks that the configured credentials can be used to
 // push to every specified destination.
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	targets := opts.Destinations
-	// When no push is set, whe want to check permissions for the cache repo
+	// When no push is set, we want to check permissions for the cache repo
 	// instead of the destinations
 	if opts.NoPush {
 		targets = []string{opts.CacheRepo}
@@ -140,6 +195,7 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 				logrus.Warnf("\nSkip running docker-credential-gcr as user provided docker configuration exists at %s", DockerConfLocation())
 			}
 		}
+
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
 			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
@@ -324,4 +380,9 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	cacheOpts.InsecureRegistries = opts.InsecureRegistries
 	cacheOpts.SkipTLSVerifyRegistries = opts.SkipTLSVerifyRegistries
 	return DoPush(empty, &cacheOpts)
+}
+
+func createECRRepo(svc ecriface.ECRAPI, input *ecr.CreateRepositoryInput) error {
+	_, err := svc.CreateRepository(input)
+	return err
 }

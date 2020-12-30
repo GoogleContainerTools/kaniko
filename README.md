@@ -57,6 +57,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-ttl duration](#--cache-ttl-duration)
     - [--cleanup](#--cleanup)
     - [--context-sub-path](#--context-sub-path)
+    - [--create](#--create)
     - [--customPlatform](#--customPlatform)
     - [--digest-file](#--digest-file)
     - [--force](#--force)
@@ -577,6 +578,10 @@ Set a sub path within the given `--context`.
 
 Its particularly useful when your context is, for example, a git repository,
 and you want to build one of its subfolders instead of the root folder.
+
+#### --create
+
+Creates an amazon ECR repository. The name is inferred from the destination or cache repository. Defaults to false.
 
 #### --customPlatform
 

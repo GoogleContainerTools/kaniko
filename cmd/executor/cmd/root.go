@@ -95,9 +95,15 @@ var RootCmd = &cobra.Command{
 			}
 			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
+
 		if !opts.NoPush || opts.CacheRepo != "" {
+			if opts.Create {
+				if err := executor.CreateECRRepo(opts); err != nil {
+					exit(errors.Wrap(err, "error creating ECR repository"))
+				}
+			}
 			if err := executor.CheckPushPermissions(opts); err != nil {
-				exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
+				exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again. You can set create to true to create the repository if it does not exist"))
 			}
 		}
 		if err := resolveRelativePaths(); err != nil {
@@ -180,6 +186,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.RunV2, "use-new-run", "", false, "Use the experimental run implementation for detecting changes without requiring file system snapshots.")
 	RootCmd.PersistentFlags().Var(&opts.Git, "git", "Branch to clone if build context is a git repository")
 	RootCmd.PersistentFlags().BoolVarP(&opts.CacheCopyLayers, "cache-copy-layers", "", false, "Caches copy layers")
+	RootCmd.PersistentFlags().BoolVarP(&opts.Create, "create", "", false, "Optionally create the AWS ECR repository")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
