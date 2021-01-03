@@ -2,7 +2,7 @@
 
 `NOTE: kaniko is not an officially supported Google product`
 
-[![Build Status](https://travis-ci.org/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.org/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/GoogleContainerTools/kaniko)](https://goreportcard.com/report/github.com/GoogleContainerTools/kaniko)
+[![Build Status](https://travis-ci.com/GoogleContainerTools/kaniko.svg?branch=master)](https://travis-ci.com/GoogleContainerTools/kaniko) [![Go Report Card](https://goreportcard.com/badge/github.com/GoogleContainerTools/kaniko)](https://goreportcard.com/report/github.com/GoogleContainerTools/kaniko)
 
 ![kaniko logo](logo/Kaniko-Logo.png)
 
