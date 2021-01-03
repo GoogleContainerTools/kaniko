@@ -217,6 +217,11 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 	if opts.TarPath != "" {
 		tagToImage := map[name.Tag]v1.Image{}
+
+		if len(destRefs) == 0 {
+			return errors.New("must provide at least one destination when tarPath is specified")
+		}
+
 		for _, destRef := range destRefs {
 			tagToImage[destRef] = image
 		}
