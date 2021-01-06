@@ -83,12 +83,12 @@ integration-test-k8s:
 
 .PHONY: integration-test-misc
 integration-test-misc:
-	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
+	# $(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
 	# @ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:
-	docker buildx build ${BUILD_ARG} --push -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker buildx build ${BUILD_ARG} --push -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug . 
-	docker buildx build ${BUILD_ARG} --push -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker buildx build ${BUILD_ARG} --builder build --push -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker buildx build ${BUILD_ARG} --builder build --push -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker buildx build ${BUILD_ARG} --builder build --push -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 

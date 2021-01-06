@@ -767,7 +767,5 @@ func containerDiff(t *testing.T, image1, image2 string, flags ...string) []byte 
 
 	containerdiffCmd := exec.Command("container-diff", flags...)
 	diff := RunCommand(containerdiffCmd, t)
-	t.Logf("diff = %s", string(diff))
-
 	return diff
 }

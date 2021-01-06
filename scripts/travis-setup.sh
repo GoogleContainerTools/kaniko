@@ -32,6 +32,7 @@ mkdir -vp ~/.docker/cli-plugins/
 curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
 chmod a+x ~/.docker/cli-plugins/docker-buildx
 docker buildx version
+docker info
 
 # This has to be set otherwise the default driver will not work to push to local registry
 docker buildx create --use --name build --node build --driver-opt network=host --platform=linux/amd64
