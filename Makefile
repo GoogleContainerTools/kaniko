@@ -71,20 +71,20 @@ integration-test:
 
 .PHONY: integration-test-run
 integration-test-run:
-	@ ./scripts/integration-test.sh -run "TestRun"
+	@ ./scripts/integration-test.sh --run "TestRun"
 
 .PHONY: integration-test-layers
 integration-test-layers:
-	@ ./scripts/integration-test.sh -run "TestLayers"
+	@ ./scripts/integration-test.sh --run "TestLayers"
 
 .PHONY: integration-test-k8s
 integration-test-k8s:
-	@ ./scripts/integration-test.sh -run "TestK8s"
+	@ ./scripts/integration-test.sh --run "TestK8s"
 
 .PHONY: integration-test-misc
 integration-test-misc:
 	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
-	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
+	# @ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:

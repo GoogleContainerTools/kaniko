@@ -1,6 +1,10 @@
 language: go
 os: linux
 dist: bionic
+services:
+  - docker
+script:
+  - docker version
 
 env:
   global:
