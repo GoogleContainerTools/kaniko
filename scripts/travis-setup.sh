@@ -29,7 +29,7 @@ echo '{"experimental": "enabled"}' > $HOME/.docker/config.json
 echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
 
 mkdir -vp ~/.docker/cli-plugins/
-curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
 chmod a+x ~/.docker/cli-plugins/docker-buildx
 docker buildx version
 docker info
