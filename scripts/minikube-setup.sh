@@ -34,7 +34,7 @@ sudo mv minikube /usr/local/bin/
 sudo apt-get update
 sudo apt-get install -y liblz4-tool
 
-sudo minikube start --vm-driver=docker --force-systemd
+sudo minikube start --vm-driver=none --force-systemd
 sudo minikube status
 sudo chown -R $USER $HOME/.kube $HOME/.minikube
 kubectl cluster-info
