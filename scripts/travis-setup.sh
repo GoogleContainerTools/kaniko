@@ -17,16 +17,15 @@ set -ex
 
 curl -LO https://storage.googleapis.com/container-diff/latest/container-diff-linux-amd64 && chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
 
-
 sudo rm -rf /var/lib/apt/lists/*
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) edge"
 sudo apt-get update
-sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-
 mkdir -p $HOME/.docker/
 echo '{"experimental": "enabled"}' > $HOME/.docker/config.json
-echo '{"experimental":"enabled", "exec-opts": ["native.cgroupdriver=systemd"]}' | sudo tee /etc/docker/daemon.json
+echo '{"experimental": "enabled", "exec-opts": ["native.cgroupdriver=systemd"]}' | sudo tee /etc/docker/daemon.json
+
+sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 
 mkdir -vp ~/.docker/cli-plugins/
 curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
