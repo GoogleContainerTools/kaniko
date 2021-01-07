@@ -26,7 +26,7 @@ sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 
 mkdir -p $HOME/.docker/
 echo '{"experimental": "enabled"}' > $HOME/.docker/config.json
-echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
+echo '{"experimental":"enabled", "exec-opts": ["native.cgroupdriver=systemd"]}' | sudo tee /etc/docker/daemon.json
 
 mkdir -vp ~/.docker/cli-plugins/
 curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
