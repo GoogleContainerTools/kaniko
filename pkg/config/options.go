@@ -46,30 +46,31 @@ type RegistryOptions struct {
 type KanikoOptions struct {
 	CacheOptions
 	RegistryOptions
-	DockerfilePath      string
-	SrcContext          string
-	SnapshotMode        string
-	CustomPlatform      string
-	Bucket              string
-	TarPath             string
-	Target              string
-	CacheRepo           string
-	DigestFile          string
-	ImageNameDigestFile string
-	OCILayoutPath       string
-	Destinations        multiArg
-	BuildArgs           multiArg
-	Labels              multiArg
-	SingleSnapshot      bool
-	Reproducible        bool
-	NoPush              bool
-	Cache               bool
-	Cleanup             bool
-	IgnoreVarRun        bool
-	SkipUnusedStages    bool
-	RunV2               bool
-	CacheCopyLayers     bool
-	Git                 KanikoGitOptions
+	DockerfilePath         string
+	SrcContext             string
+	SnapshotMode           string
+	CustomPlatform         string
+	Bucket                 string
+	TarPath                string
+	Target                 string
+	CacheRepo              string
+	DigestFile             string
+	ImageNameDigestFile    string
+	ImageNameTagDigestFile string
+	OCILayoutPath          string
+	Destinations           multiArg
+	BuildArgs              multiArg
+	Labels                 multiArg
+	SingleSnapshot         bool
+	Reproducible           bool
+	NoPush                 bool
+	Cache                  bool
+	Cleanup                bool
+	IgnoreVarRun           bool
+	SkipUnusedStages       bool
+	RunV2                  bool
+	CacheCopyLayers        bool
+	Git                    KanikoGitOptions
 }
 
 type KanikoGitOptions struct {

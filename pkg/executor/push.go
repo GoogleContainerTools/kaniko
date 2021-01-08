@@ -169,7 +169,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
 	var digestByteArray []byte
 	var builder strings.Builder
-	if opts.DigestFile != "" || opts.ImageNameDigestFile != "" {
+	if opts.DigestFile != "" || opts.ImageNameDigestFile != "" || opts.ImageNameTagDigestFile != "" {
 		var err error
 		digestByteArray, err = getDigest(image)
 		if err != nil {
@@ -200,8 +200,12 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		if err != nil {
 			return errors.Wrap(err, "getting tag for destination")
 		}
-		if opts.ImageNameDigestFile != "" {
-			imageName := []byte(destRef.Repository.Name() + "@")
+		if opts.ImageNameDigestFile != "" || opts.ImageNameTagDigestFile != "" {
+			tag := ""
+			if opts.ImageNameTagDigestFile != "" && destRef.TagStr() != "" {
+				tag = ":" + destRef.TagStr()
+			}
+			imageName := []byte(destRef.Repository.Name() + tag + "@")
 			builder.Write(append(imageName, digestByteArray...))
 			builder.WriteString("\n")
 		}
@@ -212,6 +216,13 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		err := ioutil.WriteFile(opts.ImageNameDigestFile, []byte(builder.String()), 0644)
 		if err != nil {
 			return errors.Wrap(err, "writing image name with digest to file failed")
+		}
+	}
+
+	if opts.ImageNameTagDigestFile != "" {
+		err := ioutil.WriteFile(opts.ImageNameTagDigestFile, []byte(builder.String()), 0644)
+		if err != nil {
+			return errors.Wrap(err, "writing image name with image tag and digest to file failed")
 		}
 	}
 

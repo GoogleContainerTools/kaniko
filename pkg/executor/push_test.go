@@ -333,6 +333,36 @@ func TestImageNameDigestFile(t *testing.T) {
 
 }
 
+func TestImageNameTagDigestFile(t *testing.T) {
+	image, err := random.Image(1024, 4)
+	if err != nil {
+		t.Fatalf("could not create image: %s", err)
+	}
+
+	digest, err := image.Digest()
+	if err != nil {
+		t.Fatalf("could not get image digest: %s", err)
+	}
+
+	opts := config.KanikoOptions{
+		NoPush:                 true,
+		Destinations:           []string{"gcr.io/foo/bar:123", "bob/image"},
+		ImageNameTagDigestFile: "tmpFile",
+	}
+
+	defer os.Remove("tmpFile")
+
+	if err := DoPush(image, &opts); err != nil {
+		t.Fatalf("could not push image: %s", err)
+	}
+
+	want := []byte("gcr.io/foo/bar:123@" + digest.String() + "\nindex.docker.io/bob/image:latest@" + digest.String() + "\n")
+
+	got, err := ioutil.ReadFile("tmpFile")
+
+	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
+}
+
 var calledExecCommand = []bool{}
 var calledCheckPushPermission = false
 
