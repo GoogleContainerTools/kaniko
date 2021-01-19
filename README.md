@@ -62,6 +62,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--force](#--force)
     - [--git](#--git)
     - [--image-name-with-digest-file](#--image-name-with-digest-file)
+    - [--image-name-tag-with-digest-file](#--image-name-tag-with-digest-file)
     - [--insecure](#--insecure)
     - [--insecure-pull](#--insecure-pull)
     - [--insecure-registry](#--insecure-registry)
@@ -458,9 +459,9 @@ docker run -ti --rm -e GOOGLE_APPLICATION_CREDENTIALS=/kaniko/config.json \
 ```
 
 #### Pushing to GCR using Workload Identity
-If you have enabled Workload Indentity on your GKE cluster then you can use the workload identity to push built images to GCR without adding a `GOOGLE_APPLICATION_CREDENTIALS` in your kaniko pod specification. 
+If you have enabled Workload Indentity on your GKE cluster then you can use the workload identity to push built images to GCR without adding a `GOOGLE_APPLICATION_CREDENTIALS` in your kaniko pod specification.
 
-Learn more on how to [enable](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster) and [migrate existing apps](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#migrate_applications_to) to workload identity. 
+Learn more on how to [enable](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster) and [migrate existing apps](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#migrate_applications_to) to workload identity.
 
 To authenticate using workload identity you need to run the kaniko pod using the Kubernetes Service Account (KSA) bound to Google Service Account (GSA) which as `Storage.Admin` permissions to push images to Google Container registry.
 
@@ -607,6 +608,9 @@ Branch to clone if build context is a git repository (default branch=,single-bra
 #### --image-name-with-digest-file
 
 Specify a file to save the image name w/ digest of the built image to.
+
+#### --image-name-tag-with-digest-file
+Specify a file to save the image name w/ image tag and digest of the built image to.
 
 #### --insecure
 
@@ -765,7 +769,7 @@ You may be able to achieve the same default seccomp profile that Docker uses in 
 ## Kaniko Builds - Profiling
 If your builds are taking long, we recently added support to analyze kaniko function
 calls using [Slow Jam](https://github.com/google/slowjam)
-To start profiling, 
+To start profiling,
 1. Add an environment variable `STACKLOG_PATH`  to your [pod definition](https://github.com/GoogleContainerTools/kaniko/blob/master/examples/pod-build-profile.yaml#L15).
 2. If you are using the kaniko `debug` image, you can copy the file in the `pre-stop` container lifecyle hook.
 

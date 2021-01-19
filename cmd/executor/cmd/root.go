@@ -83,6 +83,9 @@ var RootCmd = &cobra.Command{
 			if len(opts.Destinations) == 0 && opts.ImageNameDigestFile != "" {
 				return errors.New("You must provide --destination if setting ImageNameDigestFile")
 			}
+			if len(opts.Destinations) == 0 && opts.ImageNameTagDigestFile != "" {
+				return errors.New("You must provide --destination if setting ImageNameTagDigestFile")
+			}
 			// Update ignored paths
 			util.UpdateInitialIgnoreList(opts.IgnoreVarRun)
 		}
@@ -165,6 +168,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&opts.CacheDir, "cache-dir", "", "/cache", "Specify a local directory to use as a cache.")
 	RootCmd.PersistentFlags().StringVarP(&opts.DigestFile, "digest-file", "", "", "Specify a file to save the digest of the built image to.")
 	RootCmd.PersistentFlags().StringVarP(&opts.ImageNameDigestFile, "image-name-with-digest-file", "", "", "Specify a file to save the image name w/ digest of the built image to.")
+	RootCmd.PersistentFlags().StringVarP(&opts.ImageNameTagDigestFile, "image-name-tag-with-digest-file", "", "", "Specify a file to save the image name w/ image tag w/ digest of the built image to.")
 	RootCmd.PersistentFlags().StringVarP(&opts.OCILayoutPath, "oci-layout-path", "", "", "Path to save the OCI image layout of the built image.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
@@ -301,6 +305,7 @@ func resolveRelativePaths() error {
 		&opts.TarPath,
 		&opts.DigestFile,
 		&opts.ImageNameDigestFile,
+		&opts.ImageNameTagDigestFile,
 	}
 
 	for _, p := range optsPaths {
