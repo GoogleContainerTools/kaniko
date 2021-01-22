@@ -67,7 +67,9 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		RecurseSubmodules: getRecurseSubmodules(g.opts.GitRecurseSubmodules),
 	}
 	if len(parts) > 1 {
-		options.ReferenceName = plumbing.ReferenceName(parts[1])
+		if !strings.HasPrefix(parts[1], "refs/pull/") {
+			options.ReferenceName = plumbing.ReferenceName(parts[1])
+		}
 	}
 
 	if branch := g.opts.GitBranch; branch != "" {
@@ -81,7 +83,22 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	logrus.Debugf("Getting source from reference %s", options.ReferenceName)
 	r, err := git.PlainClone(directory, false, &options)
 
-	if err == nil && len(parts) > 2 {
+	if err != nil {
+		return directory, err
+	}
+
+	if len(parts) > 1 && strings.HasPrefix(parts[1], "refs/pull/") {
+
+		err = r.Fetch(&git.FetchOptions{
+			RemoteName: "origin",
+			RefSpecs:   []config.RefSpec{config.RefSpec(parts[1] + ":" + parts[1])},
+		})
+		if err != nil {
+			return directory, err
+		}
+	}
+
+	if len(parts) > 2 {
 		// ... retrieving the commit being pointed by HEAD
 		_, err := r.Head()
 		if err != nil {
