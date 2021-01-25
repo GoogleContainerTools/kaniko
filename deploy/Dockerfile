@@ -17,7 +17,6 @@
 FROM golang:1.14
 ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
-
 RUN echo $GOARCH > /goarch
 
 #This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
@@ -25,6 +24,9 @@ ARG TARGETPLATFORM
 
 #Capture ARCH has write to /goarch
 RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,"/"); print a[2]}' > /goarch` || echo "$GOARCH"
+
+RUN echo "I am runninng $TARGETPLATFORM "
+RUN cat /goarch
 
 # Get GCR credential helper
 RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
