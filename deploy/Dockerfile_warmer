@@ -17,8 +17,7 @@
 FROM golang:1.14
 ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
-
-
+RUN echo $GOARCH > /goarch
 
 #This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
 ARG TARGETPLATFORM
