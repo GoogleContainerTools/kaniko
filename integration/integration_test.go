@@ -84,10 +84,7 @@ func getDockerMajorVersion() int {
 	return ver
 }
 func launchTests(m *testing.M) (int, error) {
-	if config.localRegistry {
-		ExecutorImage = "localhost:5000/executor-image"
-		WarmerImage = "localhost:5000/warmer-image"
-	}
+
 	if config.isGcrRepository() {
 		contextFile, err := CreateIntegrationTarball()
 		if err != nil {
@@ -137,18 +134,17 @@ func TestMain(m *testing.M) {
 }
 
 func buildRequiredImages() error {
-
 	setupCommands := []struct {
 		name    string
 		command []string
 	}{
 		{
 			name:    "Building kaniko image",
-			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", ExecutorImage, "--push", "-f", "../deploy/Dockerfile", ".."}),
+			command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
 		},
 		{
 			name:    "Building cache warmer image",
-			command: append([]string{"docker", "buildx", "build", "--platform", "linux/amd64", "-t", WarmerImage, "--push", "-f", "../deploy/Dockerfile_warmer", ".."}),
+			command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
 		},
 		{
 			name:    "Building onbuild base image",
@@ -169,7 +165,7 @@ func buildRequiredImages() error {
 	}
 
 	for _, setupCmd := range setupCommands {
-		fmt.Println(setupCmd.name, "-", strings.Join(setupCmd.command, " "))
+		fmt.Println(setupCmd.name)
 		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
 		if out, err := RunCommandWithoutTest(cmd); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("%s failed: %s", setupCmd.name, string(out)))
@@ -714,8 +710,6 @@ func initIntegrationTestConfig() *integrationTestConfig {
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
-	flag.BoolVar(&c.localRegistry, "localRegistry", false, "Build setup images against local registry")
-
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {
@@ -767,5 +761,7 @@ func containerDiff(t *testing.T, image1, image2 string, flags ...string) []byte 
 
 	containerdiffCmd := exec.Command("container-diff", flags...)
 	diff := RunCommand(containerdiffCmd, t)
+	t.Logf("diff = %s", string(diff))
+
 	return diff
 }

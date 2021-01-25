@@ -24,4 +24,4 @@ docker version
 echo "Running integration tests..."
 make out/executor
 make out/warmer
-go test ./integration/... -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --localRegistry true --timeout 50m "$@"
+go test ./integration/... -v --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 50m "$@"

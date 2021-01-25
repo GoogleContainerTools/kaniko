@@ -12,42 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Get the BUILDPLATFORM ARG
 # Builds the static Go image to execute in a Kubernetes job
-FROM --platform=${BUILDPLATFORM} golang:1.14 as build_env
-ARG BUILDPLATFORM
-ARG TARGETPLATFORM
-ARG TARGETARCH
 
-#Capture all the args
-RUN echo "I am running on $BUILDPLATFORM building for $TARGETPLATFORM with $TARGETARCH"
+FROM golang:1.14
+ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 
+RUN echo $GOARCH > /goarch
+
+#This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
+ARG TARGETPLATFORM
+
+#Capture ARCH has write to /goarch
+RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,"/"); print a[2]}' > /goarch` || echo "$GOARCH"
+
 # Get GCR credential helper
-RUN GOARCH=${TARGETARCH} && CGO_ENABLED=0 && \
+RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
   (mkdir -p /go/src/github.com/GoogleCloudPlatform || true)                  && \
   cd /go/src/github.com/GoogleCloudPlatform                                  && \
   git clone https://github.com/GoogleCloudPlatform/docker-credential-gcr.git && \
   cd /go/src/github.com/GoogleCloudPlatform/docker-credential-gcr            && \
   make deps OUT_DIR=/usr/local/bin                                           && \
-  go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go
+  go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go  
 
 # Get Amazon ECR credential helper
-RUN GOARCH=${TARGETARCH} && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
+RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
   make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper
 
 # ACR docker credential helper
 COPY ./acr.patch /
-RUN GOARCH=${TARGETARCH} && (mkdir -p /go/src/github.com/Azure || true)  && \
+RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/Azure || true)  && \
   cd /go/src/github.com/Azure                                             && \
   git clone https://github.com/Azure/acr-docker-credential-helper         && \
   cd /go/src/github.com/Azure/acr-docker-credential-helper                && \
   git checkout a79b541f3ee761f6cc4511863ed41fb038c19464                   && \
   git apply < /acr.patch                                                  && \
   make && cp -f bin/linux/${GOARCH}/docker-credential-acr-linux /usr/local/bin/docker-credential-acr-linux
-
+  
 #ACR docker env credential helper
-RUN GOARCH=${TARGETARCH} && (mkdir -p /go/src/github.com/chrismellard || true)   && \
+RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true)   && \
   cd /go/src/github.com/chrismellard                                              && \
   git clone https://github.com/chrismellard/docker-credential-acr-env             && \
   cd  docker-credential-acr-env                                                   && \
@@ -57,16 +60,15 @@ RUN GOARCH=${TARGETARCH} && (mkdir -p /go/src/github.com/chrismellard || true)  
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-RUN make GOARCH=${TARGETARCH}
+RUN make GOARCH=$(cat /goarch.txt) 
 
 FROM scratch
-COPY --from=build_env /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
-COPY --from=build_env /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
-COPY --from=build_env /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
-COPY --from=build_env /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
-COPY --from=build_env /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
+COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
+COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
+COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
-COPY --from=build_env /kaniko/.docker /kaniko/.docker
+COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
 ENV USER root
@@ -76,4 +78,6 @@ ENV DOCKER_CONFIG /kaniko/.docker/
 ENV DOCKER_CREDENTIAL_GCR_CONFIG /kaniko/.config/gcloud/docker_credential_gcr_config.json
 WORKDIR /workspace
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
+
 ENTRYPOINT ["/kaniko/executor"]
+

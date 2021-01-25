@@ -39,7 +39,7 @@ GO_LDFLAGS += '
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
 KANIKO_PROJECT = $(REPOPATH)/kaniko
-BUILD_ARG ?=--platform linux/amd64
+BUILD_ARG ?=
 
 # Force using Go Modules and always read the dependencies from
 # the `vendor` folder.
@@ -71,24 +71,29 @@ integration-test:
 
 .PHONY: integration-test-run
 integration-test-run:
-	@ ./scripts/integration-test.sh --run "TestRun"
+	@ ./scripts/integration-test.sh -run "TestRun"
 
 .PHONY: integration-test-layers
 integration-test-layers:
-	@ ./scripts/integration-test.sh --run "TestLayers"
+	@ ./scripts/integration-test.sh -run "TestLayers"
 
 .PHONY: integration-test-k8s
 integration-test-k8s:
-	@ ./scripts/integration-test.sh --run "TestK8s"
+	@ ./scripts/integration-test.sh -run "TestK8s"
 
 .PHONY: integration-test-misc
 integration-test-misc:
-	# $(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
-	# @ ./scripts/integration-test.sh -run "$(RUN_ARG)"
+	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
+	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
 images:
-	docker buildx --builder build build ${BUILD_ARG}  --push -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-	docker buildx --builder build build ${BUILD_ARG} --push -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
-	docker buildx --builder build build ${BUILD_ARG} --push -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
 
+.PHONY: push
+push:
+	docker push $(REGISTRY)/executor:latest
+	docker push $(REGISTRY)/executor:debug
+	docker push $(REGISTRY)/warmer:latest
