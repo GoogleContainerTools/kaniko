@@ -17,6 +17,7 @@
 # Stage 0: Build the executor binary and get credential helpers
 FROM golang:1.14
 ARG GOARCH=amd64
+RUN echo $GOARCH > /goarch
 
 #This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
 ARG TARGETPLATFORM
@@ -66,10 +67,10 @@ RUN make GOARCH=$(cat /goarch) && make GOARCH=$(cat /goarch.txt) out/warmer
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
-COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/linux-amd64/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
+COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
-COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
 COPY --from=amd64/busybox:1.32.0 /bin /busybox
 
 # Declare /busybox as a volume to get it automatically in the path to ignore
