@@ -21,4 +21,4 @@ options:
 
 substitutions:
   _WARMER_IMAGE_NAME: warmer
-  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64,linux/s390x'
+  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64'
