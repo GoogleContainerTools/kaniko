@@ -31,9 +31,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	manifestCache = make(map[string]v1.Image)
+)
+
 // RetrieveRemoteImage retrieves the manifest for the specified image from the specified registry
 func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatform string) (v1.Image, error) {
 	logrus.Infof("Retrieving image manifest %s", image)
+
+	cachedRemoteImage := manifestCache[image]
+	if cachedRemoteImage != nil {
+		logrus.Infof("Returning cached image manifest")
+		return cachedRemoteImage, nil
+	}
+
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
@@ -63,6 +74,9 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 				logrus.Warnf("Failed to retrieve image %s from registry mirror %s: %s. Will try with the next mirror, or fallback to the default registry.", ref, registryMirror, err)
 				continue
 			}
+
+			manifestCache[image] = remoteImage
+
 			return remoteImage, nil
 		}
 	}
@@ -77,7 +91,14 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 	}
 
 	logrus.Infof("Retrieving image %s from registry %s", ref, registryName)
-	return remote.Image(ref, remoteOptions(registryName, opts, customPlatform)...)
+
+	remoteImage, err := remote.Image(ref, remoteOptions(registryName, opts, customPlatform)...)
+
+	if remoteImage != nil {
+		manifestCache[image] = remoteImage
+	}
+
+	return remoteImage, err
 }
 
 // normalizeReference adds the library/ prefix to images without it.

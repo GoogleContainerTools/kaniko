@@ -69,7 +69,7 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 
 	// Finally, check if local caching is enabled
 	// If so, look in the local cache before trying the remote registry
-	if opts.CacheDir != "" {
+	if opts.Cache && opts.CacheDir != "" {
 		cachedImage, err := cachedImage(opts, currentBaseName)
 		if err != nil {
 			switch {
