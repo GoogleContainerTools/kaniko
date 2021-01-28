@@ -1,3 +1,83 @@
+# v1.4.0 Release 2021-01-25
+
+This releases publishes multi-arch image kaniko images for following platforms
+1. linux/amd64
+2. linux/arm64
+
+If you want to add other platforms, please talk to @tejal29.
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.4.0 
+gcr.io/kaniko-project/executor:latest
+```
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:debug-v1.4.0 and
+```
+
+In this release, we have 2 slim executor images which don't contain any authentication binaries. 
+
+1. `gcr.io/kaniko-project/executor:slim`  &
+2. `gcr.io/kaniko-project/executor:slim-v1.4.0`
+
+
+# New features:
+
+* Mutli-arch support  [#1531](https://github.com/GoogleContainerTools/kaniko/pull/1531), [#1474](https://github.com/GoogleContainerTools/kaniko/pull/1474)
+* Add support to fetch a github pull request [#1543](https://github.com/GoogleContainerTools/kaniko/pull/1543)
+* Add --image-name-tag-with-digest flag [#1541](https://github.com/GoogleContainerTools/kaniko/pull/1541)
+* add caching copy layers back [#1518](https://github.com/GoogleContainerTools/kaniko/pull/1518)
+* Profiling for Snapshotting errors. [#1530](https://github.com/GoogleContainerTools/kaniko/pull/1530)
+* feat(warmer): Warmer now supports all registry-related flags [#1499](https://github.com/GoogleContainerTools/kaniko/pull/1499)
+* feat: Add https tar.gz remote source for context [#1519](https://github.com/GoogleContainerTools/kaniko/pull/1519)
+* Add option customPlatform [#1500](https://github.com/GoogleContainerTools/kaniko/pull/1500)
+* feat: support multiple registry mirrors with fallback [#1498](https://github.com/GoogleContainerTools/kaniko/pull/1498)
+* Add s390x kaniko build to multi-arch list [#1475](https://github.com/GoogleContainerTools/kaniko/pull/1475)
+
+# Bug Fixes
+* reject tarball writes with no destinations [#1534](https://github.com/GoogleContainerTools/kaniko/pull/1534)
+* Fix travis-ci link [#1535](https://github.com/GoogleContainerTools/kaniko/pull/1535)
+* fix: extract file as same user for warmer docker image [#1538](https://github.com/GoogleContainerTools/kaniko/pull/1538)
+* fix: update busybox version to fix CVE-2018-1000500 [#1532](https://github.com/GoogleContainerTools/kaniko/pull/1532)
+* Fix typo in error message [#1494](https://github.com/GoogleContainerTools/kaniko/pull/1494)
+* Fix COPY with --chown command [#1477](https://github.com/GoogleContainerTools/kaniko/pull/1477)
+* Remove unused code [#1495](https://github.com/GoogleContainerTools/kaniko/pull/1495)
+* Fixes #1469 : Remove file that matches with the directory path [#1478](https://github.com/GoogleContainerTools/kaniko/pull/1478)
+* fix: CheckPushPermissions not being called when using --no-push and --cache-repo [#1471](https://github.com/GoogleContainerTools/kaniko/pull/1471)
+
+# Refactors
+* Switch to runtime detection via bpfd/proc [#1502](https://github.com/GoogleContainerTools/kaniko/pull/1502)
+* Update ggcr to pick up estargz and caching option [#1527](https://github.com/GoogleContainerTools/kaniko/pull/1527)
+
+# Documentation
+* Document flags for tarball build only [#1503](https://github.com/GoogleContainerTools/kaniko/pull/1503)
+* doc: clarify the format of --registry-mirror [#1504](https://github.com/GoogleContainerTools/kaniko/pull/1504)
+* add section to run lints [#1480](https://github.com/GoogleContainerTools/kaniko/pull/1480)
+* Add docs for GKE workload identity. [#1476](https://github.com/GoogleContainerTools/kaniko/pull/1476)
+
+Huge thank you for this release towards our contributors: 
+- Alec Rajeev
+- Fabrice
+- Josh Chorlton
+- Lars
+- Lars Toenning
+- Matt Moore
+- Or Geva
+- Severin Strobl
+- Shashank
+- Sladyn
+- Tejal Desai
+- Theofilos Papapanagiotou
+- Vincent Behar
+- Yulia Gaponenko
+- ankitm123
+- bahetiamit
+- ejose19
+- mickkael
+- zhouhaibing089
+
 # v1.3.0 Release 2020-10-22
 
 This release publishes, multi-arch image kaniko executor images. 
