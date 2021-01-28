@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Builds the static Go image to execute in a Kubernetes job
-FROM golang:1.14 as build_env
+FROM golang:1.15 as build_env
 ARG GOARCH=amd64
 RUN echo $GOARCH > /goarch
 

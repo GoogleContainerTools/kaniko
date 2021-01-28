@@ -14,7 +14,7 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
-FROM golang:1.14
+FROM golang:1.15
 ARG GOARCH=amd64
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 RUN echo $GOARCH > /goarch
@@ -27,7 +27,7 @@ RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,
 RUN echo "I am runninng $TARGETPLATFORM with with $(cat /goarch)"
 
 # Get GCR credential helper
-RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
+RUN GOARCH=$(cat /goarch) && \
   (mkdir -p /go/src/github.com/GoogleCloudPlatform || true)                  && \
   cd /go/src/github.com/GoogleCloudPlatform                                  && \
   git clone https://github.com/GoogleCloudPlatform/docker-credential-gcr.git && \
