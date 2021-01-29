@@ -32,7 +32,7 @@ jobs:
       run: echo ${{ steps.buildx.outputs.platforms }}
 
     - name: Setup gcloud CLI
-      uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@master
       with:
         service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
@@ -40,7 +40,7 @@ jobs:
 
     - name: Build and push image
       run: |
-        gcloud auth configure-docker -q
+        gcloud -q auth configure-docker
         SHORT_SHA1=$(git rev-parse --short HEAD)
         PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
         echo "Building and pushing version ${SHORT_SHA1} of image ${IMAGE_NAME}"

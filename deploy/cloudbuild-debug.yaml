@@ -22,4 +22,4 @@ options:
 
 substitutions:
   _EXECUTOR_IMAGE_NAME: executor
-  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64'
+  _DOCKER_BUILDX_PLATFORMS: 'linux/arm64'
