@@ -1,0 +1,48 @@
+name: Build images on push to master
+
+on:
+  push:
+    branches:
+    - '**'
+
+jobs:
+  build:
+    env:
+      IMAGE_NAME: gcr.io/kaniko-project/executor
+      HASH: $(git rev-parse --short "$GITHUB_SHA")
+      BRANCH: ${GITHUB_REF##*/}
+
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone source code
+      uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: all
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+
+    - name: Available platforms
+      run: echo ${{ steps.buildx.outputs.platforms }}
+
+    - name: Setup gcloud CLI
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        project_id: kaniko-project
+        export_default_credentials: true
+
+    - name: Build and push image
+      run: |
+        gcloud auth configure-docker -q
+        SHORT_SHA1=$(git rev-parse --short HEAD)
+        PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
+        echo "Building and pushing version ${SHORT_SHA1} of image ${IMAGE_NAME}"
+        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:${SHORT_SHA1}-slim" -t "${IMAGE_NAME}:test-multi-slim" -f ./deploy/Dockerfile_slim \
+          --push .

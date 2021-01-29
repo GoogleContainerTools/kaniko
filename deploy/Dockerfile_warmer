@@ -27,13 +27,8 @@ RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,
 RUN echo "I am runninng $TARGETPLATFORM with $(cat /goarch)"
 
 # Get GCR credential helper
-RUN GOARCH=$(cat /goarch)  && \
-  (mkdir -p /go/src/github.com/GoogleCloudPlatform || true)                  && \
-  cd /go/src/github.com/GoogleCloudPlatform                                  && \
-  git clone https://github.com/GoogleCloudPlatform/docker-credential-gcr.git && \
-  cd /go/src/github.com/GoogleCloudPlatform/docker-credential-gcr            && \
-  make deps OUT_DIR=/usr/local/bin                                           && \
-  go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go
+ADD ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v2.0.1/docker-credential-gcr_linux_$GOARCH-2.0.1.tar.gz /usr/local/bin/
+    RUN tar --no-same-owner -C /usr/local/bin/ -xvzf /usr/local/bin/docker-credential-gcr_linux_$GOARCH-2.0.1.tar.gz
 
 # Get Amazon ECR credential helper
 RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
