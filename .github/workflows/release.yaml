@@ -11,6 +11,8 @@ jobs:
       IMAGE_NAME: gcr.io/kaniko-project/executor
       HASH: $(git rev-parse --short "$GITHUB_SHA")
       BRANCH: ${GITHUB_REF##*/}
+      GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+      GOOGLE_PROJECT_ID: kaniko-project
 
     runs-on: ubuntu-latest
     steps:
@@ -32,17 +34,35 @@ jobs:
       run: echo ${{ steps.buildx.outputs.platforms }}
 
     - name: Setup gcloud CLI
-        uses: google-github-actions/setup-gcloud@master
+      uses: google-github-actions/setup-gcloud@master
       with:
         service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
-    - name: Build and push image
+    - name: Build and image
       run: |
         gcloud -q auth configure-docker
-        SHORT_SHA1=$(git rev-parse --short HEAD)
         PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
         echo "Building and pushing version ${SHORT_SHA1} of image ${IMAGE_NAME}"
-        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:${SHORT_SHA1}-slim" -t "${IMAGE_NAME}:test-multi-slim" -f ./deploy/Dockerfile_slim \
-          --push .
+        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:${GITHUB_SHA}-slim" -t "${IMAGE_NAME}:test-multi-slim" -f ./deploy/Dockerfile_slim  .
+
+    - name: Push image with SHA
+      uses: raccoondev/push-docker-gcr@master
+      with:
+        gcr_host: gcr.io
+        image_name: ${IMAGE_NAME}
+        image_tag: ${GITHUB_SHA}-slim
+        env:
+          GCLOUD_SERVICE_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+          GOOGLE_PROJECT_ID: kaniko-project
+
+    - name: Push image with tag
+      uses: raccoondev/push-docker-gcr@master
+      with:
+        gcr_host: gcr.io
+        image_name: ${IMAGE_NAME}
+        image_tag: test-multi-slim
+        env:
+          GCLOUD_SERVICE_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+          GOOGLE_PROJECT_ID: kaniko-project
