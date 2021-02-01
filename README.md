@@ -59,6 +59,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--context-sub-path](#--context-sub-path)
     - [--customPlatform](#--customPlatform)
     - [--digest-file](#--digest-file)
+    - [--dockerfile](#--dockerfile)
     - [--force](#--force)
     - [--git](#--git)
     - [--image-name-with-digest-file](#--image-name-with-digest-file)
@@ -596,6 +597,10 @@ For example, setting the flag to `--digest-file=/dev/termination-log`
 will write the digest to that file, which is picked up by
 Kubernetes automatically as the `{{.state.terminated.message}}`
 of the container.
+
+#### --dockerfile
+
+Path to the dockerfile to be built. (default "Dockerfile")
 
 #### --force
 
