@@ -11,7 +11,7 @@ jobs:
       IMAGE_NAME: gcr.io/kaniko-project/executor
       HASH: $(git rev-parse --short "$GITHUB_SHA")
       BRANCH: ${GITHUB_REF##*/}
-      GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+      GCLOUD_SERVICE_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
       GOOGLE_PROJECT_ID: kaniko-project
 
     runs-on: ubuntu-latest
@@ -53,9 +53,6 @@ jobs:
         gcr_host: gcr.io
         image_name: ${IMAGE_NAME}
         image_tag: ${GITHUB_SHA}-slim
-        env:
-          GCLOUD_SERVICE_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
-          GOOGLE_PROJECT_ID: kaniko-project
 
     - name: Push image with tag
       uses: raccoondev/push-docker-gcr@master
@@ -63,6 +60,3 @@ jobs:
         gcr_host: gcr.io
         image_name: ${IMAGE_NAME}
         image_tag: test-multi-slim
-        env:
-          GCLOUD_SERVICE_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
-          GOOGLE_PROJECT_ID: kaniko-project
