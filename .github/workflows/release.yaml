@@ -6,13 +6,10 @@ on:
     - '**'
 
 jobs:
-  build:
+  setup:
     env:
-      IMAGE_NAME: gcr.io/kaniko-project/executor
-      HASH: $(git rev-parse --short "$GITHUB_SHA")
-      BRANCH: ${GITHUB_REF##*/}
-      GCLOUD_SERVICE_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
-      GOOGLE_PROJECT_ID: kaniko-project
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REF: ${{ github.ref }}
 
     runs-on: ubuntu-latest
     steps:
@@ -40,23 +37,52 @@ jobs:
         project_id: kaniko-project
         export_default_credentials: true
 
-    - name: Build and image
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |
+        # Set up docker to authenticate
+        # via gcloud command-line tool.
+        gcloud auth configure-docker
+  build-executor:
+    needs: setup
+    IMAGE_NAME: gcr.io/kaniko-project/executor
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build and image executor image
       run: |
         gcloud -q auth configure-docker
         PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
-        echo "Building and pushing version ${SHORT_SHA1} of image ${IMAGE_NAME}"
-        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:${GITHUB_SHA}-slim" -t "${IMAGE_NAME}:test-multi-slim" -f ./deploy/Dockerfile_slim  .
+        export TAG=`echo $GITHUB_REF | awk -F/ '{print $NF}'`
+        echo $TAG
+        echo "Building and pushing version ${TAG} of image ${IMAGE_NAME}"
+        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:test-multi-slim"  \
+           -t "$IMAGE":"$TAG"-slim -f ./deploy/Dockerfile_slim  . --push
 
-    - name: Push image with SHA
-      uses: raccoondev/push-docker-gcr@master
-      with:
-        gcr_host: gcr.io
-        image_name: ${IMAGE_NAME}
-        image_tag: ${GITHUB_SHA}-slim
+  build-debug:
+    needs: setup
+    IMAGE_NAME: gcr.io/kaniko-project/executor
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build and image debug image
+      run: |
+        gcloud -q auth configure-docker
+        PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
+        export TAG=`echo $GITHUB_REF | awk -F/ '{print $NF}'`
+        echo $TAG
+        echo "Building and pushing version ${TAG} of image ${IMAGE_NAME}"
+        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:test-multi-slim"  \
+           -t "$IMAGE":"$TAG"-slim -f ./deploy/Dockerfile_debug  . --push
 
-    - name: Push image with tag
-      uses: raccoondev/push-docker-gcr@master
-      with:
-        gcr_host: gcr.io
-        image_name: ${IMAGE_NAME}
-        image_tag: test-multi-slim
+  build-warmer:
+    needs: setup
+    IMAGE_NAME: gcr.io/kaniko-project/executor
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build and image warmer image
+      run: |
+        gcloud -q auth configure-docker
+        PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
+        export TAG=`echo $GITHUB_REF | awk -F/ '{print $NF}'`
+        echo $TAG
+        echo "Building and pushing version ${TAG} of image ${IMAGE_NAME}"
+        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:test-multi-slim"  \
+           -t "$IMAGE":"$TAG"-slim -f ./deploy/Dockerfile_warmer  . --push
