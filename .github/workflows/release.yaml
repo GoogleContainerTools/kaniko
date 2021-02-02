@@ -6,11 +6,11 @@ on:
     - '**'
 
 jobs:
-  setup:
+  build-executor:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-
+      PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -19,16 +19,21 @@ jobs:
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
       with:
-        platforms: all
+        platforms: ${{ env.PLATFORMS }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
 
     - name: Set up Docker Buildx
       id: buildx
       uses: docker/setup-buildx-action@v1
       with:
         version: latest
-
-    - name: Available platforms
-      run: echo ${{ steps.buildx.outputs.platforms }}
 
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
@@ -42,47 +47,113 @@ jobs:
         # Set up docker to authenticate
         # via gcloud command-line tool.
         gcloud auth configure-docker
-  build-executor:
-    needs: setup
-    IMAGE_NAME: gcr.io/kaniko-project/executor
-    runs-on: ubuntu-latest
-    steps:
-    - name: Build and image executor image
-      run: |
-        gcloud -q auth configure-docker
-        PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
-        export TAG=`echo $GITHUB_REF | awk -F/ '{print $NF}'`
-        echo $TAG
-        echo "Building and pushing version ${TAG} of image ${IMAGE_NAME}"
-        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:test-multi-slim"  \
-           -t "$IMAGE":"$TAG"-slim -f ./deploy/Dockerfile_slim  . --push
+
+    - uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./deploy/Dockerfile_slim
+        platforms: linux/amd64,linux/arm64,linux/ppc64le
+        push: true
+        tags: |
+          gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
 
   build-debug:
-    needs: setup
-    IMAGE_NAME: gcr.io/kaniko-project/executor
+    env:
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REF: ${{ github.ref }}
+      PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le"
     runs-on: ubuntu-latest
     steps:
-    - name: Build and image debug image
-      run: |
-        gcloud -q auth configure-docker
-        PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
-        export TAG=`echo $GITHUB_REF | awk -F/ '{print $NF}'`
-        echo $TAG
-        echo "Building and pushing version ${TAG} of image ${IMAGE_NAME}"
-        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:test-multi-slim"  \
-           -t "$IMAGE":"$TAG"-slim -f ./deploy/Dockerfile_debug  . --push
+    - name: Clone source code
+      uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: ${{ env.PLATFORMS }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+
+    - name: Setup gcloud CLI
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        project_id: kaniko-project
+        export_default_credentials: true
+
+      # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |
+        # Set up docker to authenticate
+        # via gcloud command-line tool.
+        gcloud auth configure-docker
+
+    - uses: docker/build-push-action@v2
+      with:
+        context: .
+        file:  ./deploy/Dockerfile_debug
+        platforms: linux/amd64,linux/arm64,linux/ppc64le
+        push: true
+        tags: |
+          gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
 
   build-warmer:
-    needs: setup
-    IMAGE_NAME: gcr.io/kaniko-project/executor
+    env:
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REF: ${{ github.ref }}
+      PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le"
     runs-on: ubuntu-latest
     steps:
-    - name: Build and image warmer image
-      run: |
-        gcloud -q auth configure-docker
-        PLATFORMS="linux/amd64,linux/ppc64le,linux/arm64"
-        export TAG=`echo $GITHUB_REF | awk -F/ '{print $NF}'`
-        echo $TAG
-        echo "Building and pushing version ${TAG} of image ${IMAGE_NAME}"
-        docker buildx build --platform "${PLATFORMS}" -t "${IMAGE_NAME}:test-multi-slim"  \
-           -t "$IMAGE":"$TAG"-slim -f ./deploy/Dockerfile_warmer  . --push
+    - name: Clone source code
+      uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: ${{ env.PLATFORMS }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+
+    - name: Setup gcloud CLI
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        project_id: kaniko-project
+        export_default_credentials: true
+
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |
+        # Set up docker to authenticate
+        # via gcloud command-line tool.
+        gcloud auth configure-docker
+    - uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./deploy/Dockerfile_warmer
+        platforms: linux/amd64,linux/arm64,linux/ppc64le
+        push: true
+        tags: |
+          gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
