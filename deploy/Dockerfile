@@ -40,13 +40,11 @@ RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-
   make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper
 
 # ACR docker env credential helper
-COPY ./acr.patch /
 RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true)   && \
   cd /go/src/github.com/chrismellard                                              && \
   git clone https://github.com/chrismellard/docker-credential-acr-env             && \
   cd  docker-credential-acr-env                                                   && \
-  git apply < /acr.patch                                                          && \
-  make build && cp -f ./build/docker-credential-acr-env /usr/local/bin/docker-credential-acr
+  make build
 
 # Add .docker config dir
 RUN mkdir -p /kaniko/.docker
@@ -58,7 +56,7 @@ FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
-COPY --from=0 /usr/local/bin/docker-credential-acr /kaniko/docker-credential-acr
+COPY --from=0 /go/src/github.com/chrismellard/docker-credential-acr-env/build/docker-credential-acr-env /kaniko/docker-credential-acr
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
