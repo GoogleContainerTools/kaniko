@@ -58,7 +58,7 @@ FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
-COPY --from=0 /usr/local/bin/docker-credential-acr-linux /kaniko/docker-credential-acr
+COPY --from=0 /usr/local/bin/docker-credential-acr /kaniko/docker-credential-acr
 COPY files/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
