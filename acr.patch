@@ -1,32 +1,41 @@
-diff --git a/build/build-config-edit.sh b/build/build-config-edit.sh
-index d9fffd0..88b83a9 100755
---- a/build/build-config-edit.sh
-+++ b/build/build-config-edit.sh
-@@ -13,10 +13,9 @@ if [[ ! -d "$sourcedir" ]]; then
- fi
+From 798b6542af25703f8d6c10980706eb0bd453d08e Mon Sep 17 00:00:00 2001
+From: Tejal Desai <tejal29@gmail.com>
+Date: Wed, 3 Feb 2021 10:27:13 -0800
+Subject: [PATCH] add GOOS
 
- export CGO_ENABLED=0
--export GOARCH=amd64
- export GOPATH=$PWD
- echo "Go path = $GOPATH"
--for go_os in "linux" "windows" "darwin"
-+for go_os in "linux"
- do
-     if [[ "$go_os" == "windows" ]]; then
-         exe_extension=".exe"
-diff --git a/build/build-cred-helper.sh b/build/build-cred-helper.sh
-index 0e88315..d016988 100755
---- a/build/build-cred-helper.sh
-+++ b/build/build-cred-helper.sh
-@@ -22,9 +22,8 @@ fi
+---
+ Makefile | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
- export BUILDVERSION=acr-docker-credential-helper`date -u +.%Y%m%d.%H%M%S`
- export CGO_ENABLED=0
--export GOARCH=amd64
- export GOPATH=$PWD
--for go_os in "linux" "windows" "darwin"
-+for go_os in "linux"
- do
-     export GOOS=$go_os
-     if [[ "$GOOS" == "windows" ]]; then
+diff --git a/Makefile b/Makefile
+index 1cca596..4aad5e3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -5,6 +5,8 @@ SHELL := /bin/bash
+ NAME := docker-credential-acr-env
+ BUILD_TARGET = build
+ MAIN_SRC_FILE=./main.go
++GOOS ?= $(shell go env GOOS)
++GOARCH ?= $(shell go env GOARCH)
+ GO := GO111MODULE=on go
+ GO_NOMOD :=GO111MODULE=off go
+ REV := $(shell git rev-parse --short HEAD 2> /dev/null || echo 'unknown')
+@@ -82,7 +84,7 @@ print-version: ## Print version
+ 
+ build: $(GO_DEPENDENCIES) clean ## Build binary for current OS
+ 	go mod download
+-	CGO_ENABLED=$(CGO_ENABLED) $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/$(NAME) $(MAIN_SRC_FILE)
++	CGO_ENABLED=$(CGO_ENABLED)  GOARCH=$(GOARCH) GOOS=$(GOOS) $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/$(NAME) $(MAIN_SRC_FILE)
+ 
+ build-all: $(GO_DEPENDENCIES) build make-reports-dir ## Build all files - runtime, all tests etc.
+ 	CGO_ENABLED=$(CGO_ENABLED) $(GOTEST) -run=nope -tags=integration -failfast -short ./... $(BUILDFLAGS)
+@@ -186,4 +188,4 @@ docs: bin/docs generate-refdocs ## update docs
+ 	@echo "Generating docs"
+ 	@./bin/docs --target=./docs/cmd
+ 	@./bin/docs --target=./docs/man/man1 --kind=man
+-	@rm -f ./bin/docs
+\ No newline at end of file
++	@rm -f ./bin/docs
+-- 
+2.30.0.365.g02bc693789-goog
 

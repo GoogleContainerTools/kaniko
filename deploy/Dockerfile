@@ -39,21 +39,13 @@ RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
 RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
   make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper
 
-# ACR docker credential helper
+# ACR docker env credential helper
 COPY ./acr.patch /
-RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/Azure || true)  && \
-  cd /go/src/github.com/Azure                                             && \
-  git clone https://github.com/Azure/acr-docker-credential-helper         && \
-  cd /go/src/github.com/Azure/acr-docker-credential-helper                && \
-  git checkout a79b541f3ee761f6cc4511863ed41fb038c19464                   && \
-  git apply < /acr.patch                                                  && \
-  make && cp -f bin/linux/${GOARCH}/docker-credential-acr-linux /usr/local/bin/docker-credential-acr-linux
-
-#ACR docker env credential helper
 RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true)   && \
   cd /go/src/github.com/chrismellard                                              && \
   git clone https://github.com/chrismellard/docker-credential-acr-env             && \
   cd  docker-credential-acr-env                                                   && \
+  git apply < /acr.patch                                                          && \
   make build && cp -f ./build/docker-credential-acr-env /usr/local/bin
 
 # Add .docker config dir

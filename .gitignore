@@ -2,6 +2,6 @@ out/
 bazel-*
 *~
 BUILD.bazel
-.idea
+.idea/**
 *.iml
 .vagrant
