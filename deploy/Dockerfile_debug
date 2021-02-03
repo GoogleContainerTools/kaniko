@@ -44,7 +44,7 @@ RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true) 
   git clone https://github.com/chrismellard/docker-credential-acr-env             && \
   cd  docker-credential-acr-env                                                   && \
   git apply < /acr.patch                                                          && \
-  make build && cp -f ./build/docker-credential-acr-env /usr/local/bin
+  make build && cp -f ./build/docker-credential-acr-env /usr/local/bin/docker-credential-acr
 
 # Add .docker config dir
 RUN mkdir -p /kaniko/.docker
