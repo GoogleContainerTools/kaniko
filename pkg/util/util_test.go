@@ -19,6 +19,7 @@ package util
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -29,4 +30,37 @@ func TestGetInputFrom(t *testing.T) {
 	validReader := bufio.NewReader(bytes.NewReader((validInput)))
 	validValue, err := GetInputFrom(validReader)
 	testutil.CheckErrorAndDeepEqual(t, false, err, validInput, validValue)
+}
+
+func makeRetryFunc(numFailures int) retryFunc {
+	i := -1
+
+	return func() error {
+		i++
+		if i < numFailures {
+			return fmt.Errorf("Failing with i=%v", i)
+		}
+		return nil
+	}
+}
+
+func TestRetry(t *testing.T) {
+	// test with a function that does not return an error
+	if err := Retry(makeRetryFunc(0), 0, 10); err != nil {
+		t.Fatalf("Not expecting error: %v", err)
+	}
+	if err := Retry(makeRetryFunc(0), 3, 10); err != nil {
+		t.Fatalf("Not expecting error: %v", err)
+	}
+
+	// test with a function that returns an error twice
+	if err := Retry(makeRetryFunc(2), 0, 10); err == nil {
+		t.Fatal("Expecting error", err)
+	}
+	if err := Retry(makeRetryFunc(2), 1, 10); err == nil {
+		t.Fatal("Expecting error", err)
+	}
+	if err := Retry(makeRetryFunc(2), 2, 10); err != nil {
+		t.Fatalf("Not expecting error: %v", err)
+	}
 }

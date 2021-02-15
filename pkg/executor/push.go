@@ -263,12 +263,18 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		tr := newRetry(util.MakeTransport(opts.RegistryOptions, registryName))
 		rt := &withUserAgent{t: tr}
 
-		if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
+		logrus.Infof("Pushing image to %s", destRef.String())
+
+		retryFunc := func() error {
+			return remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt))
+		}
+
+		if err := util.Retry(retryFunc, opts.PushRetry, 1000); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to push to destination %s", destRef))
 		}
 	}
 	timing.DefaultRun.Stop(t)
-	logrus.Infof("Pushed images to %d destinations", len(destRefs))
+	logrus.Infof("Pushed image to %d destinations", len(destRefs))
 	return writeImageOutputs(image, destRefs)
 }
 

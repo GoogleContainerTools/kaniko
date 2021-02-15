@@ -72,6 +72,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--log-timestamp](#--log-timestamp)
     - [--no-push](#--no-push)
     - [--oci-layout-path](#--oci-layout-path)
+    - [--push-retry](#--push-retry)
     - [--registry-certificate](#--registry-certificate)
     - [--registry-mirror](#--registry-mirror)
     - [--reproducible](#--reproducible)
@@ -659,6 +660,9 @@ this flag should be set to match the image resource `outputImageDir`.
 _Note: Depending on the built image, the media type of the image manifest might be either
 `application/vnd.oci.image.manifest.v1+json` or `application/vnd.docker.distribution.manifest.v2+json`._
 
+#### --push-retry
+
+Set this flag to the number of retries that should happen for the push of an image to a remote destination. Defaults to `0`.
 
 #### --registry-certificate
 

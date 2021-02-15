@@ -22,12 +22,15 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/minio/highwayhash"
+	"github.com/sirupsen/logrus"
 )
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
@@ -153,4 +156,19 @@ func GetInputFrom(r io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return output, nil
+}
+
+type retryFunc func() error
+
+// Retry retries an operation
+func Retry(operation retryFunc, retryCount int, initialDelayMilliseconds int) error {
+	err := operation()
+	for i := 0; err != nil && i < retryCount; i++ {
+		sleepDuration := time.Millisecond * time.Duration(int(math.Pow(2, float64(i)))*initialDelayMilliseconds)
+		logrus.Warnf("Retrying operation after %s due to %v", sleepDuration, err)
+		time.Sleep(sleepDuration)
+		err = operation()
+	}
+
+	return err
 }
