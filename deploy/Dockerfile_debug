@@ -50,6 +50,15 @@ RUN mkdir -p /kaniko/.docker
 COPY . .
 RUN make GOARCH=$(cat /goarch) && make GOARCH=$(cat /goarch.txt) out/warmer
 
+# Generate latest ca-certificates
+
+FROM debian:buster-slim AS certs
+
+RUN \
+  apt update && \
+  apt install -y ca-certificates && \
+  cat /etc/ssl/certs/* > /ca-certificates.crt
+
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
@@ -61,7 +70,7 @@ COPY --from=busybox:1.32.0 /bin /busybox
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
 
-COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root

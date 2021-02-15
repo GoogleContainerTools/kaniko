@@ -52,12 +52,21 @@ RUN mkdir -p /kaniko/.docker
 COPY . .
 RUN make GOARCH=$(cat /goarch.txt)
 
+# Generate latest ca-certificates
+
+FROM debian:buster-slim AS certs
+
+RUN \
+  apt update && \
+  apt install -y ca-certificates && \
+  cat /etc/ssl/certs/* > /ca-certificates.crt
+
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /go/src/github.com/chrismellard/docker-credential-acr-env/build/docker-credential-acr-env /kaniko/docker-credential-acr
-COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
