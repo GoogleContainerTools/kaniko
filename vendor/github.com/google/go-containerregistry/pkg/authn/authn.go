@@ -15,7 +15,7 @@
 package authn
 
 // AuthConfig contains authorization information for connecting to a Registry
-// Inlined what we use from github.com/cli/cli/config/types
+// Inlined what we use from github.com/docker/cli/cli/config/types
 type AuthConfig struct {
 	Username string `json:"username,omitempty"`
 	Password string `json:"password,omitempty"`

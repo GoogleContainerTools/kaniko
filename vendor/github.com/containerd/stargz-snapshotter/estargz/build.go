@@ -43,17 +43,19 @@ import (
 )
 
 type options struct {
-	chunkSize        int
-	compressionLevel int
-	prioritizedFiles []string
+	chunkSize              int
+	compressionLevel       int
+	prioritizedFiles       []string
+	missedPrioritizedFiles *[]string
 }
 
-type Option func(o *options)
+type Option func(o *options) error
 
 // WithChunkSize option specifies the chunk size of eStargz blob to build.
 func WithChunkSize(chunkSize int) Option {
-	return func(o *options) {
+	return func(o *options) error {
 		o.chunkSize = chunkSize
+		return nil
 	}
 }
 
@@ -61,17 +63,34 @@ func WithChunkSize(chunkSize int) Option {
 // The default is gzip.BestCompression.
 // See also: https://godoc.org/compress/gzip#pkg-constants
 func WithCompressionLevel(level int) Option {
-	return func(o *options) {
+	return func(o *options) error {
 		o.compressionLevel = level
+		return nil
 	}
 }
 
 // WithPrioritizedFiles option specifies the list of prioritized files.
-// These files must be a complete path relative to "/" (e.g. "foo/bar",
-// "./foo/bar")
+// These files must be complete paths that are absolute or relative to "/"
+// For example, all of "foo/bar", "/foo/bar", "./foo/bar" and "../foo/bar"
+// are treated as "/foo/bar".
 func WithPrioritizedFiles(files []string) Option {
-	return func(o *options) {
+	return func(o *options) error {
 		o.prioritizedFiles = files
+		return nil
+	}
+}
+
+// WithAllowPrioritizeNotFound makes Build continue the execution even if some
+// of prioritized files specified by WithPrioritizedFiles option aren't found
+// in the input tar. Instead, this records all missed file names to the passed
+// slice.
+func WithAllowPrioritizeNotFound(missedFiles *[]string) Option {
+	return func(o *options) error {
+		if missedFiles == nil {
+			return fmt.Errorf("WithAllowPrioritizeNotFound: slice must be passed")
+		}
+		o.missedPrioritizedFiles = missedFiles
+		return nil
 	}
 }
 
@@ -102,7 +121,9 @@ func Build(tarBlob *io.SectionReader, opt ...Option) (_ *Blob, rErr error) {
 	var opts options
 	opts.compressionLevel = gzip.BestCompression // BestCompression by default
 	for _, o := range opt {
-		o(&opts)
+		if err := o(&opts); err != nil {
+			return nil, err
+		}
 	}
 	layerFiles := newTempFiles()
 	defer func() {
@@ -112,7 +133,7 @@ func Build(tarBlob *io.SectionReader, opt ...Option) (_ *Blob, rErr error) {
 			}
 		}
 	}()
-	entries, err := sortEntries(tarBlob, opts.prioritizedFiles)
+	entries, err := sortEntries(tarBlob, opts.prioritizedFiles, opts.missedPrioritizedFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -282,10 +303,12 @@ func divideEntries(entries []*entry, minPartsNum int) (set [][]*entry) {
 	return
 }
 
+var errNotFound = errors.New("not found")
+
 // sortEntries reads the specified tar blob and returns a list of tar entries.
 // If some of prioritized files are specified, the list starts from these
 // files with keeping the order specified by the argument.
-func sortEntries(in io.ReaderAt, prioritized []string) ([]*entry, error) {
+func sortEntries(in io.ReaderAt, prioritized []string, missedPrioritized *[]string) ([]*entry, error) {
 
 	// Import tar file.
 	intar, err := importTar(in)
@@ -296,7 +319,13 @@ func sortEntries(in io.ReaderAt, prioritized []string) ([]*entry, error) {
 	// Sort the tar file respecting to the prioritized files list.
 	sorted := &tarFile{}
 	for _, l := range prioritized {
-		moveRec(l, intar, sorted)
+		if err := moveRec(l, intar, sorted); err != nil {
+			if errors.Is(err, errNotFound) && missedPrioritized != nil {
+				*missedPrioritized = append(*missedPrioritized, l)
+				continue // allow not found
+			}
+			return nil, errors.Wrap(err, "failed to sort tar entries")
+		}
 	}
 	if len(prioritized) == 0 {
 		sorted.add(&entry{
@@ -363,15 +392,15 @@ func importTar(in io.ReaderAt) (*tarFile, error) {
 				return nil, errors.Wrap(err, "failed to parse tar file")
 			}
 		}
-		switch trimNamePrefix(h.Name) {
+		switch cleanEntryName(h.Name) {
 		case PrefetchLandmark, NoPrefetchLandmark:
 			// Ignore existing landmark
 			continue
 		}
 
-		// Add entry if not exist.
+		// Add entry. If it already exists, replace it.
 		if _, ok := tf.get(h.Name); ok {
-			return nil, fmt.Errorf("Duplicated entry(%q) is not supported", h.Name)
+			tf.remove(h.Name)
 		}
 		tf.add(&entry{
 			header:  h,
@@ -382,19 +411,38 @@ func importTar(in io.ReaderAt) (*tarFile, error) {
 	return tf, nil
 }
 
-func moveRec(name string, in *tarFile, out *tarFile) {
-	if name == "" {
-		return
+func moveRec(name string, in *tarFile, out *tarFile) error {
+	name = cleanEntryName(name)
+	if name == "" { // root directory. stop recursion.
+		if e, ok := in.get(name); ok {
+			// entry of the root directory exists. we should move it as well.
+			// this case will occur if tar entries are prefixed with "./", "/", etc.
+			out.add(e)
+			in.remove(name)
+		}
+		return nil
 	}
+
+	_, okIn := in.get(name)
+	_, okOut := out.get(name)
+	if !okIn && !okOut {
+		return errors.Wrapf(errNotFound, "file: %q", name)
+	}
+
 	parent, _ := path.Split(strings.TrimSuffix(name, "/"))
-	moveRec(parent, in, out)
+	if err := moveRec(parent, in, out); err != nil {
+		return err
+	}
 	if e, ok := in.get(name); ok && e.header.Typeflag == tar.TypeLink {
-		moveRec(e.header.Linkname, in, out)
+		if err := moveRec(e.header.Linkname, in, out); err != nil {
+			return err
+		}
 	}
 	if e, ok := in.get(name); ok {
 		out.add(e)
 		in.remove(name)
 	}
+	return nil
 }
 
 type entry struct {
@@ -411,18 +459,18 @@ func (f *tarFile) add(e *entry) {
 	if f.index == nil {
 		f.index = make(map[string]*entry)
 	}
-	f.index[trimNamePrefix(e.header.Name)] = e
+	f.index[cleanEntryName(e.header.Name)] = e
 	f.stream = append(f.stream, e)
 }
 
 func (f *tarFile) remove(name string) {
-	name = trimNamePrefix(name)
+	name = cleanEntryName(name)
 	if f.index != nil {
 		delete(f.index, name)
 	}
 	var filtered []*entry
 	for _, e := range f.stream {
-		if trimNamePrefix(e.header.Name) == name {
+		if cleanEntryName(e.header.Name) == name {
 			continue
 		}
 		filtered = append(filtered, e)
@@ -434,7 +482,7 @@ func (f *tarFile) get(name string) (e *entry, ok bool) {
 	if f.index == nil {
 		return nil, false
 	}
-	e, ok = f.index[trimNamePrefix(name)]
+	e, ok = f.index[cleanEntryName(name)]
 	return
 }
 

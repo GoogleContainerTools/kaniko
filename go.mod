@@ -18,13 +18,13 @@ require (
 	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
 	github.com/docker/swarmkit v1.12.1-0.20180726190244-7567d47988d8 // indirect
-	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/golang/mock v1.4.3
-	github.com/google/go-cmp v0.4.1
-	github.com/google/go-containerregistry v0.2.2-0.20201217235130-8b4c3b5b21a3
+	github.com/google/go-cmp v0.5.2
+	github.com/google/go-containerregistry v0.4.1-0.20210128200529-19c2b639fab1
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210208222243-cbafe638a7a9
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
@@ -47,9 +47,10 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tonistiigi/fsutil v0.0.0-20191018213012-0f039a052ca1 // indirect
 	github.com/vbatts/tar-split v0.10.2 // indirect
-	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	google.golang.org/api v0.25.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
+	k8s.io/code-generator v0.20.1 // indirect
 )

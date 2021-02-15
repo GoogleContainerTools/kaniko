@@ -23,6 +23,9 @@ import (
 	"path/filepath"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/match"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -118,6 +121,85 @@ func (l Path) AppendDescriptor(desc v1.Descriptor) error {
 	}
 
 	index.Manifests = append(index.Manifests, desc)
+
+	rawIndex, err := json.MarshalIndent(index, "", "   ")
+	if err != nil {
+		return err
+	}
+
+	return l.WriteFile("index.json", rawIndex, os.ModePerm)
+}
+
+// ReplaceImage writes a v1.Image to the Path and updates
+// the index.json to reference it, replacing any existing one that matches matcher, if found.
+func (l Path) ReplaceImage(img v1.Image, matcher match.Matcher, options ...Option) error {
+	if err := l.WriteImage(img); err != nil {
+		return err
+	}
+
+	return l.replaceDescriptor(img, matcher, options...)
+}
+
+// ReplaceIndex writes a v1.ImageIndex to the Path and updates
+// the index.json to reference it, replacing any existing one that matches matcher, if found.
+func (l Path) ReplaceIndex(ii v1.ImageIndex, matcher match.Matcher, options ...Option) error {
+	if err := l.WriteIndex(ii); err != nil {
+		return err
+	}
+
+	return l.replaceDescriptor(ii, matcher, options...)
+}
+
+// replaceDescriptor adds a descriptor to the index.json of the Path, replacing
+// any one matching matcher, if found.
+func (l Path) replaceDescriptor(append mutate.Appendable, matcher match.Matcher, options ...Option) error {
+	ii, err := l.ImageIndex()
+	if err != nil {
+		return err
+	}
+
+	desc, err := partial.Descriptor(append)
+	if err != nil {
+		return err
+	}
+
+	for _, opt := range options {
+		if err := opt(desc); err != nil {
+			return err
+		}
+	}
+
+	add := mutate.IndexAddendum{
+		Add:        append,
+		Descriptor: *desc,
+	}
+	ii = mutate.AppendManifests(mutate.RemoveManifests(ii, matcher), add)
+
+	index, err := ii.IndexManifest()
+	if err != nil {
+		return err
+	}
+
+	rawIndex, err := json.MarshalIndent(index, "", "   ")
+	if err != nil {
+		return err
+	}
+
+	return l.WriteFile("index.json", rawIndex, os.ModePerm)
+}
+
+// RemoveDescriptors removes any descriptors that match the match.Matcher from the index.json of the Path.
+func (l Path) RemoveDescriptors(matcher match.Matcher) error {
+	ii, err := l.ImageIndex()
+	if err != nil {
+		return err
+	}
+	ii = mutate.RemoveManifests(ii, matcher)
+
+	index, err := ii.IndexManifest()
+	if err != nil {
+		return err
+	}
 
 	rawIndex, err := json.MarshalIndent(index, "", "   ")
 	if err != nil {

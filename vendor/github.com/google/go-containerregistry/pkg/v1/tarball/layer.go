@@ -28,7 +28,6 @@ import (
 	gestargz "github.com/google/go-containerregistry/pkg/v1/internal/estargz"
 	ggzip "github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
 type layer struct {
@@ -133,6 +132,45 @@ func WithEstargzOptions(opts ...estargz.Option) LayerOption {
 	}
 }
 
+// WithEstargz is a functional option that explicitly enables estargz support.
+func WithEstargz(l *layer) {
+	oguncompressed := l.uncompressedopener
+	estargz := func() (io.ReadCloser, error) {
+		crc, err := oguncompressed()
+		if err != nil {
+			return nil, err
+		}
+		eopts := append(l.estgzopts, estargz.WithCompressionLevel(l.compression))
+		rc, h, err := gestargz.ReadCloser(crc, eopts...)
+		if err != nil {
+			return nil, err
+		}
+		l.annotations[estargz.TOCJSONDigestAnnotation] = h.String()
+		return &and.ReadCloser{
+			Reader: rc,
+			CloseFunc: func() error {
+				err := rc.Close()
+				if err != nil {
+					return err
+				}
+				// As an optimization, leverage the DiffID exposed by the estargz ReadCloser
+				l.diffID, err = v1.NewHash(rc.DiffID().String())
+				return err
+			},
+		}, nil
+	}
+	uncompressed := func() (io.ReadCloser, error) {
+		urc, err := estargz()
+		if err != nil {
+			return nil, err
+		}
+		return ggzip.UnzipReadCloser(urc)
+	}
+
+	l.compressedopener = estargz
+	l.uncompressedopener = uncompressed
+}
+
 // LayerFromFile returns a v1.Layer given a tarball
 func LayerFromFile(path string, opts ...LayerOption) (v1.Layer, error) {
 	opener := func() (io.ReadCloser, error) {
@@ -168,6 +206,10 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 		annotations: make(map[string]string, 1),
 	}
 
+	if estgz := os.Getenv("GGCR_EXPERIMENT_ESTARGZ"); estgz == "1" {
+		opts = append([]LayerOption{WithEstargz}, opts...)
+	}
+
 	if compressed {
 		layer.compressedopener = opener
 		layer.uncompressedopener = func() (io.ReadCloser, error) {
@@ -176,38 +218,6 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 				return nil, err
 			}
 			return ggzip.UnzipReadCloser(urc)
-		}
-	} else if estgz := os.Getenv("GGCR_EXPERIMENT_ESTARGZ"); estgz == "1" {
-		layer.compressedopener = func() (io.ReadCloser, error) {
-			crc, err := opener()
-			if err != nil {
-				return nil, err
-			}
-			eopts := append(layer.estgzopts, estargz.WithCompressionLevel(layer.compression))
-			rc, h, err := gestargz.ReadCloser(crc, eopts...)
-			if err != nil {
-				return nil, err
-			}
-			layer.annotations[estargz.TOCJSONDigestAnnotation] = h.String()
-			return &and.ReadCloser{
-				Reader: rc,
-				CloseFunc: func() error {
-					err := rc.Close()
-					if err != nil {
-						return err
-					}
-					// As an optimization, leverage the DiffID exposed by the estargz ReadCloser
-					layer.diffID, err = v1.NewHash(rc.DiffID().String())
-					return err
-				},
-			}, nil
-		}
-		layer.uncompressedopener = func() (io.ReadCloser, error) {
-			urc, err := layer.compressedopener()
-			if err != nil {
-				return nil, err
-			}
-			return v1util.GunzipReadCloser(urc)
 		}
 	} else {
 		layer.uncompressedopener = opener

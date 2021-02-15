@@ -16,4 +16,4 @@ limitations under the License.
 
 // Package gcp contains implementations of DockerConfigProvider
 // for Google Cloud Platform.
-package gcp
+package gcp // import "github.com/vdemeester/k8s-pkg-credentialprovider/gcp"

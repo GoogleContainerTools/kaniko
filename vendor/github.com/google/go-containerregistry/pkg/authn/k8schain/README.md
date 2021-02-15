@@ -14,11 +14,11 @@ A `k8schain` keychain can be built via one of:
 
 ```go
 // client is a kubernetes.Interface
-kc, err := k8schain.New(client, k8schain.Options{})
+kc, err := k8schain.New(ctx, client, k8schain.Options{})
 ...
 
 // This method is suitable for use by controllers or other in-cluster processes.
-kc, err := k8schain.NewInCluster(k8schain.Options{})
+kc, err := k8schain.NewInCluster(ctx, k8schain.Options{})
 ...
 ```
 
