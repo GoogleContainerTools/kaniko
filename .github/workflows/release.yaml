@@ -10,6 +10,7 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
+      TAG: ${{ github.event.release.tag_name }}
       PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le"
     runs-on: ubuntu-latest
     steps:
@@ -56,6 +57,7 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
+          gcr.io/kaniko-project/executor:${{ env.TAG }}-slim
 
     - uses: docker/build-push-action@v2
       with:
@@ -65,6 +67,7 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
+          gcr.io/kaniko-project/executor:${{ env.TAG }}
 
   build-debug:
     env:
@@ -115,7 +118,8 @@ jobs:
         platforms: linux/amd64,linux/arm64,linux/ppc64le
         push: true
         tags: |
-          gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
+          gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-debug
+          gcr.io/kaniko-project/executor:${{ env.TAG }}-debug
 
   build-warmer:
     env:
@@ -166,3 +170,4 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
+          gcr.io/kaniko-project/warmer:${{ env.TAG }}
