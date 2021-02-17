@@ -10,12 +10,15 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      TAG: ${{ github.event.release.tag_name }}
       PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
       uses: actions/checkout@v2
+
+    - name: Get the tags
+      id: vars
+      run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -57,7 +60,8 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
-          gcr.io/kaniko-project/executor:${{ env.TAG }}-slim
+          gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
+          gcr.io/kaniko-project/executor:slim
 
     - uses: docker/build-push-action@v2
       with:
@@ -67,7 +71,8 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
-          gcr.io/kaniko-project/executor:${{ env.TAG }}
+          gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}
+          gcr.io/kaniko-project/executor:latest
 
   build-debug:
     env:
@@ -78,6 +83,10 @@ jobs:
     steps:
     - name: Clone source code
       uses: actions/checkout@v2
+
+    - name: Get the tags
+      id: vars
+      run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -119,7 +128,8 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-debug
-          gcr.io/kaniko-project/executor:${{ env.TAG }}-debug
+          gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-debug
+          gcr.io/kaniko-project/executor:debug
 
   build-warmer:
     env:
@@ -130,6 +140,10 @@ jobs:
     steps:
     - name: Clone source code
       uses: actions/checkout@v2
+
+    - name: Get the tags
+      id: vars
+      run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -170,4 +184,5 @@ jobs:
         push: true
         tags: |
           gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
-          gcr.io/kaniko-project/warmer:${{ env.TAG }}
+          gcr.io/kaniko-project/warmer:${{ steps.vars.outputs.tag }}
+          gcr.io/kaniko-project/warmer:latest
