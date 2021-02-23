@@ -29,10 +29,19 @@ COPY . .
 
 RUN make GOARCH=$(cat /goarch)
 
+# Generate latest ca-certificates
+
+FROM debian:buster-slim AS certs
+
+RUN \
+  apt update && \
+  apt install -y ca-certificates && \
+  cat /etc/ssl/certs/* > /ca-certificates.crt
+
 FROM scratch
 COPY --from=build_env /go/src/github.com/GoogleContainerTools/kaniko/out/executor /kaniko/executor
 COPY files/nsswitch.conf /etc/nsswitch.conf
-COPY files/ca-certificates.crt /kaniko/ssl/certs/
+COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
 ENV HOME /root
 ENV USER root
 ENV PATH /usr/local/bin:/kaniko
