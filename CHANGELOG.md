@@ -3,6 +3,7 @@
 This releases publishes multi-arch image kaniko images for following platforms
 1. linux/amd64
 2. linux/arm64
+3. linux/ppc64le
 
 If you want to add other platforms, please talk to @tejal29.
 
