@@ -1,4 +1,4 @@
-# v1.4.0 Release 2021-01-25
+# v1.5.0 Release 2021-01-25
 
 This releases publishes multi-arch image kaniko images for following platforms
 1. linux/amd64
