@@ -116,9 +116,14 @@ After each command, we append a layer of changed files to the base image (if the
 
 ## Tutorial
 
-For a quick quick hands-on introduction and example, please watch [Kaniko - Building Container Images In Kubernetes Without Docker](https://youtu.be/EgwVQN6GNJg).
-
 For a detailed example of kaniko with local storage, please refer to a [getting started tutorial](./docs/tutorial.md).
+
+Please see [References](#References) for more docs & video tutorials
+
+## References
+
+* [Kaniko - Building Container Images In Kubernetes Without Docker](https://youtu.be/EgwVQN6GNJg).
+
 
 ## Using kaniko
 
