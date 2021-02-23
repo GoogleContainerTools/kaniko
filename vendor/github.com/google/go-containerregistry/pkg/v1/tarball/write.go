@@ -222,6 +222,10 @@ func writeImagesToTar(refToImage map[name.Reference]v1.Image, m []byte, size int
 func calculateManifest(refToImage map[name.Reference]v1.Image) (m Manifest, err error) {
 	imageToTags := dedupRefToImage(refToImage)
 
+	if len(imageToTags) == 0 {
+		return nil, errors.New("set of images is empty")
+	}
+
 	for img, tags := range imageToTags {
 		cfgName, err := img.ConfigName()
 		if err != nil {
@@ -334,11 +338,22 @@ func dedupRefToImage(refToImage map[name.Reference]v1.Image) map[v1.Image][]stri
 
 	for ref, img := range refToImage {
 		if tag, ok := ref.(name.Tag); ok {
-			if tags, ok := imageToTags[img]; ok && tags != nil {
-				imageToTags[img] = append(tags, tag.String())
-			} else {
-				imageToTags[img] = []string{tag.String()}
+			if tags, ok := imageToTags[img]; !ok || tags == nil {
+				imageToTags[img] = []string{}
 			}
+			// Docker cannot load tarballs without an explicit tag:
+			// https://github.com/google/go-containerregistry/issues/890
+			//
+			// We can't use the fully qualified tag.Name() because of rules_docker:
+			// https://github.com/google/go-containerregistry/issues/527
+			//
+			// If the tag is "latest", but tag.String() doesn't end in ":latest",
+			// just append it. Kind of gross, but should work for now.
+			ts := tag.String()
+			if tag.Identifier() == name.DefaultTag && !strings.HasSuffix(ts, ":"+name.DefaultTag) {
+				ts = fmt.Sprintf("%s:%s", ts, name.DefaultTag)
+			}
+			imageToTags[img] = append(imageToTags[img], ts)
 		} else {
 			if _, ok := imageToTags[img]; !ok {
 				imageToTags[img] = nil

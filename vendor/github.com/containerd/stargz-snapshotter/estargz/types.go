@@ -66,8 +66,10 @@ const (
 	//   8 byte gzip footer (two little endian uint32s: digest, size)
 	legacyFooterSize = 47
 
-	// TOCJSONDigestAnnotation is an annotation for image manifest. This stores the
-	// digest of the TOC JSON
+	// TOCJSONDigestAnnotation is an annotation for an image layer. This stores the
+	// digest of the TOC JSON.
+	// This annotation is valid only when it is specified in `.[]layers.annotations`
+	// of an image manifest.
 	TOCJSONDigestAnnotation = "containerd.io/snapshot/stargz/toc.digest"
 
 	// PrefetchLandmark is a file entry which indicates the end position of

@@ -27,6 +27,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/internal/gzip"
+	"github.com/google/go-containerregistry/pkg/v1/match"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
@@ -89,6 +90,14 @@ func AppendManifests(base v1.ImageIndex, adds ...IndexAddendum) v1.ImageIndex {
 	return &index{
 		base: base,
 		adds: adds,
+	}
+}
+
+// RemoveManifests removes any descriptors that match the match.Matcher.
+func RemoveManifests(base v1.ImageIndex, matcher match.Matcher) v1.ImageIndex {
+	return &index{
+		base:   base,
+		remove: matcher,
 	}
 }
 

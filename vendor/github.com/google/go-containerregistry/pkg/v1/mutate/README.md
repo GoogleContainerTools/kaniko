@@ -46,11 +46,11 @@ e.g. to appease a registry with strict validation of images (_looking at you, GC
 
 Rebase has [its own README](/cmd/crane/rebase.md).
 
-This is the underlying implementation of [`crane rebase`](https://github.com/google/go-containerregistry/blob/master/cmd/crane/doc/crane_rebase.md).
+This is the underlying implementation of [`crane rebase`](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane_rebase.md).
 
 ### `Extract`
 
 Extract will flatten an image filesystem into a single tar stream,
 respecting whiteout files.
 
-This is the underlying implementation of [`crane export`](https://github.com/google/go-containerregistry/blob/master/cmd/crane/doc/crane_export.md).
+This is the underlying implementation of [`crane export`](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane_export.md).

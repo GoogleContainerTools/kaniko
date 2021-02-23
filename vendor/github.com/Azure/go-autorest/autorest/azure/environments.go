@@ -242,8 +242,3 @@ func EnvironmentFromFile(location string) (unmarshaled Environment, err error) {
 
 	return
 }
-
-// SetEnvironment updates the environment map with the specified values.
-func SetEnvironment(name string, env Environment) {
-	environments[strings.ToUpper(name)] = env
-}

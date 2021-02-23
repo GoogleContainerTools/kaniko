@@ -63,6 +63,8 @@ type Reader struct {
 }
 
 // Open opens a stargz file for reading.
+//
+// Note that each entry name is normalized as the path that is relative to root.
 func Open(sr *io.SectionReader) (*Reader, error) {
 	tocOff, footerSize, err := OpenFooter(sr)
 	if err != nil {
@@ -124,7 +126,7 @@ func (r *Reader) initFields() error {
 	gname := map[int]string{}
 	var lastRegEnt *TOCEntry
 	for _, ent := range r.toc.Entries {
-		ent.Name = trimNamePrefix(ent.Name)
+		ent.Name = cleanEntryName(ent.Name)
 		if ent.Type == "reg" {
 			lastRegEnt = ent
 		}
@@ -152,10 +154,8 @@ func (r *Reader) initFields() error {
 
 			if ent.Type == "dir" {
 				ent.NumLink++ // Parent dir links to this directory
-				r.m[strings.TrimSuffix(ent.Name, "/")] = ent
-			} else {
-				r.m[ent.Name] = ent
 			}
+			r.m[ent.Name] = ent
 		}
 		if ent.Type == "reg" && ent.ChunkSize > 0 && ent.ChunkSize < ent.Size {
 			r.chunks[ent.Name] = make([]*TOCEntry, 0, ent.Size/ent.ChunkSize+1)
@@ -185,13 +185,18 @@ func (r *Reader) initFields() error {
 		//    add "f.txt" child to "e"
 
 		name := ent.Name
-		if ent.Type == "dir" {
-			name = strings.TrimSuffix(name, "/")
+		pdirName := parentDir(name)
+		if name == pdirName {
+			// This entry and its parent are the same.
+			// Ignore this for avoiding infinite loop of the reference.
+			// The example case where this can occur is when tar contains the root
+			// directory itself (e.g. "./", "/").
+			continue
 		}
-		pdir := r.getOrCreateDir(parentDir(name))
+		pdir := r.getOrCreateDir(pdirName)
 		ent.NumLink++ // at least one name(ent.Name) references this entry.
 		if ent.Type == "hardlink" {
-			if org, ok := r.m[trimNamePrefix(ent.LinkName)]; ok {
+			if org, ok := r.m[cleanEntryName(ent.LinkName)]; ok {
 				org.NumLink++ // original entry is referenced by this ent.Name.
 				ent = org
 			} else {
@@ -297,7 +302,9 @@ func (v *verifier) Verifier(ce *TOCEntry) (digest.Verifier, error) {
 
 // ChunkEntryForOffset returns the TOCEntry containing the byte of the
 // named file at the given offset within the file.
+// Name must be absolute path or one that is relative to root.
 func (r *Reader) ChunkEntryForOffset(name string, offset int64) (e *TOCEntry, ok bool) {
+	name = cleanEntryName(name)
 	e, ok = r.Lookup(name)
 	if !ok || !e.isDataType() {
 		return nil, false
@@ -322,7 +329,9 @@ func (r *Reader) ChunkEntryForOffset(name string, offset int64) (e *TOCEntry, ok
 // Lookup returns the Table of Contents entry for the given path.
 //
 // To get the root directory, use the empty string.
+// Path must be absolute path or one that is relative to root.
 func (r *Reader) Lookup(path string) (e *TOCEntry, ok bool) {
+	path = cleanEntryName(path)
 	if r == nil {
 		return
 	}
@@ -333,7 +342,11 @@ func (r *Reader) Lookup(path string) (e *TOCEntry, ok bool) {
 	return
 }
 
+// OpenFile returns the reader of the specified file payload.
+//
+// Name must be absolute path or one that is relative to root.
 func (r *Reader) OpenFile(name string) (*io.SectionReader, error) {
+	name = cleanEntryName(name)
 	ent, ok := r.Lookup(name)
 	if !ok {
 		// TODO: come up with some error plan. This is lazy:
@@ -805,9 +818,9 @@ func formatModtime(t time.Time) string {
 	return t.UTC().Round(time.Second).Format(time.RFC3339)
 }
 
-func trimNamePrefix(name string) string {
-	// We don't use filepath.Clean here to preserve "/" suffix for directory entry.
-	return strings.TrimPrefix(name, "./")
+func cleanEntryName(name string) string {
+	// Use path.Clean to consistently deal with path separators across platforms.
+	return strings.TrimPrefix(path.Clean("/"+name), "/")
 }
 
 // countWriter counts how many bytes have been written to its wrapped

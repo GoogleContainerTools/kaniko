@@ -15,6 +15,7 @@
 package stream
 
 import (
+	"bufio"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
@@ -130,6 +131,7 @@ type compressedReader struct {
 
 	h, zh hash.Hash // collects digests of compressed and uncompressed stream.
 	pr    io.Reader
+	bw    *bufio.Writer
 	count *countWriter
 
 	l *Layer // stream.Layer to update upon Close.
@@ -144,7 +146,14 @@ func newCompressedReader(l *Layer) (*compressedReader, error) {
 	// capture compressed digest, and a countWriter to capture compressed
 	// size.
 	pr, pw := io.Pipe()
-	zw, err := gzip.NewWriterLevel(io.MultiWriter(pw, zh, count), l.compression)
+
+	// Write compressed bytes to be read by the pipe.Reader, hashed by zh, and counted by count.
+	mw := io.MultiWriter(pw, zh, count)
+
+	// Buffer the output of the gzip writer so we don't have to wait on pr to keep writing.
+	// 64K ought to be small enough for anybody.
+	bw := bufio.NewWriterSize(mw, 2<<16)
+	zw, err := gzip.NewWriterLevel(bw, l.compression)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +161,7 @@ func newCompressedReader(l *Layer) (*compressedReader, error) {
 	cr := &compressedReader{
 		closer: newMultiCloser(zw, l.blob),
 		pr:     pr,
+		bw:     bw,
 		h:      h,
 		zh:     zh,
 		count:  count,
@@ -180,6 +190,11 @@ func (cr *compressedReader) Close() error {
 
 	// Close the inner ReadCloser.
 	if err := cr.closer.Close(); err != nil {
+		return err
+	}
+
+	// Flush the buffer.
+	if err := cr.bw.Flush(); err != nil {
 		return err
 	}
 

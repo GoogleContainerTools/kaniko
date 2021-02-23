@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/match"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
@@ -56,6 +57,8 @@ func computeDescriptor(ia IndexAddendum) (*v1.Descriptor, error) {
 type index struct {
 	base v1.ImageIndex
 	adds []IndexAddendum
+	// remove is removed before adds
+	remove match.Matcher
 
 	computed  bool
 	manifest  *v1.IndexManifest
@@ -90,6 +93,17 @@ func (i *index) compute() error {
 	}
 	manifest := m.DeepCopy()
 	manifests := manifest.Manifests
+
+	if i.remove != nil {
+		var cleanedManifests []v1.Descriptor
+		for _, m := range manifests {
+			if !i.remove(m) {
+				cleanedManifests = append(cleanedManifests, m)
+			}
+		}
+		manifests = cleanedManifests
+	}
+
 	for _, add := range i.adds {
 		desc, err := computeDescriptor(add)
 		if err != nil {
@@ -105,6 +119,7 @@ func (i *index) compute() error {
 			logs.Warn.Printf("Unexpected index addendum: %T", add.Add)
 		}
 	}
+
 	manifest.Manifests = manifests
 
 	// With OCI media types, this should not be set, see discussion:
