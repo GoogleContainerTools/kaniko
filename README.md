@@ -123,11 +123,6 @@ For a detailed example of kaniko with local storage, please refer to a [getting 
 
 Please see [References](#References) for more docs & video tutorials
 
-## References
-
-* [Kaniko - Building Container Images In Kubernetes Without Docker](https://youtu.be/EgwVQN6GNJg).
-
-
 ## Using kaniko
 
 To use kaniko to build and push an image for you, you will need:
@@ -860,3 +855,8 @@ file are made and when the `mtime` is updated. This means:
 
 _Note that these issues are currently theoretical only. If you see this issue occur, please
 [open an issue](https://github.com/GoogleContainerTools/kaniko/issues)._
+
+## References
+
+* [Kaniko - Building Container Images In Kubernetes Without Docker](https://youtu.be/EgwVQN6GNJg).
+
