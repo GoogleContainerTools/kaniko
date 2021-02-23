@@ -121,6 +121,13 @@ After each command, we append a layer of changed files to the base image (if the
 
 For a detailed example of kaniko with local storage, please refer to a [getting started tutorial](./docs/tutorial.md).
 
+Please see [References](#References) for more docs & video tutorials
+
+## References
+
+* [Kaniko - Building Container Images In Kubernetes Without Docker](https://youtu.be/EgwVQN6GNJg).
+
+
 ## Using kaniko
 
 To use kaniko to build and push an image for you, you will need:
