@@ -1,3 +1,37 @@
+# v1.5.1 Release 2021-02-22
+This release is a minor release with following a fix to version number for v1.5.0
+The kaniko images now report the right version number.
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.5.1
+gcr.io/kaniko-project/executor:latest
+```
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:debug-v1.5.1 and
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:slim-v1.5.1
+```
+
+In this release, we have 1 new feature:
+* Improve retry behavior for push operation [#1578](https://github.com/GoogleContainerTools/kaniko/pull/1578)
+
+And followinf refactors/updates to documentation
+* Added a video introduction to Kaniko [#1517](https://github.com/GoogleContainerTools/kaniko/pull/1517)
+* Use up-to-date ca-certificates during build [#1580](https://github.com/GoogleContainerTools/kaniko/pull/1580)
+
+
+Huge thank you for this release towards our contributors: 
+- Sascha Schwarze
+- Tejal Desai
+- Viktor Farcic
+
 # v1.5.0 Release 2021-01-25
 
 This releases publishes multi-arch image kaniko images for following platforms
@@ -9,19 +43,19 @@ If you want to add other platforms, please talk to @tejal29.
 
 The executor images in this release are:
 ```
-gcr.io/kaniko-project/executor:v1.4.0 
+gcr.io/kaniko-project/executor:v1.5.0 
 gcr.io/kaniko-project/executor:latest
 ```
 The debug images are available at:
 ```
 gcr.io/kaniko-project/executor:debug
-gcr.io/kaniko-project/executor:debug-v1.4.0 and
+gcr.io/kaniko-project/executor:debug-v1.5.0 and
 ```
 
 In this release, we have 2 slim executor images which don't contain any authentication binaries. 
 
 1. `gcr.io/kaniko-project/executor:slim`  &
-2. `gcr.io/kaniko-project/executor:slim-v1.4.0`
+2. `gcr.io/kaniko-project/executor:slim-v1.5.0`
 
 
 # New features:
