@@ -611,7 +611,7 @@ Force building outside of a container
 
 #### --git
 
-Branch to clone if build context is a git repository (default branch=,single-branch=false,recurse-submodules=false)
+Git ref to clone if build context is a git repository (default branch=,single-branch=false,recurse-submodules=false)
 
 #### --image-name-with-digest-file
 
