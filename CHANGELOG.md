@@ -1,3 +1,32 @@
+# v1.5.2 Release 2021-03-30
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.5.2
+gcr.io/kaniko-project/executor:latest
+```
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:debug-v1.5.2 and
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:slim-v1.5.2
+```
+
+This release is the first to be signed by [cosign](https://github.com/sigstore/cosign)!
+The PEM-encoded public key to validate against the released kaniko images is:
+
+```
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9aAfAcgAxIFMTstJUv8l/AMqnSKw
+P+vLu3NnnBDHCfREQpV/AJuiZ1UtgGpFpHlJLCNPmFkzQTnfyN5idzNl6Q==
+-----END PUBLIC KEY-----
+```
+
 # v1.5.1 Release 2021-02-22
 This release is a minor release with following a fix to version number for v1.5.0
 The kaniko images now report the right version number.

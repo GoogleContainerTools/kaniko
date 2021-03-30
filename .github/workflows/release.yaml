@@ -73,6 +73,20 @@ jobs:
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
           gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}
           gcr.io/kaniko-project/executor:latest
+    
+    - name: Sign images 
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: 'v0.2.0'
+      run: |
+        export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim  
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim 
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:slim  
+
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:latest  
 
   build-debug:
     env:
@@ -131,6 +145,16 @@ jobs:
           gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-debug
           gcr.io/kaniko-project/executor:debug
 
+    - name: Sign images 
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: 'v0.2.0'
+      run: |
+        export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-debug
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-debug
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:debug
+
   build-warmer:
     env:
       GITHUB_SHA: ${{ github.sha }}
@@ -186,3 +210,13 @@ jobs:
           gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
           gcr.io/kaniko-project/warmer:${{ steps.vars.outputs.tag }}
           gcr.io/kaniko-project/warmer:latest
+  
+  - name: Sign images 
+    uses: sigstore/cosign-installer@main
+    with:
+      cosign-release: 'v0.2.0'
+    run: |
+      export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
+      cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
+      cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer:${{ steps.vars.outputs.tag }}
+      cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer:latest
