@@ -236,7 +236,10 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		for _, destRef := range destRefs {
 			tagToImage[destRef] = image
 		}
-		return tarball.MultiWriteToFile(opts.TarPath, tagToImage)
+		err := tarball.MultiWriteToFile(opts.TarPath, tagToImage)
+		if err != nil {
+			return errors.Wrap(err, "writing tarball to file failed")
+		}
 	}
 
 	if opts.NoPush {
