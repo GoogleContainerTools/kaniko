@@ -164,6 +164,18 @@ func getDigest(image v1.Image) ([]byte, error) {
 	return []byte(digest.String()), nil
 }
 
+func writeDigestFile(path string, digestByteArray []byte) error {
+	parentDir := filepath.Dir(path)
+	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(parentDir, 0700); err != nil {
+			logrus.Debugf("error creating %s, %s", parentDir, err)
+			return err
+		}
+		logrus.Tracef("Created directory %v", parentDir)
+	}
+	return ioutil.WriteFile(path, digestByteArray, 0644)
+}
+
 // DoPush is responsible for pushing image to the destinations specified in opts
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
@@ -178,7 +190,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	}
 
 	if opts.DigestFile != "" {
-		err := ioutil.WriteFile(opts.DigestFile, digestByteArray, 0644)
+		err := writeDigestFile(opts.DigestFile, digestByteArray)
 		if err != nil {
 			return errors.Wrap(err, "writing digest to file failed")
 		}
@@ -213,14 +225,14 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	}
 
 	if opts.ImageNameDigestFile != "" {
-		err := ioutil.WriteFile(opts.ImageNameDigestFile, []byte(builder.String()), 0644)
+		err := writeDigestFile(opts.ImageNameDigestFile, []byte(builder.String()))
 		if err != nil {
 			return errors.Wrap(err, "writing image name with digest to file failed")
 		}
 	}
 
 	if opts.ImageNameTagDigestFile != "" {
-		err := ioutil.WriteFile(opts.ImageNameTagDigestFile, []byte(builder.String()), 0644)
+		err := writeDigestFile(opts.ImageNameTagDigestFile, []byte(builder.String()))
 		if err != nil {
 			return errors.Wrap(err, "writing image name with image tag and digest to file failed")
 		}

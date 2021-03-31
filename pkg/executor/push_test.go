@@ -33,7 +33,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/validate"
-
 	"github.com/spf13/afero"
 )
 
@@ -452,4 +451,26 @@ func TestHelperProcess(t *testing.T) {
 	}
 	fmt.Fprintf(os.Stdout, "fake result")
 	os.Exit(0)
+}
+
+func TestWriteDigestFile(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "*")
+	if err != nil {
+		t.Fatalf("could not create temp dir: %s", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	t.Run("parent directory does not exist", func(t *testing.T) {
+		err := writeDigestFile(tmpDir+"/test/df", []byte("test"))
+		if err != nil {
+			t.Errorf("expected file to be written successfully, but got error: %v", err)
+		}
+	})
+
+	t.Run("parent directory exists", func(t *testing.T) {
+		err := writeDigestFile(tmpDir+"/df", []byte("test"))
+		if err != nil {
+			t.Errorf("expected file to be written successfully, but got error: %v", err)
+		}
+	})
 }
