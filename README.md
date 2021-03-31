@@ -89,6 +89,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--whitelist-var-run](#--whitelist-var-run)
   - [Debug Image](#debug-image)
 - [Security](#security)
+  - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
 - [Comparison with Other Tools](#comparison-with-other-tools)
 - [Community](#community-1)
 - [Limitations](#limitations)
@@ -776,6 +777,23 @@ Docker runs as root by default, so you still require (in a sense) privileges to
 use kaniko.
 
 You may be able to achieve the same default seccomp profile that Docker uses in your Pod by setting [seccomp](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#seccomp) profiles with annotations on a [PodSecurityPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/pod-security-policies) to create or update security policies on your cluster.
+
+
+### Verifying Signed Kaniko Images
+kaniko images are signed for versions >= 1.5.2 using [cosign](https://github.com/sigstore/cosign)!
+
+To verify a public image, install [cosign](https://github.com/sigstore/cosign) and use the provided [public key](cosign.pub):
+
+```
+$ cat cosign.pub
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9aAfAcgAxIFMTstJUv8l/AMqnSKw
+P+vLu3NnnBDHCfREQpV/AJuiZ1UtgGpFpHlJLCNPmFkzQTnfyN5idzNl6Q==
+-----END PUBLIC KEY-----
+
+$ cosign verify -key ./cosign.pub gcr.io/kaniko-project/executor:latest
+```
+
 
 ## Kaniko Builds - Profiling
 If your builds are taking long, we recently added support to analyze kaniko function
