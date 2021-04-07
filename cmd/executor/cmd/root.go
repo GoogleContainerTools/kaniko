@@ -88,6 +88,12 @@ var RootCmd = &cobra.Command{
 			}
 			// Update ignored paths
 			util.UpdateInitialIgnoreList(opts.IgnoreVarRun)
+			for _, p := range opts.IgnorePaths {
+				util.AddToBaseIgnoreList(util.IgnoreListEntry{
+					Path:            p,
+					PrefixMatchOnly: false,
+				})
+			}
 		}
 		return nil
 	},
@@ -185,6 +191,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.RunV2, "use-new-run", "", false, "Use the experimental run implementation for detecting changes without requiring file system snapshots.")
 	RootCmd.PersistentFlags().Var(&opts.Git, "git", "Branch to clone if build context is a git repository")
 	RootCmd.PersistentFlags().BoolVarP(&opts.CacheCopyLayers, "cache-copy-layers", "", false, "Caches copy layers")
+	RootCmd.PersistentFlags().VarP(&opts.IgnorePaths, "ignore-path", "", "Ignore these paths when taking a snapshot. Set it repeatedly for multiple paths.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text

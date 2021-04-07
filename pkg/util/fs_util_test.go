@@ -89,6 +89,21 @@ func Test_AddToIgnoreList(t *testing.T) {
 	}
 }
 
+func Test_AddToBaseIgnoreList(t *testing.T) {
+	t.Cleanup(func() {
+		baseIgnoreList = defaultIgnoreList
+	})
+
+	AddToBaseIgnoreList(IgnoreListEntry{
+		Path:            "/tmp",
+		PrefixMatchOnly: false,
+	})
+
+	if !IsInProvidedIgnoreList("/tmp", baseIgnoreList) {
+		t.Errorf("CheckIgnoreList() = %v, want %v", false, true)
+	}
+}
+
 var tests = []struct {
 	files         map[string]string
 	directory     string
@@ -1375,16 +1390,16 @@ func TestUpdateSkiplist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			original := initialIgnoreList
-			defer func() { initialIgnoreList = original }()
+			original := baseIgnoreList
+			defer func() { baseIgnoreList = original }()
 			UpdateInitialIgnoreList(tt.skipVarRun)
 			sort.Slice(tt.expected, func(i, j int) bool {
 				return tt.expected[i].Path < tt.expected[j].Path
 			})
-			sort.Slice(initialIgnoreList, func(i, j int) bool {
-				return initialIgnoreList[i].Path < initialIgnoreList[j].Path
+			sort.Slice(baseIgnoreList, func(i, j int) bool {
+				return baseIgnoreList[i].Path < baseIgnoreList[j].Path
 			})
-			testutil.CheckDeepEqual(t, tt.expected, initialIgnoreList)
+			testutil.CheckDeepEqual(t, tt.expected, baseIgnoreList)
 		})
 	}
 }

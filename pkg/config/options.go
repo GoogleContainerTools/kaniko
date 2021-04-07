@@ -72,6 +72,7 @@ type KanikoOptions struct {
 	RunV2                  bool
 	CacheCopyLayers        bool
 	Git                    KanikoGitOptions
+	IgnorePaths            multiArg
 }
 
 type KanikoGitOptions struct {

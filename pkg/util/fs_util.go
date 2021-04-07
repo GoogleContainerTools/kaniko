@@ -55,7 +55,7 @@ type IgnoreListEntry struct {
 	PrefixMatchOnly bool
 }
 
-var initialIgnoreList = []IgnoreListEntry{
+var defaultIgnoreList = []IgnoreListEntry{
 	{
 		Path:            config.KanikoDir,
 		PrefixMatchOnly: false,
@@ -74,7 +74,8 @@ var initialIgnoreList = []IgnoreListEntry{
 	},
 }
 
-var ignorelist = initialIgnoreList
+var baseIgnoreList = defaultIgnoreList
+var ignorelist = baseIgnoreList
 
 var volumes = []string{}
 
@@ -98,6 +99,10 @@ func IgnoreList() []IgnoreListEntry {
 
 func AddToIgnoreList(entry IgnoreListEntry) {
 	ignorelist = append(ignorelist, entry)
+}
+
+func AddToBaseIgnoreList(entry IgnoreListEntry) {
+	baseIgnoreList = append(baseIgnoreList, entry)
 }
 
 func IncludeWhiteout() FSOpt {
@@ -414,7 +419,7 @@ func checkIgnoreListRoot(root string) bool {
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func DetectFilesystemIgnoreList(path string) error {
-	ignorelist = initialIgnoreList
+	ignorelist = baseIgnoreList
 	volumes = []string{}
 	f, err := os.Open(path)
 	if err != nil {
@@ -899,7 +904,7 @@ func UpdateInitialIgnoreList(ignoreVarRun bool) {
 		return
 	}
 	logrus.Trace("Adding /var/run to initialIgnoreList ")
-	initialIgnoreList = append(initialIgnoreList, IgnoreListEntry{
+	baseIgnoreList = append(baseIgnoreList, IgnoreListEntry{
 		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
 		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
 		// in the image with no way to tell if it came from the base image or not.
