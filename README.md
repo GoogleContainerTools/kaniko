@@ -87,6 +87,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--use-new-run](#--use-new-run)
     - [--verbosity](#--verbosity)
     - [--whitelist-var-run](#--whitelist-var-run)
+    - [--ignore-path](#--ignore-path)
   - [Debug Image](#debug-image)
 - [Security](#security)
   - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
@@ -747,6 +748,10 @@ Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set 
 #### --whitelist-var-run
 
 Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
+
+#### --ignore-path
+
+Set this flag as `--ignore-path=<path>` to ignore path when taking an image snapshot. Set it multiple times for multiple ignore paths.
 
 ### Debug Image
 
