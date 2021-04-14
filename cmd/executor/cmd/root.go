@@ -261,6 +261,12 @@ func copyDockerfile() error {
 	if _, err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 		return errors.Wrap(err, "copying dockerfile")
 	}
+	dockerignorePath := opts.DockerfilePath + ".dockerignore"
+	if util.FilepathExists(dockerignorePath) {
+		if _, err := util.CopyFile(dockerignorePath, constants.DockerfilePath+".dockerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
+			return errors.Wrap(err, "copying Dockerfile.dockerignore")
+		}
+	}
 	opts.DockerfilePath = constants.DockerfilePath
 	return nil
 }
