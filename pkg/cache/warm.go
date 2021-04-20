@@ -110,7 +110,7 @@ type Warmer struct {
 // Warm retrieves a Docker image and populates the supplied buffer with the image content and manifest
 // or returns an AlreadyCachedErr if the image is present in the cache.
 func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error) {
-	cacheRef, err := name.NewTag(image, name.WeakValidation)
+	cacheRef, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return v1.Hash{}, errors.Wrapf(err, "Failed to verify image name: %s", image)
 	}
