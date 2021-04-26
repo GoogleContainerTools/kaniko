@@ -1,3 +1,40 @@
+# v1.6.0 Release 2021-04-23
+This is April's 2021 release.
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.6.0
+gcr.io/kaniko-project/executor:latest
+```
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:debug-v1.6.0
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:slim-v1.6.0
+```
+
+* Support warming images by digest [#1629](https://github.com/GoogleContainerTools/kaniko/pull/1629)
+* Fix resolution of Dockerfile relative dockerignore [#1607](https://github.com/GoogleContainerTools/kaniko/pull/1607)
+* create parent directory before writing digest files [#1612](https://github.com/GoogleContainerTools/kaniko/pull/1612)
+* adds ignore-path command arguments to executor [#1622](https://github.com/GoogleContainerTools/kaniko/pull/1622)
+* Specifying a tarPath will push the image as well [#1597](https://github.com/GoogleContainerTools/kaniko/pull/1597)
+
+Huge thank you for this release towards our contributors: 
+- Chris Hoffman
+- Colin
+- Jon Friesen
+- Lars Gröber
+- Sascha Schwarze
+- Tejal Desai
+- Viktor Farcic
+- Vivek Kumar
+- priyawadhwa
+
 # v1.5.2 Release 2021-03-30
 
 The executor images in this release are:
