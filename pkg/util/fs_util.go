@@ -182,7 +182,18 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				logrus.Debugf("Whiting out %s", path)
 
 				name := strings.TrimPrefix(base, ".wh.")
-				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
+				path := filepath.Join(dir, name)
+
+				if CheckIgnoreList(path) {
+					logrus.Debugf("Not deleting %s, as it's ignored", path)
+					continue
+				}
+				if childDirInIgnoreList(path) {
+					logrus.Debugf("Not deleting %s, as it contains a ignored path", path)
+					continue
+				}
+
+				if err := os.RemoveAll(path); err != nil {
 					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
 				}
 
