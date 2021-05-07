@@ -61,7 +61,7 @@ func (s *Snapshotter) Key() (string, error) {
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string, error) {
-	f, err := ioutil.TempFile(config.KanikoDir, "")
+	f, err := ioutil.TempFile(config.TempDir, "")
 	if err != nil {
 		return "", err
 	}
@@ -143,7 +143,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 
 func (s *Snapshotter) getSnashotPathPrefix() string {
 	if snapshotPathPrefix == "" {
-		return config.KanikoDir
+		return config.TempDir
 	}
 	return snapshotPathPrefix
 }
