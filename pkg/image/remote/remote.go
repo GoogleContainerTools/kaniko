@@ -138,6 +138,15 @@ func remoteOptions(registryName string, opts config.RegistryOptions, customPlatf
 // CurrentPlatform returns the v1.Platform on which the code runs
 func currentPlatform(customPlatform string) v1.Platform {
 	if customPlatform != "" {
+		if strings.Split(customPlatform, "/")[1] == "arm" {
+			if len(customPlatform) == 3 {
+				return v1.Platform{
+					OS:           strings.Split(customPlatform, "/")[0],
+					Architecture: strings.Split(customPlatform, "/")[1],
+					Variant:      strings.Split(customPlatform, "/")[2],
+				}
+			}
+		}
 		return v1.Platform{
 			OS:           strings.Split(customPlatform, "/")[0],
 			Architecture: strings.Split(customPlatform, "/")[1],
