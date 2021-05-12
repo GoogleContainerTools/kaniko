@@ -9,7 +9,7 @@ gcr.io/kaniko-project/executor:latest
 The debug images are available at:
 ```
 gcr.io/kaniko-project/executor:debug
-gcr.io/kaniko-project/executor:debug-v1.6.0
+gcr.io/kaniko-project/executor:v1.6.0-debug
 ```
 
 The slim executor images which don't contain any authentication binaries are available at:
