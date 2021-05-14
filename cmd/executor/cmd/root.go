@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -117,6 +118,12 @@ var RootCmd = &cobra.Command{
 		}
 		image, err := executor.DoBuild(opts)
 		if err != nil {
+			if !opts.PropagateExitCode {
+				exit(errors.Wrap(err, "error building image"))
+			}
+			if exitError, ok := errors.Cause(err).(*exec.ExitError); ok {
+				exitWithCode(errors.Wrap(exitError, "error building image"), exitError.ExitCode())
+			}
 			exit(errors.Wrap(err, "error building image"))
 		}
 		if err := executor.DoPush(image, opts); err != nil {
@@ -192,6 +199,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().Var(&opts.Git, "git", "Branch to clone if build context is a git repository")
 	RootCmd.PersistentFlags().BoolVarP(&opts.CacheCopyLayers, "cache-copy-layers", "", false, "Caches copy layers")
 	RootCmd.PersistentFlags().VarP(&opts.IgnorePaths, "ignore-path", "", "Ignore these paths when taking a snapshot. Set it repeatedly for multiple paths.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.PropagateExitCode, "propagate-exit-code", "", false, "Propagate the exit codes of a failing RUN commands to the caller. (Default false).")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -342,6 +350,12 @@ func resolveRelativePaths() error {
 func exit(err error) {
 	fmt.Println(err)
 	os.Exit(1)
+}
+
+//exits with the given error and exit code
+func exitWithCode(err error, exitCode int) {
+	fmt.Println(err)
+	os.Exit(exitCode)
 }
 
 func isURL(path string) bool {

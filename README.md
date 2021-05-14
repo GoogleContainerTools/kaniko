@@ -88,6 +88,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--verbosity](#--verbosity)
     - [--whitelist-var-run](#--whitelist-var-run)
     - [--ignore-path](#--ignore-path)
+    - [--propagate-exit-code](#--propagate-exit-code)
   - [Debug Image](#debug-image)
 - [Security](#security)
   - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
@@ -752,6 +753,10 @@ Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run
 #### --ignore-path
 
 Set this flag as `--ignore-path=<path>` to ignore path when taking an image snapshot. Set it multiple times for multiple ignore paths.
+
+#### --propagate-exit-code
+
+Set this flag to propagate the exit code produced by a failing RUN commands to the caller. (Default false).
 
 ### Debug Image
 
