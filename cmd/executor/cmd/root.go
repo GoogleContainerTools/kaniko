@@ -87,9 +87,8 @@ var RootCmd = &cobra.Command{
 				return errors.New("You must provide --destination if setting ImageNameTagDigestFile")
 			}
 			// Update ignored paths
-			util.UpdateInitialIgnoreList(opts.IgnoreVarRun)
 			for _, p := range opts.IgnorePaths {
-				util.AddToBaseIgnoreList(util.IgnoreListEntry{
+				util.AddToDefaultIgnoreList(util.IgnoreListEntry{
 					Path:            p,
 					PrefixMatchOnly: false,
 				})

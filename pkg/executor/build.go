@@ -98,6 +98,11 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 
+	err = util.InitIgnoreList(true, opts.IgnoreVarRun)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize ignore list")
+	}
+
 	hasher, err := getHasher(opts.SnapshotMode)
 	if err != nil {
 		return nil, err
@@ -309,10 +314,6 @@ func (s *stageBuilder) build() error {
 		timing.DefaultRun.Stop(t)
 	} else {
 		logrus.Info("Skipping unpacking as no commands require it.")
-	}
-
-	if err := util.DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
-		return errors.Wrap(err, "failed to check filesystem mount paths")
 	}
 
 	initSnapshotTaken := false

@@ -79,27 +79,16 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 }
 
 func Test_AddToIgnoreList(t *testing.T) {
+	t.Cleanup(func() {
+		ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
+	})
+
 	AddToIgnoreList(IgnoreListEntry{
 		Path:            "/tmp",
 		PrefixMatchOnly: false,
 	})
 
 	if !CheckIgnoreList("/tmp") {
-		t.Errorf("CheckIgnoreList() = %v, want %v", false, true)
-	}
-}
-
-func Test_AddToBaseIgnoreList(t *testing.T) {
-	t.Cleanup(func() {
-		baseIgnoreList = defaultIgnoreList
-	})
-
-	AddToBaseIgnoreList(IgnoreListEntry{
-		Path:            "/tmp",
-		PrefixMatchOnly: false,
-	})
-
-	if !IsInProvidedIgnoreList("/tmp", baseIgnoreList) {
 		t.Errorf("CheckIgnoreList() = %v, want %v", false, true)
 	}
 }
@@ -1349,7 +1338,7 @@ func TestUpdateSkiplist(t *testing.T) {
 		expected   []IgnoreListEntry
 	}{
 		{
-			name:       "var/run ignored",
+			name:       "/var/run ignored",
 			skipVarRun: true,
 			expected: []IgnoreListEntry{
 				{
@@ -1371,7 +1360,7 @@ func TestUpdateSkiplist(t *testing.T) {
 			},
 		},
 		{
-			name: "var/run not ignored",
+			name: "/var/run not ignored",
 			expected: []IgnoreListEntry{
 				{
 					Path:            "/kaniko",
@@ -1390,16 +1379,18 @@ func TestUpdateSkiplist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			original := baseIgnoreList
-			defer func() { baseIgnoreList = original }()
-			UpdateInitialIgnoreList(tt.skipVarRun)
+			original := append([]IgnoreListEntry{}, ignorelist...)
+			defer func() { ignorelist = original }()
+
+			err := InitIgnoreList(false, tt.skipVarRun)
+			testutil.CheckNoError(t, err)
 			sort.Slice(tt.expected, func(i, j int) bool {
 				return tt.expected[i].Path < tt.expected[j].Path
 			})
-			sort.Slice(baseIgnoreList, func(i, j int) bool {
-				return baseIgnoreList[i].Path < baseIgnoreList[j].Path
+			sort.Slice(ignorelist, func(i, j int) bool {
+				return ignorelist[i].Path < ignorelist[j].Path
 			})
-			testutil.CheckDeepEqual(t, tt.expected, baseIgnoreList)
+			testutil.CheckDeepEqual(t, tt.expected, ignorelist)
 		})
 	}
 }
