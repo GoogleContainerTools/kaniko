@@ -1238,6 +1238,152 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 	}
 }
 
+func Test_GetFSFromLayers_ignorelist(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+	// Write a whiteout path
+	fileContents := []byte("Hello World\n")
+	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+		IncludeWhiteout(),
+	}
+
+	f := func(expectedFiles []string, tw *tar.Writer) {
+		for _, f := range expectedFiles {
+			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+			hdr := &tar.Header{
+				Name: f,
+				Mode: 0644,
+				Size: int64(len(string(fileContents))),
+			}
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tw.Write(fileContents); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// first, testdir is not in ignorelist, so it should be deleted
+	expectedFiles := []string{
+		filepath.Join(root, ".wh.testdir"),
+		filepath.Join(root, "testdir", "file"),
+		filepath.Join(root, "other-file"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+	layerFiles := []string{
+		filepath.Join(root, ".wh.testdir"),
+		filepath.Join(root, "testdir", "file"),
+		filepath.Join(root, "other-file"),
+	}
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(layerFiles, tw)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+	}
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		false,
+	)
+
+	// Make sure whiteout files are removed form the root.
+	_, err = os.Lstat(filepath.Join(root, "testdir"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Errorf("expected testdir to be deleted. However found it.")
+	}
+
+	// second, testdir is in ignorelist, so it should not be deleted
+	original := append([]IgnoreListEntry{}, ignorelist...)
+	defer func() {
+		ignorelist = original
+	}()
+	ignorelist = append(ignorelist, IgnoreListEntry{
+		Path: filepath.Join(root, "testdir"),
+	})
+	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedFiles = []string{
+		filepath.Join(root, "other-file"),
+	}
+
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer = mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+	layerFiles = []string{
+		filepath.Join(root, ".wh.testdir"),
+		filepath.Join(root, "other-file"),
+	}
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(layerFiles, tw)
+
+	rc = ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers = []v1.Layer{
+		mockLayer,
+	}
+
+	actualFiles, err = GetFSFromLayers(root, layers, opts...)
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		false,
+	)
+
+	// Make sure testdir still exists.
+	_, err = os.Lstat(filepath.Join(root, "testdir"))
+	if err != nil {
+		t.Errorf("expected testdir to exist, but could not Lstat it: %v", err)
+	}
+}
+
 func Test_GetFSFromLayers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -1311,6 +1457,7 @@ func assertGetFSFromLayers(
 	err error,
 	expectErr bool,
 ) {
+	t.Helper()
 	if !expectErr && err != nil {
 		t.Error(err)
 		t.FailNow()

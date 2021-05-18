@@ -75,17 +75,38 @@ var additionalDockerFlagsMap = map[string][]string{
 
 // Arguments to build Dockerfiles with when building with kaniko
 var additionalKanikoFlagsMap = map[string][]string{
-	"Dockerfile_test_add":        {"--single-snapshot"},
-	"Dockerfile_test_run_new":    {"--use-new-run=true"},
-	"Dockerfile_test_run_redo":   {"--snapshotMode=redo"},
-	"Dockerfile_test_scratch":    {"--single-snapshot"},
-	"Dockerfile_test_maintainer": {"--single-snapshot"},
-	"Dockerfile_test_target":     {"--target=second"},
+	"Dockerfile_test_add":                    {"--single-snapshot"},
+	"Dockerfile_test_run_new":                {"--use-new-run=true"},
+	"Dockerfile_test_run_redo":               {"--snapshotMode=redo"},
+	"Dockerfile_test_scratch":                {"--single-snapshot"},
+	"Dockerfile_test_maintainer":             {"--single-snapshot"},
+	"Dockerfile_test_target":                 {"--target=second"},
+	"Dockerfile_test_snapshotter_ignorelist": {"--use-new-run=true", "-v=debug"},
 }
 
 // output check to do when building with kaniko
 var outputChecks = map[string]func(string, []byte) error{
 	"Dockerfile_test_arg_secret": checkArgsNotPrinted,
+	"Dockerfile_test_snapshotter_ignorelist": func(_ string, out []byte) error {
+		for _, s := range []string{
+			"Adding whiteout for /dev",
+		} {
+			if strings.Contains(string(out), s) {
+				return fmt.Errorf("output must not contain %s", s)
+			}
+		}
+
+		for _, s := range []string{
+			"resolved symlink /hello to /dev/null",
+			"path /dev/null is ignored, ignoring it",
+		} {
+			if !strings.Contains(string(out), s) {
+				return fmt.Errorf("output must contain %s", s)
+			}
+		}
+
+		return nil
+	},
 }
 
 // Checks if argument are not printed in output.
@@ -450,11 +471,11 @@ func buildKanikoImage(
 
 	out, err := RunCommandWithoutTest(kanikoCmd)
 	if err != nil {
-		return "", fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s %s", kanikoImage, kanikoCmd.Args, err, string(out))
+		return "", fmt.Errorf("Failed to build image %s with kaniko command \"%s\": %s\n%s", kanikoImage, kanikoCmd.Args, err, string(out))
 	}
 	if outputCheck := outputChecks[dockerfile]; outputCheck != nil {
 		if err := outputCheck(dockerfile, out); err != nil {
-			return "", fmt.Errorf("Output check failed for image %s with kaniko command : %s %s", kanikoImage, err, string(out))
+			return "", fmt.Errorf("Output check failed for image %s with kaniko command : %s\n%s", kanikoImage, err, string(out))
 		}
 	}
 	return benchmarkDir, nil
