@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/golang/mock/gomock"
@@ -1330,11 +1331,11 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 	}
 
 	// second, testdir is in ignorelist, so it should not be deleted
-	original := append([]IgnoreListEntry{}, ignorelist...)
+	original := append([]IgnoreListEntry{}, defaultIgnoreList...)
 	defer func() {
-		ignorelist = original
+		defaultIgnoreList = original
 	}()
-	ignorelist = append(ignorelist, IgnoreListEntry{
+	defaultIgnoreList = append(defaultIgnoreList, IgnoreListEntry{
 		Path: filepath.Join(root, "testdir"),
 	})
 	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
@@ -1455,7 +1456,7 @@ func assertGetFSFromLayers(
 	actualFiles []string,
 	expectedFiles []string,
 	err error,
-	expectErr bool,
+	expectErr bool, //nolint:unparam
 ) {
 	t.Helper()
 	if !expectErr && err != nil {
@@ -1478,68 +1479,60 @@ func assertGetFSFromLayers(
 	}
 }
 
-func TestUpdateSkiplist(t *testing.T) {
-	tests := []struct {
-		name       string
-		skipVarRun bool
-		expected   []IgnoreListEntry
-	}{
-		{
-			name:       "/var/run ignored",
-			skipVarRun: true,
-			expected: []IgnoreListEntry{
-				{
-					Path:            "/kaniko",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/etc/mtab",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/var/run",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/tmp/apt-key-gpghome",
-					PrefixMatchOnly: true,
-				},
-			},
-		},
-		{
-			name: "/var/run not ignored",
-			expected: []IgnoreListEntry{
-				{
-					Path:            "/kaniko",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/etc/mtab",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/tmp/apt-key-gpghome",
-					PrefixMatchOnly: true,
-				},
-			},
-		},
+func TestInitIgnoreList(t *testing.T) {
+	mountInfo := `36 35 98:0 /kaniko /test/kaniko rw,noatime master:1 - ext3 /dev/root rw,errors=continue
+36 35 98:0 /proc /test/proc rw,noatime master:1 - ext3 /dev/root rw,errors=continue
+`
+	mFile, err := ioutil.TempFile("", "mountinfo")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			original := append([]IgnoreListEntry{}, ignorelist...)
-			defer func() { ignorelist = original }()
+	defer mFile.Close()
+	if _, err := mFile.WriteString(mountInfo); err != nil {
+		t.Fatal(err)
+	}
+	config.IgnoreListPath = mFile.Name()
+	defer func() {
+		config.IgnoreListPath = constants.IgnoreListPath
+	}()
 
-			err := InitIgnoreList(false, tt.skipVarRun)
-			testutil.CheckNoError(t, err)
-			sort.Slice(tt.expected, func(i, j int) bool {
-				return tt.expected[i].Path < tt.expected[j].Path
-			})
-			sort.Slice(ignorelist, func(i, j int) bool {
-				return ignorelist[i].Path < ignorelist[j].Path
-			})
-			testutil.CheckDeepEqual(t, tt.expected, ignorelist)
-		})
+	expected := []IgnoreListEntry{
+		{
+			Path:            "/kaniko",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/test/kaniko",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/test/proc",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/etc/mtab",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/tmp/apt-key-gpghome",
+			PrefixMatchOnly: true,
+		},
 	}
+
+	original := append([]IgnoreListEntry{}, ignorelist...)
+	defer func() { ignorelist = original }()
+
+	err = InitIgnoreList(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Slice(expected, func(i, j int) bool {
+		return expected[i].Path < expected[j].Path
+	})
+	sort.Slice(ignorelist, func(i, j int) bool {
+		return ignorelist[i].Path < ignorelist[j].Path
+	})
+	testutil.CheckDeepEqual(t, expected, ignorelist)
 }
 
 func Test_setFileTimes(t *testing.T) {

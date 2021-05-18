@@ -132,7 +132,12 @@ func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]strin
 }
 
 func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, error) {
+	volumes = []string{}
 	cfg := new(FSConfig)
+	if err := InitIgnoreList(true); err != nil {
+		return nil, errors.Wrap(err, "initializing filesystem ignore list")
+	}
+	logrus.Debugf("Ignore list: %v", ignorelist)
 
 	for _, opt := range opts {
 		opt(cfg)
@@ -387,7 +392,21 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 }
 
 func IsInProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
-	for _, wl := range wl {
+	for _, entry := range wl {
+		if !entry.PrefixMatchOnly && path == entry.Path {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsInIgnoreList(path string) bool {
+	return IsInProvidedIgnoreList(path, ignorelist)
+}
+
+func CheckProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
+	for _, wl := range ignorelist {
 		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
 			return true
 		}
@@ -397,7 +416,7 @@ func IsInProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
 }
 
 func CheckIgnoreList(path string) bool {
-	return IsInProvidedIgnoreList(path, ignorelist)
+	return CheckProvidedIgnoreList(path, ignorelist)
 }
 
 func checkIgnoreListRoot(root string) bool {
@@ -415,7 +434,6 @@ func checkIgnoreListRoot(root string) bool {
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func DetectFilesystemIgnoreList(path string) error {
 	logrus.Trace("Detecting filesystem ignore list")
-	volumes = []string{}
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -896,10 +914,7 @@ func createParentDirectory(path string) error {
 // InitIgnoreList will initialize the ignore list using:
 // - defaultIgnoreList
 // - mounted paths via DetectFilesystemIgnoreList()
-// - also adds /var/run if requested. This is a special case. It's common to mount in /var/run/docker.sock
-//   or something similar which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
-//   in the image with no way to tell if it came from the base image or not.
-func InitIgnoreList(detectFilesystem, ignoreVarRun bool) error {
+func InitIgnoreList(detectFilesystem bool) error {
 	logrus.Trace("Initializing ignore list")
 	ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 
@@ -907,14 +922,6 @@ func InitIgnoreList(detectFilesystem, ignoreVarRun bool) error {
 		if err := DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
 			return errors.Wrap(err, "checking filesystem mount paths for ignore list")
 		}
-	}
-
-	if ignoreVarRun {
-		logrus.Trace("Adding /var/run to ignore list")
-		ignorelist = append(ignorelist, IgnoreListEntry{
-			Path:            "/var/run",
-			PrefixMatchOnly: false,
-		})
 	}
 
 	return nil
@@ -964,7 +971,7 @@ func gowalkDir(dir string, existingPaths map[string]struct{}, changeFunc func(st
 	godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
 			logrus.Tracef("Analyzing path %s", path)
-			if CheckIgnoreList(path) {
+			if IsInIgnoreList(path) {
 				if IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
 					return filepath.SkipDir

@@ -98,7 +98,7 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		return nil, err
 	}
 
-	err = util.InitIgnoreList(true, opts.IgnoreVarRun)
+	err = util.InitIgnoreList(true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize ignore list")
 	}
