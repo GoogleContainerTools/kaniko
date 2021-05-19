@@ -39,6 +39,7 @@ func WarmCache(opts *config.WarmerOptions) error {
 	logrus.Debugf("%s\n", cacheDir)
 	logrus.Debugf("%s\n", images)
 
+	errs := 0
 	for _, img := range images {
 		tarBuf := new(bytes.Buffer)
 		manifestBuf := new(bytes.Buffer)
@@ -53,7 +54,8 @@ func WarmCache(opts *config.WarmerOptions) error {
 		digest, err := cw.Warm(img, opts)
 		if err != nil {
 			if !IsAlreadyCached(err) {
-				return err
+				logrus.Warnf("Error while trying to warm image: %v %v", img, err)
+				errs++
 			}
 
 			continue
@@ -62,11 +64,18 @@ func WarmCache(opts *config.WarmerOptions) error {
 		cachePath := path.Join(cacheDir, digest.String())
 
 		if err := writeBufsToFile(cachePath, tarBuf, manifestBuf); err != nil {
-			return err
+			logrus.Warnf("Error while writing %v to cache: %v", img, err)
+			errs++
+			continue
 		}
 
 		logrus.Debugf("Wrote %s to cache", img)
 	}
+
+	if len(images) == errs {
+		return errors.New("Failed to warm any of the given images")
+	}
+
 	return nil
 }
 
