@@ -754,10 +754,6 @@ Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run
 
 Set this flag as `--ignore-path=<path>` to ignore path when taking an image snapshot. Set it multiple times for multiple ignore paths.
 
-#### --propagate-exit-code
-
-Set this flag to propagate the exit code produced by a failing RUN commands to the caller. (Default false).
-
 ### Debug Image
 
 The kaniko executor image is based on scratch and doesn't contain a shell.

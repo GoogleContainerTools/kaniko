@@ -71,7 +71,6 @@ type KanikoOptions struct {
 	SkipUnusedStages       bool
 	RunV2                  bool
 	CacheCopyLayers        bool
-	PropagateExitCode      bool
 	Git                    KanikoGitOptions
 	IgnorePaths            multiArg
 }
