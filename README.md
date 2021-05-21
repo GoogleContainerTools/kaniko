@@ -88,7 +88,6 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--verbosity](#--verbosity)
     - [--whitelist-var-run](#--whitelist-var-run)
     - [--ignore-path](#--ignore-path)
-    - [--propagate-exit-code](#--propagate-exit-code)
   - [Debug Image](#debug-image)
 - [Security](#security)
   - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
