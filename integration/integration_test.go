@@ -528,6 +528,63 @@ func TestRelativePaths(t *testing.T) {
 	})
 }
 
+func TestExitCodePropagation(t *testing.T) {
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal("Could not get working dir")
+	}
+
+	context := fmt.Sprintf("%s/testdata/exit-code-propagation", currentDir)
+	dockerfile := fmt.Sprintf("%s/Dockerfile_exit_code_propagation", context)
+
+	t.Run("test error code propagation", func(t *testing.T) {
+		// building the image with docker should fail with exit code 42
+		dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_exit_code_propagation")
+		dockerCmd := exec.Command("docker",
+			append([]string{"build",
+				"-t", dockerImage,
+				"-f", dockerfile,
+				context})...)
+		_, kanikoErr := RunCommandWithoutTest(dockerCmd)
+		if kanikoErr == nil {
+			t.Fatal("docker build did not produce an error")
+		}
+		var dockerCmdExitErr *exec.ExitError
+		var dockerExitCode int
+
+		if errors.As(kanikoErr, &dockerCmdExitErr) {
+			dockerExitCode = dockerCmdExitErr.ExitCode()
+			testutil.CheckDeepEqual(t, 42, dockerExitCode)
+		} else {
+			t.Fatalf("did not produce the expected error")
+		}
+
+		//try to build the same image with kaniko the error code should match with the one from the plain docker build
+		contextVolume := fmt.Sprintf("%s:/workspace", context)
+		dockerCmdWithKaniko := exec.Command("docker", append([]string{
+			"run",
+			"-v", contextVolume,
+			ExecutorImage,
+			"-c", "dir:///workspace/",
+			"-f", "./Dockerfile_exit_code_propagation",
+			"--no-push",
+		})...)
+
+		_, kanikoErr = RunCommandWithoutTest(dockerCmdWithKaniko)
+		if kanikoErr == nil {
+			t.Fatal("the kaniko build did not produce the expected error")
+		}
+
+		var kanikoExitErr *exec.ExitError
+		if errors.As(kanikoErr, &kanikoExitErr) {
+			testutil.CheckDeepEqual(t, dockerExitCode, kanikoExitErr.ExitCode())
+		} else {
+			t.Fatalf("did not produce the expected error")
+		}
+	})
+}
+
 type fileDiff struct {
 	Name string
 	Size int
