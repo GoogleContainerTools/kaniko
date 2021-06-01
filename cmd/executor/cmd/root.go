@@ -19,6 +19,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -340,8 +341,19 @@ func resolveRelativePaths() error {
 }
 
 func exit(err error) {
+	var execErr *exec.ExitError
+	if errors.As(err, &execErr) {
+		// if there is an exit code propagate it
+		exitWithCode(err, execErr.ExitCode())
+	}
+	// otherwise exit with catch all 1
+	exitWithCode(err, 1)
+}
+
+//exits with the given error and exit code
+func exitWithCode(err error, exitCode int) {
 	fmt.Println(err)
-	os.Exit(1)
+	os.Exit(exitCode)
 }
 
 func isURL(path string) bool {
