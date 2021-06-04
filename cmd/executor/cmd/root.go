@@ -88,9 +88,19 @@ var RootCmd = &cobra.Command{
 				return errors.New("You must provide --destination if setting ImageNameTagDigestFile")
 			}
 			// Update ignored paths
-			util.UpdateInitialIgnoreList(opts.IgnoreVarRun)
+			if opts.IgnoreVarRun {
+				// /var/run is a special case. It's common to mount in /var/run/docker.sock
+				// or something similar which leads to a special mount on the /var/run/docker.sock
+				// file itself, but the directory to exist in the image with no way to tell if it came
+				// from the base image or not.
+				logrus.Trace("Adding /var/run to default ignore list")
+				util.AddToDefaultIgnoreList(util.IgnoreListEntry{
+					Path:            "/var/run",
+					PrefixMatchOnly: false,
+				})
+			}
 			for _, p := range opts.IgnorePaths {
-				util.AddToBaseIgnoreList(util.IgnoreListEntry{
+				util.AddToDefaultIgnoreList(util.IgnoreListEntry{
 					Path:            p,
 					PrefixMatchOnly: false,
 				})

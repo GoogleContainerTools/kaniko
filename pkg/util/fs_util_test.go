@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/mocks/go-containerregistry/mockv1"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/golang/mock/gomock"
@@ -79,27 +80,16 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 }
 
 func Test_AddToIgnoreList(t *testing.T) {
+	t.Cleanup(func() {
+		ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
+	})
+
 	AddToIgnoreList(IgnoreListEntry{
 		Path:            "/tmp",
 		PrefixMatchOnly: false,
 	})
 
 	if !CheckIgnoreList("/tmp") {
-		t.Errorf("CheckIgnoreList() = %v, want %v", false, true)
-	}
-}
-
-func Test_AddToBaseIgnoreList(t *testing.T) {
-	t.Cleanup(func() {
-		baseIgnoreList = defaultIgnoreList
-	})
-
-	AddToBaseIgnoreList(IgnoreListEntry{
-		Path:            "/tmp",
-		PrefixMatchOnly: false,
-	})
-
-	if !IsInProvidedIgnoreList("/tmp", baseIgnoreList) {
 		t.Errorf("CheckIgnoreList() = %v, want %v", false, true)
 	}
 }
@@ -1249,6 +1239,152 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 	}
 }
 
+func Test_GetFSFromLayers_ignorelist(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	root, err := ioutil.TempDir("", "layers-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(root)
+	// Write a whiteout path
+	fileContents := []byte("Hello World\n")
+	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := []FSOpt{
+		// I'd rather use the real func (util.ExtractFile)
+		// but you have to be root to chown
+		ExtractFunc(fakeExtract),
+		IncludeWhiteout(),
+	}
+
+	f := func(expectedFiles []string, tw *tar.Writer) {
+		for _, f := range expectedFiles {
+			f := strings.TrimPrefix(strings.TrimPrefix(f, root), "/")
+
+			hdr := &tar.Header{
+				Name: f,
+				Mode: 0644,
+				Size: int64(len(string(fileContents))),
+			}
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tw.Write(fileContents); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := tw.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// first, testdir is not in ignorelist, so it should be deleted
+	expectedFiles := []string{
+		filepath.Join(root, ".wh.testdir"),
+		filepath.Join(root, "testdir", "file"),
+		filepath.Join(root, "other-file"),
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer := mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+	layerFiles := []string{
+		filepath.Join(root, ".wh.testdir"),
+		filepath.Join(root, "testdir", "file"),
+		filepath.Join(root, "other-file"),
+	}
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(layerFiles, tw)
+
+	rc := ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers := []v1.Layer{
+		mockLayer,
+	}
+
+	actualFiles, err := GetFSFromLayers(root, layers, opts...)
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		false,
+	)
+
+	// Make sure whiteout files are removed form the root.
+	_, err = os.Lstat(filepath.Join(root, "testdir"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Errorf("expected testdir to be deleted. However found it.")
+	}
+
+	// second, testdir is in ignorelist, so it should not be deleted
+	original := append([]IgnoreListEntry{}, defaultIgnoreList...)
+	defer func() {
+		defaultIgnoreList = original
+	}()
+	defaultIgnoreList = append(defaultIgnoreList, IgnoreListEntry{
+		Path: filepath.Join(root, "testdir"),
+	})
+	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
+		t.Fatal(err)
+	}
+
+	expectedFiles = []string{
+		filepath.Join(root, "other-file"),
+	}
+
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(expectedFiles, tw)
+
+	mockLayer = mockv1.NewMockLayer(ctrl)
+	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
+	layerFiles = []string{
+		filepath.Join(root, ".wh.testdir"),
+		filepath.Join(root, "other-file"),
+	}
+	buf = new(bytes.Buffer)
+	tw = tar.NewWriter(buf)
+
+	f(layerFiles, tw)
+
+	rc = ioutil.NopCloser(buf)
+	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
+
+	layers = []v1.Layer{
+		mockLayer,
+	}
+
+	actualFiles, err = GetFSFromLayers(root, layers, opts...)
+	assertGetFSFromLayers(
+		t,
+		actualFiles,
+		expectedFiles,
+		err,
+		false,
+	)
+
+	// Make sure testdir still exists.
+	_, err = os.Lstat(filepath.Join(root, "testdir"))
+	if err != nil {
+		t.Errorf("expected testdir to exist, but could not Lstat it: %v", err)
+	}
+}
+
 func Test_GetFSFromLayers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -1320,8 +1456,9 @@ func assertGetFSFromLayers(
 	actualFiles []string,
 	expectedFiles []string,
 	err error,
-	expectErr bool,
+	expectErr bool, //nolint:unparam
 ) {
+	t.Helper()
 	if !expectErr && err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -1342,66 +1479,60 @@ func assertGetFSFromLayers(
 	}
 }
 
-func TestUpdateSkiplist(t *testing.T) {
-	tests := []struct {
-		name       string
-		skipVarRun bool
-		expected   []IgnoreListEntry
-	}{
+func TestInitIgnoreList(t *testing.T) {
+	mountInfo := `36 35 98:0 /kaniko /test/kaniko rw,noatime master:1 - ext3 /dev/root rw,errors=continue
+36 35 98:0 /proc /test/proc rw,noatime master:1 - ext3 /dev/root rw,errors=continue
+`
+	mFile, err := ioutil.TempFile("", "mountinfo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mFile.Close()
+	if _, err := mFile.WriteString(mountInfo); err != nil {
+		t.Fatal(err)
+	}
+	config.IgnoreListPath = mFile.Name()
+	defer func() {
+		config.IgnoreListPath = constants.IgnoreListPath
+	}()
+
+	expected := []IgnoreListEntry{
 		{
-			name:       "var/run ignored",
-			skipVarRun: true,
-			expected: []IgnoreListEntry{
-				{
-					Path:            "/kaniko",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/etc/mtab",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/var/run",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/tmp/apt-key-gpghome",
-					PrefixMatchOnly: true,
-				},
-			},
+			Path:            "/kaniko",
+			PrefixMatchOnly: false,
 		},
 		{
-			name: "var/run not ignored",
-			expected: []IgnoreListEntry{
-				{
-					Path:            "/kaniko",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/etc/mtab",
-					PrefixMatchOnly: false,
-				},
-				{
-					Path:            "/tmp/apt-key-gpghome",
-					PrefixMatchOnly: true,
-				},
-			},
+			Path:            "/test/kaniko",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/test/proc",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/etc/mtab",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/tmp/apt-key-gpghome",
+			PrefixMatchOnly: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			original := baseIgnoreList
-			defer func() { baseIgnoreList = original }()
-			UpdateInitialIgnoreList(tt.skipVarRun)
-			sort.Slice(tt.expected, func(i, j int) bool {
-				return tt.expected[i].Path < tt.expected[j].Path
-			})
-			sort.Slice(baseIgnoreList, func(i, j int) bool {
-				return baseIgnoreList[i].Path < baseIgnoreList[j].Path
-			})
-			testutil.CheckDeepEqual(t, tt.expected, baseIgnoreList)
-		})
+
+	original := append([]IgnoreListEntry{}, ignorelist...)
+	defer func() { ignorelist = original }()
+
+	err = InitIgnoreList(true)
+	if err != nil {
+		t.Fatal(err)
 	}
+	sort.Slice(expected, func(i, j int) bool {
+		return expected[i].Path < expected[j].Path
+	})
+	sort.Slice(ignorelist, func(i, j int) bool {
+		return ignorelist[i].Path < ignorelist[j].Path
+	})
+	testutil.CheckDeepEqual(t, expected, ignorelist)
 }
 
 func Test_setFileTimes(t *testing.T) {

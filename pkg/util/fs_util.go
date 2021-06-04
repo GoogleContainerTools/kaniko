@@ -74,8 +74,7 @@ var defaultIgnoreList = []IgnoreListEntry{
 	},
 }
 
-var baseIgnoreList = defaultIgnoreList
-var ignorelist = baseIgnoreList
+var ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 
 var volumes = []string{}
 
@@ -101,8 +100,8 @@ func AddToIgnoreList(entry IgnoreListEntry) {
 	ignorelist = append(ignorelist, entry)
 }
 
-func AddToBaseIgnoreList(entry IgnoreListEntry) {
-	baseIgnoreList = append(baseIgnoreList, entry)
+func AddToDefaultIgnoreList(entry IgnoreListEntry) {
+	defaultIgnoreList = append(defaultIgnoreList, entry)
 }
 
 func IncludeWhiteout() FSOpt {
@@ -133,7 +132,12 @@ func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]strin
 }
 
 func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, error) {
+	volumes = []string{}
 	cfg := new(FSConfig)
+	if err := InitIgnoreList(true); err != nil {
+		return nil, errors.Wrap(err, "initializing filesystem ignore list")
+	}
+	logrus.Debugf("Ignore list: %v", ignorelist)
 
 	for _, opt := range opts {
 		opt(cfg)
@@ -142,12 +146,6 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 	if cfg.extractFunc == nil {
 		return nil, errors.New("must supply an extract function")
 	}
-
-	if err := DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
-		return nil, err
-	}
-
-	logrus.Debugf("Mounted directories: %v", ignorelist)
 
 	extractedFiles := []string{}
 	for i, l := range layers {
@@ -182,7 +180,18 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				logrus.Debugf("Whiting out %s", path)
 
 				name := strings.TrimPrefix(base, ".wh.")
-				if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
+				path := filepath.Join(dir, name)
+
+				if CheckIgnoreList(path) {
+					logrus.Debugf("Not deleting %s, as it's ignored", path)
+					continue
+				}
+				if childDirInIgnoreList(path) {
+					logrus.Debugf("Not deleting %s, as it contains a ignored path", path)
+					continue
+				}
+
+				if err := os.RemoveAll(path); err != nil {
 					return nil, errors.Wrapf(err, "removing whiteout %s", hdr.Name)
 				}
 
@@ -382,20 +391,21 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	return nil
 }
 
-func IsInIgnoreList(path string) bool {
-	return IsInProvidedIgnoreList(path, ignorelist)
-}
-
 func IsInProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
 	for _, entry := range wl {
 		if !entry.PrefixMatchOnly && path == entry.Path {
 			return true
 		}
 	}
+
 	return false
 }
 
-func CheckIgnoreList(path string) bool {
+func IsInIgnoreList(path string) bool {
+	return IsInProvidedIgnoreList(path, ignorelist)
+}
+
+func CheckProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
 	for _, wl := range ignorelist {
 		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
 			return true
@@ -403,6 +413,10 @@ func CheckIgnoreList(path string) bool {
 	}
 
 	return false
+}
+
+func CheckIgnoreList(path string) bool {
+	return CheckProvidedIgnoreList(path, ignorelist)
 }
 
 func checkIgnoreListRoot(root string) bool {
@@ -419,8 +433,7 @@ func checkIgnoreListRoot(root string) bool {
 // Where (5) is the mount point relative to the process's root
 // From: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 func DetectFilesystemIgnoreList(path string) error {
-	ignorelist = baseIgnoreList
-	volumes = []string{}
+	logrus.Trace("Detecting filesystem ignore list")
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -442,7 +455,7 @@ func DetectFilesystemIgnoreList(path string) error {
 			continue
 		}
 		if lineArr[4] != config.RootDir {
-			logrus.Tracef("Appending %s from line: %s", lineArr[4], line)
+			logrus.Tracef("Adding ignore list entry %s from line: %s", lineArr[4], line)
 			ignorelist = append(ignorelist, IgnoreListEntry{
 				Path:            lineArr[4],
 				PrefixMatchOnly: false,
@@ -898,19 +911,20 @@ func createParentDirectory(path string) error {
 	return nil
 }
 
-// UpdateInitialIgnoreList will add /var/run to ignored paths if
-func UpdateInitialIgnoreList(ignoreVarRun bool) {
-	if !ignoreVarRun {
-		return
+// InitIgnoreList will initialize the ignore list using:
+// - defaultIgnoreList
+// - mounted paths via DetectFilesystemIgnoreList()
+func InitIgnoreList(detectFilesystem bool) error {
+	logrus.Trace("Initializing ignore list")
+	ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
+
+	if detectFilesystem {
+		if err := DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
+			return errors.Wrap(err, "checking filesystem mount paths for ignore list")
+		}
 	}
-	logrus.Trace("Adding /var/run to initialIgnoreList ")
-	baseIgnoreList = append(baseIgnoreList, IgnoreListEntry{
-		// /var/run is a special case. It's common to mount in /var/run/docker.sock or something similar
-		// which leads to a special mount on the /var/run/docker.sock file itself, but the directory to exist
-		// in the image with no way to tell if it came from the base image or not.
-		Path:            "/var/run",
-		PrefixMatchOnly: false,
-	})
+
+	return nil
 }
 
 type walkFSResult struct {
@@ -985,7 +999,7 @@ func GetFSInfoMap(dir string, existing map[string]os.FileInfo) (map[string]os.Fi
 	timer := timing.Start("Walking filesystem with Stat")
 	godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
-			if IsInIgnoreList(path) {
+			if CheckIgnoreList(path) {
 				if IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
 					return filepath.SkipDir
