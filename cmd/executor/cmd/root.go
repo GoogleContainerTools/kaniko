@@ -57,7 +57,17 @@ func init() {
 	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
 	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
-	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "Please use ignore-var-run instead.")
+	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "please use ignore-var-run instead.")
+	RootCmd.PersistentFlags().SetNormalizeFunc(normalizeWhitelistVarRun)
+}
+
+func normalizeWhitelistVarRun(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	switch name {
+	case "whitelist-var-run":
+		name = "ignore-var-run"
+		break
+	}
+	return pflag.NormalizedName(name)
 }
 
 // RootCmd is the kaniko command that is run
