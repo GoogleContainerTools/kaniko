@@ -86,7 +86,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--target](#--target)
     - [--use-new-run](#--use-new-run)
     - [--verbosity](#--verbosity)
-    - [--whitelist-var-run](#--whitelist-var-run)
+    - [--ignore-var-run](#--ignore-var-run)
     - [--ignore-path](#--ignore-path)
   - [Debug Image](#debug-image)
 - [Security](#security)
@@ -745,7 +745,7 @@ Use the experimental run implementation for detecting changes without requiring 
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set the logging level. Defaults to `info`.
 
-#### --whitelist-var-run
+#### --ignore-var-run
 
 Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run/* in destination image. (Default true).
 
