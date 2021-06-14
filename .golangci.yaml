@@ -90,11 +90,6 @@ linters-settings:
     min-len: 3
     # minimal occurrences count to trigger, 3 by default
     min-occurrences: 3
-  #depguard:
-  #  list-type: blacklist
-  #  include-go-root: false
-  #  packages:
-  #    - github.com/davecgh/go-spew/spew
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Default is to use a neutral variety of English.

@@ -56,6 +56,18 @@ func init() {
 
 	addKanikoOptionsFlags()
 	addHiddenFlags(RootCmd)
+	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
+	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "please use ignore-var-run instead.")
+	RootCmd.PersistentFlags().SetNormalizeFunc(normalizeWhitelistVarRun)
+}
+
+func normalizeWhitelistVarRun(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	switch name {
+	case "whitelist-var-run":
+		name = "ignore-var-run"
+		break
+	}
+	return pflag.NormalizedName(name)
 }
 
 // RootCmd is the kaniko command that is run
@@ -196,7 +208,7 @@ func addKanikoOptionsFlags() {
 	opts.RegistriesCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().VarP(&opts.RegistryMirrors, "registry-mirror", "", "Registry mirror to use as pull-through cache instead of docker.io. Set it repeatedly for multiple mirrors.")
-	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "whitelist-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
+	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "ignore-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image. (Default true).")
 	RootCmd.PersistentFlags().VarP(&opts.Labels, "label", "", "Set metadata for an image. Set it repeatedly for multiple labels.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipUnusedStages, "skip-unused-stages", "", false, "Build only used stages if defined to true. Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile")
 	RootCmd.PersistentFlags().BoolVarP(&opts.RunV2, "use-new-run", "", false, "Use the experimental run implementation for detecting changes without requiring file system snapshots.")
