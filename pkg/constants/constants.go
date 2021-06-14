@@ -23,9 +23,6 @@ const (
 	//KanikoDir is the path to the Kaniko directory
 	KanikoDir = "/kaniko"
 
-	// TempDir is the path to the temp directory
-	TempDir = "/kaniko/tmp"
-
 	IgnoreListPath = "/proc/self/mountinfo"
 
 	Author = "kaniko"

@@ -22,12 +22,10 @@ import (
 
 var RootDir string
 var KanikoDir string
-var TempDir string
 var IgnoreListPath string
 
 func init() {
 	RootDir = constants.RootDir
 	KanikoDir = constants.KanikoDir
-	TempDir = constants.TempDir
 	IgnoreListPath = constants.IgnoreListPath
 }
