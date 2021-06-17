@@ -570,6 +570,10 @@ If `--destination=gcr.io/kaniko-project/test`, then cached layers will be stored
 
 _This flag must be used in conjunction with the `--cache=true` flag._
 
+#### --cache-copy-layers
+
+Set this flag to cache copy layers.
+
 #### --cache-ttl duration
 
 Cache timeout in hours. Defaults to two weeks.
