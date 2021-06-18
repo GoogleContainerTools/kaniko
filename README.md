@@ -588,7 +588,12 @@ and you want to build one of its subfolders instead of the root folder.
 #### --customPlatform
 
 Allows to build with another default platform than the host, similarly to docker build --platform xxx
-the value has to be on the form `--customPlatform=linux/arm` , with acceptable values listed here: [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63)
+the value has to be on the form `--customPlatform=linux/arm`, with acceptable values listed here: [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63).
+
+It's also possible specifying CPU variants adding it as a third parameter (like  `--customPlatform=linux/arm/v5`).
+Currently CPU variants are only known to be used for the ARM architecture as listed here: [GOARM](https://github.com/golang/go/wiki/GoArm#supported-architectures)
+
+_The resulting images cannot provide any metadata about CPU variant due to a limitation of the OCI-image specification._
 
 _This is not virtualization and cannot help to build an architecture not natively supported by the build host. This is used to build i386 on an amd64 Host for example, or arm32 on an arm64 host._
 
