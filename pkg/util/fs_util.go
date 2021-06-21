@@ -773,16 +773,25 @@ func Volumes() []string {
 func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
 	// Check if a file already exists on the path, if yes then delete it
 	info, err := os.Stat(path)
-	if !os.IsNotExist(err) && !info.IsDir() {
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		if err := os.MkdirAll(path, mode); err != nil {
+			return err
+		}
+	}
+
+	if info != nil && !info.IsDir() {
 		logrus.Tracef("removing file because it needs to be a directory %s", path)
 		if err := os.Remove(path); err != nil {
 			return errors.Wrapf(err, "error removing %s to make way for new directory.", path)
 		}
+		if err := os.MkdirAll(path, mode); err != nil {
+			return err
+		}
 	}
 
-	if err := os.MkdirAll(path, mode); err != nil {
-		return err
-	}
 	if uid > math.MaxUint32 || gid > math.MaxUint32 {
 		// due to https://github.com/golang/go/issues/8537
 		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", uint64(math.MaxUint32)))
