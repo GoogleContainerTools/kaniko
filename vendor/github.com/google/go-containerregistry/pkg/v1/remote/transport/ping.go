@@ -108,8 +108,11 @@ func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingRes
 			}, nil
 		case http.StatusUnauthorized:
 			if challenges := authchallenge.ResponseChallenges(resp); len(challenges) != 0 {
-				// If we hit more than one, I'm not even sure what to do.
-				wac := challenges[0]
+				// Instead of returning the first challenge better to check if there's one we know how to handle
+				wac, err := pickFromMultipleChallenges(challenges)
+				if err != nil {
+					return nil, err
+				}
 				return &pingResp{
 					challenge:  challenge(wac.Scheme).Canonical(),
 					parameters: wac.Parameters,
@@ -126,4 +129,38 @@ func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingRes
 		}
 	}
 	return nil, errors.New(strings.Join(errs, "; "))
+}
+
+func pickFromMultipleChallenges(challenges []authchallenge.Challenge) (authchallenge.Challenge, error) {
+
+	challengesLen := len(challenges)
+
+	if challengesLen == 0 {
+		return challenges[0], errors.New("No challenges provided")
+	}
+
+	if challengesLen == 1 {
+		return challenges[0], nil
+	}
+
+	// these are the schemes that are being handled in
+	// https://github.com/GoogleContainerTools/kaniko/blob/094fe52b3746b6cd59c4c3669cf2f640647321cd/vendor/github.com/google/go-containerregistry/pkg/v1/remote/transport/transport.go#L73
+	// It might happen that there are mutliple www-authenticate headers, e.g. "Negotiate" and "Basic"
+	// Picking simply the first one would result eventually in "unrecognized challenge" error message
+	allowedSchemes := []string{"basic", "bearer"}
+	var wac authchallenge.Challenge
+
+	for i := 0; i < challengesLen; i++ {
+
+		wac = challenges[i]
+		currentScheme := strings.ToLower(wac.Scheme)
+
+		for _, allowed := range allowedSchemes {
+			if allowed == currentScheme {
+				return wac, nil
+			}
+		}
+	}
+
+	return wac, nil
 }
