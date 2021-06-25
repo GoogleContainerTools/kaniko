@@ -136,7 +136,7 @@ func pickFromMultipleChallenges(challenges []authchallenge.Challenge) (authchall
 	challengesLen := len(challenges)
 
 	if challengesLen == 0 {
-		return challenges[0], errors.New("No challenges provided")
+		return authchallenge.Challenge{}, errors.New("no challenges provided")
 	}
 
 	if challengesLen == 1 {
