@@ -109,8 +109,7 @@ func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingRes
 		case http.StatusUnauthorized:
 			if challenges := authchallenge.ResponseChallenges(resp); len(challenges) != 0 {
 				// Instead of returning the first challenge better to check if there's one we know how to handle
-				wac, err := pickFromMultipleChallenges(challenges)
-
+				wac := pickFromMultipleChallenges(challenges)
 				return &pingResp{
 					challenge:  challenge(wac.Scheme).Canonical(),
 					parameters: wac.Parameters,
