@@ -312,7 +312,7 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 
-		if err := util.Retry(retryFunc, 3, 1000); err != nil {
+		if err := util.Retry(retryFunc, s.opts.ImageFSExtractRetry, 1000); err != nil {
 			return errors.Wrap(err, "failed to get filesystem from image")
 		}
 
