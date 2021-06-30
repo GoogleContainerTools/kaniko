@@ -307,7 +307,12 @@ func (s *stageBuilder) build() error {
 	if shouldUnpack {
 		t := timing.Start("FS Unpacking")
 
-		if _, err := util.GetFSFromImage(config.RootDir, s.image, util.ExtractFile); err != nil {
+		retryFunc := func() error {
+			_, err := util.GetFSFromImage(config.RootDir, s.image, util.ExtractFile)
+			return err
+		}
+
+		if err := util.Retry(retryFunc, 3, 1000); err != nil {
 			return errors.Wrap(err, "failed to get filesystem from image")
 		}
 
