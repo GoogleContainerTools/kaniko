@@ -73,6 +73,7 @@ type KanikoOptions struct {
 	CacheCopyLayers        bool
 	Git                    KanikoGitOptions
 	IgnorePaths            multiArg
+	ImageFSExtractRetry    int
 }
 
 type KanikoGitOptions struct {

@@ -88,6 +88,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--verbosity](#--verbosity)
     - [--ignore-var-run](#--ignore-var-run)
     - [--ignore-path](#--ignore-path)
+    - [--image-fs-extract-retry](#--image-fs-extract-retry)
   - [Debug Image](#debug-image)
 - [Security](#security)
   - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
@@ -752,6 +753,10 @@ Ignore /var/run when taking image snapshot. Set it to false to preserve /var/run
 #### --ignore-path
 
 Set this flag as `--ignore-path=<path>` to ignore path when taking an image snapshot. Set it multiple times for multiple ignore paths.
+
+### --image-fs-extract-retry
+
+Set this flag to the number of retries that should happen for the extracting an image filesystem. Defaults to `0`.
 
 ### Debug Image
 
