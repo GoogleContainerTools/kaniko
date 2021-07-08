@@ -79,9 +79,10 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 	if err != nil {
 		return "", err
 	}
+	isDir := strings.HasSuffix(fp, pathSeparator)
 	fp = filepath.Clean(fp)
-	if IsDestDir(value) && !IsDestDir(fp) {
-		fp = fp + "/"
+	if isDir && !strings.HasSuffix(fp, pathSeparator) {
+		fp = fp + pathSeparator
 	}
 	return fp, nil
 }

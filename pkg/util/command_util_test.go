@@ -54,6 +54,14 @@ var testEnvReplacement = []struct {
 		expectedPath: "/simple/path/",
 	},
 	{
+		path: "$simple",
+		envs: []string{
+			"simple=/path/",
+		},
+		isFilepath:   true,
+		expectedPath: "/path/",
+	},
+	{
 		path: "${a}/b",
 		envs: []string{
 			"a=/path/",
