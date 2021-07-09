@@ -717,7 +717,7 @@ Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
 #### --registry-mirror
 
-Set this flag if you want to use a registry mirror instead of the default `index.docker.io`. You can use this flag more than once, if you want to set multiple mirrors. If an image is not found on the first mirror, Kaniko will try the next mirror(s), and at the end fallback on the default registry.
+Set this flag if you want to use a registry mirror instead of the image's registry. You can use this flag more than once, if you want to set multiple mirrors. If an image is not found on the first mirror, Kaniko will try the next mirror(s), and at the end fallback on the default registry.
 
 Expected format is `mirror.gcr.io` for example.
 
