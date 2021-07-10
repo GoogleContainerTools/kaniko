@@ -185,6 +185,14 @@ func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string
 	if err != nil {
 		return compositeKey, err
 	}
+	// Use the special argument "|#" at the start of the args array. This will
+	// avoid conflicts with any RUN command since commands can not
+	// start with | (vertical bar). The "#" (number of build envs) is there to
+	// help ensure proper cache matches.
+	if len(replacementEnvs) > 0 {
+		compositeKey.AddKey(fmt.Sprintf("|%d", len(replacementEnvs)))
+		compositeKey.AddKey(replacementEnvs...)
+	}
 	// Add the next command to the cache key.
 	compositeKey.AddKey(resolvedCmd)
 	if copyCmd, ok := commands.CastAbstractCopyCommand(command); ok == true {
