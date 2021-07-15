@@ -237,7 +237,7 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
           },
           {
             "name": "docker-config",
-            "mountPath": "/kaniko/.docker/"
+            "mountPath": "/root/.docker/"
           }
         ]
       }
@@ -447,9 +447,9 @@ Create a `config.json` file with your Docker registry url and the previous gener
 }
 ```
 
-Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
+Run kaniko with the `config.json` inside `/root/.docker/config.json`
 
-    docker run -ti --rm -v `pwd`:/workspace -v `pwd`/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
+    docker run -ti --rm -v `pwd`:/workspace -v `pwd`/config.json:/root/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
 
 #### Pushing to Google GCR
 
@@ -530,7 +530,7 @@ spec:
     - "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"
     volumeMounts:
     - name: docker-config
-      mountPath: /kaniko/.docker/
+      mountPath: /root/.docker/
     # when not using instance role
     - name: aws-secret
       mountPath: /root/.aws/
