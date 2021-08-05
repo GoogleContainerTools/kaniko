@@ -32,12 +32,12 @@ RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
   cd /go/src/github.com/GoogleCloudPlatform                                  && \
   git clone https://github.com/GoogleCloudPlatform/docker-credential-gcr.git && \
   cd /go/src/github.com/GoogleCloudPlatform/docker-credential-gcr            && \
-  make deps OUT_DIR=/usr/local/bin                                           && \
-  go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go
+  GO111MODULE=off make deps OUT_DIR=/usr/local/bin                                           && \
+  GO111MODULE=off go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go
 
 # Get Amazon ECR credential helper
-RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
-  make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper
+RUN GOARCH=$(cat /goarch) && GO111MODULE=off go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
+  GO111MODULE=off make -C /go/src/github.com/awslabs/amazon-ecr-credential-helper
 
 # ACR docker env credential helper
 RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true)   && \
