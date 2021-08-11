@@ -49,6 +49,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [Pushing to Google GCR](#pushing-to-google-gcr)
     - [Pushing to Google GCR - Workload Identity](#pushing-to-google-gcr-using-workload-identity)
     - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+    - [Pushing to JFrog Container Registry or to JFrog Artifactory](#pushing-to-jfrog-container-registry-or-to-jfrog-artifactory)
   - [Additional Flags](#additional-flags)
     - [--build-arg](#--build-arg)
     - [--cache](#--cache)
@@ -545,6 +546,35 @@ spec:
       secretName: aws-secret
 ```
 
+#### Pushing to JFrog Container Registry or to JFrog Artifactory
+
+Kaniko can be used with both [JFrog Container Registry](https://www.jfrog.com/confluence/display/JFROG/JFrog+Container+Registry) and JFrog Artifactory.
+
+Get your JFrog Artifactory registry user and password encoded in base64
+
+    echo -n USER:PASSWORD | base64
+
+Create a `config.json` file with your Artifactory Docker local registry URL and the previous generated base64 string
+
+```
+{
+	"auths": {
+		"artprod.company.com": {
+			"auth": "xxxxxxxxxxxxxxx"
+		}
+	}
+}
+```
+For example, for Artifactory cloud users, the docker registry should be: `<company>.<local-repository-name>.io`.
+
+Run kaniko with the `config.json` inside `/kaniko/.docker/config.json`
+
+    docker run -ti --rm -v `pwd`:/workspace -v `pwd`/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile=Dockerfile --destination=yourimagename
+
+After the image is uploaded, using the JFrog CLI, you can [collect](https://www.jfrog.com/confluence/display/CLI/CLI+for+JFrog+Artifactory#CLIforJFrogArtifactory-PushingDockerImagesUsingKaniko) and [publish](https://www.jfrog.com/confluence/display/CLI/CLI+for+JFrog+Artifactory#CLIforJFrogArtifactory-PublishingBuild-Info) the build information to Artifactory and trigger [build vulnerabilities scanning](https://www.jfrog.com/confluence/display/JFROG/Declarative+Pipeline+Syntax#DeclarativePipelineSyntax-ScanningBuildswithJFrogXray) using JFrog Xray.
+
+To collect and publish the image's build information using the Jenkins Artifactory plugin, see instructions for [scripted pipeline](https://www.jfrog.com/confluence/display/JFROG/Scripted+Pipeline+Syntax#ScriptedPipelineSyntax-UsingKaniko) and [declarative pipeline](https://www.jfrog.com/confluence/display/JFROG/Declarative+Pipeline+Syntax#DeclarativePipelineSyntax-UsingKaniko).
+
 ### Additional Flags
 
 #### --build-arg
@@ -697,6 +727,7 @@ Note that you can't specify a URL with scheme for this flag. Some valid options 
 * `mirror.gcr.io`
 * `127.0.0.1`
 * `192.168.0.1:5000`
+* `mycompany-docker-virtual.jfrog.io`
 
 
 #### --reproducible
