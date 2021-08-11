@@ -57,16 +57,16 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 		}
 
 		for _, registryMirror := range opts.RegistryMirrors {
-			var newReg name.Registry
+			var newRepo name.Repository
 			if opts.InsecurePull || opts.InsecureRegistries.Contains(registryMirror) {
-				newReg, err = name.NewRegistry(registryMirror, name.WeakValidation, name.Insecure)
+				newRepo, err = name.NewRepository(registryMirror, name.WeakValidation, name.Insecure)
 			} else {
-				newReg, err = name.NewRegistry(registryMirror, name.StrictValidation)
+				newRepo, err = name.NewRepository(registryMirror, name.StrictValidation)
 			}
 			if err != nil {
 				return nil, err
 			}
-			ref := setNewRegistry(ref, newReg)
+			ref := setNewRepository(ref, newRepo)
 
 			logrus.Infof("Retrieving image %s from registry mirror %s", ref, registryMirror)
 			remoteImage, err := remote.Image(ref, remoteOptions(registryMirror, opts, customPlatform)...)
@@ -111,6 +111,19 @@ func normalizeReference(ref name.Reference, image string) (name.Reference, error
 	}
 
 	return ref, nil
+}
+
+func setNewRepository(ref name.Reference, newRepo name.Repository) name.Reference {
+	switch r := ref.(type) {
+	case name.Tag:
+		r.Repository = newRepo
+		return r
+	case name.Digest:
+		r.Repository = newRepo
+		return r
+	default:
+		return ref
+	}
 }
 
 func setNewRegistry(ref name.Reference, newReg name.Registry) name.Reference {
