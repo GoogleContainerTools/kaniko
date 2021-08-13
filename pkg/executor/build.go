@@ -479,7 +479,7 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 		return nil, nil
 	}
 
-	layer, err := tarball.LayerFromFile(tarPath, tarball.WithCompressedCaching)
+	layer, err := tarball.LayerFromFile(tarPath)
 	if err != nil {
 		return nil, err
 	}
