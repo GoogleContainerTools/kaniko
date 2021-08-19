@@ -894,7 +894,39 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	return otiai10Cpy.Copy(src, destFile)
+	err := otiai10Cpy.Copy(src, destFile)
+	if err != nil {
+		return err
+	}
+	err = CopyOwnership(src, destDir)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CopyOwnership copies the file or directory ownership recursively at src to dest
+func CopyOwnership(src string, destDir string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(filepath.Dir(src), path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(destDir, relPath)
+
+		if err == nil {
+			info, err = os.Stat(path)
+			if err != nil {
+				return err
+			}
+			stat := info.Sys().(*syscall.Stat_t)
+			err = os.Chown(destPath, int(stat.Uid), int(stat.Gid))
+		}
+		return err
+	})
 }
 
 func createParentDirectory(path string) error {
