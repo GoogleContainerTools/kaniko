@@ -901,7 +901,16 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	err := otiai10Cpy.Copy(src, destFile)
+	opt := otiai10Cpy.Options{
+		Skip: func(path string) (bool, error) {
+			if CheckIgnoreList(path) {
+				logrus.Debugf("Not copying %s, as it's ignored", path)
+				return true, nil
+			}
+			return false, nil
+		},
+	}
+	err := otiai10Cpy.Copy(src, destFile, opt)
 	if err != nil {
 		return errors.Wrap(err, "copying file")
 	}
