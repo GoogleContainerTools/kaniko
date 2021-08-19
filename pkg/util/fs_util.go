@@ -911,21 +911,46 @@ func CopyOwnership(src string, destDir string) error {
 		if err != nil {
 			return err
 		}
+		if IsSymlink(info) {
+			return nil
+		}
 		relPath, err := filepath.Rel(filepath.Dir(src), path)
 		if err != nil {
 			return err
 		}
 		destPath := filepath.Join(destDir, relPath)
 
-		if err == nil {
-			info, err = os.Stat(path)
-			if err != nil {
-				return err
+		if CheckIgnoreList(src) && CheckIgnoreList(destPath) {
+			if !isExist(destPath) {
+				logrus.Debugf("Path %s ignored, but not exists", destPath)
+				return nil
 			}
-			stat := info.Sys().(*syscall.Stat_t)
-			err = os.Chown(destPath, int(stat.Uid), int(stat.Gid))
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			logrus.Debugf("Not copying ownership for %s, as it's ignored", destPath)
+			return nil
 		}
-		return err
+		if CheckIgnoreList(destDir) && CheckIgnoreList(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s ignored, but not exists", path)
+				return nil
+			}
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			logrus.Debugf("Not copying ownership for %s, as it's ignored", path)
+			return nil
+		}
+
+		info, err = os.Stat(path)
+		if err != nil {
+			return errors.Wrap(err, "reading ownership")
+		}
+		stat := info.Sys().(*syscall.Stat_t)
+		err = os.Chown(destPath, int(stat.Uid), int(stat.Gid))
+
+		return nil
 	})
 }
 
