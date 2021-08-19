@@ -626,7 +626,7 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
-			uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
+			uid, gid := DetermineTargetFileOwnership(fi, uid, gid)
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
