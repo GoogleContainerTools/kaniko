@@ -896,11 +896,11 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 	}
 	err := otiai10Cpy.Copy(src, destFile)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "copying file")
 	}
 	err = CopyOwnership(src, destDir)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "copying ownership")
 	}
 	return nil
 }
