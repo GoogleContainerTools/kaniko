@@ -13,7 +13,27 @@
 # limitations under the License.
 
 FROM alpine:3.14 as rootfs
-RUN echo 7777
 
 FROM alpine:3.14
+
+RUN mkdir -p /sysroot
 COPY --from=rootfs / /sysroot/
+
+# Workaround: we must remove some files to pass the integration test.
+# Unlike Docker, kaniko has no access to the original layer data from the
+# building context and can't preserve them in their original form.
+RUN rm -f \
+      /sysroot/etc/hostname \
+      /sysroot/etc/hosts \
+      /sysroot/etc/mtab \
+      /sysroot/etc/nsswitch.conf
+
+# Additional check for preserved dirs. They must persist in image but be empty.
+RUN printf "%s\n" \
+      "/sysroot/dev/:" \
+      "" \
+      "/sysroot/sys/:" \
+      > /tmp/expected \
+ && ls -1 /sysroot/dev/ /sysroot/sys/ \
+      > /tmp/got \
+ && diff -u /tmp/got /tmp/expected
