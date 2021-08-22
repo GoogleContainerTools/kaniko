@@ -261,6 +261,10 @@ func childDirInIgnoreList(path string) bool {
 	return false
 }
 
+func UnTar(r io.Reader, dest string) ([]string, error) {
+	return unTar(r, dest)
+}
+
 // unTar returns a list of files that have been extracted from the tar archive at r to the path at dest
 func unTar(r io.Reader, dest string) ([]string, error) {
 	var extractedFiles []string

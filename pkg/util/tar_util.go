@@ -286,6 +286,6 @@ func UnpackCompressedTar(path, dir string) error {
 		return err
 	}
 	defer gzr.Close()
-	_, err = unTar(gzr, dir)
+	_, err = UnTar(gzr, dir)
 	return err
 }
