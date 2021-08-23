@@ -18,6 +18,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -29,6 +30,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/goterm/term"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -96,6 +98,19 @@ func RunDebugShell(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *i
 	}
 
 	cmd.Env = env
+
+	// If input is not terminal, we will create pty
+	if fi, _ := os.Stdin.Stat(); (fi.Mode() & os.ModeCharDevice) == 0 {
+		logrus.Debugf("Creating PTY")
+		pty, err := term.OpenPTY()
+		if err != nil {
+			return err
+		}
+		defer pty.Close()
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = pty.Slave, pty.Slave, pty.Slave
+		go io.Copy(pty.Master, os.Stdin)
+		go io.Copy(os.Stdout, pty.Master)
+	}
 
 	return cmd.Run()
 }
