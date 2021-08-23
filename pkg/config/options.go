@@ -76,6 +76,8 @@ type KanikoOptions struct {
 	RunV2                  bool
 	CacheCopyLayers        bool
 	ForceBuildMetadata     bool
+	Debug                  bool
+	DebugShell             string
 }
 
 type KanikoGitOptions struct {

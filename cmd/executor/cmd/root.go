@@ -233,6 +233,8 @@ func addKanikoOptionsFlags() {
 	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
 		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
 	}
+	RootCmd.PersistentFlags().BoolVarP(&opts.Debug, "debug", "", false, "Start debug shell in case of error")
+	RootCmd.PersistentFlags().StringVarP(&opts.DebugShell, "debug-shell", "", "/bin/sh", "Specify a shell to use for debugging")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text

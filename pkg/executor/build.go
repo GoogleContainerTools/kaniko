@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/strslice"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -389,6 +390,14 @@ func (s *stageBuilder) build() error {
 		}
 
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
+			if s.opts.Debug {
+				logrus.Errorf(errors.Wrap(err, "Failed to execute command").Error())
+				debugCmd := new(instructions.RunCommand)
+				debugCmd.CmdLine = strslice.StrSlice{s.opts.DebugShell}
+				if err = commands.RunDebugShell(&s.cf.Config, s.args, debugCmd); err != nil {
+					return errors.Wrap(err, "error starting debug shell")
+				}
+			}
 			return errors.Wrap(err, "failed to execute command")
 		}
 		files = command.FilesToSnapshot()

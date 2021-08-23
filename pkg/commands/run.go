@@ -49,6 +49,57 @@ func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	return runCommandInExec(config, buildArgs, r.cmd)
 }
 
+func RunDebugShell(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand) error {
+	var newCommand []string
+	newCommand = cmdRun.CmdLine
+	// Find and set absolute path of executable by setting PATH temporary
+	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
+	for _, v := range replacementEnvs {
+		entry := strings.SplitN(v, "=", 2)
+		if entry[0] != "PATH" {
+			continue
+		}
+		oldPath := os.Getenv("PATH")
+		defer os.Setenv("PATH", oldPath)
+		os.Setenv("PATH", entry[1])
+		path, err := exec.LookPath(newCommand[0])
+		if err == nil {
+			newCommand[0] = path
+		}
+	}
+
+	logrus.Infof("Starting debug shell: %s", newCommand[0])
+
+	cmd := exec.Command(newCommand[0])
+	cmd.Dir = setWorkDirIfExists(config.WorkingDir)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	u := config.User
+	userAndGroup := strings.Split(u, ":")
+	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
+	if err != nil {
+		return errors.Wrapf(err, "resolving user %s", userAndGroup[0])
+	}
+
+	// If specified, run the command as a specific user
+	if userStr != "" {
+		cmd.SysProcAttr.Credential, err = util.SyscallCredentials(userStr)
+		if err != nil {
+			return errors.Wrap(err, "credentials")
+		}
+	}
+
+	env, err := addDefaultHOME(userStr, replacementEnvs)
+	if err != nil {
+		return errors.Wrap(err, "adding default HOME variable")
+	}
+
+	cmd.Env = env
+
+	return cmd.Run()
+}
+
 func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand) error {
 	var newCommand []string
 	if cmdRun.PrependShell {
