@@ -74,6 +74,7 @@ type KanikoOptions struct {
 	Git                    KanikoGitOptions
 	IgnorePaths            multiArg
 	ImageFSExtractRetry    int
+	ForceBuildMetadata	   bool
 }
 
 type KanikoGitOptions struct {
