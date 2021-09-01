@@ -391,6 +391,46 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 	}
 }
 
+func TestSnapshotWithForceBuildMetadataSet(t *testing.T) {
+	_, snapshotter, cleanup, err := setUpTest()
+	defer cleanup()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	filesToSnapshot := []string{}
+
+	// snapshot should be taken regardless, if forceBuildMetadata flag is set
+	filename, err := snapshotter.TakeSnapshot(filesToSnapshot, false, true)
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+	if filename == "" {
+		t.Fatalf("Filename returned from snapshot is empty.")
+	}
+}
+
+func TestSnapshotWithForceBuildMetadataIsNotSet(t *testing.T) {
+	_, snapshotter, cleanup, err := setUpTest()
+	defer cleanup()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	filesToSnapshot := []string{}
+
+	// snapshot should not be taken
+	filename, err := snapshotter.TakeSnapshot(filesToSnapshot, false, false)
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+	if filename != "" {
+		t.Fatalf("Filename returned is expected to be empty.")
+	}
+}
+
 func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
 	newFiles := map[string]string{
 		"foo":     "newbaz1",
