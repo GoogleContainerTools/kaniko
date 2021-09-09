@@ -483,7 +483,7 @@ func TestCache(t *testing.T) {
 			}
 			// Build the second image which should pull from the cache
 			if err := imageBuilder.buildCachedImages(config, cache, dockerfilesPath, 1, args); err != nil {
-				t.Fatalf("error building cached image for the first time: %v", err)
+				t.Fatalf("error building cached image for the second time: %v", err)
 			}
 			// Make sure both images are the same
 			kanikoVersion0 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 0)
