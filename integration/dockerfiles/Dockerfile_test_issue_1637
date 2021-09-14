@@ -1,0 +1,5 @@
+FROM alpine
+
+RUN cp -a /etc/alpine-release /test
+RUN rm -f /test
+RUN cp -a /etc/alpine-release /test
