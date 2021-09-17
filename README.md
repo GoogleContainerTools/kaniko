@@ -58,6 +58,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-ttl duration](#--cache-ttl-duration)
     - [--cleanup](#--cleanup)
     - [--context-sub-path](#--context-sub-path)
+    - [--compressed-caching](#--compressed-caching)
     - [--customPlatform](#--customPlatform)
     - [--digest-file](#--digest-file)
     - [--dockerfile](#--dockerfile)
@@ -612,6 +613,11 @@ Cache timeout in hours. Defaults to two weeks.
 #### --cleanup
 
 Set this flag to clean the filesystem at the end of the build.
+
+#### --compressed-caching
+
+Set this to false in order to prevent tar compression for cached layers. This will increase the runtime of the build, but decrease the memory usage especially for large builds.
+Try to use `--compressed-caching=false` if your build fails with an out of memory error. Defaults to true.
 
 #### --context-sub-path
 
