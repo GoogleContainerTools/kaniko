@@ -784,6 +784,42 @@ func Test_stageBuilder_build(t *testing.T) {
 				rootDir:           dir,
 			}
 		}(),
+		func() testcase {
+			dir, files := tempDirAndFile(t)
+			file := files[0]
+			filePath := filepath.Join(dir, file)
+			ch := NewCompositeCache("", "meow")
+
+			ch.AddPath(filePath, util.FileContext{})
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			command := MockDockerCommand{
+				command:      "meow",
+				contextFiles: []string{filePath},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{filePath},
+				},
+			}
+
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			return testcase{
+				description: "fake command cache enabled with tar compression disabled and key in cache",
+				opts:        &config.KanikoOptions{Cache: true, CompressedCaching: false},
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				layerCache: &fakeLayerCache{
+					retrieve: true,
+				},
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
 		{
 			description: "fake command cache disabled and key not in cache",
 			opts:        &config.KanikoOptions{Cache: false},
