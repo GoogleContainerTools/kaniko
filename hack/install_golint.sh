@@ -70,6 +70,7 @@ is_supported_platform() {
     linux/amd64) found=0 ;;
     linux/386) found=0 ;;
     linux/ppc64le) found=0 ;;
+    linux/s390x) found=0 ;;
   esac
   return $found
 }
