@@ -66,8 +66,14 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		SingleBranch:      g.opts.GitSingleBranch,
 		RecurseSubmodules: getRecurseSubmodules(g.opts.GitRecurseSubmodules),
 	}
+	var fetchRef string
 	if len(parts) > 1 {
-		if !strings.HasPrefix(parts[1], "refs/pull/") {
+		if plumbing.IsHash(parts[1]) || !strings.HasPrefix(parts[1], "refs/pull/") {
+			// Handle any non-branch refs separately. First, clone the repo HEAD, and
+			// then fetch and check out the fetchRef.
+			fetchRef = parts[1]
+		} else {
+			// Branches will be cloned directly.
 			options.ReferenceName = plumbing.ReferenceName(parts[1])
 		}
 	}
@@ -87,18 +93,21 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		return directory, err
 	}
 
-	if len(parts) > 1 && strings.HasPrefix(parts[1], "refs/pull/") {
-
+	if fetchRef != "" {
 		err = r.Fetch(&git.FetchOptions{
 			RemoteName: "origin",
-			RefSpecs:   []config.RefSpec{config.RefSpec(parts[1] + ":" + parts[1])},
+			RefSpecs:   []config.RefSpec{config.RefSpec(fetchRef + ":" + fetchRef)},
 		})
 		if err != nil {
 			return directory, err
 		}
 	}
 
+	checkoutRef := fetchRef
 	if len(parts) > 2 {
+		checkoutRef = parts[2]
+	}
+	if checkoutRef != "" {
 		// ... retrieving the commit being pointed by HEAD
 		_, err := r.Head()
 		if err != nil {
@@ -112,7 +121,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 
 		// ... checking out to desired commit
 		err = w.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(parts[2]),
+			Hash: plumbing.NewHash(checkoutRef),
 		})
 		if err != nil {
 			return directory, err
