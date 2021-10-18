@@ -375,8 +375,8 @@ func (s *stageBuilder) build() error {
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) && !s.opts.ForceBuildMetadata{
-			logrus.Debugf("build: skipping snapshot for [%v]" , command.String())
+		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) && !s.opts.ForceBuildMetadata {
+			logrus.Debugf("build: skipping snapshot for [%v]", command.String())
 			continue
 		}
 		if isCacheCommand {
@@ -474,7 +474,7 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "tar file path does not exist")
 	}
-	if fi.Size() <= emptyTarSize && !s.opts.ForceBuildMetadata{
+	if fi.Size() <= emptyTarSize && !s.opts.ForceBuildMetadata {
 		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 		return nil, nil
 	}
