@@ -8,6 +8,9 @@ jobs:
     env:
       IMAGE_REPO: 'localhost:5000'
       REGISTRY: 'localhost:5000'
+      TRAVIS_REPO_SLUG: ${{ github.repository }}
+      TRAVIS_BRANCH: ${{ github.head_ref }}
+      TRAVIS_PULL_REQUEST: ${{ github.event.number }}
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
@@ -20,6 +23,12 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+
+      - name: Print Travis ENV vars
+        run: |
+          echo "TRAVIS_BRANCH: ${TRAVIS_BRANCH}"
+          echo "TRAVIS_PULL_REQUEST: ${TRAVIS_PULL_REQUEST}"
+          echo "TRAVIS_REPO_SLUG: ${TRAVIS_REPO_SLUG}"
 
       - name: Run integration-test-misc
         run : |
