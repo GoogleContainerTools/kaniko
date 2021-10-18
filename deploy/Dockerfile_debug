@@ -81,4 +81,6 @@ ENV DOCKER_CONFIG /kaniko/.docker/
 ENV DOCKER_CREDENTIAL_GCR_CONFIG /kaniko/.config/gcloud/docker_credential_gcr_config.json
 WORKDIR /workspace
 RUN ["docker-credential-gcr", "config", "--token-source=env"]
+RUN ["/busybox/mkdir", "-p", "/bin"]
+RUN ["/busybox/ln", "-s", "/busybox/sh", "/bin/sh"]
 ENTRYPOINT ["/kaniko/executor"]
