@@ -25,6 +25,5 @@ jobs:
       run: |
         make travis-setup
         make minikube-setup
-        make images
-        make push
+        make k8s-executor-build-push
         make integration-test-k8s
