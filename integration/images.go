@@ -194,9 +194,9 @@ func NewDockerFileBuilder() *DockerFileBuilder {
 		// TODO: All the below tests are fialing with errro
 		// You don't have the needed permissions to perform this operation, and you may have invalid credentials.
 		// To authenticate your request, follow the steps in: https://cloud.google.com/container-registry/docs/advanced-authentication
-		"Dockerfile_test_onbuild": {},
+		"Dockerfile_test_onbuild":    {},
 		"Dockerfile_test_extraction": {},
-		"Dockerfile_test_hardlink": {},
+		"Dockerfile_test_hardlink":   {},
 	}
 	d.TestCacheDockerfiles = map[string]struct{}{
 		"Dockerfile_test_cache":         {},

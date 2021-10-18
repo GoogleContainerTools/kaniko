@@ -24,4 +24,4 @@ if ! [ -x "$(command -v golangci-lint)" ]; then
 	${DIR}/install_golint.sh -b ${BIN} v1.23.7
 fi
 
-golangci-lint run
+${BIN}/golangci-lint run
