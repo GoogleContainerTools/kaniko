@@ -45,8 +45,13 @@ type RegistryOptions struct {
 
 // KanikoOptions are options that are set by command line arguments
 type KanikoOptions struct {
-	CacheOptions
 	RegistryOptions
+	CacheOptions
+	Destinations           multiArg
+	BuildArgs              multiArg
+	Labels                 multiArg
+	Git                    KanikoGitOptions
+	IgnorePaths            multiArg
 	DockerfilePath         string
 	SrcContext             string
 	SnapshotMode           string
@@ -59,9 +64,7 @@ type KanikoOptions struct {
 	ImageNameDigestFile    string
 	ImageNameTagDigestFile string
 	OCILayoutPath          string
-	Destinations           multiArg
-	BuildArgs              multiArg
-	Labels                 multiArg
+	ImageFSExtractRetry    int
 	SingleSnapshot         bool
 	Reproducible           bool
 	NoPush                 bool
@@ -71,9 +74,6 @@ type KanikoOptions struct {
 	SkipUnusedStages       bool
 	RunV2                  bool
 	CacheCopyLayers        bool
-	Git                    KanikoGitOptions
-	IgnorePaths            multiArg
-	ImageFSExtractRetry    int
 	ForceBuildMetadata     bool
 }
 
