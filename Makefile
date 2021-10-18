@@ -86,6 +86,11 @@ integration-test-misc:
 	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
 	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
+.PHONY: k8s-executor-build-push
+k8s-executor-build-push:
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker push $(REGISTRY)/executor:latest
+
 .PHONY: images
 images:
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
@@ -97,8 +102,3 @@ push:
 	docker push $(REGISTRY)/executor:latest
 	docker push $(REGISTRY)/executor:debug
 	docker push $(REGISTRY)/warmer:latest
-
-.PHONY: k8s-executor-build-push
-k8s-executor-build-push:
-  docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
-  docker push $(REGISTRY)/executor:latest
