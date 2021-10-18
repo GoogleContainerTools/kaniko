@@ -60,7 +60,7 @@ type cachePusher func(*config.KanikoOptions, string, string, string) error
 type snapShotter interface {
 	Init() error
 	TakeSnapshotFS() (string, error)
-	TakeSnapshot([]string, bool) (string, error)
+	TakeSnapshot([]string, bool, bool) (string, error)
 }
 
 // stageBuilder contains all fields necessary to build one stage of a Dockerfile
@@ -375,7 +375,8 @@ func (s *stageBuilder) build() error {
 		files = command.FilesToSnapshot()
 		timing.DefaultRun.Stop(t)
 
-		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) {
+		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) && !s.opts.ForceBuildMetadata{
+			logrus.Debugf("build: skipping snapshot for [%v]" , command.String())
 			continue
 		}
 		if isCacheCommand {
@@ -429,7 +430,7 @@ func (s *stageBuilder) takeSnapshot(files []string, shdDelete bool) (string, err
 	} else {
 		// Volumes are very weird. They get snapshotted in the next command.
 		files = append(files, util.Volumes()...)
-		snapshot, err = s.snapshotter.TakeSnapshot(files, shdDelete)
+		snapshot, err = s.snapshotter.TakeSnapshot(files, shdDelete, s.opts.ForceBuildMetadata)
 	}
 	timing.DefaultRun.Stop(t)
 	return snapshot, err
@@ -473,7 +474,7 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "tar file path does not exist")
 	}
-	if fi.Size() <= emptyTarSize {
+	if fi.Size() <= emptyTarSize && !s.opts.ForceBuildMetadata{
 		logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 		return nil, nil
 	}

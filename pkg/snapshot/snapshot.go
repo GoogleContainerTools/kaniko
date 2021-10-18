@@ -35,6 +35,9 @@ import (
 // For testing
 var snapshotPathPrefix = ""
 
+// for user layer flag
+var addUserLayer bool = true
+
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
 	l          *LayeredMap
@@ -60,7 +63,7 @@ func (s *Snapshotter) Key() (string, error) {
 
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
-func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string, error) {
+func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBuildMetadata bool) (string, error) {
 	f, err := ioutil.TempFile(config.KanikoDir, "")
 	if err != nil {
 		return "", err
@@ -68,7 +71,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool) (string,
 	defer f.Close()
 
 	s.l.Snapshot()
-	if len(files) == 0 {
+	if len(files) == 0 && !forceBuildMetadata {
 		logrus.Info("No files changed in this command, skipping snapshotting.")
 		return "", nil
 	}
