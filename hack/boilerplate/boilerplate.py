@@ -69,6 +69,10 @@ def file_passes(filename, refs, regexs):
 
     # remove build tags from the top of Go files
     if extension == "go":
+        p = regexs["go_build_constraints_go"]
+        (data, found) = p.subn("", data, 1)
+
+    if extension == "go":
         p = regexs["go_build_constraints"]
         (data, found) = p.subn("", data, 1)
 
@@ -144,6 +148,8 @@ def get_regexs():
     regexs["year"] = re.compile( 'YEAR' )
     # dates can be 2018, 2019, 2020 company holder names can be anything
     regexs["date"] = re.compile( '(2018|2019|2020)' )
+    # strip // go:build \n\n build constraints
+    regexs["go_build_constraints_go"] = re.compile(r"^(//go\:build.*)+\n", re.MULTILINE)
     # strip // +build \n\n build constraints
     regexs["go_build_constraints"] = re.compile(r"^(// \+build.*\n)+\n", re.MULTILINE)
     # strip #!.* from shell scripts
