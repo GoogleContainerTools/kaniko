@@ -1,4 +1,4 @@
-name: Unit tests
+name: Integration tests (Run)
 
 # Triggers the workflow on push or pull request events
 on: [push, pull_request]
