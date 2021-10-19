@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -263,15 +262,6 @@ var calledCheckPushPermission = false
 func setCalledFalse() {
 	calledExecCommand = []bool{}
 	calledCheckPushPermission = false
-}
-
-func fakeExecCommand(command string, args ...string) *exec.Cmd {
-	calledExecCommand = append(calledExecCommand, true)
-	cs := []string{"-test.run=TestHelperProcess", "--", command}
-	cs = append(cs, args...)
-	cmd := exec.Command(os.Args[0], cs...)
-	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-	return cmd
 }
 
 func fakeCheckPushPermission(ref name.Reference, kc authn.Keychain, t http.RoundTripper) error {
