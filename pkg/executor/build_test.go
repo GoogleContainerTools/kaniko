@@ -1361,6 +1361,81 @@ func hashCompositeKeys(t *testing.T, ck1 CompositeCache, ck2 CompositeCache) (st
 	return key1, key2
 }
 
+func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
+	// See https://github.com/GoogleContainerTools/kaniko/issues/589
+
+	for _, tc := range []struct {
+		description      string
+		command          string
+		expectedCacheKey string
+	}{
+		{
+			description:      "multi-stage copy command",
+			command:          "COPY --from=0 foo.txt bar.txt",
+			expectedCacheKey: "COPY --from=0 foo.txt bar.txt-some-cache-key",
+		},
+		{
+			description:      "copy command",
+			command:          "COPY foo.txt bar.txt",
+			expectedCacheKey: "COPY foo.txt bar.txt",
+		},
+	} {
+		t.Run(tc.description, func(t *testing.T) {
+			instructions, err := dockerfile.ParseCommands([]string{tc.command})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fc := util.FileContext{Root: "workspace"}
+			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, useCacheCommand := range []bool{false, true} {
+				t.Run(fmt.Sprintf("CacheCommand=%t", useCacheCommand), func(t *testing.T) {
+					var cmd fmt.Stringer = copyCommand
+					if useCacheCommand {
+						cmd = copyCommand.(*commands.CopyCommand).CacheCommand(nil)
+					}
+
+					sb := &stageBuilder{
+						fileContext: fc,
+						stageIdxToDigest: map[string]string{
+							"0": "some-digest",
+						},
+						digestToCacheKey: map[string]string{
+							"some-digest": "some-cache-key",
+						},
+					}
+
+					ck := CompositeCache{}
+					ck, err = sb.populateCompositeKey(
+						cmd,
+						[]string{},
+						ck,
+						dockerfile.NewBuildArgs([]string{}),
+						[]string{},
+					)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					actualCacheKey := ck.Key()
+					if tc.expectedCacheKey != actualCacheKey {
+						t.Errorf(
+							"Expected cache key to be %s, was %s",
+							tc.expectedCacheKey,
+							actualCacheKey,
+						)
+					}
+
+				})
+			}
+		})
+	}
+}
+
 func Test_ResolveCrossStageInstructions(t *testing.T) {
 	df := `
 	FROM scratch
