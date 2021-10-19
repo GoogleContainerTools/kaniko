@@ -38,7 +38,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        service_account_key: ${{ secrets.GCR_PUSH_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
@@ -51,7 +51,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile_slim
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
@@ -101,7 +101,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        service_account_key: ${{ secrets.GCR_PUSH_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
@@ -154,7 +154,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        service_account_key: ${{ secrets.GCR_PUSH_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
