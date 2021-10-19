@@ -1,3 +1,77 @@
+# v1.7.0 Release 2021-10-19
+This is Oct's 2021 release.
+
+## Highights
+
+* In this release, we have kaniko **s390x** platform support for multi-arch image.
+* Kaniko **Self Serve** documentation is up to enableuser to build and push kaniko images themselves [here](https://github.com/GoogleContainerTools/kaniko/blob/master/RELEASE.md)
+
+
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.7.0
+gcr.io/kaniko-project/executor:latest
+```
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.7.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.7.0-slim
+```
+
+* Remove tarball.WithCompressedCaching flag to resolve OOM Killed error [#1722](https://github.com/GoogleContainerTools/kaniko/pull/1722)
+* disable github action workflow on push to master [#1770](https://github.com/GoogleContainerTools/kaniko/pull/1770)
+* Add s390x support to docker images [copy] [#1769](https://github.com/GoogleContainerTools/kaniko/pull/1769)
+* Fix typo [#1719](https://github.com/GoogleContainerTools/kaniko/pull/1719)
+* Fix composite cache key for multi-stage copy command [#1735](https://github.com/GoogleContainerTools/kaniko/pull/1735)
+* chore: add workflows for pr tests [#1766](https://github.com/GoogleContainerTools/kaniko/pull/1766)
+* Make /bin/sh available to debug image [#1748](https://github.com/GoogleContainerTools/kaniko/pull/1748)
+* Fix executor Dockerfile, which wasn't building [#1741](https://github.com/GoogleContainerTools/kaniko/pull/1741)
+* Support force-building metadata layers into snapshot [#1731](https://github.com/GoogleContainerTools/kaniko/pull/1731)
+* Add support for CPU variants [#1676](https://github.com/GoogleContainerTools/kaniko/pull/1676)
+* refactor: adjust bpfd container runtime detection [#1686](https://github.com/GoogleContainerTools/kaniko/pull/1686)
+* Fix snapshotter ignore list; do not attempt to delete whiteouts of ignored paths [#1652](https://github.com/GoogleContainerTools/kaniko/pull/1652)
+* Add instructions for using JFrog Artifactory [#1715](https://github.com/GoogleContainerTools/kaniko/pull/1715)
+* add SECURITY.md [#1710](https://github.com/GoogleContainerTools/kaniko/pull/1710)
+* Support mirror registries with path component [#1707](https://github.com/GoogleContainerTools/kaniko/pull/1707)
+* Retry extracting filesystem from image [#1685](https://github.com/GoogleContainerTools/kaniko/pull/1685)
+* Bugfix/trailing path separator [#1683](https://github.com/GoogleContainerTools/kaniko/pull/1683)
+* docs: add missing cache-copy-layers arg in README [#1672](https://github.com/GoogleContainerTools/kaniko/pull/1672)
+* save snaphots to tmp dir [#1662](https://github.com/GoogleContainerTools/kaniko/pull/1662)
+* Revert "save snaphots to tmp dir" [#1670](https://github.com/GoogleContainerTools/kaniko/pull/1670)
+* Try to warm all images and warn about errors [#1653](https://github.com/GoogleContainerTools/kaniko/pull/1653)
+* Exit Code Propagation [#1655](https://github.com/GoogleContainerTools/kaniko/pull/1655)
+* Fix changelog headings [#1643](https://github.com/GoogleContainerTools/kaniko/pull/1643)
+
+
+Huge thank you for this release towards our contributors:
+- Anbraten
+- Benjamin Krenn
+- Gilbert Gilb's
+- Jake Sanders
+- Janosch Maier
+- Jason Hall
+- Jose Donizetti
+- Kamal Nasser
+- Liwen Guo
+- Max Walther
+- Mikhail Vasin
+- Patrick Barker
+- Rhianna
+- Silvano Cirujano Cuesta
+- Tejal Desai
+- Yahav Itzhak
+- ankitm123
+- ejose19
+- nihilo
+- priyawadhwa
+
 # v1.6.0 Release 2021-04-23
 This is April's 2021 release.
 
