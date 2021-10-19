@@ -477,7 +477,12 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 		return nil, nil
 	}
 
-	layer, err := tarball.LayerFromFile(tarPath, tarball.WithCompressedCaching)
+	var layer v1.Layer
+	if s.opts.CompressedCaching == true {
+		layer, err = tarball.LayerFromFile(tarPath, tarball.WithCompressedCaching)
+	} else {
+		layer, err = tarball.LayerFromFile(tarPath)
+	}
 	if err != nil {
 		return nil, err
 	}
