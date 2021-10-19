@@ -93,7 +93,7 @@ func TestK8s(t *testing.T) {
 				"job/kaniko-test-"+job.Name)
 			if out, errR := RunCommandWithoutTest(kubeWaitCmd); errR != nil {
 				t.Log(kubeWaitCmd.Args)
-				t.Log(out)
+				t.Log(string(out))
 				descCmd := exec.Command("kubectl", "describe", "job/kaniko-test-"+job.Name)
 				outD, errD := RunCommandWithoutTest(descCmd)
 				if errD != nil {
