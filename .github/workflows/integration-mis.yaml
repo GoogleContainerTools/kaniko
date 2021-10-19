@@ -4,7 +4,7 @@ name: Integration Tests Misc
 on: [push, pull_request]
 
 concurrency:
-  group: ${{ github.head_ref }}
+  group: int-test-mis-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:

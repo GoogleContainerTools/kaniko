@@ -4,7 +4,7 @@ name: Intergration tests (K8s)
 on: [push, pull_request]
 
 concurrency:
-  group: ${{ github.head_ref }}
+  group: int-test-k8s${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:

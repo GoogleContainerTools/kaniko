@@ -4,7 +4,7 @@ name: Integration tests (Layers)
 on: [push, pull_request]
 
 concurrency:
-  group: ${{ github.head_ref }}
+  group: int-test-layers-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:

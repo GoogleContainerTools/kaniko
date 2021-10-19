@@ -4,7 +4,7 @@ name: Unit tests
 on: [push, pull_request]
 
 concurrency:
-  group: ${{ github.head_ref }}
+  group: unit-tests-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
