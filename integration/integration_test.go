@@ -324,8 +324,8 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
-		"--registry-mirror", "doesnotexist.example.com/",
-		"--registry-mirror", "us-mirror.gcr.io/",
+		"--registry-mirror", "doesnotexist.example.com/test",
+		"--registry-mirror", "us-mirror.gcr.io/test",
 		"-c", fmt.Sprintf("git://%s", repo))
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
