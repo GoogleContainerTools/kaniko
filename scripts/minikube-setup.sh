@@ -15,27 +15,6 @@
 
 set -ex
 
-curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
-kubectl version --client
-
-# conntrack is required for minikube 1.19 and higher for none driver
-if ! conntrack --version &>/dev/null; then
-  echo "WARNING: No contrack is not installed"
-  sudo apt-get update -qq
-  sudo apt-get -qq -y install conntrack
-fi
-
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-chmod +x minikube
-sudo mv minikube /usr/local/bin/
-
-sudo apt-get update
-sudo apt-get install -y liblz4-tool
-cat /proc/cpuinfo
-
-sudo minikube start --vm-driver=none --force
-sudo minikube status
-sudo chown -R $USER $HOME/.kube $HOME/.minikube
-kubectl cluster-info
+curl -Lo minikube https://storage.googleapis.com/minikube-builds/master/minikube-linux-amd64
+sudo install minikube /usr/local/bin/minikube
+minikube start --profile=minikube --driver=docker

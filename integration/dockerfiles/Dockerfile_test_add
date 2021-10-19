@@ -26,8 +26,8 @@ COPY $file /arg
 ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3/docker-credential-gcr_linux_386-1.4.3.tar.gz context/foo /test/all/
 
 # Test environment replacement in the URL
-ENV VERSION=v1.4.3
-ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/${VERSION}-static/docker-credential-gcr_linux_amd64-1.4.3.tar.gz /destination
+ENV VERSION=v2.1.0
+ADD https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/${VERSION}/docker-credential-gcr_darwin_amd64-2.1.0.tar.gz /destination
 
 # Test full url replacement
 ENV URL=https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3/docker-credential-gcr_linux_386-1.4.3.tar.gz

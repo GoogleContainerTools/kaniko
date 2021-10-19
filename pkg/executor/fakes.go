@@ -38,7 +38,7 @@ func (f fakeSnapShotter) Init() error { return nil }
 func (f fakeSnapShotter) TakeSnapshotFS() (string, error) {
 	return f.tarPath, nil
 }
-func (f fakeSnapShotter) TakeSnapshot(_ []string, _ bool) (string, error) {
+func (f fakeSnapShotter) TakeSnapshot(_ []string, _, _ bool) (string, error) {
 	return f.tarPath, nil
 }
 
