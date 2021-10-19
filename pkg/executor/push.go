@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -72,7 +71,6 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 // for testing
 var (
 	fs                        = afero.NewOsFs()
-	execCommand               = exec.Command
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
