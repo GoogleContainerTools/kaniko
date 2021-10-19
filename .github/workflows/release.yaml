@@ -42,7 +42,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ secrets.GCR_PUSH_KEY }}
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
@@ -126,7 +126,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ secrets.GCR_PUSH_KEY }}
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
@@ -195,7 +195,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ secrets.GCR_PUSH_KEY }}
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
