@@ -50,7 +50,6 @@ func DockerConfLocation() string {
 	return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
 }
 
-
 func ConfigureGCR(flags string) error {
 	// Checking for existence of docker.config as it's normally required for
 	// authenticated registries and prevent overwriting user provided docker conf

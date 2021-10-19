@@ -75,14 +75,13 @@ var RootCmd = &cobra.Command{
 		// Historically kaniko was pre-configured by default with gcr credential helper,
 		// in here we keep the backwards compatibility by enabling the GCR helper only
 		// when gcr.io (or pkg.dev) is in one of the destinations.
-		if isGCR{
+		if isGCR {
 			util.ConfigureGCR("")
 		}
 
 		if err := cache.WarmCache(opts); err != nil {
 			exit(errors.Wrap(err, "Failed warming cache"))
 		}
-
 
 	},
 }
