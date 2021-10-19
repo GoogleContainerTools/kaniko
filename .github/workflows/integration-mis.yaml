@@ -11,8 +11,6 @@ jobs:
       TRAVIS_REPO_SLUG: ${{ github.repository }}
       TRAVIS_BRANCH: ${{ github.head_ref }}
       TRAVIS_PULL_REQUEST: ${{ github.event.number }}
-      TRAVIS_BASE_REPO_SLUG: ${{ github.base_ref }}
-      TRAVIS_GITHUB_REF: ${{ github.ref }}
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
