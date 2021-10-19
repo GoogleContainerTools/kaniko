@@ -1,7 +1,7 @@
 name: Unit tests
 
 # Triggers the workflow on push or pull request events
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: unit-tests-${{ github.head_ref }}
