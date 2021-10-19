@@ -316,7 +316,6 @@ func TestCheckPushPermissions(t *testing.T) {
 		},
 	}
 
-	execCommand = fakeExecCommand
 	checkRemotePushPermission = fakeCheckPushPermission
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
