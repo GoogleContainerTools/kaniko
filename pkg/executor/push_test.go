@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -431,8 +432,8 @@ func TestCheckPushPermissions(t *testing.T) {
 				Destinations: test.Destination,
 			}
 			if test.ExistingConfig {
-				afero.WriteFile(fs, DockerConfLocation(), []byte(""), os.FileMode(0644))
-				defer fs.Remove(DockerConfLocation())
+				afero.WriteFile(fs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
+				defer fs.Remove(util.DockerConfLocation())
 			}
 			CheckPushPermissions(&opts)
 			for i, shdCall := range test.ShouldCallExecCommand {
