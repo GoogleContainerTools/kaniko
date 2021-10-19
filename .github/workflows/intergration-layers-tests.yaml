@@ -3,6 +3,10 @@ name: Integration tests (Layers)
 # Triggers the workflow on push or pull request events
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   build-executor:
     env:

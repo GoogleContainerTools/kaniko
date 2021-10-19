@@ -4,6 +4,9 @@ on:
   push:
     tags:
     - 'v[0-9]+.[0-9]+.[0-9]+*'
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
   build-executor:
