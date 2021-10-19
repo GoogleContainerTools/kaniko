@@ -207,9 +207,9 @@ func TestRun(t *testing.T) {
 
 func getGitRepo() string {
 	var branch, repoSlug string
-	if os.Getenv("TRAVIS_PULL_REQUEST") != "false" {
-		branch = os.Getenv("TRAVIS_PULL_REQUEST_BRANCH")
-		repoSlug = os.Getenv("TRAVIS_PULL_REQUEST_SLUG")
+	if os.Getenv("TRAVIS_PULL_REQUEST") != "" {
+		branch = os.Getenv("TRAVIS_PULL_BRANCH")
+		repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
 		log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
 	} else {
 		branch = os.Getenv("TRAVIS_BRANCH")
