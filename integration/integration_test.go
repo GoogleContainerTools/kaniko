@@ -324,8 +324,8 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
-		"--registry-mirror", "doesnotexist.example.com",
-		"--registry-mirror", "us-mirror.gcr.io",
+		"--registry-mirror", "doesnotexist.example.com/",
+		"--registry-mirror", "us-mirror.gcr.io/",
 		"-c", fmt.Sprintf("git://%s", repo))
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)
@@ -420,26 +420,31 @@ func TestBuildWithHTTPError(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":     12,
-		"Dockerfile_test_scratch": 3,
+		"Dockerfile_test_add":                       12,
+		"Dockerfile_test_scratch":                   3,
+		"Dockerfile_test_meta_arg":                  1,
+		"Dockerfile_test_copy_same_file_many_times": 1,
+		"Dockerfile_test_arg_multi_with_quotes":     1,
+		"Dockerfile_test_arg_multi":                 1,
+		"Dockerfile_test_arg_blank_with_quotes":     1,
 	}
 	for _, dockerfile := range allDockerfiles {
 		t.Run("test_layer_"+dockerfile, func(t *testing.T) {
-			dockerfile := dockerfile
+			dockerfileTest := dockerfile
 
 			t.Parallel()
-			if _, ok := imageBuilder.DockerfilesToIgnore[dockerfile]; ok {
+			if _, ok := imageBuilder.DockerfilesToIgnore[dockerfileTest]; ok {
 				t.SkipNow()
 			}
 
-			buildImage(t, dockerfile, imageBuilder)
+			buildImage(t, dockerfileTest, imageBuilder)
 
 			// Pull the kaniko image
-			dockerImage := GetDockerImage(config.imageRepo, dockerfile)
-			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
+			dockerImage := GetDockerImage(config.imageRepo, dockerfileTest)
+			kanikoImage := GetKanikoImage(config.imageRepo, dockerfileTest)
 			pullCmd := exec.Command("docker", "pull", kanikoImage)
 			RunCommand(pullCmd, t)
-			checkLayers(t, dockerImage, kanikoImage, offset[dockerfile])
+			checkLayers(t, dockerImage, kanikoImage, offset[dockerfileTest])
 		})
 	}
 
