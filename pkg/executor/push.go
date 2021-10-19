@@ -17,13 +17,11 @@ limitations under the License.
 package executor
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -61,28 +59,6 @@ const (
 	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
 )
 
-// DockerConfLocation returns the file system location of the Docker
-// configuration file under the directory set in the DOCKER_CONFIG environment
-// variable.  If that variable is not set, it returns the OS-equivalent of
-// "/kaniko/.docker/config.json".
-func DockerConfLocation() string {
-	configFile := "config.json"
-	if dockerConfig := os.Getenv("DOCKER_CONFIG"); dockerConfig != "" {
-		file, err := os.Stat(dockerConfig)
-		if err == nil {
-			if file.IsDir() {
-				return filepath.Join(dockerConfig, configFile)
-			}
-		} else {
-			if os.IsNotExist(err) {
-				return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
-			}
-		}
-		return filepath.Clean(dockerConfig)
-	}
-	return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
-}
-
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
 	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
@@ -95,7 +71,6 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 // for testing
 var (
 	fs                        = afero.NewOsFs()
-	execCommand               = exec.Command
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
@@ -110,8 +85,6 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	}
 
 	checked := map[string]bool{}
-	_, err := fs.Stat(DockerConfLocation())
-	dockerConfNotExists := os.IsNotExist(err)
 	for _, destination := range targets {
 		destRef, err := name.NewTag(destination, name.WeakValidation)
 		if err != nil {
@@ -126,18 +99,8 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		// in here we keep the backwards compatibility by enabling the GCR helper only
 		// when gcr.io (or pkg.dev) is in one of the destinations.
 		if registryName == "gcr.io" || strings.HasSuffix(registryName, ".gcr.io") || strings.HasSuffix(registryName, ".pkg.dev") {
-			// Checking for existence of docker.config as it's normally required for
-			// authenticated registries and prevent overwriting user provided docker conf
-			if dockerConfNotExists {
-				flags := fmt.Sprintf("--registries=%s", registryName)
-				cmd := execCommand("docker-credential-gcr", "configure-docker", flags)
-				var out bytes.Buffer
-				cmd.Stderr = &out
-				if err := cmd.Run(); err != nil {
-					return errors.Wrap(err, fmt.Sprintf("error while configuring docker-credential-gcr helper: %s : %s", cmd.String(), out.String()))
-				}
-			} else {
-				logrus.Warnf("\nSkip running docker-credential-gcr as user provided docker configuration exists at %s", DockerConfLocation())
+			if err := util.ConfigureGCR(fmt.Sprintf("--registries=%s", registryName)); err != nil {
+				return err
 			}
 		}
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {

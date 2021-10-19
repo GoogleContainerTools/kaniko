@@ -19,11 +19,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/logging"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -63,9 +65,24 @@ var RootCmd = &cobra.Command{
 				exit(errors.Wrap(err, "Failed to create cache directory"))
 			}
 		}
+		isGCR := false
+		for _, image := range opts.Images {
+			if strings.Contains(image, "gcr.io") || strings.Contains(image, ".pkg.dev") {
+				isGCR = true
+				break
+			}
+		}
+		// Historically kaniko was pre-configured by default with gcr credential helper,
+		// in here we keep the backwards compatibility by enabling the GCR helper only
+		// when gcr.io (or pkg.dev) is in one of the destinations.
+		if isGCR {
+			util.ConfigureGCR("")
+		}
+
 		if err := cache.WarmCache(opts); err != nil {
 			exit(errors.Wrap(err, "Failed warming cache"))
 		}
+
 	},
 }
 
