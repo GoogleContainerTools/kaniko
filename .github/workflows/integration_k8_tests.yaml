@@ -1,7 +1,7 @@
 name: Intergration tests (K8s)
 
 # Triggers the workflow on push or pull request events
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: int-test-k8s${{ github.head_ref }}
