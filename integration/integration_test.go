@@ -420,8 +420,8 @@ func TestBuildWithHTTPError(t *testing.T) {
 
 func TestLayers(t *testing.T) {
 	offset := map[string]int{
-		"Dockerfile_test_add":                       12,
-		"Dockerfile_test_scratch":                   3,
+		"Dockerfile_test_add":     12,
+		"Dockerfile_test_scratch": 3,
 
 		// TODO: tejaldesai fix this!
 		"Dockerfile_test_meta_arg":                  1,
