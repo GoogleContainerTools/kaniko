@@ -53,7 +53,7 @@ RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true) 
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-#RUN make GOARCH=$(cat /goarch) && make GOARCH=$(cat /goarch) out/warmer
+RUN make GOARCH=$(cat /goarch) && make GOARCH=$(cat /goarch) out/warmer
 
 # Generate latest ca-certificates
 
@@ -65,8 +65,8 @@ RUN \
   cat /etc/ssl/certs/* > /ca-certificates.crt
 
 FROM scratch
-#COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
-#COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/* /kaniko/
+COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/out/warmer /kaniko/warmer
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /go/src/github.com/awslabs/amazon-ecr-credential-helper/bin/local/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /go/src/github.com/chrismellard/docker-credential-acr-env/build/docker-credential-acr-env /kaniko/docker-credential-acr
