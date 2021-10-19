@@ -8,7 +8,7 @@ Kaniko is not an officially supported Google product. Kaniko is maintained by Go
 ## Self-Serve Kaniko Release  [Non-Google contributors]
 Kaniko is not an officially supported Google product however only contributors part of
 Google organization can release Kaniko to official kaniko project at `kaniko-project`.
-If you are a part of [Google organization](https://github.com/orgs/google/people), please see skip to [Kaniko Release Process - Google Contributors](https://github.com/GoogleContainerTools/kaniko/blob/master/RELEASE.md#kaniko-release-process)
+If you are a part of [Google organization](https://github.com/orgs/google/people), please see skip to [Kaniko Release Process - Google Contributors](https://github.com/GoogleContainerTools/kaniko/blob/master/RELEASE.md#kaniko-release-process-google-contributors)
 
 Non-Google Contributors or users, please follow the following steps:
 1. Follow the setup instruction to fork kaniko repository [here](https://github.com/GoogleContainerTools/kaniko/blob/master/DEVELOPMENT.md#getting-started)
