@@ -2,6 +2,10 @@ name: Build images on pull requests
 
 on: [pull_request]
 
+concurrency:
+  group: release-images-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   build-executor:
     env:
