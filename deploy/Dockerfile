@@ -51,7 +51,7 @@ RUN GOARCH=$(cat /goarch) && (mkdir -p /go/src/github.com/chrismellard || true) 
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-RUN make GOARCH=$(cat /goarch.txt)
+RUN make GOARCH=$(cat /goarch)
 
 # Generate latest ca-certificates
 
