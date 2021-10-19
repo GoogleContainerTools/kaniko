@@ -7,7 +7,7 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      PLATFORMS: "linux/amd64,linux/arm64,linux/s390x"
+      PLATFORMS: "linux/amd64,linux/arm64"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -51,7 +51,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile_slim
-        platforms: linux/amd64,linux/arm64,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
@@ -60,7 +60,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile
-        platforms: linux/amd64,linux/arm64,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
@@ -70,7 +70,7 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      PLATFORMS: "linux/amd64,linux/arm64,linux/s390x"
+      PLATFORMS: "linux/amd64,linux/arm64"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -114,7 +114,7 @@ jobs:
       with:
         context: .
         file:  ./deploy/Dockerfile_debug
-        platforms: linux/amd64,linux/arm64,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-debug
@@ -123,7 +123,7 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      PLATFORMS: "linux/amd64,linux/arm64,linux/s390x"
+      PLATFORMS: "linux/amd64,linux/arm64"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -167,7 +167,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile_warmer
-        platforms: linux/amd64,linux/arm64,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
