@@ -1,8 +1,12 @@
 # v1.7.0 Release 2021-10-19
 This is Oct's 2021 release.
 
-**HighLights**
-In this release, we have kaniko s390x multi-arch image.
+## Highights
+
+* In this release, we have kaniko **s390x** platform support for multi-arch image.
+* Kaniko **Self Serve** documentation is up to enableuser to build and push kaniko images themselves [here](https://github.com/GoogleContainerTools/kaniko/blob/master/RELEASE.md)
+
+
 
 The executor images in this release are:
 ```
