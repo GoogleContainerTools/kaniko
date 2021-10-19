@@ -207,19 +207,16 @@ func TestRun(t *testing.T) {
 
 func getGitRepo() string {
 	var branch, repoSlug string
-	if _, ok := os.LookupEnv("TRAVIS"); ok {
-		if os.Getenv("TRAVIS_PULL_REQUEST") != "false" {
-			branch = os.Getenv("TRAVIS_PULL_REQUEST_BRANCH")
-			repoSlug = os.Getenv("TRAVIS_PULL_REQUEST_SLUG")
-			log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
-		} else {
-			branch = os.Getenv("TRAVIS_BRANCH")
-			repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
-			log.Printf("Travis CI repo: %s branch: %s\n", repoSlug, branch)
-		}
-		return "github.com/" + repoSlug + "#refs/heads/" + branch
+	if os.Getenv("TRAVIS_PULL_REQUEST") != "false" {
+		branch = os.Getenv("TRAVIS_PULL_REQUEST_BRANCH")
+		repoSlug = os.Getenv("TRAVIS_PULL_REQUEST_SLUG")
+		log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
+	} else {
+		branch = os.Getenv("TRAVIS_BRANCH")
+		repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
+		log.Printf("Travis CI repo: %s branch: %s\n", repoSlug, branch)
 	}
-	return "github.com/GoogleContainerTools/kaniko"
+	return "github.com/" + repoSlug + "#refs/heads/" + branch
 }
 
 func TestGitBuildcontext(t *testing.T) {

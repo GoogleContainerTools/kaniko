@@ -91,7 +91,7 @@ func TestK8s(t *testing.T) {
 
 			kubeWaitCmd := exec.Command("kubectl", "wait", "--for=condition=complete", "--timeout=60s",
 				"job/kaniko-test-"+job.Name)
-			if out, errR := RunCommandWithoutTest(kubeWaitCmd); errR != nil{
+			if out, errR := RunCommandWithoutTest(kubeWaitCmd); errR != nil {
 				t.Log(kubeWaitCmd.Args)
 				t.Log(out)
 				descCmd := exec.Command("kubectl", "describe", "job/kaniko-test-"+job.Name)
