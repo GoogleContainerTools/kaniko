@@ -91,7 +91,19 @@ func TestK8s(t *testing.T) {
 
 			kubeWaitCmd := exec.Command("kubectl", "wait", "--for=condition=complete", "--timeout=60s",
 				"job/kaniko-test-"+job.Name)
-			RunCommand(kubeWaitCmd, t)
+			if out, errR := RunCommandWithoutTest(kubeWaitCmd); errR != nil{
+				t.Log(kubeWaitCmd.Args)
+				t.Log(out)
+				descCmd := exec.Command("kubectl", "describe", "job/kaniko-test-"+job.Name)
+				outD, errD := RunCommandWithoutTest(descCmd)
+				if errD != nil {
+					t.Error(errD)
+				} else {
+					t.Log(outD)
+					t.Error(errR)
+				}
+				t.FailNow()
+			}
 
 			diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
