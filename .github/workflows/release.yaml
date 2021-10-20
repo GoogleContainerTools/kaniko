@@ -52,6 +52,8 @@ jobs:
         # Set up docker to authenticate
         # via gcloud command-line tool.
         gcloud auth configure-docker
+        echo ${{ env.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        echo ${{ env.PLATFORMS }}
 
     - uses: docker/build-push-action@v2
       with:
