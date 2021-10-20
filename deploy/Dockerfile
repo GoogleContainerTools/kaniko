@@ -33,7 +33,9 @@ RUN GOARCH=$(cat /goarch) && CGO_ENABLED=0 && \
   git clone https://github.com/GoogleCloudPlatform/docker-credential-gcr.git && \
   cd /go/src/github.com/GoogleCloudPlatform/docker-credential-gcr            && \
   git checkout 4cdd60d0f2d8a69bc70933f4d7718f9c4e956ff8                      && \
-  go build -o /usr/local/bin/docker-credential-gcr main.go
+  go get -u -t ./...                                                         && \
+  go build -ldflags "-linkmode external -extldflags -static" -i -o /usr/local/bin/docker-credential-gcr main.go
+
 
 # Get Amazon ECR credential helper
 RUN GOARCH=$(cat /goarch) && go get -u github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login && \
