@@ -8,7 +8,7 @@ spec:
       hostNetwork: true
       containers:
       - name: kaniko
-        image: localhost:5000/executor:debug
+        image: localhost:5000/executor:latest
         args: [ "--context=dir:///workspace",
                 "--destination={{.KanikoImage}}"]
         volumeMounts:

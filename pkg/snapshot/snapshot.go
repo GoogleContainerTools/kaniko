@@ -35,9 +35,6 @@ import (
 // For testing
 var snapshotPathPrefix = ""
 
-// for user layer flag
-var addUserLayer bool = true
-
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
 	l          *LayeredMap

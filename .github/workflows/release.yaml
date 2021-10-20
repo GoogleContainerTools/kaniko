@@ -10,7 +10,8 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
+      PLATFORMS: "linux/amd64,linux/arm64"
+
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -55,19 +56,8 @@ jobs:
     - uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./deploy/Dockerfile_slim
-        platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
-        push: true
-        tags: |
-          gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
-          gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
-          gcr.io/kaniko-project/executor:slim
-
-    - uses: docker/build-push-action@v2
-      with:
-        context: .
         file: ./deploy/Dockerfile
-        platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
@@ -94,7 +84,7 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
+      PLATFORMS: "linux/amd64,linux/arm64"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -140,7 +130,7 @@ jobs:
       with:
         context: .
         file:  ./deploy/Dockerfile_debug
-        platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-debug
@@ -163,7 +153,7 @@ jobs:
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
-      PLATFORMS: "linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
+      PLATFORMS: "linux/amd64,linux/arm64"
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -208,7 +198,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile_warmer
-        platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
           gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
@@ -226,3 +216,61 @@ jobs:
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer:${{ steps.vars.outputs.tag }}
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer:latest
+
+  build-slim:
+    env:
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REF: ${{ github.ref }}
+      PLATFORMS: "linux/amd64,linux/arm64,linux/s390x,linux/ppc64le"
+
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone source code
+      uses: actions/checkout@v2
+
+    - name: Get the tags
+      id: vars
+      run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: ${{ env.PLATFORMS }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+
+    - name: Setup gcloud CLI
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        project_id: kaniko-project
+        export_default_credentials: true
+
+    # Configure docker to use the gcloud command-line tool as a credential helper
+    - run: |
+        # Set up docker to authenticate
+        # via gcloud command-line tool.
+        gcloud auth configure-docker
+
+    - uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./deploy/Dockerfile_slim
+        platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+        push: true
+        tags: |
+          gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
+          gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
+          gcr.io/kaniko-project/executor:slim

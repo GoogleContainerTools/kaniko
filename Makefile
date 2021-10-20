@@ -14,7 +14,7 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 1
-VERSION_MINOR ?= 6
+VERSION_MINOR ?= 7
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
@@ -85,6 +85,11 @@ integration-test-k8s:
 integration-test-misc:
 	$(eval RUN_ARG=$(shell ./scripts/misc-integration-test.sh))
 	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
+
+.PHONY: k8s-executor-build-push
+k8s-executor-build-push:
+	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
+	docker push $(REGISTRY)/executor:latest
 
 .PHONY: images
 images:

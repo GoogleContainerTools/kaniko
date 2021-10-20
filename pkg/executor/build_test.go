@@ -784,6 +784,42 @@ func Test_stageBuilder_build(t *testing.T) {
 				rootDir:           dir,
 			}
 		}(),
+		func() testcase {
+			dir, files := tempDirAndFile(t)
+			file := files[0]
+			filePath := filepath.Join(dir, file)
+			ch := NewCompositeCache("", "meow")
+
+			ch.AddPath(filePath, util.FileContext{})
+			hash, err := ch.Hash()
+			if err != nil {
+				t.Errorf("couldn't create hash %v", err)
+			}
+			command := MockDockerCommand{
+				command:      "meow",
+				contextFiles: []string{filePath},
+				cacheCommand: MockCachedDockerCommand{
+					contextFiles: []string{filePath},
+				},
+			}
+
+			destDir, err := ioutil.TempDir("", "baz")
+			if err != nil {
+				t.Errorf("could not create temp dir %v", err)
+			}
+			return testcase{
+				description: "fake command cache enabled with tar compression disabled and key in cache",
+				opts:        &config.KanikoOptions{Cache: true, CompressedCaching: false},
+				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
+				layerCache: &fakeLayerCache{
+					retrieve: true,
+				},
+				expectedCacheKeys: []string{hash},
+				pushedCacheKeys:   []string{},
+				commands:          []commands.DockerCommand{command},
+				rootDir:           dir,
+			}
+		}(),
 		{
 			description: "fake command cache disabled and key not in cache",
 			opts:        &config.KanikoOptions{Cache: false},
@@ -1359,6 +1395,81 @@ func hashCompositeKeys(t *testing.T, ck1 CompositeCache, ck2 CompositeCache) (st
 		t.Errorf("could not hash composite key due to %s", err)
 	}
 	return key1, key2
+}
+
+func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
+	// See https://github.com/GoogleContainerTools/kaniko/issues/589
+
+	for _, tc := range []struct {
+		description      string
+		command          string
+		expectedCacheKey string
+	}{
+		{
+			description:      "multi-stage copy command",
+			command:          "COPY --from=0 foo.txt bar.txt",
+			expectedCacheKey: "COPY --from=0 foo.txt bar.txt-some-cache-key",
+		},
+		{
+			description:      "copy command",
+			command:          "COPY foo.txt bar.txt",
+			expectedCacheKey: "COPY foo.txt bar.txt",
+		},
+	} {
+		t.Run(tc.description, func(t *testing.T) {
+			instructions, err := dockerfile.ParseCommands([]string{tc.command})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fc := util.FileContext{Root: "workspace"}
+			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, useCacheCommand := range []bool{false, true} {
+				t.Run(fmt.Sprintf("CacheCommand=%t", useCacheCommand), func(t *testing.T) {
+					var cmd fmt.Stringer = copyCommand
+					if useCacheCommand {
+						cmd = copyCommand.(*commands.CopyCommand).CacheCommand(nil)
+					}
+
+					sb := &stageBuilder{
+						fileContext: fc,
+						stageIdxToDigest: map[string]string{
+							"0": "some-digest",
+						},
+						digestToCacheKey: map[string]string{
+							"some-digest": "some-cache-key",
+						},
+					}
+
+					ck := CompositeCache{}
+					ck, err = sb.populateCompositeKey(
+						cmd,
+						[]string{},
+						ck,
+						dockerfile.NewBuildArgs([]string{}),
+						[]string{},
+					)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					actualCacheKey := ck.Key()
+					if tc.expectedCacheKey != actualCacheKey {
+						t.Errorf(
+							"Expected cache key to be %s, was %s",
+							tc.expectedCacheKey,
+							actualCacheKey,
+						)
+					}
+
+				})
+			}
+		})
+	}
 }
 
 func Test_ResolveCrossStageInstructions(t *testing.T) {

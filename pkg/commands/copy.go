@@ -293,3 +293,20 @@ func copyCmdFilesUsedFromContext(
 
 	return files, nil
 }
+
+// AbstractCopyCommand can either be a CopyCommand or a CachingCopyCommand.
+type AbstractCopyCommand interface {
+	From() string
+}
+
+// CastAbstractCopyCommand tries to convert a command to an AbstractCopyCommand.
+func CastAbstractCopyCommand(cmd interface{}) (AbstractCopyCommand, bool) {
+	switch v := cmd.(type) {
+	case *CopyCommand:
+		return v, true
+	case *CachingCopyCommand:
+		return v, true
+	}
+
+	return nil, false
+}

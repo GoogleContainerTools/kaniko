@@ -58,6 +58,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--cache-ttl duration](#--cache-ttl-duration)
     - [--cleanup](#--cleanup)
     - [--context-sub-path](#--context-sub-path)
+    - [--compressed-caching](#--compressed-caching)
     - [--customPlatform](#--customPlatform)
     - [--digest-file](#--digest-file)
     - [--dockerfile](#--dockerfile)
@@ -395,7 +396,7 @@ as a remote image destination:
 ### Caching
 
 #### Caching Layers
-kaniko can cache layers created by `RUN` and `Copy` (configured by flag `--cache-copy-layers`) commands in a remote repository.
+kaniko can cache layers created by `RUN` and `COPY` (configured by flag `--cache-copy-layers`) commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
@@ -471,7 +472,7 @@ If you have enabled Workload Indentity on your GKE cluster then you can use the 
 
 Learn more on how to [enable](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster) and [migrate existing apps](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#migrate_applications_to) to workload identity.
 
-To authenticate using workload identity you need to run the kaniko pod using the Kubernetes Service Account (KSA) bound to Google Service Account (GSA) which as `Storage.Admin` permissions to push images to Google Container registry.
+To authenticate using workload identity you need to run the kaniko pod using the Kubernetes Service Account (KSA) bound to Google Service Account (GSA) which has `Storage.Admin` permissions to push images to Google Container registry.
 
 Please follow the detailed steps [here](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#authenticating_to) to create a Kubernetes Service Account, Google Service Account and create an IAM policy binding between the two to allow the Kubernetes Service account to act as the Google service account.
 
@@ -612,6 +613,11 @@ Cache timeout in hours. Defaults to two weeks.
 #### --cleanup
 
 Set this flag to clean the filesystem at the end of the build.
+
+#### --compressed-caching
+
+Set this to false in order to prevent tar compression for cached layers. This will increase the runtime of the build, but decrease the memory usage especially for large builds.
+Try to use `--compressed-caching=false` if your build fails with an out of memory error. Defaults to true.
 
 #### --context-sub-path
 
