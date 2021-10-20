@@ -37,15 +37,11 @@ fail=0
 for s in "${scripts[@]}"
 do
     echo "RUN ${s}"
-    set +e
-    ./$s
-    result=$?
-    set -e
-    if [[ $result  -eq 1 ]]; then
+    if "./${s}"; then
+        echo -e "${GREEN}PASSED${RESET} ${s}"
+    else
         echo -e "${RED}FAILED${RESET} ${s}"
         fail=1
-    else
-        echo -e "${GREEN}PASSED${RESET} ${s}"
     fi
 done
 exit $fail
