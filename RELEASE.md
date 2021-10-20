@@ -13,22 +13,25 @@ If you are a part of [Google organization](https://github.com/orgs/google/people
 Non-Google Contributors or users, please follow the following steps:
 1. Follow the setup instruction to fork kaniko repository [here](https://github.com/GoogleContainerTools/kaniko/blob/master/DEVELOPMENT.md#getting-started)
 2. Run the following `make` commands to build and push Kaniko image to your organization image repository.
-```shell
-REGISTRY=gcr.io/YOUR-PROJECT make images
-```
+  ```shell
+   REGISTRY=gcr.io/YOUR-PROJECT make images
+   ```
   The above command will build and push all the 3 kaniko images
-  1) gcr.io/YOUR-PROJECT/executor:latest
-  2) gcr.io/YOUR-PROJECT/executor:debug
-  3) gcr.io/YOUR-PROJECT/warmer:latest
+  * gcr.io/YOUR-PROJECT/executor:latest
+  * gcr.io/YOUR-PROJECT/executor:debug
+  * gcr.io/YOUR-PROJECT/warmer:latest
 
 3. You can choose tag these images using `docker tag` 
-e.g. To tag `gcr.io/YOUR-PROJECT/executor:latest` to a version `gcr.io/YOUR-PROJECT/executor:v1.6.0self-serve`, run
+e.g. To tag `gcr.io/YOUR-PROJECT/executor:latest` as `gcr.io/YOUR-PROJECT/executor:v1.6.0self-serve`, run
    ```shell
     docker tag gcr.io/YOUR-PROJECT/executor:latest gcr.io/YOUR-PROJECT/executor:v1.6.0self-serve
    ```
    
 Please change all usages of `gcr.io/kaniko-project/executor:latest` to `gcr.io/YOUR-PROJECT/executor:latest` for executor image and so on.
-
+4. Finally, pushed your tagged images via docker. You could also use the Makefile target `push` to push these images like this
+  ```shell
+   REGISTRY=gcr.io/YOUR-PROJECT make images
+  ```
 
 ## Kaniko Release Process [Google Contributors]
 ### Getting write access to the Kaniko Project
