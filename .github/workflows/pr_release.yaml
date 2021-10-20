@@ -39,7 +39,7 @@ jobs:
       uses: docker/setup-buildx-action@v1
       with:
         version: latest
-        config: .github/buildkitd.toml
+       
 
     - uses: docker/build-push-action@v2
       with:
@@ -88,7 +88,7 @@ jobs:
       uses: docker/setup-buildx-action@v1
       with:
         version: latest
-        config: .github/buildkitd.toml
+       
 
     - uses: docker/build-push-action@v2
       with:
@@ -129,7 +129,7 @@ jobs:
       uses: docker/setup-buildx-action@v1
       with:
         version: latest
-        config: .github/buildkitd.toml
+       
     - uses: docker/build-push-action@v2
       with:
         context: .
