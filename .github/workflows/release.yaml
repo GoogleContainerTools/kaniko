@@ -11,7 +11,7 @@ jobs:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
       PLATFORMS: "linux/amd64,linux/arm64,linux/s390x,linux/ppc64le"
-      GCR_DEVOPS_SERVICE_ACCOUNT_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -43,7 +43,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ env.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
@@ -52,8 +52,6 @@ jobs:
         # Set up docker to authenticate
         # via gcloud command-line tool.
         gcloud auth configure-docker
-        echo ${{ env.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
-        echo ${{ env.PLATFORMS }}
 
     - uses: docker/build-push-action@v2
       with:
@@ -98,7 +96,6 @@ jobs:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
       PLATFORMS: "linux/amd64,linux/arm64,linux/s390x,linux/ppc64le"
-      GCR_DEVOPS_SERVICE_ACCOUNT_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -130,7 +127,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ env.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
@@ -168,7 +165,6 @@ jobs:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
       PLATFORMS: "linux/amd64,linux/arm64,linux/s390x,linux/ppc64le"
-      GCR_DEVOPS_SERVICE_ACCOUNT_KEY: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -200,7 +196,7 @@ jobs:
     - name: Setup gcloud CLI
       uses: google-github-actions/setup-gcloud@master
       with:
-        service_account_key: ${{ env.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
         export_default_credentials: true
 
