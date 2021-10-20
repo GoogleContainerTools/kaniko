@@ -25,6 +25,7 @@ gcr.io/kaniko-project/executor:slim
 gcr.io/kaniko-project/executor:v1.7.0-slim
 ```
 
+*  git: accept explicit commit hash for git context [#1765](https://github.com/GoogleContainerTools/kaniko/pull/1765)
 * Remove tarball.WithCompressedCaching flag to resolve OOM Killed error [#1722](https://github.com/GoogleContainerTools/kaniko/pull/1722)
 * disable github action workflow on push to master [#1770](https://github.com/GoogleContainerTools/kaniko/pull/1770)
 * Add s390x support to docker images [copy] [#1769](https://github.com/GoogleContainerTools/kaniko/pull/1769)
@@ -71,6 +72,7 @@ Huge thank you for this release towards our contributors:
 - ejose19
 - nihilo
 - priyawadhwa
+- wwade
 
 # v1.6.0 Release 2021-04-23
 This is April's 2021 release.
