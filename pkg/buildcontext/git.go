@@ -96,6 +96,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	if fetchRef != "" {
 		err = r.Fetch(&git.FetchOptions{
 			RemoteName: "origin",
+			Auth:       getGitAuth(),
 			RefSpecs:   []config.RefSpec{config.RefSpec(fetchRef + ":" + fetchRef)},
 		})
 		if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
