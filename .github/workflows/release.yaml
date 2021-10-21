@@ -72,13 +72,9 @@ jobs:
     # Use cosign to sign the images
     - run: |
         export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
-        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim  
-        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim 
-        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:slim  
-
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}
-        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:latest  
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:latest
 
   build-debug:
     env:
@@ -274,3 +270,17 @@ jobs:
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
           gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
           gcr.io/kaniko-project/executor:slim
+
+    - name: Sign images
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: 'v0.2.0'
+
+      # Use cosign to sign the images
+      - run: |
+          export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
+          cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
+          cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
+          cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:slim
+
+
