@@ -21,6 +21,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
@@ -28,14 +29,18 @@ import (
 )
 
 // Present the ARM instruction set architecture, eg: v7, v8
-var cpuVariant string
+// Don't use this value directly; call cpuVariant() instead.
+var cpuVariantValue string
 
-func init() {
-	if isArmArch(runtime.GOARCH) {
-		cpuVariant = getCPUVariant()
-	} else {
-		cpuVariant = ""
-	}
+var cpuVariantOnce sync.Once
+
+func cpuVariant() string {
+	cpuVariantOnce.Do(func() {
+		if isArmArch(runtime.GOARCH) {
+			cpuVariantValue = getCPUVariant()
+		}
+	})
+	return cpuVariantValue
 }
 
 // For Linux, the kernel has already detected the ABI, ISA and Features.
@@ -74,8 +79,8 @@ func getCPUInfo(pattern string) (info string, err error) {
 }
 
 func getCPUVariant() string {
-	if runtime.GOOS == "windows" {
-		// Windows only supports v7 for ARM32 and v8 for ARM64 and so we can use
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		// Windows/Darwin only supports v7 for ARM32 and v8 for ARM64 and so we can use
 		// runtime.GOARCH to determine the variants
 		var variant string
 		switch runtime.GOARCH {
@@ -96,16 +101,25 @@ func getCPUVariant() string {
 		return ""
 	}
 
-	switch variant {
-	case "8", "AArch64":
+	// handle edge case for Raspberry Pi ARMv6 devices (which due to a kernel quirk, report "CPU architecture: 7")
+	// https://www.raspberrypi.org/forums/viewtopic.php?t=12614
+	if runtime.GOARCH == "arm" && variant == "7" {
+		model, err := getCPUInfo("model name")
+		if err == nil && strings.HasPrefix(strings.ToLower(model), "armv6-compatible") {
+			variant = "6"
+		}
+	}
+
+	switch strings.ToLower(variant) {
+	case "8", "aarch64":
 		variant = "v8"
-	case "7", "7M", "?(12)", "?(13)", "?(14)", "?(15)", "?(16)", "?(17)":
+	case "7", "7m", "?(12)", "?(13)", "?(14)", "?(15)", "?(16)", "?(17)":
 		variant = "v7"
-	case "6", "6TEJ":
+	case "6", "6tej":
 		variant = "v6"
-	case "5", "5T", "5TE", "5TEJ":
+	case "5", "5t", "5te", "5tej":
 		variant = "v5"
-	case "4", "4T":
+	case "4", "4t":
 		variant = "v4"
 	case "3":
 		variant = "v3"

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/go-containerregistry/internal/verify"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -122,6 +123,30 @@ func (r *remoteIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
 	return desc.ImageIndex()
 }
 
+// Workaround for #819.
+func (r *remoteIndex) Layer(h v1.Hash) (v1.Layer, error) {
+	index, err := r.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, childDesc := range index.Manifests {
+		if h == childDesc.Digest {
+			l, err := partial.CompressedToLayer(&remoteLayer{
+				fetcher: r.fetcher,
+				digest:  h,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return &MountableLayer{
+				Layer:     l,
+				Reference: r.Ref.Context().Digest(h.String()),
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("layer not found: %s", h)
+}
+
 func (r *remoteIndex) imageByPlatform(platform v1.Platform) (v1.Image, error) {
 	desc, err := r.childByPlatform(platform)
 	if err != nil {
@@ -174,9 +199,20 @@ func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
 // Convert one of this index's child's v1.Descriptor into a remote.Descriptor, with the given platform option.
 func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform) (*Descriptor, error) {
 	ref := r.Ref.Context().Digest(child.Digest.String())
-	manifest, _, err := r.fetchManifest(ref, []types.MediaType{child.MediaType})
-	if err != nil {
-		return nil, err
+	var (
+		manifest []byte
+		err      error
+	)
+	if child.Data != nil {
+		if err := verify.Descriptor(child); err != nil {
+			return nil, err
+		}
+		manifest = child.Data
+	} else {
+		manifest, _, err = r.fetchManifest(ref, []types.MediaType{child.MediaType})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &Descriptor{
 		fetcher: fetcher{

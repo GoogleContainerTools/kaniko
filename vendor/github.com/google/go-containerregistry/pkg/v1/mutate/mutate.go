@@ -17,6 +17,7 @@ package mutate
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,10 +25,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/internal/gzip"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/match"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
@@ -111,6 +113,72 @@ func Config(base v1.Image, cfg v1.Config) (v1.Image, error) {
 	cf.Config = cfg
 
 	return ConfigFile(base, cf)
+}
+
+// Annotatable represents a manifest that can carry annotations.
+type Annotatable interface {
+	partial.WithRawManifest
+}
+
+// Annotations mutates the annotations on an annotatable image or index manifest.
+//
+// The annotatable input is expected to be a v1.Image or v1.ImageIndex, and
+// returns the same type. You can type-assert the result like so:
+//
+//     img := Annotations(empty.Image, map[string]string{
+//         "foo": "bar",
+//     }).(v1.Image)
+//
+// Or for an index:
+//
+//     idx := Annotations(empty.Index, map[string]string{
+//         "foo": "bar",
+//     }).(v1.ImageIndex)
+//
+// If the input Annotatable is not an Image or ImageIndex, the result will
+// attempt to lazily annotate the raw manifest.
+func Annotations(f Annotatable, anns map[string]string) Annotatable {
+	if img, ok := f.(v1.Image); ok {
+		return &image{
+			base:        img,
+			annotations: anns,
+		}
+	}
+	if idx, ok := f.(v1.ImageIndex); ok {
+		return &index{
+			base:        idx,
+			annotations: anns,
+		}
+	}
+	return arbitraryRawManifest{f, anns}
+}
+
+type arbitraryRawManifest struct {
+	a    Annotatable
+	anns map[string]string
+}
+
+func (a arbitraryRawManifest) RawManifest() ([]byte, error) {
+	b, err := a.a.RawManifest()
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	if ann, ok := m["annotations"]; ok {
+		if annm, ok := ann.(map[string]string); ok {
+			for k, v := range a.anns {
+				annm[k] = v
+			}
+		} else {
+			return nil, fmt.Errorf(".annotations is not a map: %T", ann)
+		}
+	} else {
+		m["annotations"] = a.anns
+	}
+	return json.Marshal(m)
 }
 
 // ConfigFile mutates the provided v1.Image to have the provided v1.ConfigFile

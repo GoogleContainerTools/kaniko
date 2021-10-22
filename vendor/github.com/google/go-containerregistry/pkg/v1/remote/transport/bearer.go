@@ -25,8 +25,9 @@ import (
 	"strings"
 
 	authchallenge "github.com/docker/distribution/registry/client/auth/challenge"
+	"github.com/google/go-containerregistry/internal/redact"
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/internal/redact"
+	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -262,6 +263,7 @@ func (bt *bearerTransport) refreshOauth(ctx context.Context) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if err := CheckError(resp, http.StatusOK); err != nil {
+		logs.Warn.Printf("No matching credentials were found for %q", bt.registry)
 		return nil, err
 	}
 
@@ -301,6 +303,7 @@ func (bt *bearerTransport) refreshBasic(ctx context.Context) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if err := CheckError(resp, http.StatusOK); err != nil {
+		logs.Warn.Printf("No matching credentials were found for %q", bt.registry)
 		return nil, err
 	}
 

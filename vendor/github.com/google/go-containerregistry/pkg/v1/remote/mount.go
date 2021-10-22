@@ -34,6 +34,11 @@ func (ml *MountableLayer) Descriptor() (*v1.Descriptor, error) {
 	return partial.Descriptor(ml.Layer)
 }
 
+// Exists is a hack. See partial.Exists.
+func (ml *MountableLayer) Exists() (bool, error) {
+	return partial.Exists(ml.Layer)
+}
+
 // mountableImage wraps the v1.Layer references returned by the embedded v1.Image
 // in MountableLayer's so that remote.Write might attempt to mount them from their
 // source repository.

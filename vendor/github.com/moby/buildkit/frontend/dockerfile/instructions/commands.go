@@ -1,11 +1,12 @@
 package instructions
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
+	"github.com/pkg/errors"
 )
 
 // KeyValuePair represent an arbitrary named value (useful in slice instead of map[string] string to preserve ordering)
@@ -20,8 +21,9 @@ func (kvp *KeyValuePair) String() string {
 
 // KeyValuePairOptional is the same as KeyValuePair but Value is optional
 type KeyValuePairOptional struct {
-	Key   string
-	Value *string
+	Key     string
+	Value   *string
+	Comment string
 }
 
 func (kvpo *KeyValuePairOptional) ValueString() string {
@@ -35,6 +37,7 @@ func (kvpo *KeyValuePairOptional) ValueString() string {
 // Command is implemented by every command present in a dockerfile
 type Command interface {
 	Name() string
+	Location() []parser.Range
 }
 
 // KeyValuePairs is a slice of KeyValuePair
@@ -42,8 +45,9 @@ type KeyValuePairs []KeyValuePair
 
 // withNameAndCode is the base of every command in a Dockerfile (String() returns its source code)
 type withNameAndCode struct {
-	code string
-	name string
+	code     string
+	name     string
+	location []parser.Range
 }
 
 func (c *withNameAndCode) String() string {
@@ -55,8 +59,13 @@ func (c *withNameAndCode) Name() string {
 	return c.name
 }
 
+// Location of the command in source
+func (c *withNameAndCode) Location() []parser.Range {
+	return c.location
+}
+
 func newWithNameAndCode(req parseRequest) withNameAndCode {
-	return withNameAndCode{code: strings.TrimSpace(req.original), name: req.command}
+	return withNameAndCode{code: strings.TrimSpace(req.original), name: req.command, location: req.location}
 }
 
 // SingleWordExpander is a provider for variable expansion where 1 word => 1 output
@@ -156,19 +165,45 @@ func (c *LabelCommand) Expand(expander SingleWordExpander) error {
 	return expandKvpsInPlace(c.Labels, expander)
 }
 
-// SourcesAndDest represent a list of source files and a destination
-type SourcesAndDest []string
-
-// Sources list the source paths
-func (s SourcesAndDest) Sources() []string {
-	res := make([]string, len(s)-1)
-	copy(res, s[:len(s)-1])
-	return res
+// SourceContent represents an anonymous file object
+type SourceContent struct {
+	Path   string
+	Data   string
+	Expand bool
 }
 
-// Dest path of the operation
-func (s SourcesAndDest) Dest() string {
-	return s[len(s)-1]
+// SourcesAndDest represent a collection of sources and a destination
+type SourcesAndDest struct {
+	DestPath       string
+	SourcePaths    []string
+	SourceContents []SourceContent
+}
+
+func (s *SourcesAndDest) Expand(expander SingleWordExpander) error {
+	for i, content := range s.SourceContents {
+		if !content.Expand {
+			continue
+		}
+
+		expandedData, err := expander(content.Data)
+		if err != nil {
+			return err
+		}
+		s.SourceContents[i].Data = expandedData
+	}
+
+	err := expandSliceInPlace(s.SourcePaths, expander)
+	if err != nil {
+		return err
+	}
+
+	expandedDestPath, err := expander(s.DestPath)
+	if err != nil {
+		return err
+	}
+	s.DestPath = expandedDestPath
+
+	return nil
 }
 
 // AddCommand : ADD foo /path
@@ -180,11 +215,18 @@ type AddCommand struct {
 	withNameAndCode
 	SourcesAndDest
 	Chown string
+	Chmod string
 }
 
 // Expand variables
 func (c *AddCommand) Expand(expander SingleWordExpander) error {
-	return expandSliceInPlace(c.SourcesAndDest, expander)
+	expandedChown, err := expander(c.Chown)
+	if err != nil {
+		return err
+	}
+	c.Chown = expandedChown
+
+	return c.SourcesAndDest.Expand(expander)
 }
 
 // CopyCommand : COPY foo /path
@@ -196,6 +238,7 @@ type CopyCommand struct {
 	SourcesAndDest
 	From  string
 	Chown string
+	Chmod string
 }
 
 // Expand variables
@@ -205,7 +248,8 @@ func (c *CopyCommand) Expand(expander SingleWordExpander) error {
 		return err
 	}
 	c.Chown = expandedChown
-	return expandSliceInPlace(c.SourcesAndDest, expander)
+
+	return c.SourcesAndDest.Expand(expander)
 }
 
 // OnbuildCommand : ONBUILD <some other command>
@@ -233,9 +277,17 @@ func (c *WorkdirCommand) Expand(expander SingleWordExpander) error {
 	return nil
 }
 
+// ShellInlineFile represents an inline file created for a shell command
+type ShellInlineFile struct {
+	Name  string
+	Data  string
+	Chomp bool
+}
+
 // ShellDependantCmdLine represents a cmdline optionally prepended with the shell
 type ShellDependantCmdLine struct {
 	CmdLine      strslice.StrSlice
+	Files        []ShellInlineFile
 	PrependShell bool
 }
 
@@ -253,6 +305,14 @@ type RunCommand struct {
 	withNameAndCode
 	withExternalData
 	ShellDependantCmdLine
+	FlagsUsed []string
+}
+
+func (c *RunCommand) Expand(expander SingleWordExpander) error {
+	if err := setMountState(c, expander); err != nil {
+		return err
+	}
+	return nil
 }
 
 // CmdCommand : CMD foo
@@ -365,22 +425,25 @@ func (c *StopSignalCommand) CheckPlatform(platform string) error {
 // Dockerfile author may optionally set a default value of this variable.
 type ArgCommand struct {
 	withNameAndCode
-	KeyValuePairOptional
+	Args []KeyValuePairOptional
 }
 
 // Expand variables
 func (c *ArgCommand) Expand(expander SingleWordExpander) error {
-	p, err := expander(c.Key)
-	if err != nil {
-		return err
-	}
-	c.Key = p
-	if c.Value != nil {
-		p, err = expander(*c.Value)
+	for i, v := range c.Args {
+		p, err := expander(v.Key)
 		if err != nil {
 			return err
 		}
-		c.Value = &p
+		v.Key = p
+		if v.Value != nil {
+			p, err = expander(*v.Value)
+			if err != nil {
+				return err
+			}
+			v.Value = &p
+		}
+		c.Args[i] = v
 	}
 	return nil
 }
@@ -400,6 +463,8 @@ type Stage struct {
 	BaseName   string
 	SourceCode string
 	Platform   string
+	Location   []parser.Range
+	Comment    string
 }
 
 // AddCommand to the stage
@@ -419,7 +484,7 @@ func IsCurrentStage(s []Stage, name string) bool {
 // CurrentStage return the last stage in a slice
 func CurrentStage(s []Stage) (*Stage, error) {
 	if len(s) == 0 {
-		return nil, errors.New("No build stage in current context")
+		return nil, errors.New("no build stage in current context")
 	}
 	return &s[len(s)-1], nil
 }

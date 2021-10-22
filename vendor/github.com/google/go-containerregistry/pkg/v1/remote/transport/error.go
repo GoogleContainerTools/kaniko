@@ -100,7 +100,7 @@ func (e *Error) Temporary() bool {
 	return true
 }
 
-// TODO(jonjohnsonjr): Consider moving to pkg/internal/redact.
+// TODO(jonjohnsonjr): Consider moving to internal/redact.
 func redactURL(original *url.URL) *url.URL {
 	qs := original.Query()
 	for k, v := range qs {
@@ -163,6 +163,7 @@ var temporaryErrorCodes = map[ErrorCode]struct{}{
 }
 
 var temporaryStatusCodes = map[int]struct{}{
+	http.StatusRequestTimeout:      {},
 	http.StatusInternalServerError: {},
 	http.StatusBadGateway:          {},
 	http.StatusServiceUnavailable:  {},

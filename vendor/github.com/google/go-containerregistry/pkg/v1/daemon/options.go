@@ -19,34 +19,76 @@ import (
 	"io"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
+// ImageOption is an alias for Option.
+// Deprecated: Use Option instead.
+type ImageOption Option
+
+// Option is a functional option for daemon operations.
+type Option func(*options)
+
+type options struct {
+	ctx      context.Context
+	client   Client
+	buffered bool
+}
+
+var defaultClient = func() (Client, error) {
+	return client.NewClientWithOpts(client.FromEnv)
+}
+
+func makeOptions(opts ...Option) (*options, error) {
+	o := &options{
+		buffered: true,
+		ctx:      context.Background(),
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	if o.client == nil {
+		client, err := defaultClient()
+		if err != nil {
+			return nil, err
+		}
+		o.client = client
+	}
+	o.client.NegotiateAPIVersion(o.ctx)
+
+	return o, nil
+}
+
 // WithBufferedOpener buffers the image.
-func WithBufferedOpener() ImageOption {
-	return func(i *imageOpener) error {
-		return i.setBuffered(true)
+func WithBufferedOpener() Option {
+	return func(o *options) {
+		o.buffered = true
 	}
 }
 
 // WithUnbufferedOpener streams the image to avoid buffering.
-func WithUnbufferedOpener() ImageOption {
-	return func(i *imageOpener) error {
-		return i.setBuffered(false)
+func WithUnbufferedOpener() Option {
+	return func(o *options) {
+		o.buffered = false
 	}
-}
-
-func (i *imageOpener) setBuffered(buffer bool) error {
-	i.buffered = buffer
-	return nil
 }
 
 // WithClient is a functional option to allow injecting a docker client.
 //
 // By default, github.com/docker/docker/client.FromEnv is used.
-func WithClient(client Client) ImageOption {
-	return func(i *imageOpener) error {
-		i.client = client
-		return nil
+func WithClient(client Client) Option {
+	return func(o *options) {
+		o.client = client
+	}
+}
+
+// WithContext is a functional option to pass through a context.Context.
+//
+// By default, context.Background() is used.
+func WithContext(ctx context.Context) Option {
+	return func(o *options) {
+		o.ctx = ctx
 	}
 }
 

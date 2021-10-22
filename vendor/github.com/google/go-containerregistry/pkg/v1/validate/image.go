@@ -22,12 +22,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // Image validates that img does not violate any invariants of the image format.
-func Image(img v1.Image) error {
+func Image(img v1.Image, opt ...Option) error {
 	errs := []string{}
-	if err := validateLayers(img); err != nil {
+	if err := validateLayers(img, opt...); err != nil {
 		errs = append(errs, fmt.Sprintf("validating layers: %v", err))
 	}
 
@@ -100,10 +101,16 @@ func validateConfig(img v1.Image) error {
 	return nil
 }
 
-func validateLayers(img v1.Image) error {
+func validateLayers(img v1.Image, opt ...Option) error {
+	o := makeOptions(opt...)
+
 	layers, err := img.Layers()
 	if err != nil {
 		return err
+	}
+
+	if o.fast {
+		return layersExist(layers)
 	}
 
 	digests := []v1.Hash{}
@@ -241,6 +248,25 @@ func validateManifest(img v1.Image) error {
 
 	if size != int64(len(rm)) {
 		errs = append(errs, fmt.Sprintf("mismatched manifest size: Size()=%d, len(RawManifest())=%d", size, len(rm)))
+	}
+
+	if len(errs) != 0 {
+		return errors.New(strings.Join(errs, "\n"))
+	}
+
+	return nil
+}
+
+func layersExist(layers []v1.Layer) error {
+	errs := []string{}
+	for _, layer := range layers {
+		ok, err := partial.Exists(layer)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+		if !ok {
+			errs = append(errs, "layer does not exist")
+		}
 	}
 
 	if len(errs) != 0 {

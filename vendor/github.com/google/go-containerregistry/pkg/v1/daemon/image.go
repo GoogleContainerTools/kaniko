@@ -19,103 +19,71 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"sync"
 
-	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-// image accesses an image from a docker daemon
-type image struct {
-	v1.Image
-}
-
-var _ v1.Image = (*image)(nil)
-
 type imageOpener struct {
-	ref      name.Reference
+	ref name.Reference
+	ctx context.Context
+
 	buffered bool
 	client   Client
+
+	once  sync.Once
+	bytes []byte
+	err   error
 }
 
-// ImageOption is a functional option for Image.
-type ImageOption func(*imageOpener) error
-
-func (i *imageOpener) Open() (v1.Image, error) {
-	var opener tarball.Opener
-	var err error
-	if i.buffered {
-		opener, err = i.bufferedOpener(i.ref)
-	} else {
-		opener, err = i.unbufferedOpener(i.ref)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	tb, err := tarball.Image(opener, nil)
-	if err != nil {
-		return nil, err
-	}
-	img := &image{
-		Image: tb,
-	}
-	return img, nil
+func (i *imageOpener) saveImage() (io.ReadCloser, error) {
+	return i.client.ImageSave(i.ctx, []string{i.ref.Name()})
 }
 
-func (i *imageOpener) saveImage(ref name.Reference) (io.ReadCloser, error) {
-	return i.client.ImageSave(context.Background(), []string{ref.Name()})
-}
-
-func (i *imageOpener) bufferedOpener(ref name.Reference) (tarball.Opener, error) {
+func (i *imageOpener) bufferedOpener() (io.ReadCloser, error) {
 	// Store the tarball in memory and return a new reader into the bytes each time we need to access something.
-	rc, err := i.saveImage(ref)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
+	i.once.Do(func() {
+		i.bytes, i.err = func() ([]byte, error) {
+			rc, err := i.saveImage()
+			if err != nil {
+				return nil, err
+			}
+			defer rc.Close()
 
-	imageBytes, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-	// The tarball interface takes a function that it can call to return an opened reader-like object.
-	// Daemon comes from a set of bytes, so wrap them in a ReadCloser so it looks like an opened file.
-	return func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewReader(imageBytes)), nil
-	}, nil
+			return ioutil.ReadAll(rc)
+		}()
+	})
+
+	// Wrap the bytes in a ReadCloser so it looks like an opened file.
+	return ioutil.NopCloser(bytes.NewReader(i.bytes)), i.err
 }
 
-func (i *imageOpener) unbufferedOpener(ref name.Reference) (tarball.Opener, error) {
+func (i *imageOpener) opener() tarball.Opener {
+	if i.buffered {
+		return i.bufferedOpener
+	}
+
 	// To avoid storing the tarball in memory, do a save every time we need to access something.
-	return func() (io.ReadCloser, error) {
-		return i.saveImage(ref)
-	}, nil
+	return i.saveImage
 }
 
 // Image provides access to an image reference from the Docker daemon,
 // applying functional options to the underlying imageOpener before
 // resolving the reference into a v1.Image.
-func Image(ref name.Reference, options ...ImageOption) (v1.Image, error) {
+func Image(ref name.Reference, options ...Option) (v1.Image, error) {
+	o, err := makeOptions(options...)
+	if err != nil {
+		return nil, err
+	}
+
 	i := &imageOpener{
 		ref:      ref,
-		buffered: true, // buffer by default
-	}
-	for _, option := range options {
-		if err := option(i); err != nil {
-			return nil, err
-		}
+		buffered: o.buffered,
+		client:   o.client,
+		ctx:      o.ctx,
 	}
 
-	if i.client == nil {
-		var err error
-		i.client, err = client.NewClientWithOpts(client.FromEnv)
-		if err != nil {
-			return nil, err
-		}
-	}
-	i.client.NegotiateAPIVersion(context.Background())
-
-	return i.Open()
+	return tarball.Image(i.opener(), nil)
 }

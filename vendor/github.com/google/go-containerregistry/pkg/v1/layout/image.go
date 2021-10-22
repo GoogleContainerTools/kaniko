@@ -17,6 +17,7 @@ package layout
 import (
 	"fmt"
 	"io"
+	"os"
 	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -84,20 +85,20 @@ func (li *layoutImage) LayerByDigest(h v1.Hash) (partial.CompressedLayer, error)
 	}
 
 	if h == manifest.Config.Digest {
-		return partial.CompressedLayer(&compressedBlob{
+		return &compressedBlob{
 			path: li.path,
 			desc: manifest.Config,
-		}), nil
+		}, nil
 	}
 
 	for _, desc := range manifest.Layers {
 		if h == desc.Digest {
 			switch desc.MediaType {
 			case types.OCILayer, types.DockerLayer:
-				return partial.CompressedToLayer(&compressedBlob{
+				return &compressedBlob{
 					path: li.path,
 					desc: desc,
-				})
+				}, nil
 			default:
 				// TODO: We assume everything is a compressed blob, but that might not be true.
 				// TODO: Handle foreign layers.
@@ -128,4 +129,13 @@ func (b *compressedBlob) Size() (int64, error) {
 
 func (b *compressedBlob) MediaType() (types.MediaType, error) {
 	return b.desc.MediaType, nil
+}
+
+// See partial.Exists.
+func (b *compressedBlob) Exists() (bool, error) {
+	_, err := os.Stat(b.path.blobPath(b.desc.Digest))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return err == nil, err
 }

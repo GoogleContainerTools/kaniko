@@ -66,8 +66,11 @@ func (p *Publisher) SubscribeTopicWithBuffer(topic topicFunc, buffer int) chan i
 // Evict removes the specified subscriber from receiving any more messages.
 func (p *Publisher) Evict(sub chan interface{}) {
 	p.m.Lock()
-	delete(p.subscribers, sub)
-	close(sub)
+	_, exists := p.subscribers[sub]
+	if exists {
+		delete(p.subscribers, sub)
+		close(sub)
+	}
 	p.m.Unlock()
 }
 
@@ -107,9 +110,12 @@ func (p *Publisher) sendTopic(sub subscriber, topic topicFunc, v interface{}, wg
 
 	// send under a select as to not block if the receiver is unavailable
 	if p.timeout > 0 {
+		timeout := time.NewTimer(p.timeout)
+		defer timeout.Stop()
+
 		select {
 		case sub <- v:
-		case <-time.After(p.timeout):
+		case <-timeout.C:
 		}
 		return
 	}

@@ -15,47 +15,28 @@
 package daemon
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-// ImageLoader is an interface for testing.
-type ImageLoader interface {
-	ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)
-	ImageTag(context.Context, string, string) error
-}
-
-// GetImageLoader is a variable so we can override in tests.
-var GetImageLoader = func() (ImageLoader, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return nil, err
-	}
-	cli.NegotiateAPIVersion(context.Background())
-	return cli, nil
-}
-
 // Tag adds a tag to an already existent image.
-func Tag(src, dest name.Tag) error {
-	cli, err := GetImageLoader()
+func Tag(src, dest name.Tag, options ...Option) error {
+	o, err := makeOptions(options...)
 	if err != nil {
 		return err
 	}
 
-	return cli.ImageTag(context.Background(), src.String(), dest.String())
+	return o.client.ImageTag(o.ctx, src.String(), dest.String())
 }
 
 // Write saves the image into the daemon as the given tag.
-func Write(tag name.Tag, img v1.Image) (string, error) {
-	cli, err := GetImageLoader()
+func Write(tag name.Tag, img v1.Image, options ...Option) (string, error) {
+	o, err := makeOptions(options...)
 	if err != nil {
 		return "", err
 	}
@@ -66,14 +47,14 @@ func Write(tag name.Tag, img v1.Image) (string, error) {
 	}()
 
 	// write the image in docker save format first, then load it
-	resp, err := cli.ImageLoad(context.Background(), pr, false)
+	resp, err := o.client.ImageLoad(o.ctx, pr, false)
 	if err != nil {
 		return "", fmt.Errorf("error loading image: %v", err)
 	}
 	defer resp.Body.Close()
-	b, readErr := ioutil.ReadAll(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
 	response := string(b)
-	if readErr != nil {
+	if err != nil {
 		return response, fmt.Errorf("error reading load response body: %v", err)
 	}
 	return response, nil

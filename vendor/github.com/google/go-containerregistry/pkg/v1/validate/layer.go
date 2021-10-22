@@ -26,11 +26,24 @@ import (
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // Layer validates that the values return by its methods are consistent with the
 // contents returned by Compressed and Uncompressed.
-func Layer(layer v1.Layer) error {
+func Layer(layer v1.Layer, opt ...Option) error {
+	o := makeOptions(opt...)
+	if o.fast {
+		ok, err := partial.Exists(layer)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("layer does not exist")
+		}
+		return nil
+	}
+
 	cl, err := computeLayer(layer)
 	if err != nil {
 		return err

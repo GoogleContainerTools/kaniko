@@ -113,7 +113,7 @@ func (m *MountPoint) Setup(mountLabel string, rootIDs idtools.Identity, checkFun
 			return
 		}
 		err = label.Relabel(sourcePath, mountLabel, label.IsShared(m.Mode))
-		if err == syscall.ENOTSUP {
+		if errors.Is(err, syscall.ENOTSUP) {
 			err = nil
 		}
 		if err != nil {
@@ -125,7 +125,7 @@ func (m *MountPoint) Setup(mountLabel string, rootIDs idtools.Identity, checkFun
 	if m.Volume != nil {
 		id := m.ID
 		if id == "" {
-			id = stringid.GenerateNonCryptoID()
+			id = stringid.GenerateRandomID()
 		}
 		path, err := m.Volume.Mount(id)
 		if err != nil {

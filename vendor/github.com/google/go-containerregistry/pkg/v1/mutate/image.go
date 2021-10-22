@@ -30,12 +30,13 @@ type image struct {
 	base v1.Image
 	adds []Addendum
 
-	computed   bool
-	configFile *v1.ConfigFile
-	manifest   *v1.Manifest
-	mediaType  *types.MediaType
-	diffIDMap  map[v1.Hash]v1.Layer
-	digestMap  map[v1.Hash]v1.Layer
+	computed    bool
+	configFile  *v1.ConfigFile
+	manifest    *v1.Manifest
+	annotations map[string]string
+	mediaType   *types.MediaType
+	diffIDMap   map[v1.Hash]v1.Layer
+	digestMap   map[v1.Hash]v1.Layer
 }
 
 var _ v1.Image = (*image)(nil)
@@ -129,6 +130,11 @@ func (i *image) compute() error {
 	manifest.Config.Digest = d
 	manifest.Config.Size = sz
 
+	// If Data was set in the base image, we need to update it in the mutated image.
+	if m.Config.Data != nil {
+		manifest.Config.Data = rcfg
+	}
+
 	// With OCI media types, this should not be set, see discussion:
 	// https://github.com/opencontainers/image-spec/pull/795
 	if i.mediaType != nil {
@@ -136,6 +142,16 @@ func (i *image) compute() error {
 			manifest.MediaType = ""
 		} else if strings.Contains(string(*i.mediaType), types.DockerVendorPrefix) {
 			manifest.MediaType = *i.mediaType
+		}
+	}
+
+	if i.annotations != nil {
+		if manifest.Annotations == nil {
+			manifest.Annotations = map[string]string{}
+		}
+
+		for k, v := range i.annotations {
+			manifest.Annotations[k] = v
 		}
 	}
 
