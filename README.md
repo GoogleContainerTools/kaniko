@@ -678,7 +678,7 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 
 #### --insecure-registry
 
-Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
+You can set `--insecure-registry <registry-name>` to use plain HTTP requests when accessing the specified registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --label
