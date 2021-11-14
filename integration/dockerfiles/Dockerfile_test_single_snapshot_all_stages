@@ -1,0 +1,7 @@
+FROM alpine AS base_stage
+RUN touch foo
+RUN touch bar
+
+FROM base_stage AS final_stage
+RUN touch baz
+RUN touch qux

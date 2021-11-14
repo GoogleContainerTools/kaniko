@@ -66,6 +66,7 @@ type KanikoOptions struct {
 	OCILayoutPath          string
 	ImageFSExtractRetry    int
 	SingleSnapshot         bool
+	SingleSnapshotMode     string
 	Reproducible           bool
 	NoPush                 bool
 	Cache                  bool

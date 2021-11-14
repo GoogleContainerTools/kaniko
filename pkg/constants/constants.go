@@ -46,6 +46,10 @@ const (
 	SnapshotModeFull = "full"
 	SnapshotModeRedo = "redo"
 
+	// Various single snapshot modes:
+	SingleSnapshotModePerStage  = "per-stage"
+	SingleSnapshotModeAllStages = "all-stages"
+
 	// NoBaseImage is the scratch image
 	NoBaseImage = "scratch"
 

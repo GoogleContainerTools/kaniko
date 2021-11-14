@@ -75,13 +75,15 @@ var additionalDockerFlagsMap = map[string][]string{
 
 // Arguments to build Dockerfiles with when building with kaniko
 var additionalKanikoFlagsMap = map[string][]string{
-	"Dockerfile_test_add":                    {"--single-snapshot"},
-	"Dockerfile_test_run_new":                {"--use-new-run=true"},
-	"Dockerfile_test_run_redo":               {"--snapshotMode=redo"},
-	"Dockerfile_test_scratch":                {"--single-snapshot"},
-	"Dockerfile_test_maintainer":             {"--single-snapshot"},
-	"Dockerfile_test_target":                 {"--target=second"},
-	"Dockerfile_test_snapshotter_ignorelist": {"--use-new-run=true", "-v=debug"},
+	"Dockerfile_test_add":                        {"--single-snapshot"},
+	"Dockerfile_test_run_new":                    {"--use-new-run=true"},
+	"Dockerfile_test_run_redo":                   {"--snapshotMode=redo"},
+	"Dockerfile_test_scratch":                    {"--single-snapshot"},
+	"Dockerfile_test_maintainer":                 {"--single-snapshot"},
+	"Dockerfile_test_target":                     {"--target=second"},
+	"Dockerfile_test_snapshotter_ignorelist":     {"--use-new-run=true", "-v=debug"},
+	"Dockerfile_test_single_snapshot_per_stage":  {"--single-snapshot", "--single-snapshot-mode=per-stage"},
+	"Dockerfile_test_single_snapshot_all_stages": {"--single-snapshot", "--single-snapshot-mode=all-stages"},
 }
 
 // output check to do when building with kaniko

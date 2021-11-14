@@ -439,7 +439,11 @@ func (s *stageBuilder) shouldTakeSnapshot(index int, isMetadatCmd bool) bool {
 
 	// We only snapshot the very end with single snapshot mode on.
 	if s.opts.SingleSnapshot {
-		return isLastCommand
+		if s.opts.SingleSnapshotMode == constants.SingleSnapshotModePerStage {
+			return isLastCommand
+		} else if s.opts.SingleSnapshotMode == constants.SingleSnapshotModeAllStages {
+			return isLastCommand && s.stage.Final
+		}
 	}
 
 	// Always take snapshots if we're using the cache.

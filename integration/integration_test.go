@@ -488,6 +488,9 @@ func TestLayers(t *testing.T) {
 		"Dockerfile_test_add":     12,
 		"Dockerfile_test_scratch": 3,
 
+		"Dockerfile_test_single_snapshot_per_stage":  2,
+		"Dockerfile_test_single_snapshot_all_stages": 3,
+
 		// TODO: tejaldesai fix this!
 		"Dockerfile_test_meta_arg":                  1,
 		"Dockerfile_test_copy_same_file_many_times": 47,
