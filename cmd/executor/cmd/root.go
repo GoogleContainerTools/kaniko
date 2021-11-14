@@ -194,7 +194,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().IntVar(&opts.PushRetry, "push-retry", 0, "Number of retries for the push operation")
 	RootCmd.PersistentFlags().IntVar(&opts.ImageFSExtractRetry, "image-fs-extract-retry", 0, "Number of retries for image FS extraction")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
-	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
+	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot per build stage or for all build stages, other than per command. See also the single-snapshot-mode option. This shall affect only the newly added layers, and layers from the base image shall remain untouched.")
 	RootCmd.PersistentFlags().StringVarP(&opts.SingleSnapshotMode, "single-snapshot-mode", "", constants.SingleSnapshotModePerStage, "When to take the single snapshot. Shall be per-stage (default) or all-stages.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
