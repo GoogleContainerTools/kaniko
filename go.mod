@@ -14,11 +14,12 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.8.0
 	github.com/aws/aws-sdk-go v1.31.6
 	github.com/containerd/cgroups v1.0.2 // indirect
-	github.com/docker/docker v20.10.11+incompatible
+	github.com/docker/docker v20.10.10+incompatible
 	github.com/docker/swarmkit v1.12.1-0.20180726190244-7567d47988d8 // indirect
 	github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.1.0
+	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/golang/mock v1.4.3
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.4.1-0.20210128200529-19c2b639fab1
@@ -41,4 +42,5 @@ require (
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20211123173158-ef496fb156ab // indirect
 )
