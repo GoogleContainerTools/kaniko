@@ -10,7 +10,6 @@ cloud.google.com/go/internal/version
 ## explicit
 cloud.google.com/go/storage
 # github.com/Azure/azure-pipeline-go v0.2.2
-## explicit
 github.com/Azure/azure-pipeline-go/pipeline
 # github.com/Azure/azure-sdk-for-go v43.0.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-05-01/containerregistry
@@ -158,10 +157,7 @@ github.com/containerd/stargz-snapshotter/estargz/errorutil
 # github.com/containerd/typeurl v1.0.2
 github.com/containerd/typeurl
 # github.com/coreos/etcd v3.3.13+incompatible
-## explicit
 github.com/coreos/etcd/raft/raftpb
-# github.com/coreos/go-systemd v0.0.0-20190620071333-e64a0ec8b42a
-## explicit
 # github.com/coreos/go-systemd/v22 v22.3.2
 github.com/coreos/go-systemd/v22/dbus
 # github.com/cyphar/filepath-securejoin v0.2.2
@@ -269,7 +265,6 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 github.com/docker/go-events
 # github.com/docker/go-metrics v0.0.1
-## explicit
 github.com/docker/go-metrics
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
@@ -418,12 +413,9 @@ github.com/google/go-containerregistry/pkg/authn/k8schain
 ## explicit
 github.com/google/go-github/github
 # github.com/google/go-querystring v1.0.0
-## explicit
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
-# github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible
-## explicit
 # github.com/google/slowjam v1.0.0
 ## explicit
 github.com/google/slowjam/pkg/stacklog
@@ -438,8 +430,6 @@ github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-memdb v0.0.0-20180223233045-1289e7fffe71
 ## explicit
 github.com/hashicorp/go-memdb
-# github.com/hashicorp/go-uuid v1.0.1
-## explicit
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
@@ -468,10 +458,7 @@ github.com/klauspost/compress/huff0
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/mattn/go-ieproxy v0.0.1
-## explicit
 github.com/mattn/go-ieproxy
-# github.com/mattn/go-shellwords v1.0.10
-## explicit
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/minio/highwayhash v1.0.0
@@ -519,15 +506,11 @@ github.com/opencontainers/runc/libcontainer/devices
 github.com/opencontainers/runc/libcontainer/user
 github.com/opencontainers/runc/libcontainer/userns
 # github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
-## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.8.2
-## explicit
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalk
-# github.com/opentracing/opentracing-go v1.2.0
-## explicit
 # github.com/otiai10/copy v1.0.2
 ## explicit
 github.com/otiai10/copy
@@ -566,7 +549,6 @@ github.com/spf13/pflag
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 github.com/syndtr/gocapability/capability
 # github.com/tonistiigi/fsutil v0.0.0-20210609172227-d72af97c0eaf
-## explicit
 github.com/tonistiigi/fsutil
 github.com/tonistiigi/fsutil/prefix
 github.com/tonistiigi/fsutil/types
@@ -700,7 +682,6 @@ golang.org/x/tools/internal/typesinternal
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/api v0.25.0
-## explicit
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
@@ -816,7 +797,6 @@ gopkg.in/warnings.v0
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
 # honnef.co/go/tools v0.0.1-2020.1.5
-## explicit
 honnef.co/go/tools/arg
 honnef.co/go/tools/cmd/staticcheck
 honnef.co/go/tools/code
@@ -995,8 +975,6 @@ k8s.io/client-go/util/connrotation
 k8s.io/client-go/util/flowcontrol
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/workqueue
-# k8s.io/code-generator v0.20.1
-## explicit
 # k8s.io/component-base v0.20.6
 k8s.io/component-base/version
 # k8s.io/klog/v2 v2.5.0
