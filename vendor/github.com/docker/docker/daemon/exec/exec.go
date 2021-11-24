@@ -1,6 +1,7 @@
 package exec // import "github.com/docker/docker/daemon/exec"
 
 import (
+	"context"
 	"runtime"
 	"sync"
 
@@ -39,7 +40,7 @@ type Config struct {
 // NewConfig initializes the a new exec configuration
 func NewConfig() *Config {
 	return &Config{
-		ID:           stringid.GenerateNonCryptoID(),
+		ID:           stringid.GenerateRandomID(),
 		StreamConfig: stream.NewConfig(),
 		Started:      make(chan struct{}),
 	}
@@ -58,7 +59,7 @@ func (i *rio) Close() error {
 }
 
 func (i *rio) Wait() {
-	i.sc.Wait()
+	i.sc.Wait(context.Background())
 
 	i.IO.Wait()
 }

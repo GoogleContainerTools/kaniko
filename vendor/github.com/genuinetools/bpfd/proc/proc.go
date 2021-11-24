@@ -150,12 +150,6 @@ func GetContainerRuntime(tgid, pid int) ContainerRuntime {
 		return runtime
 	}
 
-	// Check for container specific files
-	runtime = detectContainerFiles()
-	if runtime != RuntimeNotFound {
-		return runtime
-	}
-
 	return RuntimeNotFound
 }
 
@@ -167,28 +161,6 @@ func getContainerRuntime(input string) ContainerRuntime {
 	for _, runtime := range ContainerRuntimes {
 		if strings.Contains(input, string(runtime)) {
 			return runtime
-		}
-	}
-
-	return RuntimeNotFound
-}
-
-// Related implementation: https://github.com/systemd/systemd/blob/6604fb0207ee10e8dc05d67f6fe45de0b193b5c4/src/basic/virt.c#L523-L549
-func detectContainerFiles() ContainerRuntime {
-	files := []struct {
-		runtime  ContainerRuntime
-		location string
-	}{
-		// https://github.com/containers/podman/issues/6192
-		// https://github.com/containers/podman/issues/3586#issuecomment-661918679
-		{RuntimePodman, "/run/.containerenv"},
-		// https://github.com/moby/moby/issues/18355
-		{RuntimeDocker, "/.dockerenv"},
-	}
-
-	for i := range files {
-		if fileExists(files[i].location) {
-			return files[i].runtime
 		}
 	}
 

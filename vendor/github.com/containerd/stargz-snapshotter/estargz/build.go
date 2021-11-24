@@ -37,6 +37,7 @@ import (
 	"sync"
 
 	"github.com/containerd/stargz-snapshotter/estargz/errorutil"
+	"github.com/klauspost/compress/zstd"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -112,11 +113,11 @@ func (b *Blob) TOCDigest() digest.Digest {
 	return b.tocDigest
 }
 
-// Build builds an eStargz blob which is an extended version of stargz, from tar blob passed
-// through the argument. If there are some prioritized files are listed in the option, these
-// files are grouped as "prioritized" and can be used for runtime optimization (e.g. prefetch).
-// This function builds a blob in parallel, with dividing that blob into several (at least the
-// number of runtime.GOMAXPROCS(0)) sub-blobs.
+// Build builds an eStargz blob which is an extended version of stargz, from a blob (gzip, zstd
+// or plain tar) passed through the argument. If there are some prioritized files are listed in
+// the option, these files are grouped as "prioritized" and can be used for runtime optimization
+// (e.g. prefetch). This function builds a blob in parallel, with dividing that blob into several
+// (at least the number of runtime.GOMAXPROCS(0)) sub-blobs.
 func Build(tarBlob *io.SectionReader, opt ...Option) (_ *Blob, rErr error) {
 	var opts options
 	opts.compressionLevel = gzip.BestCompression // BestCompression by default
@@ -133,6 +134,10 @@ func Build(tarBlob *io.SectionReader, opt ...Option) (_ *Blob, rErr error) {
 			}
 		}
 	}()
+	tarBlob, err := decompressBlob(tarBlob, layerFiles)
+	if err != nil {
+		return nil, err
+	}
 	entries, err := sortEntries(tarBlob, opts.prioritizedFiles, opts.missedPrioritizedFiles)
 	if err != nil {
 		return nil, err
@@ -592,4 +597,43 @@ func (cr *countReader) currentPos() int64 {
 	defer cr.mu.Unlock()
 
 	return *cr.cPos
+}
+
+func decompressBlob(org *io.SectionReader, tmp *tempFiles) (*io.SectionReader, error) {
+	if org.Size() < 4 {
+		return org, nil
+	}
+	src := make([]byte, 4)
+	if _, err := org.Read(src); err != nil && err != io.EOF {
+		return nil, err
+	}
+	var dR io.Reader
+	if bytes.Equal([]byte{0x1F, 0x8B, 0x08}, src[:3]) {
+		// gzip
+		dgR, err := gzip.NewReader(io.NewSectionReader(org, 0, org.Size()))
+		if err != nil {
+			return nil, err
+		}
+		defer dgR.Close()
+		dR = io.Reader(dgR)
+	} else if bytes.Equal([]byte{0x28, 0xb5, 0x2f, 0xfd}, src[:4]) {
+		// zstd
+		dzR, err := zstd.NewReader(io.NewSectionReader(org, 0, org.Size()))
+		if err != nil {
+			return nil, err
+		}
+		defer dzR.Close()
+		dR = io.Reader(dzR)
+	} else {
+		// uncompressed
+		return io.NewSectionReader(org, 0, org.Size()), nil
+	}
+	b, err := tmp.TempFile("", "uncompresseddata")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(b, dR); err != nil {
+		return nil, err
+	}
+	return fileSectionReader(b)
 }

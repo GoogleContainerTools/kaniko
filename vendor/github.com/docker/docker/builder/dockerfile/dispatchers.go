@@ -16,7 +16,6 @@ import (
 
 	"github.com/containerd/containerd/platforms"
 	"github.com/docker/docker/api"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/builder"
 	"github.com/docker/docker/errdefs"
@@ -93,6 +92,9 @@ func dispatchLabel(d dispatchRequest, c *instructions.LabelCommand) error {
 // exist here. If you do not wish to have this automatic handling, use COPY.
 //
 func dispatchAdd(d dispatchRequest, c *instructions.AddCommand) error {
+	if c.Chmod != "" {
+		return errors.New("the --chmod option requires BuildKit. Refer to https://docs.docker.com/go/buildkit/ to learn how to build images with BuildKit enabled")
+	}
 	downloader := newRemoteSourceDownloader(d.builder.Output, d.builder.Stdout)
 	copier := copierFromDispatchRequest(d, downloader, nil)
 	defer copier.Cleanup()
@@ -112,6 +114,9 @@ func dispatchAdd(d dispatchRequest, c *instructions.AddCommand) error {
 // Same as 'ADD' but without the tar and remote url handling.
 //
 func dispatchCopy(d dispatchRequest, c *instructions.CopyCommand) error {
+	if c.Chmod != "" {
+		return errors.New("the --chmod option requires BuildKit. Refer to https://docs.docker.com/go/buildkit/ to learn how to build images with BuildKit enabled")
+	}
 	var im *imageMount
 	var err error
 	if c.From != "" {
@@ -127,7 +132,9 @@ func dispatchCopy(d dispatchRequest, c *instructions.CopyCommand) error {
 		return err
 	}
 	copyInstruction.chownStr = c.Chown
-
+	if c.From != "" && copyInstruction.chownStr == "" {
+		copyInstruction.preserveOwnership = true
+	}
 	return d.builder.performCopy(d, copyInstruction)
 }
 
@@ -204,7 +211,8 @@ func dispatchTriggeredOnBuild(d dispatchRequest, triggers []string) error {
 		}
 		cmd, err := instructions.ParseCommand(ast.AST.Children[0])
 		if err != nil {
-			if instructions.IsUnknownInstruction(err) {
+			var uiErr *instructions.UnknownInstruction
+			if errors.As(err, &uiErr) {
 				buildsFailed.WithValues(metricsUnknownInstructionError).Inc()
 			}
 			return err
@@ -330,14 +338,6 @@ func dispatchWorkdir(d dispatchRequest, c *instructions.WorkdirCommand) error {
 	return d.builder.commitContainer(d.state, containerID, runConfigWithCommentCmd)
 }
 
-func resolveCmdLine(cmd instructions.ShellDependantCmdLine, runConfig *container.Config, os string) []string {
-	result := cmd.CmdLine
-	if cmd.PrependShell && result != nil {
-		result = append(getShell(runConfig, os), result...)
-	}
-	return result
-}
-
 // RUN some command yo
 //
 // run a command and commit the image. Args are automatically prepended with
@@ -352,8 +352,14 @@ func dispatchRun(d dispatchRequest, c *instructions.RunCommand) error {
 	if !system.IsOSSupported(d.state.operatingSystem) {
 		return system.ErrNotSupportedOperatingSystem
 	}
+
+	if len(c.FlagsUsed) > 0 {
+		// classic builder RUN currently does not support any flags, so fail on the first one
+		return errors.Errorf("the --%s option requires BuildKit. Refer to https://docs.docker.com/go/buildkit/ to learn how to build images with BuildKit enabled", c.FlagsUsed[0])
+	}
+
 	stateRunConfig := d.state.runConfig
-	cmdFromArgs := resolveCmdLine(c.ShellDependantCmdLine, stateRunConfig, d.state.operatingSystem)
+	cmdFromArgs, argsEscaped := resolveCmdLine(c.ShellDependantCmdLine, stateRunConfig, d.state.operatingSystem, c.Name(), c.String())
 	buildArgs := d.state.buildArgs.FilterAllowed(stateRunConfig.Env)
 
 	saveCmd := cmdFromArgs
@@ -363,6 +369,7 @@ func dispatchRun(d dispatchRequest, c *instructions.RunCommand) error {
 
 	runConfigForCacheProbe := copyRunConfig(stateRunConfig,
 		withCmd(saveCmd),
+		withArgsEscaped(argsEscaped),
 		withEntrypointOverride(saveCmd, nil))
 	if hit, err := d.builder.probeCache(d.state, runConfigForCacheProbe); err != nil || hit {
 		return err
@@ -370,12 +377,10 @@ func dispatchRun(d dispatchRequest, c *instructions.RunCommand) error {
 
 	runConfig := copyRunConfig(stateRunConfig,
 		withCmd(cmdFromArgs),
+		withArgsEscaped(argsEscaped),
 		withEnv(append(stateRunConfig.Env, buildArgs...)),
 		withEntrypointOverride(saveCmd, strslice.StrSlice{""}),
 		withoutHealthcheck())
-
-	// set config as already being escaped, this prevents double escaping on windows
-	runConfig.ArgsEscaped = true
 
 	cID, err := d.builder.create(runConfig)
 	if err != nil {
@@ -397,6 +402,12 @@ func dispatchRun(d dispatchRequest, c *instructions.RunCommand) error {
 			}
 		}
 		return err
+	}
+
+	// Don't persist the argsEscaped value in the committed image. Use the original
+	// from previous build steps (only CMD and ENTRYPOINT persist this).
+	if d.state.operatingSystem == "windows" {
+		runConfigForCacheProbe.ArgsEscaped = stateRunConfig.ArgsEscaped
 	}
 
 	return d.builder.commitContainer(d.state, cID, runConfigForCacheProbe)
@@ -434,15 +445,23 @@ func prependEnvOnCmd(buildArgs *BuildArgs, buildArgVars []string, cmd strslice.S
 //
 func dispatchCmd(d dispatchRequest, c *instructions.CmdCommand) error {
 	runConfig := d.state.runConfig
-	cmd := resolveCmdLine(c.ShellDependantCmdLine, runConfig, d.state.operatingSystem)
+	cmd, argsEscaped := resolveCmdLine(c.ShellDependantCmdLine, runConfig, d.state.operatingSystem, c.Name(), c.String())
+
+	// We warn here as Windows shell processing operates differently to Linux.
+	// Linux:   /bin/sh -c "echo hello" world	--> hello
+	// Windows: cmd /s /c "echo hello" world	--> hello world
+	if d.state.operatingSystem == "windows" &&
+		len(runConfig.Entrypoint) > 0 &&
+		d.state.runConfig.ArgsEscaped != argsEscaped {
+		fmt.Fprintf(d.builder.Stderr, " ---> [Warning] Shell-form ENTRYPOINT and exec-form CMD may have unexpected results\n")
+	}
+
 	runConfig.Cmd = cmd
-	// set config as already being escaped, this prevents double escaping on windows
-	runConfig.ArgsEscaped = true
+	runConfig.ArgsEscaped = argsEscaped
 
 	if err := d.builder.commit(d.state, fmt.Sprintf("CMD %q", cmd)); err != nil {
 		return err
 	}
-
 	if len(c.ShellDependantCmdLine.CmdLine) != 0 {
 		d.state.cmdSet = true
 	}
@@ -477,8 +496,22 @@ func dispatchHealthcheck(d dispatchRequest, c *instructions.HealthCheckCommand) 
 //
 func dispatchEntrypoint(d dispatchRequest, c *instructions.EntrypointCommand) error {
 	runConfig := d.state.runConfig
-	cmd := resolveCmdLine(c.ShellDependantCmdLine, runConfig, d.state.operatingSystem)
+	cmd, argsEscaped := resolveCmdLine(c.ShellDependantCmdLine, runConfig, d.state.operatingSystem, c.Name(), c.String())
+
+	// This warning is a little more complex than in dispatchCmd(), as the Windows base images (similar
+	// universally to almost every Linux image out there) have a single .Cmd field populated so that
+	// `docker run --rm image` starts the default shell which would typically be sh on Linux,
+	// or cmd on Windows. The catch to this is that if a dockerfile had `CMD ["c:\\windows\\system32\\cmd.exe"]`,
+	// we wouldn't be able to tell the difference. However, that would be highly unlikely, and besides, this
+	// is only trying to give a helpful warning of possibly unexpected results.
+	if d.state.operatingSystem == "windows" &&
+		d.state.runConfig.ArgsEscaped != argsEscaped &&
+		((len(runConfig.Cmd) == 1 && strings.ToLower(runConfig.Cmd[0]) != `c:\windows\system32\cmd.exe` && len(runConfig.Shell) == 0) || (len(runConfig.Cmd) > 1)) {
+		fmt.Fprintf(d.builder.Stderr, " ---> [Warning] Shell-form CMD and exec-form ENTRYPOINT may have unexpected results\n")
+	}
+
 	runConfig.Entrypoint = cmd
+	runConfig.ArgsEscaped = argsEscaped
 	if !d.state.cmdSet {
 		runConfig.Cmd = nil
 	}
@@ -566,14 +599,21 @@ func dispatchStopSignal(d dispatchRequest, c *instructions.StopSignalCommand) er
 // to builder using the --build-arg flag for expansion/substitution or passing to 'run'.
 // Dockerfile author may optionally set a default value of this variable.
 func dispatchArg(d dispatchRequest, c *instructions.ArgCommand) error {
-
-	commitStr := "ARG " + c.Key
-	if c.Value != nil {
-		commitStr += "=" + *c.Value
+	var commitStr strings.Builder
+	commitStr.WriteString("ARG ")
+	for i, arg := range c.Args {
+		if i > 0 {
+			commitStr.WriteString(" ")
+		}
+		commitStr.WriteString(arg.Key)
+		if arg.Value != nil {
+			commitStr.WriteString("=")
+			commitStr.WriteString(*arg.Value)
+		}
+		d.state.buildArgs.AddArg(arg.Key, arg.Value)
 	}
 
-	d.state.buildArgs.AddArg(c.Key, c.Value)
-	return d.builder.commit(d.state, commitStr)
+	return d.builder.commit(d.state, commitStr.String())
 }
 
 // SHELL powershell -command
