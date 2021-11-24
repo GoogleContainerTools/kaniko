@@ -484,7 +484,7 @@ gcloud projects add-iam-policy-binding $PROJECT \
   --role=roles/storage.objectAdmin
 ```
 
-Please ensure, kaniko pod is running in the namespace and with Kubernetest Service Account.
+Please ensure, kaniko pod is running in the namespace and with a Kubernetes Service Account.
 
 
 #### Pushing to Amazon ECR
