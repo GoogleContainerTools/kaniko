@@ -78,7 +78,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 				checkoutRef = fetchRef
 			} else {
 				// The ReferenceName still needs to be present in the options passed
-				// to the clone operation for non-hash references.
+				// to the clone operation for non-hash references of private repositories.
 				options.ReferenceName = plumbing.ReferenceName(fetchRef)
 			}
 		} else {
