@@ -276,11 +276,10 @@ jobs:
       with:
         cosign-release: 'v0.2.0'
 
-      # Use cosign to sign the images
-      - run: |
-          export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
-          cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
-          cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
-          cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:slim
-
+    # Use cosign to sign the images
+    - run: |
+        export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:${{ steps.vars.outputs.tag }}-slim
+        cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor:slim
 
