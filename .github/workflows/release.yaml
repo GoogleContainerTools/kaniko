@@ -57,7 +57,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ env.PLATFORMS }}
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}
@@ -67,7 +67,7 @@ jobs:
     - name: Sign images 
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v0.2.0'
+        cosign-release: 'v1.4.1'
     
     # Use cosign to sign the images
     - run: |
@@ -81,6 +81,7 @@ jobs:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
       PLATFORMS: "linux/amd64,linux/arm64"
+
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -126,7 +127,7 @@ jobs:
       with:
         context: .
         file:  ./deploy/Dockerfile_debug
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ env.PLATFORMS }}
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-debug
@@ -136,7 +137,7 @@ jobs:
     - name: Sign images 
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v0.2.0'
+        cosign-release: 'v1.4.1'
       
       # Use cosign to sign the images
     - run: |
@@ -150,6 +151,7 @@ jobs:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
       PLATFORMS: "linux/amd64,linux/arm64"
+
     runs-on: ubuntu-latest
     steps:
     - name: Clone source code
@@ -194,7 +196,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile_warmer
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ env.PLATFORMS }}
         push: true
         tags: |
           gcr.io/kaniko-project/warmer:${{ env.GITHUB_SHA }}
@@ -204,7 +206,7 @@ jobs:
     - name: Sign images 
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v0.2.0'
+        cosign-release: 'v1.4.1'
 
       # Use cosign to sign the images
     - run: |
@@ -264,7 +266,7 @@ jobs:
       with:
         context: .
         file: ./deploy/Dockerfile_slim
-        platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+        platforms: ${{ env.PLATFORMS }}
         push: true
         tags: |
           gcr.io/kaniko-project/executor:${{ env.GITHUB_SHA }}-slim
@@ -274,7 +276,7 @@ jobs:
     - name: Sign images
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v0.2.0'
+        cosign-release: 'v1.4.1'
 
     # Use cosign to sign the images
     - run: |
