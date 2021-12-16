@@ -1,6 +1,6 @@
-name: Intergration tests (K8s)
+name: Integration tests (K8s)
 
-# Triggers the workflow on push or pull request events
+# Triggers the workflow on pull request events
 on: [pull_request]
 
 concurrency:

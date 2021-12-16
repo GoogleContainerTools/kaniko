@@ -37,7 +37,7 @@ func TestWithContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	builder := NewDockerFileBuilder()
+	builder := NewDockerFileBuilder(t.Logf)
 
 	for _, tdInfo := range testDirs {
 		name := tdInfo.Name()
@@ -47,7 +47,7 @@ func TestWithContext(t *testing.T) {
 			t.Parallel()
 
 			if err := builder.BuildImageWithContext(
-				config, "", name, testDir,
+				t, config, "", name, testDir,
 			); err != nil {
 				t.Fatal(err)
 			}
