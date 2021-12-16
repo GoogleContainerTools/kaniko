@@ -334,6 +334,10 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 
+		if err = writeSecurityXattrToToFile(path, hdr); err != nil {
+			return err
+		}
+
 		if err = setFileTimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
 			return err
 		}
