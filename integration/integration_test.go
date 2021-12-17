@@ -87,8 +87,8 @@ func getDockerMajorVersion() int {
 	}
 	return ver
 }
-func launchTests(m *testing.M) (int, error) {
 
+func launchTests(m *testing.M) (int, error) {
 	if config.isGcrRepository() {
 		contextFile, err := CreateIntegrationTarball()
 		if err != nil {
@@ -141,32 +141,25 @@ func buildRequiredImages() error {
 	setupCommands := []struct {
 		name    string
 		command []string
-	}{
-		{
-			name:    "Building kaniko image",
-			command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
-		},
-		{
-			name:    "Building cache warmer image",
-			command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
-		},
-		{
-			name:    "Building onbuild base image",
-			command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
-		},
-		{
-			name:    "Pushing onbuild base image",
-			command: []string{"docker", "push", config.onbuildBaseImage},
-		},
-		{
-			name:    "Building hardlink base image",
-			command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
-		},
-		{
-			name:    "Pushing hardlink base image",
-			command: []string{"docker", "push", config.hardlinkBaseImage},
-		},
-	}
+	}{{
+		name:    "Building kaniko image",
+		command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
+	}, {
+		name:    "Building cache warmer image",
+		command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
+	}, {
+		name:    "Building onbuild base image",
+		command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
+	}, {
+		name:    "Pushing onbuild base image",
+		command: []string{"docker", "push", config.onbuildBaseImage},
+	}, {
+		name:    "Building hardlink base image",
+		command: []string{"docker", "build", "-t", config.hardlinkBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_hardlink_base", dockerfilesPath), "."},
+	}, {
+		name:    "Pushing hardlink base image",
+		command: []string{"docker", "push", config.hardlinkBaseImage},
+	}}
 
 	for _, setupCmd := range setupCommands {
 		fmt.Println(setupCmd.name)
@@ -522,7 +515,7 @@ func TestLayers(t *testing.T) {
 }
 
 func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
-	if err := imageBuilder.BuildImage(config, dockerfilesPath, dockerfile); err != nil {
+	if err := imageBuilder.BuildImage(t, config, dockerfilesPath, dockerfile); err != nil {
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
 	}

@@ -28,4 +28,5 @@ jobs:
     - name: Run integration-test-layers
       run: |
         make travis-setup
+        make minikube-setup
         make integration-test-layers

@@ -27,4 +27,5 @@ jobs:
       - name: Run integration-test-run
         run: |
           make travis-setup
+          make minikube-setup
           make integration-test-run
