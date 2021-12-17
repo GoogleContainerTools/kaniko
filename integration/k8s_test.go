@@ -89,7 +89,7 @@ func TestK8s(t *testing.T) {
 			t.Logf("Waiting for K8s kaniko build job to finish: %s\n",
 				"job/kaniko-test-"+job.Name)
 
-			kubeWaitCmd := exec.Command("kubectl", "wait", "--for=condition=complete", "--timeout=5m",
+			kubeWaitCmd := exec.Command("kubectl", "wait", "--for=condition=complete", "--timeout=1m",
 				"job/kaniko-test-"+job.Name)
 			if out, errR := RunCommandWithoutTest(kubeWaitCmd); errR != nil {
 				t.Log(kubeWaitCmd.Args)
@@ -110,7 +110,7 @@ func TestK8s(t *testing.T) {
 					t.Log(string(outD))
 				}
 
-				logsCmd := exec.Command("kubectl", "logs", "job/kaniko-test-"+job.Name)
+				logsCmd := exec.Command("kubectl", "logs", "--all-containers", "job/kaniko-test-"+job.Name)
 				outL, errL := RunCommandWithoutTest(logsCmd)
 				if errL != nil {
 					t.Error(errL)
