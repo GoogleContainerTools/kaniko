@@ -178,20 +178,18 @@ func FindDockerFiles(dockerfilesPath string) ([]string, error) {
 // DockerFileBuilder knows how to build docker files using both Kaniko and Docker and
 // keeps track of which files have been built.
 type DockerFileBuilder struct {
-	logf Logger
 	// Holds all available docker files and whether or not they've been built
 	filesBuilt           map[string]struct{}
 	DockerfilesToIgnore  map[string]struct{}
 	TestCacheDockerfiles map[string]struct{}
 }
 
-type Logger func(string, ...interface{})
+type logger func(string, ...interface{})
 
 // NewDockerFileBuilder will create a DockerFileBuilder initialized with dockerfiles, which
 // it will assume are all as yet unbuilt.
-func NewDockerFileBuilder(logf Logger) *DockerFileBuilder {
+func NewDockerFileBuilder() *DockerFileBuilder {
 	d := DockerFileBuilder{
-		logf:       logf,
 		filesBuilt: map[string]struct{}{},
 	}
 	d.DockerfilesToIgnore = map[string]struct{}{
@@ -309,7 +307,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	timer = timing.Start(dockerfile + "_kaniko")
-	if _, err := buildKanikoImage(d.logf, dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
+	if _, err := buildKanikoImage(t.Logf, dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
 		contextDir, gcsBucket, serviceAccount, true); err != nil {
 		return err
 	}
@@ -427,7 +425,7 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 }
 
 func buildKanikoImage(
-	logf Logger,
+	logf logger,
 	dockerfilesPath string,
 	dockerfile string,
 	buildArgs []string,

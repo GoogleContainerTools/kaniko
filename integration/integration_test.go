@@ -111,7 +111,7 @@ func launchTests(m *testing.M) (int, error) {
 		return 1, errors.Wrap(err, "Error while building images")
 	}
 
-	imageBuilder = NewDockerFileBuilder(log.Printf)
+	imageBuilder = NewDockerFileBuilder()
 
 	return m.Run(), nil
 }

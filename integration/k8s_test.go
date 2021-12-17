@@ -46,7 +46,7 @@ func TestK8s(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	builder := NewDockerFileBuilder(t.Logf)
+	builder := NewDockerFileBuilder()
 
 	for _, tdInfo := range testDirs {
 		name := tdInfo.Name()
