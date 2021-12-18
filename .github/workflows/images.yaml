@@ -1,0 +1,100 @@
+name: Build images
+
+on:
+  pull_request:
+    branches: ['master']
+  push:
+    branches: ['master']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+concurrency:
+  group: release-images-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-images:
+    permissions:
+      contents: read  # Read the repo contents.
+      id-token: write # Produce identity token for keyless signing.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+        - executor
+        - executor-debug
+        - executor-slim
+        - warmer
+
+        include:
+        - image: executor
+          dockerfile: ./deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          name: gcr.io/kaniko-project/executor:${{ github.sha }}
+
+        - image: executor-debug
+          dockerfile: ./deploy/Dockerfile_debug
+          platforms: linux/amd64,linux/arm64
+          name: gcr.io/kaniko-project/executor:${{ github.sha }}-debug
+
+        - image: executor-slim
+          dockerfile: ./deploy/Dockerfile_slim
+          platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          name: gcr.io/kaniko-project/executor:${{ github.sha }}-slim
+
+        - image: warmer
+          dockerfile: ./deploy/Dockerfile_warmer
+          name: gcr.io/kaniko-project/warmer:${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # Setup auth if not a PR.
+    - if: github.event_name != 'pull_request'
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+        project_id: kaniko-project
+        export_default_credentials: true
+    - if: github.event_name != 'pull_request'
+      run: gcloud auth configure-docker
+
+    # Build and push with Docker.
+    - uses: docker/setup-qemu-action@v1
+      with:
+        platforms: ${{ matrix.platforms }}
+    - uses: docker/setup-buildx-action@v1
+    - uses: docker/build-push-action@v2
+      id: build-and-push
+      with:
+        context: .
+        file: ${{ matrix.dockerfile }}
+        platforms: ${{ matrix.platforms }}
+        push: ${{ github.event_name != 'pull_request' }} # Only push if not a PR.
+        tags: ${{ matrix.name }}
+        # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#github-cache
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    # Sign images if not a PR.
+    - if: github.event_name != 'pull_request'
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: 'v1.4.1'
+    - if: github.event_name != 'pull_request'
+      env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: |
+        #export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
+        #cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
+        cosign sign ${{ matrix.name }}@${{ steps.build-and-push.outputs.digest }}
+
+    # If a tag push, use crane to add the image tag.
+    - if: startsWith(github.ref, 'refs/tags/v')
+      uses: imjasonh/setup-crane@v0.1
+    - if: startsWith(github.ref, 'refs/tags/v')
+      name: Apply release tag
+      run: |
+        crane cp ${{ matrix.name }}@${{ steps.build-and-push.outputs.digest }} \
+            ${{ matrix.name }}:${GITHUB_REF/refs\/tags\//}
