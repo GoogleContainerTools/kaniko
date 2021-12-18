@@ -7,6 +7,12 @@ on:
 
 jobs:
   build-executor:
+    permissions:
+      # Read the repo contents
+      contents: read
+      # Produce identity token for keyless signing
+      id-token: write
+
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
@@ -71,11 +77,20 @@ jobs:
         cosign-release: 'v1.4.1'
     
     # Use cosign to sign the images
-    - run: |
+    - env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: |
         export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
+        cosign sign gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
 
   build-debug:
+    permissions:
+      # Read the repo contents
+      contents: read
+      # Produce identity token for keyless signing
+      id-token: write
+
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
@@ -116,7 +131,7 @@ jobs:
         project_id: kaniko-project
         export_default_credentials: true
 
-      # Configure docker to use the gcloud command-line tool as a credential helper
+    # Configure docker to use the gcloud command-line tool as a credential helper
     - run: |
         # Set up docker to authenticate
         # via gcloud command-line tool.
@@ -126,7 +141,7 @@ jobs:
       id: build-and-push
       with:
         context: .
-        file:  ./deploy/Dockerfile_debug
+        file: ./deploy/Dockerfile_debug
         platforms: ${{ env.PLATFORMS }}
         push: true
         tags: |
@@ -139,12 +154,21 @@ jobs:
       with:
         cosign-release: 'v1.4.1'
       
-      # Use cosign to sign the images
-    - run: |
+    # Use cosign to sign the images
+    - env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: |
         export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
+        cosign sign gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
 
   build-warmer:
+    permissions:
+      # Read the repo contents
+      contents: read
+      # Produce identity token for keyless signing
+      id-token: write
+
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
@@ -208,12 +232,21 @@ jobs:
       with:
         cosign-release: 'v1.4.1'
 
-      # Use cosign to sign the images
-    - run: |
+    # Use cosign to sign the images
+    - env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: |
         export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/warmer@${{ steps.build-and-push.outputs.digest }}
+        cosign sign gcr.io/kaniko-project/warmer@${{ steps.build-and-push.outputs.digest }}
 
   build-slim:
+    permissions:
+      # Read the repo contents
+      contents: read
+      # Produce identity token for keyless signing
+      id-token: write
+
     env:
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REF: ${{ github.ref }}
@@ -278,7 +311,9 @@ jobs:
         cosign-release: 'v1.4.1'
 
     # Use cosign to sign the images
-    - run: |
+    - env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: |
         export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
         cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
-
+        cosign sign gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
