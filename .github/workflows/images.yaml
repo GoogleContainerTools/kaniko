@@ -96,7 +96,7 @@ jobs:
       run: |
         cosign sign \
             --kms gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
-            ${{ matrix.image }}@${{ steps.build-and-push.outputs.digest }}
+            ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
         cosign sign ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
 
     # If a tag push, use crane to add more tags.
@@ -107,9 +107,5 @@ jobs:
       run: |
         crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
             ${{ matrix.image-name }}:${GITHUB_REF/refs\/tags\//}
-
-        # Also apply release tags.
-        if [[ ! -z "${{ matrix.release-tag }}" ]]; then
-          crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
+        crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
             ${{ matrix.image-name }}:${{ matrix.release-tag }}
-        fi
