@@ -31,21 +31,25 @@ jobs:
           dockerfile: ./deploy/Dockerfile
           platforms: linux/amd64,linux/arm64
           name: gcr.io/kaniko-project/executor:${{ github.sha }}
+          tag: 'latest'
 
         - image: executor-debug
           dockerfile: ./deploy/Dockerfile_debug
           platforms: linux/amd64,linux/arm64
           name: gcr.io/kaniko-project/executor:${{ github.sha }}-debug
+          tag: 'debug'
 
         - image: executor-slim
           dockerfile: ./deploy/Dockerfile_slim
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           name: gcr.io/kaniko-project/executor:${{ github.sha }}-slim
+          tag: 'slim'
 
         - image: warmer
           dockerfile: ./deploy/Dockerfile_warmer
           name: gcr.io/kaniko-project/warmer:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
+          tag: ''
 
     steps:
     - uses: actions/checkout@v2
@@ -86,15 +90,22 @@ jobs:
       env:
         COSIGN_EXPERIMENTAL: "true"
       run: |
-        #export KMS_VAL=gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign
-        #cosign sign -kms $KMS_VAL gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
+        cosign sign \
+            --kms gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
+            gcr.io/kaniko-project/executor@${{ steps.build-and-push.outputs.digest }}
         cosign sign ${{ matrix.name }}@${{ steps.build-and-push.outputs.digest }}
 
     # If a tag push, use crane to add the image tag.
     - if: startsWith(github.ref, 'refs/tags/v')
       uses: imjasonh/setup-crane@v0.1
     - if: startsWith(github.ref, 'refs/tags/v')
-      name: Apply release tag
+      name: Apply release tags
       run: |
         crane cp ${{ matrix.name }}@${{ steps.build-and-push.outputs.digest }} \
             ${{ matrix.name }}:${GITHUB_REF/refs\/tags\//}
+
+        # Also apply executor:${tag} if necessary.
+        if [[ ! -z "${{ matrix.tag }}" ]]; then
+          crane cp ${{ matrix.name }}@${{ steps.build-and-push.outputs.digest }} \
+            gcr.io/kaniko-project/executor:${{ matrix.tag }}
+        fi
