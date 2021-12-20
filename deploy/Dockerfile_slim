@@ -13,21 +13,15 @@
 # limitations under the License.
 
 # Builds the static Go image to execute in a Kubernetes job
-FROM golang:1.15 as build_env
-ARG GOARCH=amd64
-RUN echo $GOARCH > /goarch
+FROM golang:1.17 as build_env
 
-#This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
-ARG TARGETPLATFORM
-
-#Capture ARCH has write to /goarch
-RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,"/"); print a[2]}' > /goarch` || echo "$GOARCH"
-RUN echo "I am runninng $TARGETPLATFORM with $(cat /goarch)"
+# This arg is passed by docker buildx & contains the target CPU architecture (e.g., amd64, arm64, etc.)
+ARG TARGETARCH
 
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 COPY . .
 
-RUN make GOARCH=$(cat /goarch)
+RUN make GOARCH=$TARGETARCH
 
 # Generate latest ca-certificates
 
