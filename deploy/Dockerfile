@@ -14,7 +14,7 @@
 
 # Builds the static Go image to execute in a Kubernetes job
 
-FROM golang:1.17
+FROM golang:1.15
 WORKDIR /go/src/github.com/GoogleContainerTools/kaniko
 
 # This arg is passed by docker buildx & contains the target CPU architecture (e.g., amd64, arm64, etc.)
