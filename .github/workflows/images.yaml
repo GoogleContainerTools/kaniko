@@ -95,7 +95,7 @@ jobs:
         COSIGN_EXPERIMENTAL: "true"
       run: |
         cosign sign \
-            --kms gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
+            --key gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
             ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
         cosign sign ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
 
