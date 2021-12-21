@@ -54,6 +54,7 @@ COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr
 COPY --from=busybox:1.32.0 /bin /busybox
+
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
 
@@ -67,6 +68,7 @@ ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENV DOCKER_CONFIG /kaniko/.docker/
 ENV DOCKER_CREDENTIAL_GCR_CONFIG /kaniko/.config/gcloud/docker_credential_gcr_config.json
 WORKDIR /workspace
+RUN ["/kaniko/docker-credential-gcr", "config", "--token-source=env"]
 RUN ["/busybox/mkdir", "-p", "/bin"]
 RUN ["/busybox/ln", "-s", "/busybox/sh", "/bin/sh"]
 ENTRYPOINT ["/kaniko/executor"]
