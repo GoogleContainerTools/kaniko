@@ -158,9 +158,7 @@ You can also run tests with `go test`, for example to run tests individually:
 go test ./integration -v --repo localhost:5000 -run TestLayers/test_layer_Dockerfile_test_copy_bucket
 ```
 
-These tests will be kicked off by [reviewers](#reviews) for submitted PRs by the travis task.
-
-
+These tests will be kicked off by [reviewers](#reviews) for submitted PRs using GitHub Actions.
 
 ### Benchmarking
 

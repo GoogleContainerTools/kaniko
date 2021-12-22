@@ -30,10 +30,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-git/go-git/v5"
-	gitConfig "github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/pkg/errors"
@@ -203,53 +199,30 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func findSHA(ref plumbing.ReferenceName, refs []*plumbing.Reference) (string, error) {
-	for _, ref2 := range refs {
-		if ref.String() == ref2.Name().String() {
-			return ref2.Hash().String(), nil
-		}
+func getBranchCommitAndURL() (branch, commit, url string) {
+	repo := os.Getenv("GITHUB_REPOSITORY")
+	commit = os.Getenv("GITHUB_SHA")
+	branch = os.Getenv("GITHUB_HEAD_REF")
+	if branch == "" {
+		branch = os.Getenv("GITHUB_REF")
+		log.Printf("GITHUB_HEAD_REF is unset (not a PR); using GITHUB_REF=%q", branch)
 	}
-	return "", errors.New("no ref found")
-}
-
-// getBranchSHA get a SHA commit hash for the given repo url and branch ref name.
-func getBranchSHA(t *testing.T, url, branch string) string {
-	repo := "https://" + url
-	c := &gitConfig.RemoteConfig{URLs: []string{repo}}
-	remote := git.NewRemote(memory.NewStorage(), c)
-	refs, err := remote.List(&git.ListOptions{})
-	if err != nil {
-		t.Fatalf("list remote %s#%s: %s", repo, branch, err)
+	branch = strings.TrimPrefix(branch, "refs/heads/")
+	if repo == "" {
+		repo = "GoogleContainerTools/kaniko"
 	}
-	commit, err := findSHA(plumbing.NewBranchReferenceName(branch), refs)
-	if err != nil {
-		t.Fatalf("findSHA %s#%s: %s", repo, branch, err)
-	}
-	return commit
-}
-
-func getBranchAndURL() (branch, url string) {
-	var repoSlug string
-	if _, ok := os.LookupEnv("TRAVIS_PULL_REQUEST"); ok {
+	if branch == "" {
 		branch = "master"
-		repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
-		log.Printf("Travis CI Pull request source repo: %s branch: %s\n", repoSlug, branch)
-	} else if _, ok := os.LookupEnv("TRAVIS_BRANCH"); ok {
-		branch = os.Getenv("TRAVIS_BRANCH")
-		repoSlug = os.Getenv("TRAVIS_REPO_SLUG")
-		log.Printf("Travis CI repo: %s branch: %s\n", repoSlug, branch)
-	} else {
-		branch = "master"
-		repoSlug = "GoogleContainerTools/kaniko"
 	}
-	url = "github.com/" + repoSlug
+	log.Printf("repo=%q / commit=%q / branch=%q", repo, commit, branch)
+	url = "github.com/" + repo
 	return
 }
 
 func getGitRepo(t *testing.T, explicit bool) string {
-	branch, url := getBranchAndURL()
-	if explicit {
-		return url + "#" + getBranchSHA(t, url, branch)
+	branch, commit, url := getBranchCommitAndURL()
+	if explicit && commit != "" {
+		return url + "#" + commit
 	}
 	return url + "#refs/heads/" + branch
 }
@@ -304,8 +277,8 @@ func TestGitBuildcontext(t *testing.T) {
 // Example:
 //   git://github.com/myuser/repo
 func TestGitBuildcontextNoRef(t *testing.T) {
-	_, repo := getBranchAndURL()
-	testGitBuildcontextHelper(t, repo)
+	_, _, url := getBranchCommitAndURL()
+	testGitBuildcontextHelper(t, url)
 }
 
 // TestGitBuildcontextExplicitCommit uses an explicit commit hash instead of named reference
