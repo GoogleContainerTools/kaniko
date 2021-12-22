@@ -219,7 +219,7 @@ func getBranchCommitAndURL() (branch, commit, url string) {
 	return
 }
 
-func getGitRepo(t *testing.T, explicit bool) string {
+func getGitRepo(explicit bool) string {
 	branch, commit, url := getBranchCommitAndURL()
 	if explicit && commit != "" {
 		return url + "#" + commit
@@ -269,7 +269,7 @@ func testGitBuildcontextHelper(t *testing.T, repo string) {
 // Example:
 //   git://github.com/myuser/repo#refs/heads/master
 func TestGitBuildcontext(t *testing.T) {
-	repo := getGitRepo(t, false)
+	repo := getGitRepo(false)
 	testGitBuildcontextHelper(t, repo)
 }
 
@@ -285,12 +285,12 @@ func TestGitBuildcontextNoRef(t *testing.T) {
 // Example:
 //   git://github.com/myuser/repo#b873088c4a7b60bb7e216289c58da945d0d771b6
 func TestGitBuildcontextExplicitCommit(t *testing.T) {
-	repo := getGitRepo(t, true)
+	repo := getGitRepo(true)
 	testGitBuildcontextHelper(t, repo)
 }
 
 func TestGitBuildcontextSubPath(t *testing.T) {
-	repo := getGitRepo(t, false)
+	repo := getGitRepo(false)
 	dockerfile := "Dockerfile_test_run_2"
 
 	// Build with docker
@@ -334,7 +334,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 }
 
 func TestBuildViaRegistryMirrors(t *testing.T) {
-	repo := getGitRepo(t, false)
+	repo := getGitRepo(false)
 	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
 
 	// Build with docker
@@ -374,7 +374,7 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 }
 
 func TestBuildWithLabels(t *testing.T) {
-	repo := getGitRepo(t, false)
+	repo := getGitRepo(false)
 	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_label", integrationPath, dockerfilesPath)
 
 	testLabel := "mylabel=myvalue"
@@ -417,7 +417,7 @@ func TestBuildWithLabels(t *testing.T) {
 }
 
 func TestBuildWithHTTPError(t *testing.T) {
-	repo := getGitRepo(t, false)
+	repo := getGitRepo(false)
 	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_add_404", integrationPath, dockerfilesPath)
 
 	// Build with docker
