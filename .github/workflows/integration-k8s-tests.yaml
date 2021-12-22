@@ -1,11 +1,11 @@
-name: Integration tests (Layers)
+name: Integration tests (K8s)
 
 on:
   pull_request:
     branches: ['master']
 
 concurrency:
-  group: int-test-layers-${{ github.head_ref }}
+  group: int-test-k8s-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
@@ -21,8 +21,9 @@ jobs:
     - uses: actions/checkout@v2
     - uses: docker/setup-buildx-action@v1
 
-    - name: Run integration-test-layers
+    - name: Run build-image-and-k8s-integration-test
       run: |
         make travis-setup
         make minikube-setup
-        make integration-test-layers
+        make k8s-executor-build-push
+        make integration-test-k8s

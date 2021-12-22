@@ -1,14 +1,15 @@
 name: Integration Tests Misc
 
-# Triggers the workflow on push or pull request events
-on: [pull_request]
+on:
+  pull_request:
+    branches: ['master']
 
 concurrency:
   group: int-test-mis-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
-  build-executor:
+  tests:
     env:
       IMAGE_REPO: 'localhost:5000'
       REGISTRY: 'localhost:5000'
@@ -17,25 +18,20 @@ jobs:
       TRAVIS_PULL_REQUEST: ${{ github.event.number }}
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.14
-        id: go
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - uses: actions/checkout@v2
+    - uses: docker/setup-buildx-action@v1
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+    - name: Print Travis ENV vars
+      run: |
+        echo "TRAVIS_BRANCH: ${TRAVIS_BRANCH}"
+        echo "TRAVIS_PULL_REQUEST: ${TRAVIS_PULL_REQUEST}"
+        echo "TRAVIS_REPO_SLUG: ${TRAVIS_REPO_SLUG}"
 
-      - name: Print Travis ENV vars
-        run: |
-          echo "TRAVIS_BRANCH: ${TRAVIS_BRANCH}"
-          echo "TRAVIS_PULL_REQUEST: ${TRAVIS_PULL_REQUEST}"
-          echo "TRAVIS_REPO_SLUG: ${TRAVIS_REPO_SLUG}"
-
-      - name: Run integration-test-misc
-        run : |
-          make travis-setup
-          make minikube-setup
-          make integration-test-misc
+    - name: Run integration-test-misc
+      run : |
+        make travis-setup
+        make minikube-setup
+        make integration-test-misc

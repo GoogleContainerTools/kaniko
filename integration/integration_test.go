@@ -164,6 +164,7 @@ func buildRequiredImages() error {
 	for _, setupCmd := range setupCommands {
 		fmt.Println(setupCmd.name)
 		cmd := exec.Command(setupCmd.command[0], setupCmd.command[1:]...)
+		cmd.Env = append(os.Environ(), "DOCKER_BUILDKIT=1") // Build with buildkit enabled.
 		if out, err := RunCommandWithoutTest(cmd); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("%s failed: %s", setupCmd.name, string(out)))
 		}
