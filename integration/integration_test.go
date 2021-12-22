@@ -202,12 +202,13 @@ func TestRun(t *testing.T) {
 func getBranchCommitAndURL() (branch, commit, url string) {
 	repo := os.Getenv("GITHUB_REPOSITORY")
 	commit = os.Getenv("GITHUB_SHA")
-	branch = os.Getenv("GITHUB_HEAD_REF")
-	if branch == "" {
+	if _, isPR := os.LookupEnv("GITHUB_HEAD_REF"); isPR {
+		branch = "master"
+	} else {
 		branch = os.Getenv("GITHUB_REF")
 		log.Printf("GITHUB_HEAD_REF is unset (not a PR); using GITHUB_REF=%q", branch)
+		branch = strings.TrimPrefix(branch, "refs/heads/")
 	}
-	branch = strings.TrimPrefix(branch, "refs/heads/")
 	if repo == "" {
 		repo = "GoogleContainerTools/kaniko"
 	}
