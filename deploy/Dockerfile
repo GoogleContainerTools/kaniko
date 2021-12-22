@@ -35,7 +35,10 @@ RUN go install github.com/chrismellard/docker-credential-acr-env@09e2b5a8ac86c3e
 RUN mkdir -p /kaniko/.docker
 
 COPY . .
-RUN make GOARCH=$TARGETARCH
+RUN \
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
+    make GOARCH=$TARGETARCH
 
 # Generate latest ca-certificates
 

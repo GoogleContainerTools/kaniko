@@ -21,7 +21,10 @@ ARG TARGETARCH
 WORKDIR /src
 COPY . .
 
-RUN make GOARCH=$TARGETARCH
+RUN \
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
+    make GOARCH=$TARGETARCH
 
 # Generate latest ca-certificates
 

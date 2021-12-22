@@ -20,7 +20,6 @@ IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 
 docker version
 
-# Sets up a kokoro (Google internal integration testing tool) environment
 echo "Running integration tests..."
 make out/executor
 make out/warmer
