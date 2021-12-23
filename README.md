@@ -50,7 +50,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
   - [Pushing to Different Registries](#pushing-to-different-registries)
     - [Pushing to Docker Hub](#pushing-to-docker-hub)
     - [Pushing to Google GCR](#pushing-to-google-gcr)
-    - [Pushing to Google GCR - Workload Identity](#pushing-to-google-gcr-using-workload-identity)
+    - [Pushing to Google GCR - Workload Identity](#pushing-to-gcr-using-workload-identity)
     - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
     - [Pushing to Azure Container Registry](#pushing-to-azure-container-registry)
     - [Pushing to JFrog Container Registry or to JFrog Artifactory](#pushing-to-jfrog-container-registry-or-to-jfrog-artifactory)
