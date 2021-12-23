@@ -630,7 +630,7 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
-			uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
+			uid, gid := DetermineTargetFileOwnership(fi, uid, gid)
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
@@ -901,7 +901,64 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	return otiai10Cpy.Copy(src, destFile)
+	err := otiai10Cpy.Copy(src, destFile)
+	if err != nil {
+		return errors.Wrap(err, "copying file")
+	}
+	err = CopyOwnership(src, destDir)
+	if err != nil {
+		return errors.Wrap(err, "copying ownership")
+	}
+	return nil
+}
+
+// CopyOwnership copies the file or directory ownership recursively at src to dest
+func CopyOwnership(src string, destDir string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if IsSymlink(info) {
+			return nil
+		}
+		relPath, err := filepath.Rel(filepath.Dir(src), path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(destDir, relPath)
+
+		if CheckIgnoreList(src) && CheckIgnoreList(destPath) {
+			if !isExist(destPath) {
+				logrus.Debugf("Path %s ignored, but not exists", destPath)
+				return nil
+			}
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			logrus.Debugf("Not copying ownership for %s, as it's ignored", destPath)
+			return nil
+		}
+		if CheckIgnoreList(destDir) && CheckIgnoreList(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s ignored, but not exists", path)
+				return nil
+			}
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			logrus.Debugf("Not copying ownership for %s, as it's ignored", path)
+			return nil
+		}
+
+		info, err = os.Stat(path)
+		if err != nil {
+			return errors.Wrap(err, "reading ownership")
+		}
+		stat := info.Sys().(*syscall.Stat_t)
+		err = os.Chown(destPath, int(stat.Uid), int(stat.Gid))
+
+		return nil
+	})
 }
 
 func createParentDirectory(path string) error {
