@@ -97,6 +97,8 @@ func (t *Tar) AddFileToTar(p string) error {
 	// this makes this layer unnecessarily differ from a cached layer which does contain this information
 	hdr.Uname = ""
 	hdr.Gname = ""
+	// use PAX format to preserve accurate mtime (match Docker behavior)
+	hdr.Format = tar.FormatPAX
 
 	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {
