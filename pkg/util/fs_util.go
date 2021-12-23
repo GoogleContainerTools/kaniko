@@ -905,7 +905,7 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 	if err != nil {
 		return errors.Wrap(err, "copying file")
 	}
-	err = CopyOwnership(src, destDir)
+	err = CopyOwnership(src, destDir, root)
 	if err != nil {
 		return errors.Wrap(err, "copying ownership")
 	}
@@ -913,7 +913,7 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 }
 
 // CopyOwnership copies the file or directory ownership recursively at src to dest
-func CopyOwnership(src string, destDir string) error {
+func CopyOwnership(src string, destDir string, root string) error {
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -921,7 +921,7 @@ func CopyOwnership(src string, destDir string) error {
 		if IsSymlink(info) {
 			return nil
 		}
-		relPath, err := filepath.Rel(filepath.Dir(src), path)
+		relPath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
@@ -955,9 +955,7 @@ func CopyOwnership(src string, destDir string) error {
 			return errors.Wrap(err, "reading ownership")
 		}
 		stat := info.Sys().(*syscall.Stat_t)
-		err = os.Chown(destPath, int(stat.Uid), int(stat.Gid))
-
-		return nil
+		return os.Chown(destPath, int(stat.Uid), int(stat.Gid))
 	})
 }
 
