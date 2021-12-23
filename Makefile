@@ -53,9 +53,10 @@ out/executor: $(GO_FILES)
 out/warmer: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(WARMER_PACKAGE)
 
-.PHONY: travis-setup
-travis-setup:
-	@ ./scripts/travis-setup.sh
+.PHONY: install-container-diff
+install-container-diff:
+	@ curl -LO https://github.com/GoogleContainerTools/container-diff/releases/download/v0.17.0/container-diff-linux-amd64 && \
+		chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
 
 .PHONY: minikube-setup
 minikube-setup:

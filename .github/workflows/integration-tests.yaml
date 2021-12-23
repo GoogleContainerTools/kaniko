@@ -1,0 +1,36 @@
+name: Integration tests
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+    branches: ['master']
+
+concurrency:
+  group: integration-test-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REPO: 'localhost:5000'
+      REGISTRY: 'localhost:5000'
+    strategy:
+      fail-fast: false
+      matrix:
+        make-target:
+        - integration-test-layers
+        - integration-test-misc
+        - integration-test-run
+        - k8s-executor-build-push integration-test-k8s
+
+    steps:
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - uses: actions/checkout@v2
+    - uses: docker/setup-buildx-action@v1
+
+    - run: make install-container-diff minikube-setup
+    - run: make ${{ matrix.make-target }}
