@@ -750,7 +750,7 @@ Set this flag if you want to pull images from a plain HTTP registry. It is suppo
 
 #### --insecure-registry
 
-Set this flag to use plain HTTP requests when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
+You can set `--insecure-registry <registry-name>` to use plain HTTP requests when accessing the specified registry. It is supposed to be used for testing purposes only and should not be used in production!
 You can set it multiple times for multiple registries.
 
 #### --label
@@ -827,8 +827,7 @@ Set this flag to skip TLS certificate validation when pulling from a registry. I
 
 #### --skip-tls-verify-registry
 
-Set this flag to skip TLS certificate validation when accessing a registry. It is supposed to be used for testing purposes only and should not be used in production!
-You can set it multiple times for multiple registries.
+You can set `--skip-tls-verify-registry <registry-name>` to skip TLS certificate validation when accessing the specified registry. It is supposed to be used for testing purposes only and should not be used in production! You can set it multiple times for multiple registries.
 
 #### --skip-unused-stages
 
