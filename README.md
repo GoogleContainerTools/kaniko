@@ -52,6 +52,7 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [Pushing to Google GCR](#pushing-to-google-gcr)
     - [Pushing to Google GCR - Workload Identity](#pushing-to-google-gcr-using-workload-identity)
     - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+    - [Pushing to Azure Container Registry](#pushing-to-azure-container-registry)
     - [Pushing to JFrog Container Registry or to JFrog Artifactory](#pushing-to-jfrog-container-registry-or-to-jfrog-artifactory)
   - [Additional Flags](#additional-flags)
     - [--build-arg](#--build-arg)
@@ -548,6 +549,74 @@ spec:
   - name: aws-secret
     secret:
       secretName: aws-secret
+```
+
+#### Pushing to Azure Container Registry
+
+An ACR [credential helper](https://github.com/chrismellard/docker-credential-acr-env) is built into the kaniko executor image, which can be 
+used to authenticate with well-known Azure environmental information.
+
+To configure credentials, you will need to do the following:
+
+1. Update the `credStore` section of `config.json`:
+
+  ```json
+  { "credsStore": "acr" }
+  ```
+  
+  A downside of this approach is that ACR authentication will be used for all registries, which will fail if you also pull from DockerHub, GCR, etc. Thus,
+  it is better to configure the credential tool only for your ACR registries by using `credHelpers` instead of `credsStore`:
+  
+  ```json
+  { "credHelpers": {"mycr.azurecr.io": "acr"} }
+  ```
+  
+  You can mount in the new config as a configMap:
+
+  ```shell
+  kubectl create configmap docker-config --from-file=<path to config.json>
+  ```
+
+2. Configure credentials
+
+  You can create a Kubernetes secret with environment variables required for Service Principal authentication and expose them to the builder container.
+
+  ```
+  AZURE_CLIENT_ID=<clientID>
+  AZURE_CLIENT_SECRET=<clientSecret>
+  AZURE_TENANT_ID=<tenantId>
+  ```
+
+  If the above are not set then authentication falls back to managed service identities and the MSI endpoint is attempted to be contacted which will work in various Azure contexts such as App Service and Azure Kubernetes Service where the MSI endpoint will authenticate the MSI context the service is running under.
+
+The Kubernetes Pod spec should look similar to this, with the args parameters filled in.
+Note that `azure-secret` secret is only needed when using Azure Service Principal credentials, not when using a managed service identity.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args:
+    - "--dockerfile=<path to Dockerfile within the build context>"
+    - "--context=s3://<bucket name>/<path to .tar.gz>"
+    - "--destination=mycr.azurecr.io/my-repository:my-tag"
+    envFrom:
+    # when authenticating with service principal
+    - secretRef:
+        name: azure-secret
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker/
+  volumes:
+  - name: docker-config
+    configMap:
+      name: docker-config
+  restartPolicy: Never
 ```
 
 #### Pushing to JFrog Container Registry or to JFrog Artifactory
