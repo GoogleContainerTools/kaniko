@@ -1,0 +1,6 @@
+FROM registry.access.redhat.com/ubi8/ubi:8.2 AS BASE
+# Install ping
+RUN yum --disableplugin=subscription-manager install -y iputils
+
+FROM BASE
+RUN set -e && [ ! -z "$(getcap /bin/ping)" ] || exit 1

@@ -30,6 +30,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/system"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -76,6 +77,10 @@ func (t *Tar) AddFileToTar(p string) error {
 	if err != nil {
 		return err
 	}
+	err = readSecurityXattrToTarHeader(p, hdr)
+	if err != nil {
+		return err
+	}
 
 	if p == config.RootDir {
 		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
@@ -112,6 +117,41 @@ func (t *Tar) AddFileToTar(p string) error {
 	defer r.Close()
 	if _, err := io.Copy(t.w, r); err != nil {
 		return err
+	}
+	return nil
+}
+
+const (
+	securityCapabilityXattr = "security.capability"
+)
+
+// writeSecurityXattrToTarHeader writes security.capability
+// xattrs from a a tar header to filesystem
+func writeSecurityXattrToToFile(path string, hdr *tar.Header) error {
+	if hdr.Xattrs == nil {
+		return nil
+	}
+	if capability, ok := hdr.Xattrs[securityCapabilityXattr]; ok {
+		err := system.Lsetxattr(path, securityCapabilityXattr, []byte(capability), 0)
+		if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && err != system.ErrNotSupportedPlatform {
+			return errors.Wrapf(err, "failed to write %q attribute to %q", securityCapabilityXattr, path)
+		}
+	}
+	return nil
+}
+
+// readSecurityXattrToTarHeader reads security.capability
+// xattrs from filesystem to a tar header
+func readSecurityXattrToTarHeader(path string, hdr *tar.Header) error {
+	if hdr.Xattrs == nil {
+		hdr.Xattrs = make(map[string]string)
+	}
+	capability, err := system.Lgetxattr(path, securityCapabilityXattr)
+	if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && err != system.ErrNotSupportedPlatform {
+		return errors.Wrapf(err, "failed to read %q attribute from %q", securityCapabilityXattr, path)
+	}
+	if capability != nil {
+		hdr.Xattrs[securityCapabilityXattr] = string(capability)
 	}
 	return nil
 }
