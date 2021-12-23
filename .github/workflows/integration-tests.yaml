@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: ['master']
 
-concurrency:
-  group: integration-test-${{ github.head_ref }}
-  cancel-in-progress: true
-
 jobs:
   tests:
     runs-on: ubuntu-latest
