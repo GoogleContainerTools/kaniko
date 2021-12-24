@@ -62,10 +62,10 @@ func Test_IsLocalTarArchive(t *testing.T) {
 
 func Test_AddFileToTar(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "")
-    if err != nil {
-        t.Fatalf("err setting up temp dir: %v", err)
-    }
-    defer os.RemoveAll(testDir)
+	if err != nil {
+		t.Fatalf("err setting up temp dir: %v", err)
+	}
+	defer os.RemoveAll(testDir)
 
 	path := filepath.Join(testDir, regularFiles[0])
 	if err := ioutil.WriteFile(path, []byte("hello"), os.ModePerm); err != nil {
