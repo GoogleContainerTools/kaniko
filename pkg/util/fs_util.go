@@ -67,6 +67,14 @@ var defaultIgnoreList = []IgnoreListEntry{
 		PrefixMatchOnly: false,
 	},
 	{
+		Path:            "/.dockerenv",
+		PrefixMatchOnly: false,
+	},
+	{
+		Path:            "/.dockerinit",
+		PrefixMatchOnly: false,
+	},
+	{
 		// we ingore /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
 		// from the base image
 		Path:            "/tmp/apt-key-gpghome",
