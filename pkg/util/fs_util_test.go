@@ -626,7 +626,7 @@ func createUncompressedTar(fileContents map[string]string, tarFileName, testDir 
 	return nil
 }
 
-func Test_unTar(t *testing.T) {
+func Test_UnTar(t *testing.T) {
 	tcs := []struct {
 		name             string
 		setupTarContents map[string]string
@@ -671,7 +671,7 @@ func Test_unTar(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fileList, err := unTar(file, tc.destination)
+			fileList, err := UnTar(file, tc.destination)
 			if err != nil {
 				t.Fatal(err)
 			}
