@@ -18,11 +18,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/buildcontext"
@@ -40,12 +42,14 @@ import (
 )
 
 var (
-	opts         = &config.KanikoOptions{}
-	ctxSubPath   string
-	force        bool
-	logLevel     string
-	logFormat    string
-	logTimestamp bool
+	opts             = &config.KanikoOptions{}
+	ctxSubPath       string
+	force            bool
+	logLevel         string
+	logFormat        string
+	logTimestamp     bool
+	dockerConfig     = util.DockerConfLocation()
+	dockerConfigData []byte
 )
 
 func init() {
@@ -121,7 +125,8 @@ var RootCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if !checkContained() {
+		contained := checkContained()
+		if !contained {
 			if !force {
 				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
@@ -130,6 +135,23 @@ var RootCmd = &cobra.Command{
 		if !opts.NoPush || opts.CacheRepo != "" {
 			if err := executor.CheckPushPermissions(opts); err != nil {
 				exit(errors.Wrap(err, "error checking push permissions -- make sure you entered the correct tag name, and that you are authenticated correctly, and try again"))
+			}
+		}
+		// preserving docker config if possible
+		if contained {
+			if stat, err := os.Stat(dockerConfig); err == nil {
+				rootStat, err := os.Stat("/")
+				if err != nil {
+					exit(errors.Wrap(err, "error stat root dir"))
+				}
+				// If device for docker config same as root, then it is not a mounted
+				if stat.Sys().(*syscall.Stat_t).Dev == rootStat.Sys().(*syscall.Stat_t).Dev {
+					logrus.Infof("%s is not mounted, preserving", dockerConfig)
+					if err := preserveDockerConfig(); err != nil {
+						exit(err)
+					}
+					defer restoreDockerConfig()
+				}
 			}
 		}
 		if err := resolveRelativePaths(); err != nil {
@@ -141,6 +163,9 @@ var RootCmd = &cobra.Command{
 		image, err := executor.DoBuild(opts)
 		if err != nil {
 			exit(errors.Wrap(err, "error building image"))
+		}
+		if err := restoreDockerConfig(); err != nil {
+			exit(errors.Wrap(err, "error restoring docker config"))
 		}
 		if err := executor.DoPush(image, opts); err != nil {
 			exit(errors.Wrap(err, "error pushing image"))
@@ -390,4 +415,26 @@ func isURL(path string) bool {
 
 func shdSkip(path string) bool {
 	return path == "" || isURL(path) || filepath.IsAbs(path)
+}
+
+func preserveDockerConfig() error {
+	var err error
+	dockerConfigData, err = os.ReadFile(dockerConfig)
+	if err != nil {
+		return errors.Wrap(err, "error reading docker config")
+	}
+	err = os.Remove(dockerConfig)
+	if err != nil {
+		return errors.Wrap(err, "error deleting docker config")
+	}
+	return nil
+}
+
+func restoreDockerConfig() error {
+	if len(dockerConfigData) == 0 {
+		return nil
+	}
+	err := ioutil.WriteFile(dockerConfig, dockerConfigData, 0)
+	dockerConfigData = []byte{}
+	return err
 }
