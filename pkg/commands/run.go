@@ -18,7 +18,6 @@ package commands
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -30,7 +29,6 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/goterm/term"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -49,67 +47,6 @@ var (
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	return runCommandInExec(config, buildArgs, r.cmd)
-}
-
-func RunDebugShell(config *v1.Config, buildArgs *dockerfile.BuildArgs, debugShell string, r *DockerCommand) error {
-	logrus.Infof("Starting debug shell: %s", debugShell)
-	cmd := exec.Command(debugShell)
-	cmd.Dir = setWorkDirIfExists(config.WorkingDir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	u := config.User
-	userAndGroup := strings.Split(u, ":")
-	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	userStr, err := util.ResolveEnvironmentReplacement(userAndGroup[0], replacementEnvs, false)
-	if err != nil {
-		return errors.Wrapf(err, "resolving user %s", userAndGroup[0])
-	}
-
-	// If specified, run the command as a specific user
-	if userStr != "" {
-		cmd.SysProcAttr.Credential, err = util.SyscallCredentials(userStr)
-		if err != nil {
-			return errors.Wrap(err, "credentials")
-		}
-	}
-
-	env, err := addDefaultHOME(userStr, replacementEnvs)
-	if err != nil {
-		return errors.Wrap(err, "adding default HOME variable")
-	}
-
-	cmd.Env = env
-
-	logrus.Debugf("Creating PTY")
-
-	pty, err := term.OpenPTY()
-	if err != nil {
-		return errors.Wrap(err, "creating pty")
-	}
-	defer pty.Close()
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = pty.Slave, pty.Slave, pty.Slave
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid:  true,
-		Setctty: true}
-
-	if backupTerm, err := term.Attr(os.Stdin); err == nil {
-		// Stdin is Terminal
-		myTerm := backupTerm
-		logrus.Debugf("Switching terminal to raw mode")
-		myTerm.Raw()
-		myTerm.Set(os.Stdin)
-		defer backupTerm.Set(os.Stdin)
-	} else if fi, _ := os.Stdin.Stat(); (fi.Mode() & os.ModeCharDevice) != 0 {
-		// Stdin has no data
-		return fmt.Errorf(`can not start without stdin, don't forget to add the '--interactive, -i' flag`)
-	}
-
-	// Put command into shell
-	command := strings.Join((*r).(*RunCommand).cmd.CmdLine, " ")
-	pty.Master.WriteString(command)
-	go io.Copy(pty.Master, os.Stdin)
-	go io.Copy(os.Stdout, pty.Master)
-	return cmd.Run()
 }
 
 func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand) error {

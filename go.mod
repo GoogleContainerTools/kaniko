@@ -27,7 +27,7 @@ require (
 	github.com/google/go-containerregistry v0.8.1-0.20220214202839-625fe7b4276a
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
+	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/slowjam v1.0.0
 	github.com/karrick/godirwalk v1.16.1

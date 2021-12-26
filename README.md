@@ -95,8 +95,6 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
     - [--ignore-var-run](#--ignore-var-run)
     - [--ignore-path](#--ignore-path)
     - [--image-fs-extract-retry](#--image-fs-extract-retry)
-    - [--debug](#--debug)
-    - [--debug-shell](#--debug-shell)
   - [Debug Image](#debug-image)
 - [Security](#security)
   - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
@@ -885,17 +883,6 @@ Set this flag as `--ignore-path=<path>` to ignore path when taking an image snap
 #### --image-fs-extract-retry
 
 Set this flag to the number of retries that should happen for the extracting an image filesystem. Defaults to `0`.
-
-#### --debug
-
-Set this flag as `--debug=true` enable debug shell.
-
-#### --debug-shell
-
-Set this flag to specify a debug shell to execute.
-
-_This flag must be used in conjunction with the `--debug=true` flag._
-
 
 ### Debug Image
 

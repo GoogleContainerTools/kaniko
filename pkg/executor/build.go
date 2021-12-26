@@ -389,12 +389,6 @@ func (s *stageBuilder) build() error {
 		}
 
 		if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
-			if s.opts.Debug {
-				logrus.Errorf(errors.Wrap(err, "Failed to execute command").Error())
-				if err := commands.RunDebugShell(&s.cf.Config, s.args, s.opts.DebugShell, &command); err != nil {
-					return errors.Wrap(err, "error starting debug shell")
-				}
-			}
 			return errors.Wrap(err, "failed to execute command")
 		}
 		files = command.FilesToSnapshot()
