@@ -7,12 +7,16 @@ on:
     branches: ['master']
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
 
-concurrency:
-  group: release-images-${{ github.head_ref }}
-  cancel-in-progress: true
-
 jobs:
   build-images:
+    concurrency:
+      # If a previous run is ongoing with the same head_ref (it's a run on the
+      # same PR) then cancel it to save time. If it isn't a PR, only cancel the
+      # previous run if it's on the same commit SHA. This prevents a run for a
+      # commit push from cancelling a previous commit push's build, since we
+      # want an image built and tagged for each commit.
+      group: build-images-${{ github.head_ref || github.sha }}
+      cancel-in-progress: true
     permissions:
       contents: read  # Read the repo contents.
       id-token: write # Produce identity token for keyless signing.
