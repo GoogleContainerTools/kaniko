@@ -244,7 +244,15 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		logrus.Infof("Pushing image to %s", destRef.String())
 
 		retryFunc := func() error {
-			return remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt))
+			dig, err := image.Digest()
+			if err != nil {
+				return err
+			}
+			if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
+				return err
+			}
+			logrus.Infof("Pushed %s", destRef.Context().Digest(dig.String()))
+			return nil
 		}
 
 		if err := util.Retry(retryFunc, opts.PushRetry, 1000); err != nil {
@@ -252,7 +260,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 	}
 	timing.DefaultRun.Stop(t)
-	logrus.Infof("Pushed image to %d destinations", len(destRefs))
 	return writeImageOutputs(image, destRefs)
 }
 
