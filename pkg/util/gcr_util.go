@@ -17,15 +17,8 @@ limitations under the License.
 package util
 
 import (
-	"bytes"
-	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 )
 
 // DockerConfLocation returns the file system location of the Docker
@@ -48,22 +41,4 @@ func DockerConfLocation() string {
 		return filepath.Clean(dockerConfig)
 	}
 	return string(os.PathSeparator) + filepath.Join("kaniko", ".docker", configFile)
-}
-
-func ConfigureGCR(flags string) error {
-	// Checking for existence of docker.config as it's normally required for
-	// authenticated registries and prevent overwriting user provided docker conf
-	_, err := afero.NewOsFs().Stat(DockerConfLocation())
-	dockerConfNotExists := os.IsNotExist(err)
-	if dockerConfNotExists {
-		cmd := exec.Command("docker-credential-gcr", "configure-docker", flags)
-		var out bytes.Buffer
-		cmd.Stderr = &out
-		if err := cmd.Run(); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("error while configuring docker-credential-gcr helper: %s : %s", cmd.String(), out.String()))
-		}
-	} else {
-		logrus.Warnf("\nSkip running docker-credential-gcr as user provided docker configuration exists at %s", DockerConfLocation())
-	}
-	return nil
 }

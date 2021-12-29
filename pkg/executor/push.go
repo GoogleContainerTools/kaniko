@@ -95,14 +95,6 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		}
 
 		registryName := destRef.Repository.Registry.Name()
-		// Historically kaniko was pre-configured by default with gcr credential helper,
-		// in here we keep the backwards compatibility by enabling the GCR helper only
-		// when gcr.io (or pkg.dev) is in one of the destinations.
-		if registryName == "gcr.io" || strings.HasSuffix(registryName, ".gcr.io") || strings.HasSuffix(registryName, ".pkg.dev") {
-			if err := util.ConfigureGCR(fmt.Sprintf("--registries=%s", registryName)); err != nil {
-				return err
-			}
-		}
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
 			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
