@@ -597,20 +597,6 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 		shdEqual    bool
 	}{
 		{
-			description: "cache key for same command, different buildargs, args not used in command",
-			cmd1: newStageContext(
-				"RUN echo const > test",
-				map[string]string{"ARG": "foo"},
-				[]string{"ENV=foo1"},
-			),
-			cmd2: newStageContext(
-				"RUN echo const > test",
-				map[string]string{"ARG": "bar"},
-				[]string{"ENV=bar1"},
-			),
-			shdEqual: true,
-		},
-		{
 			description: "cache key for same command with same build args",
 			cmd1: newStageContext(
 				"RUN echo $ARG > test",
@@ -625,7 +611,21 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			shdEqual: true,
 		},
 		{
-			description: "cache key for same command with same env",
+			description: "cache key for same command with same env and args",
+			cmd1: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=same"},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=same"},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command with same env but different args",
 			cmd1: newStageContext(
 				"RUN echo $ENV > test",
 				map[string]string{"ARG": "foo"},
@@ -636,7 +636,35 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 				map[string]string{"ARG": "bar"},
 				[]string{"ENV=same"},
 			),
-			shdEqual: true,
+		},
+		{
+			description: "cache key for same command, different buildargs, args not used in command",
+			cmd1: newStageContext(
+				"RUN echo const > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=foo1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo const > test",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=bar1"},
+			),
+		},
+		{
+			description: "cache key for same command, different buildargs, args used in script",
+			// test.sh
+			// #!/bin/sh
+			// echo ${ARG}
+			cmd1: newStageContext(
+				"RUN ./test.sh",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=foo1"},
+			),
+			cmd2: newStageContext(
+				"RUN ./test.sh",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=bar1"},
+			),
 		},
 		{
 			description: "cache key for same command with a build arg values",
@@ -1116,6 +1144,8 @@ RUN foobar
 		func() testcase {
 			dir, _ := tempDirAndFile(t)
 			ch := NewCompositeCache("")
+			ch.AddKey("|1")
+			ch.AddKey("test=value")
 			ch.AddKey("RUN foobar")
 			hash, err := ch.Hash()
 			if err != nil {
@@ -1151,6 +1181,8 @@ RUN foobar
 			dir, _ := tempDirAndFile(t)
 
 			ch := NewCompositeCache("")
+			ch.AddKey("|1")
+			ch.AddKey("arg=value")
 			ch.AddKey("RUN value")
 			hash, err := ch.Hash()
 			if err != nil {
@@ -1193,6 +1225,8 @@ RUN foobar
 			}
 
 			ch2 := NewCompositeCache("")
+			ch2.AddKey("|1")
+			ch2.AddKey("arg=anotherValue")
 			ch2.AddKey("RUN anotherValue")
 			hash2, err := ch2.Hash()
 			if err != nil {
