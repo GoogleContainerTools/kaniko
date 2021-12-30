@@ -23,6 +23,7 @@
 package estargz
 
 import (
+	"archive/tar"
 	"os"
 	"path"
 	"time"
@@ -71,6 +72,12 @@ const (
 	// This annotation is valid only when it is specified in `.[]layers.annotations`
 	// of an image manifest.
 	TOCJSONDigestAnnotation = "containerd.io/snapshot/stargz/toc.digest"
+
+	// StoreUncompressedSizeAnnotation is an additional annotation key for eStargz to enable lazy
+	// pulling on containers/storage. Stargz Store is required to expose the layer's uncompressed size
+	// to the runtime but current OCI image doesn't ship this information by default. So we store this
+	// to the special annotation.
+	StoreUncompressedSizeAnnotation = "io.containers.estargz.uncompressed-size"
 
 	// PrefetchLandmark is a file entry which indicates the end position of
 	// prefetch in the stargz file.
@@ -229,7 +236,9 @@ func (fi fileInfo) Size() int64        { return fi.e.Size }
 func (fi fileInfo) ModTime() time.Time { return fi.e.ModTime() }
 func (fi fileInfo) Sys() interface{}   { return fi.e }
 func (fi fileInfo) Mode() (m os.FileMode) {
-	m = os.FileMode(fi.e.Mode) & os.ModePerm
+	// TOCEntry.Mode is tar.Header.Mode so we can understand the these bits using `tar` pkg.
+	m = (&tar.Header{Mode: fi.e.Mode}).FileInfo().Mode() &
+		(os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky)
 	switch fi.e.Type {
 	case "dir":
 		m |= os.ModeDir
@@ -242,7 +251,6 @@ func (fi fileInfo) Mode() (m os.FileMode) {
 	case "fifo":
 		m |= os.ModeNamedPipe
 	}
-	// TODO: ModeSetuid, ModeSetgid, if/as needed.
 	return m
 }
 

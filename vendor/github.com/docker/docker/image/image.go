@@ -11,7 +11,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/dockerversion"
 	"github.com/docker/docker/layer"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 // ID is the content-addressable ID of an image.
@@ -53,6 +53,8 @@ type V1Image struct {
 	Config *container.Config `json:"config,omitempty"`
 	// Architecture is the hardware that the image is built and runs on
 	Architecture string `json:"architecture,omitempty"`
+	// Variant is the CPU architecture variant (presently ARM-only)
+	Variant string `json:"variant,omitempty"`
 	// OS is the operating system used to build and run the image
 	OS string `json:"os,omitempty"`
 	// Size is the total size of the image including all layers it is composed of
@@ -62,7 +64,7 @@ type V1Image struct {
 // Image stores the image configuration
 type Image struct {
 	V1Image
-	Parent     ID        `json:"parent,omitempty"`
+	Parent     ID        `json:"parent,omitempty"` //nolint:govet
 	RootFS     *RootFS   `json:"rootfs,omitempty"`
 	History    []History `json:"history,omitempty"`
 	OSVersion  string    `json:"os.version,omitempty"`
@@ -105,6 +107,13 @@ func (img *Image) BaseImgArch() string {
 	return arch
 }
 
+// BaseImgVariant returns the image's variant, whether populated or not.
+// This avoids creating an inconsistency where the stored image variant
+// is "greater than" (i.e. v8 vs v6) the actual image variant.
+func (img *Image) BaseImgVariant() string {
+	return img.Variant
+}
+
 // OperatingSystem returns the image's operating system. If not populated, defaults to the host runtime OS.
 func (img *Image) OperatingSystem() string {
 	os := img.OS
@@ -144,7 +153,7 @@ type ChildConfig struct {
 }
 
 // NewChildImage creates a new Image as a child of this image.
-func NewChildImage(img *Image, child ChildConfig, platform string) *Image {
+func NewChildImage(img *Image, child ChildConfig, os string) *Image {
 	isEmptyLayer := layer.IsEmpty(child.DiffID)
 	var rootFS *RootFS
 	if img.RootFS != nil {
@@ -167,7 +176,8 @@ func NewChildImage(img *Image, child ChildConfig, platform string) *Image {
 			DockerVersion:   dockerversion.Version,
 			Config:          child.Config,
 			Architecture:    img.BaseImgArch(),
-			OS:              platform,
+			Variant:         img.BaseImgVariant(),
+			OS:              os,
 			Container:       child.ContainerID,
 			ContainerConfig: *child.ContainerConfig,
 			Author:          child.Author,

@@ -48,8 +48,10 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 	defer timing.DefaultRun.Stop(t)
 	var buildArgs []string
 
-	for _, arg := range stage.MetaArgs {
-		buildArgs = append(buildArgs, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+	for _, marg := range stage.MetaArgs {
+		for _, arg := range marg.Args {
+			buildArgs = append(buildArgs, fmt.Sprintf("%s=%s", arg.Key, arg.ValueString()))
+		}
 	}
 	buildArgs = append(buildArgs, opts.BuildArgs...)
 	currentBaseName, err := util.ResolveEnvironmentReplacement(stage.BaseName, buildArgs, false)

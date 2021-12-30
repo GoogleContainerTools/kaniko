@@ -12,7 +12,7 @@ import (
 	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/docker/daemon/logger/loggerutils"
 	"github.com/docker/docker/errdefs"
-	"github.com/docker/go-units"
+	units "github.com/docker/go-units"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -109,7 +109,7 @@ func makeMarshaller() func(m *logger.Message) ([]byte, error) {
 
 		messageToProto(m, proto, md)
 		protoSize := proto.Size()
-		writeLen := protoSize + (2 * encodeBinaryLen) //+ len(messageDelimiter)
+		writeLen := protoSize + (2 * encodeBinaryLen) // + len(messageDelimiter)
 
 		if writeLen > len(buf) {
 			buf = make([]byte, writeLen)

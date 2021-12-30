@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/go-units"
+	units "github.com/docker/go-units"
 )
 
 // State holds the current container state, and has methods to get and
@@ -17,7 +17,7 @@ import (
 type State struct {
 	sync.Mutex
 	// Note that `Running` and `Paused` are not mutually exclusive:
-	// When pausing a container (on Linux), the cgroups freezer is used to suspend
+	// When pausing a container (on Linux), the freezer cgroup is used to suspend
 	// all processes in the container. Freezing the process requires the process to
 	// be running. As a result, paused containers are both `Running` _and_ `Paused`.
 	Running           bool
@@ -364,13 +364,6 @@ func (s *State) IsRemovalInProgress() bool {
 	res := s.RemovalInProgress
 	s.Unlock()
 	return res
-}
-
-// SetDead sets the container state to "dead"
-func (s *State) SetDead() {
-	s.Lock()
-	s.Dead = true
-	s.Unlock()
 }
 
 // IsDead returns whether the Dead flag is set. Used by Container to check whether a container is dead.

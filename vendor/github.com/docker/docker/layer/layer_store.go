@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/docker/distribution"
@@ -13,7 +15,8 @@ import (
 	"github.com/docker/docker/pkg/plugingetter"
 	"github.com/docker/docker/pkg/stringid"
 	"github.com/docker/docker/pkg/system"
-	"github.com/opencontainers/go-digest"
+	"github.com/moby/locker"
+	digest "github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 	"github.com/vbatts/tar-split/tar/asm"
 	"github.com/vbatts/tar-split/tar/storage"
@@ -36,7 +39,11 @@ type layerStore struct {
 
 	mounts map[string]*mountedLayer
 	mountL sync.Mutex
-	os     string
+
+	// protect *RWLayer() methods from operating on the same name/id
+	locker *locker.Locker
+
+	os string
 }
 
 // StoreOptions are the options used to create a new Store instance
@@ -92,6 +99,7 @@ func newStoreFromGraphDriver(root string, driver graphdriver.Driver, os string) 
 		driver:      driver,
 		layerMap:    map[ChainID]*roLayer{},
 		mounts:      map[string]*mountedLayer{},
+		locker:      locker.New(),
 		useTarSplit: !caps.ReproducesExactDiffs,
 		os:          os,
 	}
@@ -189,6 +197,8 @@ func (ls *layerStore) loadLayer(layer ChainID) (*roLayer, error) {
 }
 
 func (ls *layerStore) loadMount(mount string) error {
+	ls.mountL.Lock()
+	defer ls.mountL.Unlock()
 	if _, ok := ls.mounts[mount]; ok {
 		return nil
 	}
@@ -407,11 +417,24 @@ func (ls *layerStore) Map() map[ChainID]Layer {
 }
 
 func (ls *layerStore) deleteLayer(layer *roLayer, metadata *Metadata) error {
+	// Rename layer digest folder first so we detect orphan layer(s)
+	// if ls.driver.Remove fails
+	var dir string
+	for {
+		dgst := digest.Digest(layer.chainID)
+		tmpID := fmt.Sprintf("%s-%s-removing", dgst.Hex(), stringid.GenerateRandomID())
+		dir = filepath.Join(ls.store.root, string(dgst.Algorithm()), tmpID)
+		err := os.Rename(ls.store.getLayerDirectory(layer.chainID), dir)
+		if os.IsExist(err) {
+			continue
+		}
+		break
+	}
 	err := ls.driver.Remove(layer.cacheID)
 	if err != nil {
 		return err
 	}
-	err = ls.store.Remove(layer.chainID)
+	err = os.RemoveAll(dir)
 	if err != nil {
 		return err
 	}
@@ -444,12 +467,14 @@ func (ls *layerStore) releaseLayer(l *roLayer) ([]Metadata, error) {
 		if l.hasReferences() {
 			panic("cannot delete referenced layer")
 		}
+		// Remove layer from layer map first so it is not considered to exist
+		// when if ls.deleteLayer fails.
+		delete(ls.layerMap, l.chainID)
+
 		var metadata Metadata
 		if err := ls.deleteLayer(l, &metadata); err != nil {
 			return nil, err
 		}
-
-		delete(ls.layerMap, l.chainID)
 		removed = append(removed, metadata)
 
 		if l.parent == nil {
@@ -477,7 +502,7 @@ func (ls *layerStore) Release(l Layer) ([]Metadata, error) {
 	return ls.releaseLayer(layer)
 }
 
-func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWLayerOpts) (RWLayer, error) {
+func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWLayerOpts) (_ RWLayer, err error) {
 	var (
 		storageOpt map[string]string
 		initFunc   MountInit
@@ -490,14 +515,16 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 		initFunc = opts.InitFunc
 	}
 
+	ls.locker.Lock(name)
+	defer ls.locker.Unlock(name)
+
 	ls.mountL.Lock()
-	defer ls.mountL.Unlock()
-	m, ok := ls.mounts[name]
+	_, ok := ls.mounts[name]
+	ls.mountL.Unlock()
 	if ok {
 		return nil, ErrMountNameConflict
 	}
 
-	var err error
 	var pid string
 	var p *roLayer
 	if string(parent) != "" {
@@ -517,7 +544,7 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 		}()
 	}
 
-	m = &mountedLayer{
+	m := &mountedLayer{
 		name:       name,
 		parent:     p,
 		mountID:    ls.mountID(name),
@@ -528,7 +555,7 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 	if initFunc != nil {
 		pid, err = ls.initMount(m.mountID, pid, mountLabel, initFunc, storageOpt)
 		if err != nil {
-			return nil, err
+			return
 		}
 		m.initID = pid
 	}
@@ -538,20 +565,23 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 	}
 
 	if err = ls.driver.CreateReadWrite(m.mountID, pid, createOpts); err != nil {
-		return nil, err
+		return
 	}
 	if err = ls.saveMount(m); err != nil {
-		return nil, err
+		return
 	}
 
 	return m.getReference(), nil
 }
 
 func (ls *layerStore) GetRWLayer(id string) (RWLayer, error) {
+	ls.locker.Lock(id)
+	defer ls.locker.Unlock(id)
+
 	ls.mountL.Lock()
-	defer ls.mountL.Unlock()
-	mount, ok := ls.mounts[id]
-	if !ok {
+	mount := ls.mounts[id]
+	ls.mountL.Unlock()
+	if mount == nil {
 		return nil, ErrMountDoesNotExist
 	}
 
@@ -560,9 +590,10 @@ func (ls *layerStore) GetRWLayer(id string) (RWLayer, error) {
 
 func (ls *layerStore) GetMountID(id string) (string, error) {
 	ls.mountL.Lock()
-	defer ls.mountL.Unlock()
-	mount, ok := ls.mounts[id]
-	if !ok {
+	mount := ls.mounts[id]
+	ls.mountL.Unlock()
+
+	if mount == nil {
 		return "", ErrMountDoesNotExist
 	}
 	logrus.Debugf("GetMountID id: %s -> mountID: %s", id, mount.mountID)
@@ -571,10 +602,14 @@ func (ls *layerStore) GetMountID(id string) (string, error) {
 }
 
 func (ls *layerStore) ReleaseRWLayer(l RWLayer) ([]Metadata, error) {
+	name := l.Name()
+	ls.locker.Lock(name)
+	defer ls.locker.Unlock(name)
+
 	ls.mountL.Lock()
-	defer ls.mountL.Unlock()
-	m, ok := ls.mounts[l.Name()]
-	if !ok {
+	m := ls.mounts[name]
+	ls.mountL.Unlock()
+	if m == nil {
 		return []Metadata{}, nil
 	}
 
@@ -606,7 +641,9 @@ func (ls *layerStore) ReleaseRWLayer(l RWLayer) ([]Metadata, error) {
 		return nil, err
 	}
 
-	delete(ls.mounts, m.Name())
+	ls.mountL.Lock()
+	delete(ls.mounts, name)
+	ls.mountL.Unlock()
 
 	ls.layerL.Lock()
 	defer ls.layerL.Unlock()
@@ -634,7 +671,9 @@ func (ls *layerStore) saveMount(mount *mountedLayer) error {
 		}
 	}
 
+	ls.mountL.Lock()
 	ls.mounts[mount.name] = mount
+	ls.mountL.Unlock()
 
 	return nil
 }
@@ -721,6 +760,23 @@ func (ls *layerStore) assembleTarTo(graphID string, metadata io.ReadCloser, size
 }
 
 func (ls *layerStore) Cleanup() error {
+	orphanLayers, err := ls.store.getOrphan()
+	if err != nil {
+		logrus.Errorf("Cannot get orphan layers: %v", err)
+	}
+	logrus.Debugf("found %v orphan layers", len(orphanLayers))
+	for _, orphan := range orphanLayers {
+		logrus.Debugf("removing orphan layer, chain ID: %v , cache ID: %v", orphan.chainID, orphan.cacheID)
+		err = ls.driver.Remove(orphan.cacheID)
+		if err != nil && !os.IsNotExist(err) {
+			logrus.WithError(err).WithField("cache-id", orphan.cacheID).Error("cannot remove orphan layer")
+			continue
+		}
+		err = ls.store.Remove(orphan.chainID, orphan.cacheID)
+		if err != nil {
+			logrus.WithError(err).WithField("chain-id", orphan.chainID).Error("cannot remove orphan layer metadata")
+		}
+	}
 	return ls.driver.Cleanup()
 }
 

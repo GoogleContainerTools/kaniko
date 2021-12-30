@@ -10,6 +10,7 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/pkg/errors"
+	"github.com/tonistiigi/fsutil/prefix"
 	"github.com/tonistiigi/fsutil/types"
 )
 
@@ -25,21 +26,21 @@ type WalkOpt struct {
 func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) error {
 	root, err := filepath.EvalSymlinks(p)
 	if err != nil {
-		return errors.Wrapf(err, "failed to resolve %s", root)
+		return errors.WithStack(&os.PathError{Op: "resolve", Path: root, Err: err})
 	}
 	fi, err := os.Stat(root)
 	if err != nil {
-		return errors.Wrapf(err, "failed to stat: %s", root)
+		return errors.WithStack(err)
 	}
 	if !fi.IsDir() {
-		return errors.Errorf("%s is not a directory", root)
+		return errors.WithStack(&os.PathError{Op: "walk", Path: root, Err: syscall.ENOTDIR})
 	}
 
 	var pm *fileutils.PatternMatcher
 	if opt != nil && opt.ExcludePatterns != nil {
 		pm, err = fileutils.NewPatternMatcher(opt.ExcludePatterns)
 		if err != nil {
-			return errors.Wrapf(err, "invalid excludepaths %s", opt.ExcludePatterns)
+			return errors.Wrapf(err, "invalid excludepatterns: %s", opt.ExcludePatterns)
 		}
 	}
 
@@ -65,17 +66,15 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 
 	seenFiles := make(map[uint64]string)
 	return filepath.Walk(root, func(path string, fi os.FileInfo, err error) (retErr error) {
-		if err != nil {
-			if os.IsNotExist(err) {
-				return filepath.SkipDir
-			}
-			return err
-		}
 		defer func() {
 			if retErr != nil && isNotExist(retErr) {
 				retErr = filepath.SkipDir
 			}
 		}()
+		if err != nil {
+			return err
+		}
+
 		origpath := path
 		path, err = filepath.Rel(root, path)
 		if err != nil {
@@ -98,8 +97,8 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 				if !skip {
 					matched := false
 					partial := true
-					for _, p := range includePatterns {
-						if ok, p := matchPrefix(p, path); ok {
+					for _, pattern := range includePatterns {
+						if ok, p := prefix.Match(pattern, path, false); ok {
 							matched = true
 							if !p {
 								partial = false
@@ -192,39 +191,6 @@ func (s *StatInfo) Sys() interface{} {
 	return s.Stat
 }
 
-func matchPrefix(pattern, name string) (bool, bool) {
-	count := strings.Count(name, string(filepath.Separator))
-	partial := false
-	if strings.Count(pattern, string(filepath.Separator)) > count {
-		pattern = trimUntilIndex(pattern, string(filepath.Separator), count)
-		partial = true
-	}
-	m, _ := filepath.Match(pattern, name)
-	return m, partial
-}
-
-func trimUntilIndex(str, sep string, count int) string {
-	s := str
-	i := 0
-	c := 0
-	for {
-		idx := strings.Index(s, sep)
-		s = s[idx+len(sep):]
-		i += idx + len(sep)
-		c++
-		if c > count {
-			return str[:i-len(sep)]
-		}
-	}
-}
-
 func isNotExist(err error) bool {
-	err = errors.Cause(err)
-	if os.IsNotExist(err) {
-		return true
-	}
-	if pe, ok := err.(*os.PathError); ok {
-		err = pe.Err
-	}
-	return err == syscall.ENOTDIR
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTDIR)
 }

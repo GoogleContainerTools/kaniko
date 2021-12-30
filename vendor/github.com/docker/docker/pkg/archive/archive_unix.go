@@ -7,11 +7,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
+	"github.com/containerd/containerd/sys"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/system"
-	rsystem "github.com/opencontainers/runc/libcontainer/system"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,7 +27,7 @@ func fixVolumePathPrefix(srcPath string) string {
 // can't use filepath.Join(srcPath,include) because this will clean away
 // a trailing "." or "/" which may be important.
 func getWalkRoot(srcPath string, include string) string {
-	return srcPath + string(filepath.Separator) + include
+	return strings.TrimSuffix(srcPath, string(filepath.Separator)) + string(filepath.Separator) + include
 }
 
 // CanonicalTarNameForPath returns platform-specific filepath
@@ -80,11 +81,6 @@ func getFileUIDGID(stat interface{}) (idtools.Identity, error) {
 // handleTarTypeBlockCharFifo is an OS-specific helper function used by
 // createTarFile to handle the following types of header: Block; Char; Fifo
 func handleTarTypeBlockCharFifo(hdr *tar.Header, path string) error {
-	if rsystem.RunningInUserNS() {
-		// cannot create a device if running in user namespace
-		return nil
-	}
-
 	mode := uint32(hdr.Mode & 07777)
 	switch hdr.Typeflag {
 	case tar.TypeBlock:
@@ -95,7 +91,12 @@ func handleTarTypeBlockCharFifo(hdr *tar.Header, path string) error {
 		mode |= unix.S_IFIFO
 	}
 
-	return system.Mknod(path, mode, int(system.Mkdev(hdr.Devmajor, hdr.Devminor)))
+	err := system.Mknod(path, mode, int(system.Mkdev(hdr.Devmajor, hdr.Devminor)))
+	if errors.Is(err, syscall.EPERM) && sys.RunningInUserNS() {
+		// In most cases, cannot create a device if running in user namespace
+		err = nil
+	}
+	return err
 }
 
 func handleLChmod(hdr *tar.Header, path string, hdrInfo os.FileInfo) error {
