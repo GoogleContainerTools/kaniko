@@ -20,7 +20,6 @@ import (
 type Lex struct {
 	escapeToken  rune
 	RawQuotes    bool
-	RawEscapes   bool
 	SkipUnsetEnv bool
 }
 
@@ -66,7 +65,6 @@ func (s *Lex) process(word string, env map[string]string) (string, []string, err
 		escapeToken:  s.escapeToken,
 		skipUnsetEnv: s.SkipUnsetEnv,
 		rawQuotes:    s.RawQuotes,
-		rawEscapes:   s.RawEscapes,
 	}
 	sw.scanner.Init(strings.NewReader(word))
 	return sw.process(word)
@@ -77,7 +75,6 @@ type shellWord struct {
 	envs         map[string]string
 	escapeToken  rune
 	rawQuotes    bool
-	rawEscapes   bool
 	skipUnsetEnv bool
 }
 
@@ -171,10 +168,6 @@ func (sw *shellWord) processStopOn(stopChar rune) (string, []string, error) {
 			ch = sw.scanner.Next()
 
 			if ch == sw.escapeToken {
-				if sw.rawEscapes {
-					words.addRawChar(ch)
-				}
-
 				// '\' (default escape token, but ` allowed) escapes, except end of line
 				ch = sw.scanner.Next()
 
@@ -267,10 +260,6 @@ func (sw *shellWord) processDoubleQuote() (string, error) {
 		default:
 			ch := sw.scanner.Next()
 			if ch == sw.escapeToken {
-				if sw.rawEscapes {
-					result.WriteRune(ch)
-				}
-
 				switch sw.scanner.Peek() {
 				case scanner.EOF:
 					// Ignore \ at end of word

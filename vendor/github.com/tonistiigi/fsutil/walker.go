@@ -10,7 +10,6 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/pkg/errors"
-	"github.com/tonistiigi/fsutil/prefix"
 	"github.com/tonistiigi/fsutil/types"
 )
 
@@ -97,8 +96,8 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 				if !skip {
 					matched := false
 					partial := true
-					for _, pattern := range includePatterns {
-						if ok, p := prefix.Match(pattern, path, false); ok {
+					for _, p := range includePatterns {
+						if ok, p := matchPrefix(p, path); ok {
 							matched = true
 							if !p {
 								partial = false
@@ -189,6 +188,32 @@ func (s *StatInfo) IsDir() bool {
 }
 func (s *StatInfo) Sys() interface{} {
 	return s.Stat
+}
+
+func matchPrefix(pattern, name string) (bool, bool) {
+	count := strings.Count(name, string(filepath.Separator))
+	partial := false
+	if strings.Count(pattern, string(filepath.Separator)) > count {
+		pattern = trimUntilIndex(pattern, string(filepath.Separator), count)
+		partial = true
+	}
+	m, _ := filepath.Match(pattern, name)
+	return m, partial
+}
+
+func trimUntilIndex(str, sep string, count int) string {
+	s := str
+	i := 0
+	c := 0
+	for {
+		idx := strings.Index(s, sep)
+		s = s[idx+len(sep):]
+		i += idx + len(sep)
+		c++
+		if c > count {
+			return str[:i-len(sep)]
+		}
+	}
 }
 
 func isNotExist(err error) bool {

@@ -13,7 +13,7 @@ import (
 
 var (
 	nextCallback    uintptr
-	callbackMap     = map[uintptr]*notificationWatcherContext{}
+	callbackMap     = map[uintptr]*notifcationWatcherContext{}
 	callbackMapLock = sync.RWMutex{}
 
 	notificationWatcherCallback = syscall.NewCallback(notificationWatcher)
@@ -87,7 +87,7 @@ func (hn hcsNotification) String() string {
 
 type notificationChannel chan error
 
-type notificationWatcherContext struct {
+type notifcationWatcherContext struct {
 	channels notificationChannels
 	handle   vmcompute.HcsCallback
 
@@ -106,7 +106,6 @@ func newSystemChannels() notificationChannels {
 		hcsNotificationSystemStartCompleted,
 		hcsNotificationSystemPauseCompleted,
 		hcsNotificationSystemResumeCompleted,
-		hcsNotificationSystemSaveCompleted,
 	} {
 		channels[notif] = make(notificationChannel, 1)
 	}

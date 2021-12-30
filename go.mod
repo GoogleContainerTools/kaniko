@@ -2,6 +2,13 @@ module github.com/GoogleContainerTools/kaniko
 
 go 1.14
 
+// These match the docker/docker's dependencies configured in:
+// https://github.com/moby/moby/blob/v20.10.12/vendor.conf
+replace (
+	github.com/moby/buildkit v0.9.3 => github.com/moby/buildkit v0.8.3
+	github.com/opencontainers/runc v1.0.3 => github.com/opencontainers/runc v1.0.0-rc92
+)
+
 require (
 	cloud.google.com/go/storage v1.8.0
 	github.com/Azure/azure-storage-blob-go v0.8.0

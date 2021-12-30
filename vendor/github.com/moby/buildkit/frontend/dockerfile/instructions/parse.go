@@ -12,14 +12,12 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/moby/buildkit/frontend/dockerfile/command"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
-	"github.com/moby/buildkit/util/suggest"
 	"github.com/pkg/errors"
 )
 
 type parseRequest struct {
 	command    string
 	args       []string
-	heredocs   []parser.Heredoc
 	attributes map[string]bool
 	flags      *BFlags
 	original   string
@@ -49,7 +47,6 @@ func newParseRequestFromNode(node *parser.Node) parseRequest {
 	return parseRequest{
 		command:    node.Value,
 		args:       nodeArgs(node),
-		heredocs:   node.Heredocs,
 		attributes: node.Attributes,
 		original:   node.Original,
 		flags:      NewBFlagsWithArgs(node.Flags),
@@ -64,7 +61,7 @@ func ParseInstruction(node *parser.Node) (v interface{}, err error) {
 		err = parser.WithLocation(err, node.Location())
 	}()
 	req := newParseRequestFromNode(node)
-	switch strings.ToLower(node.Value) {
+	switch node.Value {
 	case command.Env:
 		return parseEnv(req)
 	case command.Maintainer:
@@ -102,7 +99,8 @@ func ParseInstruction(node *parser.Node) (v interface{}, err error) {
 	case command.Shell:
 		return parseShell(req)
 	}
-	return nil, suggest.WrapError(&UnknownInstruction{Instruction: node.Value, Line: node.StartLine}, node.Value, allInstructionNames(), false)
+
+	return nil, &UnknownInstruction{Instruction: node.Value, Line: node.StartLine}
 }
 
 // ParseCommand converts an AST to a typed Command
@@ -124,7 +122,7 @@ type UnknownInstruction struct {
 }
 
 func (e *UnknownInstruction) Error() string {
-	return fmt.Sprintf("unknown instruction: %s", e.Instruction)
+	return fmt.Sprintf("unknown instruction: %s", strings.ToUpper(e.Instruction))
 }
 
 type parseError struct {
@@ -133,7 +131,7 @@ type parseError struct {
 }
 
 func (e *parseError) Error() string {
-	return fmt.Sprintf("dockerfile parse error on line %d: %v", e.node.StartLine, e.inner.Error())
+	return fmt.Sprintf("dockerfile parse error line %d: %v", e.node.StartLine, e.inner.Error())
 }
 
 func (e *parseError) Unwrap() error {
@@ -238,45 +236,6 @@ func parseLabel(req parseRequest) (*LabelCommand, error) {
 	}, nil
 }
 
-func parseSourcesAndDest(req parseRequest, command string) (*SourcesAndDest, error) {
-	srcs := req.args[:len(req.args)-1]
-	dest := req.args[len(req.args)-1]
-	if heredoc := parser.MustParseHeredoc(dest); heredoc != nil {
-		return nil, errBadHeredoc(command, "a destination")
-	}
-
-	heredocLookup := make(map[string]parser.Heredoc)
-	for _, heredoc := range req.heredocs {
-		heredocLookup[heredoc.Name] = heredoc
-	}
-
-	var sourcePaths []string
-	var sourceContents []SourceContent
-	for _, src := range srcs {
-		if heredoc := parser.MustParseHeredoc(src); heredoc != nil {
-			content := heredocLookup[heredoc.Name].Content
-			if heredoc.Chomp {
-				content = parser.ChompHeredocContent(content)
-			}
-			sourceContents = append(sourceContents,
-				SourceContent{
-					Data:   content,
-					Path:   heredoc.Name,
-					Expand: heredoc.Expand,
-				},
-			)
-		} else {
-			sourcePaths = append(sourcePaths, src)
-		}
-	}
-
-	return &SourcesAndDest{
-		DestPath:       dest,
-		SourcePaths:    sourcePaths,
-		SourceContents: sourceContents,
-	}, nil
-}
-
 func parseAdd(req parseRequest) (*AddCommand, error) {
 	if len(req.args) < 2 {
 		return nil, errNoDestinationArgument("ADD")
@@ -286,15 +245,9 @@ func parseAdd(req parseRequest) (*AddCommand, error) {
 	if err := req.flags.Parse(); err != nil {
 		return nil, err
 	}
-
-	sourcesAndDest, err := parseSourcesAndDest(req, "ADD")
-	if err != nil {
-		return nil, err
-	}
-
 	return &AddCommand{
+		SourcesAndDest:  SourcesAndDest(req.args),
 		withNameAndCode: newWithNameAndCode(req),
-		SourcesAndDest:  *sourcesAndDest,
 		Chown:           flChown.Value,
 		Chmod:           flChmod.Value,
 	}, nil
@@ -310,16 +263,10 @@ func parseCopy(req parseRequest) (*CopyCommand, error) {
 	if err := req.flags.Parse(); err != nil {
 		return nil, err
 	}
-
-	sourcesAndDest, err := parseSourcesAndDest(req, "COPY")
-	if err != nil {
-		return nil, err
-	}
-
 	return &CopyCommand{
-		withNameAndCode: newWithNameAndCode(req),
-		SourcesAndDest:  *sourcesAndDest,
+		SourcesAndDest:  SourcesAndDest(req.args),
 		From:            flFrom.Value,
+		withNameAndCode: newWithNameAndCode(req),
 		Chown:           flChown.Value,
 		Chmod:           flChmod.Value,
 	}, nil
@@ -381,14 +328,11 @@ func parseOnBuild(req parseRequest) (*OnbuildCommand, error) {
 	}
 
 	original := regexp.MustCompile(`(?i)^\s*ONBUILD\s*`).ReplaceAllString(req.original, "")
-	for _, heredoc := range req.heredocs {
-		original += "\n" + heredoc.Content + heredoc.Name
-	}
-
 	return &OnbuildCommand{
 		Expression:      original,
 		withNameAndCode: newWithNameAndCode(req),
 	}, nil
+
 }
 
 func parseWorkdir(req parseRequest) (*WorkdirCommand, error) {
@@ -407,17 +351,7 @@ func parseWorkdir(req parseRequest) (*WorkdirCommand, error) {
 
 }
 
-func parseShellDependentCommand(req parseRequest, command string, emptyAsNil bool) (ShellDependantCmdLine, error) {
-	var files []ShellInlineFile
-	for _, heredoc := range req.heredocs {
-		file := ShellInlineFile{
-			Name:  heredoc.Name,
-			Data:  heredoc.Content,
-			Chomp: heredoc.Chomp,
-		}
-		files = append(files, file)
-	}
-
+func parseShellDependentCommand(req parseRequest, emptyAsNil bool) ShellDependantCmdLine {
 	args := handleJSONArgs(req.args, req.attributes)
 	cmd := strslice.StrSlice(args)
 	if emptyAsNil && len(cmd) == 0 {
@@ -425,9 +359,8 @@ func parseShellDependentCommand(req parseRequest, command string, emptyAsNil boo
 	}
 	return ShellDependantCmdLine{
 		CmdLine:      cmd,
-		Files:        files,
 		PrependShell: !req.attributes["json"],
-	}, nil
+	}
 }
 
 func parseRun(req parseRequest) (*RunCommand, error) {
@@ -443,13 +376,7 @@ func parseRun(req parseRequest) (*RunCommand, error) {
 		return nil, err
 	}
 	cmd.FlagsUsed = req.flags.Used()
-
-	cmdline, err := parseShellDependentCommand(req, "RUN", false)
-	if err != nil {
-		return nil, err
-	}
-	cmd.ShellDependantCmdLine = cmdline
-
+	cmd.ShellDependantCmdLine = parseShellDependentCommand(req, false)
 	cmd.withNameAndCode = newWithNameAndCode(req)
 
 	for _, fn := range parseRunPostHooks {
@@ -465,16 +392,11 @@ func parseCmd(req parseRequest) (*CmdCommand, error) {
 	if err := req.flags.Parse(); err != nil {
 		return nil, err
 	}
-
-	cmdline, err := parseShellDependentCommand(req, "CMD", false)
-	if err != nil {
-		return nil, err
-	}
-
 	return &CmdCommand{
-		ShellDependantCmdLine: cmdline,
+		ShellDependantCmdLine: parseShellDependentCommand(req, false),
 		withNameAndCode:       newWithNameAndCode(req),
 	}, nil
+
 }
 
 func parseEntrypoint(req parseRequest) (*EntrypointCommand, error) {
@@ -482,15 +404,12 @@ func parseEntrypoint(req parseRequest) (*EntrypointCommand, error) {
 		return nil, err
 	}
 
-	cmdline, err := parseShellDependentCommand(req, "ENTRYPOINT", true)
-	if err != nil {
-		return nil, err
+	cmd := &EntrypointCommand{
+		ShellDependantCmdLine: parseShellDependentCommand(req, true),
+		withNameAndCode:       newWithNameAndCode(req),
 	}
 
-	return &EntrypointCommand{
-		ShellDependantCmdLine: cmdline,
-		withNameAndCode:       newWithNameAndCode(req),
-	}, nil
+	return cmd, nil
 }
 
 // parseOptInterval(flag) is the duration of flag.Value, or 0 if
@@ -732,10 +651,6 @@ func errNoDestinationArgument(command string) error {
 	return errors.Errorf("%s requires at least two arguments, but only one was provided. Destination could not be determined.", command)
 }
 
-func errBadHeredoc(command string, option string) error {
-	return errors.Errorf("%s cannot accept a heredoc as %s", command, option)
-}
-
 func errBlankCommandNames(command string) error {
 	return errors.Errorf("%s names can not be blank", command)
 }
@@ -754,14 +669,4 @@ func getComment(comments []string, name string) string {
 		}
 	}
 	return ""
-}
-
-func allInstructionNames() []string {
-	out := make([]string, len(command.Commands))
-	i := 0
-	for name := range command.Commands {
-		out[i] = strings.ToUpper(name)
-		i++
-	}
-	return out
 }

@@ -276,7 +276,7 @@ func (f *RaceFreeFakeWatcher) Action(action EventType, obj runtime.Object) {
 	}
 }
 
-// ProxyWatcher lets you wrap your channel in watch Interface. threadsafe.
+// ProxyWatcher lets you wrap your channel in watch Interface. Threadsafe.
 type ProxyWatcher struct {
 	result chan Event
 	stopCh chan struct{}

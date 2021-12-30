@@ -30,7 +30,7 @@ func consumeEnum(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInfo, _ 
 	}
 	v, n := protowire.ConsumeVarint(b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	p.v.Elem().SetInt(int64(v))
 	out.n = n
@@ -130,12 +130,12 @@ func consumeEnumSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 	if wtyp == protowire.BytesType {
 		b, n := protowire.ConsumeBytes(b)
 		if n < 0 {
-			return out, errDecode
+			return out, protowire.ParseError(n)
 		}
 		for len(b) > 0 {
 			v, n := protowire.ConsumeVarint(b)
 			if n < 0 {
-				return out, errDecode
+				return out, protowire.ParseError(n)
 			}
 			rv := reflect.New(s.Type().Elem()).Elem()
 			rv.SetInt(int64(v))
@@ -150,7 +150,7 @@ func consumeEnumSlice(b []byte, p pointer, wtyp protowire.Type, f *coderFieldInf
 	}
 	v, n := protowire.ConsumeVarint(b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	rv := reflect.New(s.Type().Elem()).Elem()
 	rv.SetInt(int64(v))

@@ -17,49 +17,24 @@ package protoregistry
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"strings"
 	"sync"
 
-	"google.golang.org/protobuf/internal/encoding/messageset"
 	"google.golang.org/protobuf/internal/errors"
-	"google.golang.org/protobuf/internal/flags"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
-
-// conflictPolicy configures the policy for handling registration conflicts.
-//
-// It can be over-written at compile time with a linker-initialized variable:
-//	go build -ldflags "-X google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=warn"
-//
-// It can be over-written at program execution with an environment variable:
-//	GOLANG_PROTOBUF_REGISTRATION_CONFLICT=warn ./main
-//
-// Neither of the above are covered by the compatibility promise and
-// may be removed in a future release of this module.
-var conflictPolicy = "panic" // "panic" | "warn" | "ignore"
 
 // ignoreConflict reports whether to ignore a registration conflict
 // given the descriptor being registered and the error.
 // It is a variable so that the behavior is easily overridden in another file.
 var ignoreConflict = func(d protoreflect.Descriptor, err error) bool {
-	const env = "GOLANG_PROTOBUF_REGISTRATION_CONFLICT"
-	const faq = "https://developers.google.com/protocol-buffers/docs/reference/go/faq#namespace-conflict"
-	policy := conflictPolicy
-	if v := os.Getenv(env); v != "" {
-		policy = v
-	}
-	switch policy {
-	case "panic":
-		panic(fmt.Sprintf("%v\nSee %v\n", err, faq))
-	case "warn":
-		fmt.Fprintf(os.Stderr, "WARNING: %v\nSee %v\n\n", err, faq)
-		return true
-	case "ignore":
-		return true
-	default:
-		panic("invalid " + env + " value: " + os.Getenv(env))
-	}
+	log.Printf(""+
+		"WARNING: %v\n"+
+		"A future release will panic on registration conflicts. See:\n"+
+		"https://developers.google.com/protocol-buffers/docs/reference/go/faq#namespace-conflict\n"+
+		"\n", err)
+	return true
 }
 
 var globalMutex sync.RWMutex
@@ -94,8 +69,7 @@ type Files struct {
 	// Note that enum values are in the top-level since that are in the same
 	// scope as the parent enum.
 	descsByName map[protoreflect.FullName]interface{}
-	filesByPath map[string][]protoreflect.FileDescriptor
-	numFiles    int
+	filesByPath map[string]protoreflect.FileDescriptor
 }
 
 type packageDescriptor struct {
@@ -118,16 +92,48 @@ func (r *Files) RegisterFile(file protoreflect.FileDescriptor) error {
 		r.descsByName = map[protoreflect.FullName]interface{}{
 			"": &packageDescriptor{},
 		}
-		r.filesByPath = make(map[string][]protoreflect.FileDescriptor)
+		r.filesByPath = make(map[string]protoreflect.FileDescriptor)
 	}
 	path := file.Path()
-	if prev := r.filesByPath[path]; len(prev) > 0 {
-		r.checkGenProtoConflict(path)
-		err := errors.New("file %q is already registered", file.Path())
-		err = amendErrorWithCaller(err, prev[0], file)
-		if !(r == GlobalFiles && ignoreConflict(file, err)) {
-			return err
+	if prev := r.filesByPath[path]; prev != nil {
+		// TODO: Remove this after some soak-in period after moving these types.
+		var prevPath string
+		const prevModule = "google.golang.org/genproto"
+		const prevVersion = "cb27e3aa (May 26th, 2020)"
+		switch path {
+		case "google/protobuf/field_mask.proto":
+			prevPath = prevModule + "/protobuf/field_mask"
+		case "google/protobuf/api.proto":
+			prevPath = prevModule + "/protobuf/api"
+		case "google/protobuf/type.proto":
+			prevPath = prevModule + "/protobuf/ptype"
+		case "google/protobuf/source_context.proto":
+			prevPath = prevModule + "/protobuf/source_context"
 		}
+		if r == GlobalFiles && prevPath != "" {
+			pkgName := strings.TrimSuffix(strings.TrimPrefix(path, "google/protobuf/"), ".proto")
+			pkgName = strings.Replace(pkgName, "_", "", -1) + "pb"
+			currPath := "google.golang.org/protobuf/types/known/" + pkgName
+			panic(fmt.Sprintf(""+
+				"duplicate registration of %q\n"+
+				"\n"+
+				"The generated definition for this file has moved:\n"+
+				"\tfrom: %q\n"+
+				"\tto:   %q\n"+
+				"A dependency on the %q module must\n"+
+				"be at version %v or higher.\n"+
+				"\n"+
+				"Upgrade the dependency by running:\n"+
+				"\tgo get -u %v\n",
+				path, prevPath, currPath, prevModule, prevVersion, prevPath))
+		}
+
+		err := errors.New("file %q is already registered", file.Path())
+		err = amendErrorWithCaller(err, prev, file)
+		if r == GlobalFiles && ignoreConflict(file, err) {
+			err = nil
+		}
+		return err
 	}
 
 	for name := file.Package(); name != ""; name = name.Parent() {
@@ -168,50 +174,8 @@ func (r *Files) RegisterFile(file protoreflect.FileDescriptor) error {
 	rangeTopLevelDescriptors(file, func(d protoreflect.Descriptor) {
 		r.descsByName[d.FullName()] = d
 	})
-	r.filesByPath[path] = append(r.filesByPath[path], file)
-	r.numFiles++
+	r.filesByPath[path] = file
 	return nil
-}
-
-// Several well-known types were hosted in the google.golang.org/genproto module
-// but were later moved to this module. To avoid a weak dependency on the
-// genproto module (and its relatively large set of transitive dependencies),
-// we rely on a registration conflict to determine whether the genproto version
-// is too old (i.e., does not contain aliases to the new type declarations).
-func (r *Files) checkGenProtoConflict(path string) {
-	if r != GlobalFiles {
-		return
-	}
-	var prevPath string
-	const prevModule = "google.golang.org/genproto"
-	const prevVersion = "cb27e3aa (May 26th, 2020)"
-	switch path {
-	case "google/protobuf/field_mask.proto":
-		prevPath = prevModule + "/protobuf/field_mask"
-	case "google/protobuf/api.proto":
-		prevPath = prevModule + "/protobuf/api"
-	case "google/protobuf/type.proto":
-		prevPath = prevModule + "/protobuf/ptype"
-	case "google/protobuf/source_context.proto":
-		prevPath = prevModule + "/protobuf/source_context"
-	default:
-		return
-	}
-	pkgName := strings.TrimSuffix(strings.TrimPrefix(path, "google/protobuf/"), ".proto")
-	pkgName = strings.Replace(pkgName, "_", "", -1) + "pb" // e.g., "field_mask" => "fieldmaskpb"
-	currPath := "google.golang.org/protobuf/types/known/" + pkgName
-	panic(fmt.Sprintf(""+
-		"duplicate registration of %q\n"+
-		"\n"+
-		"The generated definition for this file has moved:\n"+
-		"\tfrom: %q\n"+
-		"\tto:   %q\n"+
-		"A dependency on the %q module must\n"+
-		"be at version %v or higher.\n"+
-		"\n"+
-		"Upgrade the dependency by running:\n"+
-		"\tgo get -u %v\n",
-		path, prevPath, currPath, prevModule, prevVersion, prevPath))
 }
 
 // FindDescriptorByName looks up a descriptor by the full name.
@@ -309,7 +273,6 @@ func (s *nameSuffix) Pop() (name protoreflect.Name) {
 // FindFileByPath looks up a file by the path.
 //
 // This returns (nil, NotFound) if not found.
-// This returns an error if multiple files have the same path.
 func (r *Files) FindFileByPath(path string) (protoreflect.FileDescriptor, error) {
 	if r == nil {
 		return nil, NotFound
@@ -318,19 +281,13 @@ func (r *Files) FindFileByPath(path string) (protoreflect.FileDescriptor, error)
 		globalMutex.RLock()
 		defer globalMutex.RUnlock()
 	}
-	fds := r.filesByPath[path]
-	switch len(fds) {
-	case 0:
-		return nil, NotFound
-	case 1:
-		return fds[0], nil
-	default:
-		return nil, errors.New("multiple files named %q", path)
+	if fd, ok := r.filesByPath[path]; ok {
+		return fd, nil
 	}
+	return nil, NotFound
 }
 
-// NumFiles reports the number of registered files,
-// including duplicate files with the same name.
+// NumFiles reports the number of registered files.
 func (r *Files) NumFiles() int {
 	if r == nil {
 		return 0
@@ -339,11 +296,10 @@ func (r *Files) NumFiles() int {
 		globalMutex.RLock()
 		defer globalMutex.RUnlock()
 	}
-	return r.numFiles
+	return len(r.filesByPath)
 }
 
 // RangeFiles iterates over all registered files while f returns true.
-// If multiple files have the same name, RangeFiles iterates over all of them.
 // The iteration order is undefined.
 func (r *Files) RangeFiles(f func(protoreflect.FileDescriptor) bool) {
 	if r == nil {
@@ -353,11 +309,9 @@ func (r *Files) RangeFiles(f func(protoreflect.FileDescriptor) bool) {
 		globalMutex.RLock()
 		defer globalMutex.RUnlock()
 	}
-	for _, files := range r.filesByPath {
-		for _, file := range files {
-			if !f(file) {
-				return
-			}
+	for _, file := range r.filesByPath {
+		if !f(file) {
+			return
 		}
 	}
 }
@@ -606,25 +560,13 @@ func (r *Types) FindEnumByName(enum protoreflect.FullName) (protoreflect.EnumTyp
 	return nil, NotFound
 }
 
-// FindMessageByName looks up a message by its full name,
-// e.g. "google.protobuf.Any".
+// FindMessageByName looks up a message by its full name.
+// E.g., "google.protobuf.Any"
 //
-// This returns (nil, NotFound) if not found.
+// This return (nil, NotFound) if not found.
 func (r *Types) FindMessageByName(message protoreflect.FullName) (protoreflect.MessageType, error) {
-	if r == nil {
-		return nil, NotFound
-	}
-	if r == GlobalTypes {
-		globalMutex.RLock()
-		defer globalMutex.RUnlock()
-	}
-	if v := r.typesByName[message]; v != nil {
-		if mt, _ := v.(protoreflect.MessageType); mt != nil {
-			return mt, nil
-		}
-		return nil, errors.New("found wrong type: got %v, want message", typeName(v))
-	}
-	return nil, NotFound
+	// The full name by itself is a valid URL.
+	return r.FindMessageByURL(string(message))
 }
 
 // FindMessageByURL looks up a message by a URL identifier.
@@ -632,8 +574,6 @@ func (r *Types) FindMessageByName(message protoreflect.FullName) (protoreflect.M
 //
 // This returns (nil, NotFound) if not found.
 func (r *Types) FindMessageByURL(url string) (protoreflect.MessageType, error) {
-	// This function is similar to FindMessageByName but
-	// truncates anything before and including '/' in the URL.
 	if r == nil {
 		return nil, NotFound
 	}
@@ -673,26 +613,6 @@ func (r *Types) FindExtensionByName(field protoreflect.FullName) (protoreflect.E
 		if xt, _ := v.(protoreflect.ExtensionType); xt != nil {
 			return xt, nil
 		}
-
-		// MessageSet extensions are special in that the name of the extension
-		// is the name of the message type used to extend the MessageSet.
-		// This naming scheme is used by text and JSON serialization.
-		//
-		// This feature is protected by the ProtoLegacy flag since MessageSets
-		// are a proto1 feature that is long deprecated.
-		if flags.ProtoLegacy {
-			if _, ok := v.(protoreflect.MessageType); ok {
-				field := field.Append(messageset.ExtensionName)
-				if v := r.typesByName[field]; v != nil {
-					if xt, _ := v.(protoreflect.ExtensionType); xt != nil {
-						if messageset.IsMessageSetExtension(xt.TypeDescriptor()) {
-							return xt, nil
-						}
-					}
-				}
-			}
-		}
-
 		return nil, errors.New("found wrong type: got %v, want extension", typeName(v))
 	}
 	return nil, NotFound

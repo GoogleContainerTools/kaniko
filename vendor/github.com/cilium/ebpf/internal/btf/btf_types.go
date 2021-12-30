@@ -6,8 +6,6 @@ import (
 	"io"
 )
 
-//go:generate stringer -linecomment -output=btf_types_string.go -type=FuncLinkage,VarLinkage
-
 // btfKind describes a Type.
 type btfKind uint8
 
@@ -33,23 +31,12 @@ const (
 	kindDatasec
 )
 
-// FuncLinkage describes BTF function linkage metadata.
-type FuncLinkage int
-
-// Equivalent of enum btf_func_linkage.
-const (
-	StaticFunc FuncLinkage = iota // static
-	GlobalFunc                    // global
-	ExternFunc                    // extern
-)
-
-// VarLinkage describes BTF variable linkage metadata.
-type VarLinkage int
+type btfFuncLinkage uint8
 
 const (
-	StaticVar VarLinkage = iota // static
-	GlobalVar                   // global
-	ExternVar                   // extern
+	linkageStatic btfFuncLinkage = iota
+	linkageGlobal
+	linkageExtern
 )
 
 const (
@@ -155,11 +142,11 @@ func (bt *btfType) KindFlag() bool {
 	return bt.info(btfTypeKindFlagMask, btfTypeKindFlagShift) == 1
 }
 
-func (bt *btfType) Linkage() FuncLinkage {
-	return FuncLinkage(bt.info(btfTypeVlenMask, btfTypeVlenShift))
+func (bt *btfType) Linkage() btfFuncLinkage {
+	return btfFuncLinkage(bt.info(btfTypeVlenMask, btfTypeVlenShift))
 }
 
-func (bt *btfType) SetLinkage(linkage FuncLinkage) {
+func (bt *btfType) SetLinkage(linkage btfFuncLinkage) {
 	bt.setInfo(uint32(linkage), btfTypeVlenMask, btfTypeVlenShift)
 }
 

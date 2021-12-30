@@ -21,7 +21,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
@@ -29,18 +28,14 @@ import (
 )
 
 // Present the ARM instruction set architecture, eg: v7, v8
-// Don't use this value directly; call cpuVariant() instead.
-var cpuVariantValue string
+var cpuVariant string
 
-var cpuVariantOnce sync.Once
-
-func cpuVariant() string {
-	cpuVariantOnce.Do(func() {
-		if isArmArch(runtime.GOARCH) {
-			cpuVariantValue = getCPUVariant()
-		}
-	})
-	return cpuVariantValue
+func init() {
+	if isArmArch(runtime.GOARCH) {
+		cpuVariant = getCPUVariant()
+	} else {
+		cpuVariant = ""
+	}
 }
 
 // For Linux, the kernel has already detected the ABI, ISA and Features.
@@ -112,7 +107,12 @@ func getCPUVariant() string {
 
 	switch strings.ToLower(variant) {
 	case "8", "aarch64":
-		variant = "v8"
+		// special case: if running a 32-bit userspace on aarch64, the variant should be "v7"
+		if runtime.GOARCH == "arm" {
+			variant = "v7"
+		} else {
+			variant = "v8"
+		}
 	case "7", "7m", "?(12)", "?(13)", "?(14)", "?(15)", "?(16)", "?(17)":
 		variant = "v7"
 	case "6", "6tej":

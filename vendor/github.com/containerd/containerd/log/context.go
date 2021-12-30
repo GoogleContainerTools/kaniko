@@ -37,17 +37,9 @@ type (
 	loggerKey struct{}
 )
 
-const (
-	// RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
-	// ensure the formatted time is always the same number of characters.
-	RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
-
-	// TextFormat represents the text logging format
-	TextFormat = "text"
-
-	// JSONFormat represents the JSON logging format
-	JSONFormat = "json"
-)
+// RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
+// ensure the formatted time is always the same number of characters.
+const RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
 
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.

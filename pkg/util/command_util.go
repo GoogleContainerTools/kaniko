@@ -89,7 +89,7 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 
 func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, fileContext FileContext, envs []string) ([]string, string, error) {
 	// First, resolve any environment replacement
-	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd.SourcePaths, envs, true)
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd, envs, true)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve environment")
 	}
@@ -223,8 +223,8 @@ func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, er
 }
 
 func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, fileContext FileContext) error {
-	srcs := srcsAndDest.SourcePaths
-	dest := srcsAndDest.DestPath
+	srcs := srcsAndDest[:len(srcsAndDest)-1]
+	dest := srcsAndDest[len(srcsAndDest)-1]
 
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0

@@ -65,9 +65,6 @@ type DefaultRESTMapper struct {
 }
 
 func (m *DefaultRESTMapper) String() string {
-	if m == nil {
-		return "<nil>"
-	}
 	return fmt.Sprintf("DefaultRESTMapper{kindToPluralResource=%v}", m.kindToPluralResource)
 }
 

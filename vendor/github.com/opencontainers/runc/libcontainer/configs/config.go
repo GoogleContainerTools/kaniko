@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,10 +30,9 @@ type IDMap struct {
 // for syscalls. Additional architectures can be added by specifying them in
 // Architectures.
 type Seccomp struct {
-	DefaultAction   Action     `json:"default_action"`
-	Architectures   []string   `json:"architectures"`
-	Syscalls        []*Syscall `json:"syscalls"`
-	DefaultErrnoRet *uint      `json:"default_errno_ret"`
+	DefaultAction Action     `json:"default_action"`
+	Architectures []string   `json:"architectures"`
+	Syscalls      []*Syscall `json:"syscalls"`
 }
 
 // Action is taken upon rule match in Seccomp
@@ -94,9 +92,6 @@ type Config struct {
 	// Path to a directory containing the container's root filesystem.
 	Rootfs string `json:"rootfs"`
 
-	// Umask is the umask to use inside of the container.
-	Umask *uint32 `json:"umask"`
-
 	// Readonlyfs will remount the container's rootfs as readonly where only externally mounted
 	// bind mounts are writtable.
 	Readonlyfs bool `json:"readonlyfs"`
@@ -109,7 +104,7 @@ type Config struct {
 	Mounts []*Mount `json:"mounts"`
 
 	// The device nodes that should be automatically created within the container upon container start.  Note, make sure that the node is marked as allowed in the cgroup as well!
-	Devices []*devices.Device `json:"devices"`
+	Devices []*Device `json:"devices"`
 
 	MountLabel string `json:"mount_label"`
 
@@ -208,11 +203,9 @@ type Config struct {
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
 }
 
-type (
-	HookName string
-	HookList []Hook
-	Hooks    map[HookName]HookList
-)
+type HookName string
+type HookList []Hook
+type Hooks map[HookName]HookList
 
 const (
 	// Prestart commands are executed after the container namespaces are created,
@@ -225,25 +218,25 @@ const (
 	// the runtime environment has been created but before the pivot_root has been executed.
 	// CreateRuntime is called immediately after the deprecated Prestart hook.
 	// CreateRuntime commands are called in the Runtime Namespace.
-	CreateRuntime HookName = "createRuntime"
+	CreateRuntime = "createRuntime"
 
 	// CreateContainer commands MUST be called as part of the create operation after
 	// the runtime environment has been created but before the pivot_root has been executed.
 	// CreateContainer commands are called in the Container namespace.
-	CreateContainer HookName = "createContainer"
+	CreateContainer = "createContainer"
 
 	// StartContainer commands MUST be called as part of the start operation and before
 	// the container process is started.
 	// StartContainer commands are called in the Container namespace.
-	StartContainer HookName = "startContainer"
+	StartContainer = "startContainer"
 
 	// Poststart commands are executed after the container init process starts.
 	// Poststart commands are called in the Runtime Namespace.
-	Poststart HookName = "poststart"
+	Poststart = "poststart"
 
 	// Poststop commands are executed after the container init process exits.
 	// Poststop commands are called in the Runtime Namespace.
-	Poststop HookName = "poststop"
+	Poststop = "poststop"
 )
 
 type Capabilities struct {
@@ -389,8 +382,8 @@ func (c Command) Run(s *specs.State) error {
 	case err := <-errC:
 		return err
 	case <-timerCh:
-		_ = cmd.Process.Kill()
-		<-errC
+		cmd.Process.Kill()
+		cmd.Wait()
 		return fmt.Errorf("hook ran past specified timeout of %.1fs", c.Timeout.Seconds())
 	}
 }

@@ -1,4 +1,4 @@
-// +build !windows
+// +build go1.12
 
 /*
    Copyright The containerd Authors.

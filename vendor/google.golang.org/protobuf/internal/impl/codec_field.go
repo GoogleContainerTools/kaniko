@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"google.golang.org/protobuf/encoding/protowire"
-	"google.golang.org/protobuf/internal/errors"
 	"google.golang.org/protobuf/proto"
 	pref "google.golang.org/protobuf/reflect/protoreflect"
 	preg "google.golang.org/protobuf/reflect/protoregistry"
@@ -21,7 +20,6 @@ type errInvalidUTF8 struct{}
 
 func (errInvalidUTF8) Error() string     { return "string field contains invalid UTF-8" }
 func (errInvalidUTF8) InvalidUTF8() bool { return true }
-func (errInvalidUTF8) Unwrap() error     { return errors.Error }
 
 // initOneofFieldCoders initializes the fast-path functions for the fields in a oneof.
 //
@@ -244,7 +242,7 @@ func consumeMessageInfo(b []byte, p pointer, wtyp protowire.Type, f *coderFieldI
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	if p.Elem().IsNil() {
 		p.SetPointer(pointerOfValue(reflect.New(f.mi.GoReflectType.Elem())))
@@ -278,7 +276,7 @@ func consumeMessage(b []byte, m proto.Message, wtyp protowire.Type, opts unmarsh
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	o, err := opts.Options().UnmarshalState(piface.UnmarshalInput{
 		Buf:     v,
@@ -422,7 +420,7 @@ func consumeGroup(b []byte, m proto.Message, num protowire.Number, wtyp protowir
 	}
 	b, n := protowire.ConsumeGroup(num, b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	o, err := opts.Options().UnmarshalState(piface.UnmarshalInput{
 		Buf:     b,
@@ -496,7 +494,7 @@ func consumeMessageSliceInfo(b []byte, p pointer, wtyp protowire.Type, f *coderF
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	m := reflect.New(f.mi.GoReflectType.Elem()).Interface()
 	mp := pointerOfIface(m)
@@ -552,7 +550,7 @@ func consumeMessageSlice(b []byte, p pointer, goType reflect.Type, wtyp protowir
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	mp := reflect.New(goType.Elem())
 	o, err := opts.Options().UnmarshalState(piface.UnmarshalInput{
@@ -615,7 +613,7 @@ func consumeMessageSliceValue(b []byte, listv pref.Value, _ protowire.Number, wt
 	}
 	v, n := protowire.ConsumeBytes(b)
 	if n < 0 {
-		return pref.Value{}, out, errDecode
+		return pref.Value{}, out, protowire.ParseError(n)
 	}
 	m := list.NewElement()
 	o, err := opts.Options().UnmarshalState(piface.UnmarshalInput{
@@ -683,7 +681,7 @@ func consumeGroupSliceValue(b []byte, listv pref.Value, num protowire.Number, wt
 	}
 	b, n := protowire.ConsumeGroup(num, b)
 	if n < 0 {
-		return pref.Value{}, out, errDecode
+		return pref.Value{}, out, protowire.ParseError(n)
 	}
 	m := list.NewElement()
 	o, err := opts.Options().UnmarshalState(piface.UnmarshalInput{
@@ -769,7 +767,7 @@ func consumeGroupSlice(b []byte, p pointer, num protowire.Number, wtyp protowire
 	}
 	b, n := protowire.ConsumeGroup(num, b)
 	if n < 0 {
-		return out, errDecode
+		return out, protowire.ParseError(n)
 	}
 	mp := reflect.New(goType.Elem())
 	o, err := opts.Options().UnmarshalState(piface.UnmarshalInput{

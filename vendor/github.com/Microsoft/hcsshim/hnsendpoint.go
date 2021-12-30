@@ -7,9 +7,6 @@ import (
 // HNSEndpoint represents a network endpoint in HNS
 type HNSEndpoint = hns.HNSEndpoint
 
-// HNSEndpointStats represent the stats for an networkendpoint in HNS
-type HNSEndpointStats = hns.EndpointStats
-
 // Namespace represents a Compartment.
 type Namespace = hns.Namespace
 
@@ -43,9 +40,6 @@ func HNSListEndpointRequest() ([]HNSEndpoint, error) {
 // HotAttachEndpoint makes a HCS Call to attach the endpoint to the container
 func HotAttachEndpoint(containerID string, endpointID string) error {
 	endpoint, err := GetHNSEndpointByID(endpointID)
-	if err != nil {
-		return err
-	}
 	isAttached, err := endpoint.IsAttached(containerID)
 	if isAttached {
 		return err
@@ -56,9 +50,6 @@ func HotAttachEndpoint(containerID string, endpointID string) error {
 // HotDetachEndpoint makes a HCS Call to detach the endpoint from the container
 func HotDetachEndpoint(containerID string, endpointID string) error {
 	endpoint, err := GetHNSEndpointByID(endpointID)
-	if err != nil {
-		return err
-	}
 	isAttached, err := endpoint.IsAttached(containerID)
 	if !isAttached {
 		return err
@@ -110,9 +101,4 @@ func GetHNSEndpointByID(endpointID string) (*HNSEndpoint, error) {
 // GetHNSEndpointByName gets the endpoint filtered by Name
 func GetHNSEndpointByName(endpointName string) (*HNSEndpoint, error) {
 	return hns.GetHNSEndpointByName(endpointName)
-}
-
-// GetHNSEndpointStats gets the endpoint stats by ID
-func GetHNSEndpointStats(endpointName string) (*HNSEndpointStats, error) {
-	return hns.GetHNSEndpointStats(endpointName)
 }

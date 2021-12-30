@@ -104,18 +104,19 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 
 // expandNestedArgs tries to resolve nested ARG value against the previously defined ARGs
 func expandNested(metaArgs []instructions.ArgCommand, buildArgs []string) ([]instructions.ArgCommand, error) {
-	prevArgs := make([]string, 0)
-	for i := range metaArgs {
-		arg := metaArgs[i]
-		v := arg.Value
-		if v != nil {
-			val, err := util.ResolveEnvironmentReplacement(*v, append(prevArgs, buildArgs...), false)
-			if err != nil {
-				return nil, err
+	var prevArgs []string
+	for i, marg := range metaArgs {
+		for j, arg := range marg.Args {
+			v := arg.Value
+			if v != nil {
+				val, err := util.ResolveEnvironmentReplacement(*v, append(prevArgs, buildArgs...), false)
+				if err != nil {
+					return nil, err
+				}
+				prevArgs = append(prevArgs, arg.Key+"="+val)
+				arg.Value = &val
+				metaArgs[i].Args[j] = arg
 			}
-			prevArgs = append(prevArgs, arg.Key+"="+val)
-			arg.Value = &val
-			metaArgs[i] = arg
 		}
 	}
 	return metaArgs, nil
@@ -124,17 +125,18 @@ func expandNested(metaArgs []instructions.ArgCommand, buildArgs []string) ([]ins
 // stripEnclosingQuotes removes quotes enclosing the value of each instructions.ArgCommand in a slice
 // if the quotes are escaped it leaves them
 func stripEnclosingQuotes(metaArgs []instructions.ArgCommand) ([]instructions.ArgCommand, error) {
-	for i := range metaArgs {
-		arg := metaArgs[i]
-		v := arg.Value
-		if v != nil {
-			val, err := extractValFromQuotes(*v)
-			if err != nil {
-				return nil, err
-			}
+	for i, marg := range metaArgs {
+		for j, arg := range marg.Args {
+			v := arg.Value
+			if v != nil {
+				val, err := extractValFromQuotes(*v)
+				if err != nil {
+					return nil, err
+				}
 
-			arg.Value = &val
-			metaArgs[i] = arg
+				arg.Value = &val
+				metaArgs[i].Args[j] = arg
+			}
 		}
 	}
 	return metaArgs, nil
@@ -322,9 +324,11 @@ func GetOnBuildInstructions(config *v1.Config, stageNameToIdx map[string]string)
 // by default --build-arg overrides metaArgs except when --build-arg is empty
 func unifyArgs(metaArgs []instructions.ArgCommand, buildArgs []string) []string {
 	argsMap := make(map[string]string)
-	for _, a := range metaArgs {
-		if a.Value != nil {
-			argsMap[a.Key] = *a.Value
+	for _, marg := range metaArgs {
+		for _, arg := range marg.Args {
+			if arg.Value != nil {
+				argsMap[arg.Key] = *arg.Value
+			}
 		}
 	}
 	splitter := "="

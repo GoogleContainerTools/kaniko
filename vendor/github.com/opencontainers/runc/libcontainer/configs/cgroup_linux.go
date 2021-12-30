@@ -2,7 +2,6 @@ package configs
 
 import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
-	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 type FreezerState string
@@ -13,12 +12,12 @@ const (
 	Thawed    FreezerState = "THAWED"
 )
 
-// Cgroup holds properties of a cgroup on Linux.
 type Cgroup struct {
-	// Name specifies the name of the cgroup
+	// Deprecated, use Path instead
 	Name string `json:"name,omitempty"`
 
-	// Parent specifies the name of parent of cgroup or slice
+	// name of parent of cgroup or slice
+	// Deprecated, use Path instead
 	Parent string `json:"parent,omitempty"`
 
 	// Path specifies the path to cgroups that are created and/or joined by the container.
@@ -43,7 +42,7 @@ type Cgroup struct {
 
 type Resources struct {
 	// Devices is the set of access rules for devices in the container.
-	Devices []*devices.Rule `json:"devices"`
+	Devices []*DeviceRule `json:"devices"`
 
 	// Memory limit (in bytes)
 	Memory int64 `json:"memory"`
@@ -53,6 +52,12 @@ type Resources struct {
 
 	// Total memory usage (memory + swap); set `-1` to enable unlimited swap
 	MemorySwap int64 `json:"memory_swap"`
+
+	// Kernel memory limit (in bytes)
+	KernelMemory int64 `json:"kernel_memory"`
+
+	// Kernel memory limit for TCP use (in bytes)
+	KernelMemoryTCP int64 `json:"kernel_memory_tcp"`
 
 	// CPU shares (relative weight vs. other containers)
 	CpuShares uint64 `json:"cpu_shares"`
@@ -122,25 +127,10 @@ type Resources struct {
 	// CpuWeight sets a proportional bandwidth limit.
 	CpuWeight uint64 `json:"cpu_weight"`
 
-	// Unified is cgroupv2-only key-value map.
-	Unified map[string]string `json:"unified"`
-
 	// SkipDevices allows to skip configuring device permissions.
 	// Used by e.g. kubelet while creating a parent cgroup (kubepods)
-	// common for many containers, and by runc update.
+	// common for many containers.
 	//
 	// NOTE it is impossible to start a container which has this flag set.
-	SkipDevices bool `json:"-"`
-
-	// SkipFreezeOnSet is a flag for cgroup manager to skip the cgroup
-	// freeze when setting resources. Only applicable to systemd legacy
-	// (i.e. cgroup v1) manager (which uses freeze by default to avoid
-	// spurious permission errors caused by systemd inability to update
-	// device rules in a non-disruptive manner).
-	//
-	// If not set, a few methods (such as looking into cgroup's
-	// devices.list and querying the systemd unit properties) are used
-	// during Set() to figure out whether the freeze is required. Those
-	// methods may be relatively slow, thus this flag.
-	SkipFreezeOnSet bool `json:"-"`
+	SkipDevices bool `json:"skip_devices"`
 }

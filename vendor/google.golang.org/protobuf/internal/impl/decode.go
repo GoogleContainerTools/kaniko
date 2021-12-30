@@ -17,8 +17,6 @@ import (
 	piface "google.golang.org/protobuf/runtime/protoiface"
 )
 
-var errDecode = errors.New("cannot parse invalid wire-format data")
-
 type unmarshalOptions struct {
 	flags    protoiface.UnmarshalInputFlags
 	resolver interface {
@@ -102,13 +100,13 @@ func (mi *MessageInfo) unmarshalPointer(b []byte, p pointer, groupTag protowire.
 			var n int
 			tag, n = protowire.ConsumeVarint(b)
 			if n < 0 {
-				return out, errDecode
+				return out, protowire.ParseError(n)
 			}
 			b = b[n:]
 		}
 		var num protowire.Number
 		if n := tag >> 3; n < uint64(protowire.MinValidNumber) || n > uint64(protowire.MaxValidNumber) {
-			return out, errDecode
+			return out, errors.New("invalid field number")
 		} else {
 			num = protowire.Number(n)
 		}
@@ -116,7 +114,7 @@ func (mi *MessageInfo) unmarshalPointer(b []byte, p pointer, groupTag protowire.
 
 		if wtyp == protowire.EndGroupType {
 			if num != groupTag {
-				return out, errDecode
+				return out, errors.New("mismatching end group marker")
 			}
 			groupTag = 0
 			break
@@ -172,10 +170,10 @@ func (mi *MessageInfo) unmarshalPointer(b []byte, p pointer, groupTag protowire.
 			}
 			n = protowire.ConsumeFieldValue(num, wtyp, b)
 			if n < 0 {
-				return out, errDecode
+				return out, protowire.ParseError(n)
 			}
 			if !opts.DiscardUnknown() && mi.unknownOffset.IsValid() {
-				u := mi.mutableUnknownBytes(p)
+				u := p.Apply(mi.unknownOffset).Bytes()
 				*u = protowire.AppendTag(*u, num, wtyp)
 				*u = append(*u, b[:n]...)
 			}
@@ -183,7 +181,7 @@ func (mi *MessageInfo) unmarshalPointer(b []byte, p pointer, groupTag protowire.
 		b = b[n:]
 	}
 	if groupTag != 0 {
-		return out, errDecode
+		return out, errors.New("missing end group marker")
 	}
 	if mi.numRequiredFields > 0 && bits.OnesCount64(requiredMask) != int(mi.numRequiredFields) {
 		initialized = false
@@ -223,7 +221,7 @@ func (mi *MessageInfo) unmarshalExtension(b []byte, num protowire.Number, wtyp p
 					return out, nil
 				}
 			case ValidationInvalid:
-				return out, errDecode
+				return out, errors.New("invalid wire format")
 			case ValidationUnknown:
 			}
 		}

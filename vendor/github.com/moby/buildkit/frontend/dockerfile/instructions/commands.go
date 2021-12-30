@@ -165,45 +165,19 @@ func (c *LabelCommand) Expand(expander SingleWordExpander) error {
 	return expandKvpsInPlace(c.Labels, expander)
 }
 
-// SourceContent represents an anonymous file object
-type SourceContent struct {
-	Path   string
-	Data   string
-	Expand bool
+// SourcesAndDest represent a list of source files and a destination
+type SourcesAndDest []string
+
+// Sources list the source paths
+func (s SourcesAndDest) Sources() []string {
+	res := make([]string, len(s)-1)
+	copy(res, s[:len(s)-1])
+	return res
 }
 
-// SourcesAndDest represent a collection of sources and a destination
-type SourcesAndDest struct {
-	DestPath       string
-	SourcePaths    []string
-	SourceContents []SourceContent
-}
-
-func (s *SourcesAndDest) Expand(expander SingleWordExpander) error {
-	for i, content := range s.SourceContents {
-		if !content.Expand {
-			continue
-		}
-
-		expandedData, err := expander(content.Data)
-		if err != nil {
-			return err
-		}
-		s.SourceContents[i].Data = expandedData
-	}
-
-	err := expandSliceInPlace(s.SourcePaths, expander)
-	if err != nil {
-		return err
-	}
-
-	expandedDestPath, err := expander(s.DestPath)
-	if err != nil {
-		return err
-	}
-	s.DestPath = expandedDestPath
-
-	return nil
+// Dest path of the operation
+func (s SourcesAndDest) Dest() string {
+	return s[len(s)-1]
 }
 
 // AddCommand : ADD foo /path
@@ -225,8 +199,7 @@ func (c *AddCommand) Expand(expander SingleWordExpander) error {
 		return err
 	}
 	c.Chown = expandedChown
-
-	return c.SourcesAndDest.Expand(expander)
+	return expandSliceInPlace(c.SourcesAndDest, expander)
 }
 
 // CopyCommand : COPY foo /path
@@ -248,8 +221,7 @@ func (c *CopyCommand) Expand(expander SingleWordExpander) error {
 		return err
 	}
 	c.Chown = expandedChown
-
-	return c.SourcesAndDest.Expand(expander)
+	return expandSliceInPlace(c.SourcesAndDest, expander)
 }
 
 // OnbuildCommand : ONBUILD <some other command>
@@ -277,17 +249,9 @@ func (c *WorkdirCommand) Expand(expander SingleWordExpander) error {
 	return nil
 }
 
-// ShellInlineFile represents an inline file created for a shell command
-type ShellInlineFile struct {
-	Name  string
-	Data  string
-	Chomp bool
-}
-
 // ShellDependantCmdLine represents a cmdline optionally prepended with the shell
 type ShellDependantCmdLine struct {
 	CmdLine      strslice.StrSlice
-	Files        []ShellInlineFile
 	PrependShell bool
 }
 
@@ -306,13 +270,6 @@ type RunCommand struct {
 	withExternalData
 	ShellDependantCmdLine
 	FlagsUsed []string
-}
-
-func (c *RunCommand) Expand(expander SingleWordExpander) error {
-	if err := setMountState(c, expander); err != nil {
-		return err
-	}
-	return nil
 }
 
 // CmdCommand : CMD foo

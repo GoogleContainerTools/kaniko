@@ -39,6 +39,12 @@ type HNSNetwork struct {
 	AutomaticDNS         bool              `json:",omitempty"`
 }
 
+type hnsNetworkResponse struct {
+	Success bool
+	Error   string
+	Output  HNSNetwork
+}
+
 type hnsResponse struct {
 	Success bool
 	Error   string

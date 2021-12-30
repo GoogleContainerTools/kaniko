@@ -560,11 +560,13 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 					return nil, err
 				}
 			case *instructions.ArgCommand:
-				k, v, err := commands.ParseArg(cmd.Key, cmd.Value, cfg.Config.Env, ba)
-				if err != nil {
-					return nil, err
+				for _, arg := range cmd.Args {
+					k, v, err := commands.ParseArg(arg.Key, arg.Value, cfg.Config.Env, ba)
+					if err != nil {
+						return nil, err
+					}
+					ba.AddArg(k, v)
 				}
-				ba.AddArg(k, v)
 			}
 		}
 		images = append(images, image)

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync"
 
-	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/runtime/protoimpl"
@@ -63,7 +62,14 @@ func FileDescriptor(s filePath) fileDescGZIP {
 	// Find the descriptor in the v2 registry.
 	var b []byte
 	if fd, _ := protoregistry.GlobalFiles.FindFileByPath(s); fd != nil {
-		b, _ = Marshal(protodesc.ToFileDescriptorProto(fd))
+		if fd, ok := fd.(interface{ ProtoLegacyRawDesc() []byte }); ok {
+			b = fd.ProtoLegacyRawDesc()
+		} else {
+			// TODO: Use protodesc.ToFileDescriptorProto to construct
+			// a descriptorpb.FileDescriptorProto and marshal it.
+			// However, doing so causes the proto package to have a dependency
+			// on descriptorpb, leading to cyclic dependency issues.
+		}
 	}
 
 	// Locally cache the raw descriptor form for the file.

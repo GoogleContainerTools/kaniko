@@ -607,6 +607,7 @@ func TestExitCodePropagation(t *testing.T) {
 			"-c", "dir:///workspace/",
 			"-f", "./Dockerfile_exit_code_propagation",
 			"--no-push",
+			"--force", // TODO: detection of whether kaniko is being run inside a container might be broken?
 		})...)
 
 		_, kanikoErr = RunCommandWithoutTest(dockerCmdWithKaniko)

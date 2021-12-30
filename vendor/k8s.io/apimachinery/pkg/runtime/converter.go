@@ -186,9 +186,6 @@ func fromUnstructured(sv, dv reflect.Value) error {
 					reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 					dv.Set(sv.Convert(dt))
 					return nil
-				case reflect.Float32, reflect.Float64:
-					dv.Set(sv.Convert(dt))
-					return nil
 				}
 			case reflect.Float32, reflect.Float64:
 				switch dt.Kind() {

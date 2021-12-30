@@ -56,7 +56,7 @@ func Mknod(p string, mode os.FileMode, maj, min int) error {
 		m |= unix.S_IFIFO
 	}
 
-	return mknod(p, m, dev)
+	return unix.Mknod(p, m, int(dev))
 }
 
 // syscallMode returns the syscall-specific mode bits from Go's portable mode bits.

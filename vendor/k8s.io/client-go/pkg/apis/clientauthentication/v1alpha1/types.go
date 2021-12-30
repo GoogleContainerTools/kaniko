@@ -37,7 +37,7 @@ type ExecCredential struct {
 	Status *ExecCredentialStatus `json:"status,omitempty"`
 }
 
-// ExecCredentialSpec holds request and runtime specific information provided by
+// ExecCredenitalSpec holds request and runtime specific information provided by
 // the transport.
 type ExecCredentialSpec struct {
 	// Response is populated when the transport encounters HTTP status codes, such as 401,
@@ -61,11 +61,11 @@ type ExecCredentialStatus struct {
 	// +optional
 	ExpirationTimestamp *metav1.Time `json:"expirationTimestamp,omitempty"`
 	// Token is a bearer token used by the client for request authentication.
-	Token string `json:"token,omitempty" datapolicy:"token"`
+	Token string `json:"token,omitempty"`
 	// PEM-encoded client TLS certificates (including intermediates, if any).
 	ClientCertificateData string `json:"clientCertificateData,omitempty"`
 	// PEM-encoded private key for the above certificate.
-	ClientKeyData string `json:"clientKeyData,omitempty" datapolicy:"security-key"`
+	ClientKeyData string `json:"clientKeyData,omitempty"`
 }
 
 // Response defines metadata about a failed request, including HTTP status code and

@@ -1,7 +1,7 @@
 package credentials
 
 import (
-	exec "golang.org/x/sys/execabs"
+	"os/exec"
 )
 
 // DetectDefaultStore return the default credentials store for the platform if

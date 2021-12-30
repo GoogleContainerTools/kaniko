@@ -3,9 +3,6 @@
 // license that can be found in the LICENSE file.
 
 // Package filedesc provides functionality for constructing descriptors.
-//
-// The types in this package implement interfaces in the protoreflect package
-// related to protobuf descripriptors.
 package filedesc
 
 import (

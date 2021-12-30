@@ -1,3 +1,5 @@
+// +build dfrunnetwork
+
 package instructions
 
 import (

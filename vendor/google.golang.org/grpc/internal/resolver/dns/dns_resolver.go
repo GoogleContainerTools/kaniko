@@ -32,9 +32,7 @@ import (
 	"sync"
 	"time"
 
-	grpclbstate "google.golang.org/grpc/balancer/grpclb/state"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/internal/backoff"
 	"google.golang.org/grpc/internal/envconfig"
 	"google.golang.org/grpc/internal/grpcrand"
 	"google.golang.org/grpc/resolver"
@@ -44,15 +42,6 @@ import (
 // EnableSRVLookups controls whether the DNS resolver attempts to fetch gRPCLB
 // addresses from SRV records.  Must not be changed after init time.
 var EnableSRVLookups = false
-
-var logger = grpclog.Component("dns")
-
-// Globals to stub out in tests. TODO: Perhaps these two can be combined into a
-// single variable for testing the resolver?
-var (
-	newTimer           = time.NewTimer
-	newTimerDNSResRate = time.NewTimer
-)
 
 func init() {
 	resolver.Register(NewBuilder())
@@ -151,6 +140,7 @@ func (b *dnsBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts 
 
 	d.wg.Add(1)
 	go d.watcher()
+	d.ResolveNow(resolver.ResolveNowOptions{})
 	return d, nil
 }
 
@@ -208,38 +198,28 @@ func (d *dnsResolver) Close() {
 
 func (d *dnsResolver) watcher() {
 	defer d.wg.Done()
-	backoffIndex := 1
 	for {
-		state, err := d.lookup()
-		if err != nil {
-			// Report error to the underlying grpc.ClientConn.
-			d.cc.ReportError(err)
-		} else {
-			err = d.cc.UpdateState(*state)
-		}
-
-		var timer *time.Timer
-		if err == nil {
-			// Success resolving, wait for the next ResolveNow. However, also wait 30 seconds at the very least
-			// to prevent constantly re-resolving.
-			backoffIndex = 1
-			timer = newTimerDNSResRate(minDNSResRate)
-			select {
-			case <-d.ctx.Done():
-				timer.Stop()
-				return
-			case <-d.rn:
-			}
-		} else {
-			// Poll on an error found in DNS Resolver or an error received from ClientConn.
-			timer = newTimer(backoff.DefaultExponential.Backoff(backoffIndex))
-			backoffIndex++
-		}
 		select {
 		case <-d.ctx.Done():
-			timer.Stop()
 			return
-		case <-timer.C:
+		case <-d.rn:
+		}
+
+		state, err := d.lookup()
+		if err != nil {
+			d.cc.ReportError(err)
+		} else {
+			d.cc.UpdateState(*state)
+		}
+
+		// Sleep to prevent excessive re-resolutions. Incoming resolution requests
+		// will be queued in d.rn.
+		t := time.NewTimer(minDNSResRate)
+		select {
+		case <-t.C:
+		case <-d.ctx.Done():
+			t.Stop()
+			return
 		}
 	}
 }
@@ -271,7 +251,7 @@ func (d *dnsResolver) lookupSRV() ([]resolver.Address, error) {
 				return nil, fmt.Errorf("dns: error parsing A record IP address %v", a)
 			}
 			addr := ip + ":" + strconv.Itoa(int(s.Port))
-			newAddrs = append(newAddrs, resolver.Address{Addr: addr, ServerName: s.Target})
+			newAddrs = append(newAddrs, resolver.Address{Addr: addr, Type: resolver.GRPCLB, ServerName: s.Target})
 		}
 	}
 	return newAddrs, nil
@@ -291,7 +271,7 @@ func handleDNSError(err error, lookupType string) error {
 	err = filterError(err)
 	if err != nil {
 		err = fmt.Errorf("dns: %v record lookup error: %v", lookupType, err)
-		logger.Info(err)
+		grpclog.Infoln(err)
 	}
 	return err
 }
@@ -314,7 +294,7 @@ func (d *dnsResolver) lookupTXT() *serviceconfig.ParseResult {
 
 	// TXT record must have "grpc_config=" attribute in order to be used as service config.
 	if !strings.HasPrefix(res, txtAttribute) {
-		logger.Warningf("dns: TXT record %v missing %v attribute", res, txtAttribute)
+		grpclog.Warningf("dns: TXT record %v missing %v attribute", res, txtAttribute)
 		// This is not an error; it is the equivalent of not having a service config.
 		return nil
 	}
@@ -346,15 +326,13 @@ func (d *dnsResolver) lookup() (*resolver.State, error) {
 	if hostErr != nil && (srvErr != nil || len(srv) == 0) {
 		return nil, hostErr
 	}
-
-	state := resolver.State{Addresses: addrs}
-	if len(srv) > 0 {
-		state = grpclbstate.Set(state, &grpclbstate.State{BalancerAddresses: srv})
+	state := &resolver.State{
+		Addresses: append(addrs, srv...),
 	}
 	if !d.disableServiceConfig {
 		state.ServiceConfig = d.lookupTXT()
 	}
-	return &state, nil
+	return state, nil
 }
 
 // formatIP returns ok = false if addr is not a valid textual representation of an IP address.
@@ -440,12 +418,12 @@ func canaryingSC(js string) string {
 	var rcs []rawChoice
 	err := json.Unmarshal([]byte(js), &rcs)
 	if err != nil {
-		logger.Warningf("dns: error parsing service config json: %v", err)
+		grpclog.Warningf("dns: error parsing service config json: %v", err)
 		return ""
 	}
 	cliHostname, err := os.Hostname()
 	if err != nil {
-		logger.Warningf("dns: error getting client hostname: %v", err)
+		grpclog.Warningf("dns: error getting client hostname: %v", err)
 		return ""
 	}
 	var sc string

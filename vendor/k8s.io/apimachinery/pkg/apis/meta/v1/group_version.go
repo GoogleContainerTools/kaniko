@@ -34,9 +34,6 @@ type GroupResource struct {
 }
 
 func (gr *GroupResource) String() string {
-	if gr == nil {
-		return "<nil>"
-	}
 	if len(gr.Group) == 0 {
 		return gr.Resource
 	}
@@ -54,9 +51,6 @@ type GroupVersionResource struct {
 }
 
 func (gvr *GroupVersionResource) String() string {
-	if gvr == nil {
-		return "<nil>"
-	}
 	return strings.Join([]string{gvr.Group, "/", gvr.Version, ", Resource=", gvr.Resource}, "")
 }
 
@@ -70,9 +64,6 @@ type GroupKind struct {
 }
 
 func (gk *GroupKind) String() string {
-	if gk == nil {
-		return "<nil>"
-	}
 	if len(gk.Group) == 0 {
 		return gk.Kind
 	}

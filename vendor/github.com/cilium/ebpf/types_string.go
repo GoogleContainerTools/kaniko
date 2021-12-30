@@ -34,15 +34,11 @@ func _() {
 	_ = x[Stack-23]
 	_ = x[SkStorage-24]
 	_ = x[DevMapHash-25]
-	_ = x[StructOpts-26]
-	_ = x[RingBuf-27]
-	_ = x[InodeStorage-28]
-	_ = x[TaskStorage-29]
 }
 
-const _MapType_name = "UnspecifiedMapHashArrayProgramArrayPerfEventArrayPerCPUHashPerCPUArrayStackTraceCGroupArrayLRUHashLRUCPUHashLPMTrieArrayOfMapsHashOfMapsDevMapSockMapCPUMapXSKMapSockHashCGroupStorageReusePortSockArrayPerCPUCGroupStorageQueueStackSkStorageDevMapHashStructOptsRingBufInodeStorageTaskStorage"
+const _MapType_name = "UnspecifiedMapHashArrayProgramArrayPerfEventArrayPerCPUHashPerCPUArrayStackTraceCGroupArrayLRUHashLRUCPUHashLPMTrieArrayOfMapsHashOfMapsDevMapSockMapCPUMapXSKMapSockHashCGroupStorageReusePortSockArrayPerCPUCGroupStorageQueueStackSkStorageDevMapHash"
 
-var _MapType_index = [...]uint16{0, 14, 18, 23, 35, 49, 59, 70, 80, 91, 98, 108, 115, 126, 136, 142, 149, 155, 161, 169, 182, 200, 219, 224, 229, 238, 248, 258, 265, 277, 288}
+var _MapType_index = [...]uint8{0, 14, 18, 23, 35, 49, 59, 70, 80, 91, 98, 108, 115, 126, 136, 142, 149, 155, 161, 169, 182, 200, 219, 224, 229, 238, 248}
 
 func (i MapType) String() string {
 	if i >= MapType(len(_MapType_index)-1) {
