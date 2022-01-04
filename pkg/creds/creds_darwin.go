@@ -17,20 +17,33 @@ limitations under the License.
 package creds
 
 import (
+	"log"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 )
 
 var (
-	setupKeyChainOnce sync.Once
-	keyChain          authn.Keychain
+	setupKeychainOnce sync.Once
+	keychain          authn.Keychain
 )
 
 // GetKeychain returns a keychain for accessing container registries.
 func GetKeychain() authn.Keychain {
-	setupKeyChainOnce.Do(func() {
-		keyChain = authn.NewMultiKeychain(authn.DefaultKeychain)
+	setupKeychainOnce.Do(func() {
+		keychain = authn.DefaultKeychain
+
+		// Historically kaniko was pre-configured by default with gcr
+		// credential helper, in here we keep the backwards
+		// compatibility by enabling the GCR helper only when gcr.io
+		// (or pkg.dev) is in one of the destinations.
+		gauth, err := google.NewEnvAuthenticator()
+		if err != nil {
+			log.Printf("Failed to setup Google env authenticator, ignoring: %v", err)
+		} else {
+			keychain = authn.NewMultiKeychain(authn.DefaultKeychain, gcrKeychain{gauth})
+		}
 	})
-	return keyChain
+	return keychain
 }

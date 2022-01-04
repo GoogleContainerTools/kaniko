@@ -95,14 +95,6 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 		}
 
 		registryName := destRef.Repository.Registry.Name()
-		// Historically kaniko was pre-configured by default with gcr credential helper,
-		// in here we keep the backwards compatibility by enabling the GCR helper only
-		// when gcr.io (or pkg.dev) is in one of the destinations.
-		if registryName == "gcr.io" || strings.HasSuffix(registryName, ".gcr.io") || strings.HasSuffix(registryName, ".pkg.dev") {
-			if err := util.ConfigureGCR(fmt.Sprintf("--registries=%s", registryName)); err != nil {
-				return err
-			}
-		}
 		if opts.Insecure || opts.InsecureRegistries.Contains(registryName) {
 			newReg, err := name.NewRegistry(registryName, name.WeakValidation, name.Insecure)
 			if err != nil {
@@ -244,7 +236,15 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		logrus.Infof("Pushing image to %s", destRef.String())
 
 		retryFunc := func() error {
-			return remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt))
+			dig, err := image.Digest()
+			if err != nil {
+				return err
+			}
+			if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
+				return err
+			}
+			logrus.Infof("Pushed %s", destRef.Context().Digest(dig.String()))
+			return nil
 		}
 
 		if err := util.Retry(retryFunc, opts.PushRetry, 1000); err != nil {
@@ -252,7 +252,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 	}
 	timing.DefaultRun.Stop(t)
-	logrus.Infof("Pushed image to %d destinations", len(destRefs))
 	return writeImageOutputs(image, destRefs)
 }
 

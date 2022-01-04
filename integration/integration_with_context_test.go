@@ -47,7 +47,7 @@ func TestWithContext(t *testing.T) {
 			t.Parallel()
 
 			if err := builder.BuildImageWithContext(
-				config, "", name, testDir,
+				t, config, "", name, testDir,
 			); err != nil {
 				t.Fatal(err)
 			}

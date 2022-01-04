@@ -68,11 +68,19 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		RecurseSubmodules: getRecurseSubmodules(g.opts.GitRecurseSubmodules),
 	}
 	var fetchRef string
+	var checkoutRef string
 	if len(parts) > 1 {
 		if plumbing.IsHash(parts[1]) || !strings.HasPrefix(parts[1], "refs/pull/") {
 			// Handle any non-branch refs separately. First, clone the repo HEAD, and
 			// then fetch and check out the fetchRef.
 			fetchRef = parts[1]
+			if plumbing.IsHash(parts[1]) {
+				checkoutRef = fetchRef
+			} else {
+				// The ReferenceName still needs to be present in the options passed
+				// to the clone operation for non-hash references of private repositories.
+				options.ReferenceName = plumbing.ReferenceName(fetchRef)
+			}
 		} else {
 			// Branches will be cloned directly.
 			options.ReferenceName = plumbing.ReferenceName(parts[1])
@@ -96,6 +104,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	if fetchRef != "" {
 		err = r.Fetch(&git.FetchOptions{
 			RemoteName: "origin",
+			Auth:       getGitAuth(),
 			RefSpecs:   []config.RefSpec{config.RefSpec(fetchRef + ":" + fetchRef)},
 		})
 		if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
@@ -103,7 +112,6 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		}
 	}
 
-	checkoutRef := fetchRef
 	if len(parts) > 2 {
 		checkoutRef = parts[2]
 	}

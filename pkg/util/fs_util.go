@@ -261,8 +261,8 @@ func childDirInIgnoreList(path string) bool {
 	return false
 }
 
-// unTar returns a list of files that have been extracted from the tar archive at r to the path at dest
-func unTar(r io.Reader, dest string) ([]string, error) {
+// UnTar returns a list of files that have been extracted from the tar archive at r to the path at dest
+func UnTar(r io.Reader, dest string) ([]string, error) {
 	var extractedFiles []string
 	tr := tar.NewReader(r)
 	for {
@@ -331,6 +331,10 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 
 		if err = setFilePermissions(path, mode, uid, gid); err != nil {
+			return err
+		}
+
+		if err = writeSecurityXattrToToFile(path, hdr); err != nil {
 			return err
 		}
 
@@ -626,7 +630,7 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 			logrus.Tracef("Creating directory %s", destPath)
 
 			mode := fi.Mode()
-			uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
+			uid, gid := DetermineTargetFileOwnership(fi, uid, gid)
 			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
@@ -773,11 +777,14 @@ func Volumes() []string {
 func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
 	// Check if a file already exists on the path, if yes then delete it
 	info, err := os.Stat(path)
-	if !os.IsNotExist(err) && !info.IsDir() {
+	if err == nil && !info.IsDir() {
 		logrus.Tracef("removing file because it needs to be a directory %s", path)
 		if err := os.Remove(path); err != nil {
 			return errors.Wrapf(err, "error removing %s to make way for new directory.", path)
 		}
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return errors.Wrapf(err, "error calling stat on %s.", path)
 	}
 
 	if err := os.MkdirAll(path, mode); err != nil {
@@ -894,7 +901,62 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	return otiai10Cpy.Copy(src, destFile)
+	err := otiai10Cpy.Copy(src, destFile)
+	if err != nil {
+		return errors.Wrap(err, "copying file")
+	}
+	err = CopyOwnership(src, destDir, root)
+	if err != nil {
+		return errors.Wrap(err, "copying ownership")
+	}
+	return nil
+}
+
+// CopyOwnership copies the file or directory ownership recursively at src to dest
+func CopyOwnership(src string, destDir string, root string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if IsSymlink(info) {
+			return nil
+		}
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(destDir, relPath)
+
+		if CheckIgnoreList(src) && CheckIgnoreList(destPath) {
+			if !isExist(destPath) {
+				logrus.Debugf("Path %s ignored, but not exists", destPath)
+				return nil
+			}
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			logrus.Debugf("Not copying ownership for %s, as it's ignored", destPath)
+			return nil
+		}
+		if CheckIgnoreList(destDir) && CheckIgnoreList(path) {
+			if !isExist(path) {
+				logrus.Debugf("Path %s ignored, but not exists", path)
+				return nil
+			}
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			logrus.Debugf("Not copying ownership for %s, as it's ignored", path)
+			return nil
+		}
+
+		info, err = os.Stat(path)
+		if err != nil {
+			return errors.Wrap(err, "reading ownership")
+		}
+		stat := info.Sys().(*syscall.Stat_t)
+		return os.Chown(destPath, int(stat.Uid), int(stat.Gid))
+	})
 }
 
 func createParentDirectory(path string) error {

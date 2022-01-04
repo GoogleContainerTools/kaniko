@@ -1,30 +1,18 @@
 name: Unit tests
 
-# Triggers the workflow on push or pull request events
-on: [pull_request]
-
-concurrency:
-  group: unit-tests-${{ github.head_ref }}
-  cancel-in-progress: true
+on:
+  push:
+    branches: ['master']
+  pull_request:
+    branches: ['master']
 
 jobs:
-  build-executor:
-    env:
-      IMAGE_REPO: 'localhost:5000'
-      REGISTRY: 'localhost:5000'
+  tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.14
-        id: go
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - uses: actions/checkout@v2
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Run unit-test
-        run:
-          make test
+    - run: make test
