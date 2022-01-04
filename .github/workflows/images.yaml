@@ -33,14 +33,14 @@ jobs:
         include:
         - image: executor
           dockerfile: ./deploy/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/s390x
           image-name: gcr.io/kaniko-project/executor
           tag: ${{ github.sha }}
           release-tag: latest
 
         - image: executor-debug
           dockerfile: ./deploy/Dockerfile_debug
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/s390x
           image-name: gcr.io/kaniko-project/executor
           tag: ${{ github.sha }}-debug
           release_tag: debug
@@ -54,7 +54,7 @@ jobs:
 
         - image: warmer
           dockerfile: ./deploy/Dockerfile_warmer
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/s390x
           image-name: gcr.io/kaniko-project/warmer
           tag: ${{ github.sha }}
           release-tag: latest
