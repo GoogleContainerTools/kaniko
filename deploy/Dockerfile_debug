@@ -57,6 +57,10 @@ COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
 COPY --from=busybox:1.32.0 /bin /busybox
+# Since busybox needs some lib files which lie in /lib directory to run the executables on s390x, 
+# the below COPY command is added to address "ld64.so.1 not found" issue. This extra copy action will not 
+# happen on amd64 or arm64 platforms since /lib does not exist in amd64 or arm64 version of busybox container.
+# Similar issues could be found in https://github.com/multiarch/qemu-user-static/issues/110#issuecomment-652951564.
 COPY --from=busybox:1.32.0 /*lib /lib
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
