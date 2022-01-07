@@ -218,6 +218,11 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.CacheCopyLayers, "cache-copy-layers", "", false, "Caches copy layers")
 	RootCmd.PersistentFlags().VarP(&opts.IgnorePaths, "ignore-path", "", "Ignore these paths when taking a snapshot. Set it repeatedly for multiple paths.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.ForceBuildMetadata, "force-build-metadata", "", false, "Force add metadata layers to build image")
+
+	// Allow setting --registry-mirror using an environment variable.
+	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
+		opts.RegistryMirrors.Set(val)
+	}
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
