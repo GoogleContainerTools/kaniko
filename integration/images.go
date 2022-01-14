@@ -476,7 +476,9 @@ func buildKanikoImage(
 
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", kanikoDockerfilePath,
-		"-d", kanikoImage)
+		"-d", kanikoImage,
+		"--force", // TODO: detection of whether kaniko is being run inside a container might be broken?
+	)
 	dockerRunFlags = append(dockerRunFlags, additionalFlags...)
 
 	kanikoCmd := exec.Command("docker", dockerRunFlags...)

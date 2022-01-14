@@ -57,8 +57,10 @@ func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 
 // AddMetaArgs adds the supplied args map to b's allowedMetaArgs
 func (b *BuildArgs) AddMetaArgs(metaArgs []instructions.ArgCommand) {
-	for _, arg := range metaArgs {
-		v := arg.Value
-		b.AddMetaArg(arg.Key, v)
+	for _, marg := range metaArgs {
+		for _, arg := range marg.Args {
+			v := arg.Value
+			b.AddMetaArg(arg.Key, v)
+		}
 	}
 }

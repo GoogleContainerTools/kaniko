@@ -28,14 +28,20 @@ import (
 // works a little more effectively than a "proper" parse tree for our needs.
 //
 type Node struct {
-	Value      string          // actual content
-	Next       *Node           // the next item in the current sexp
-	Children   []*Node         // the children of this sexp
-	Attributes map[string]bool // special attributes for this node
-	Original   string          // original line used before parsing
-	Flags      []string        // only top Node should have this set
-	StartLine  int             // the line in the original dockerfile where the node begins
-	EndLine    int             // the line in the original dockerfile where the node ends
+	Value       string          // actual content
+	Next        *Node           // the next item in the current sexp
+	Children    []*Node         // the children of this sexp
+	Attributes  map[string]bool // special attributes for this node
+	Original    string          // original line used before parsing
+	Flags       []string        // only top Node should have this set
+	StartLine   int             // the line in the original dockerfile where the node begins
+	EndLine     int             // the line in the original dockerfile where the node ends
+	PrevComment []string
+}
+
+// Location return the location of node in source code
+func (node *Node) Location() []Range {
+	return toRanges(node.StartLine, node.EndLine)
 }
 
 // Dump dumps the AST defined by `node` as a list of sexps.
@@ -79,64 +85,91 @@ func (node *Node) AddChild(child *Node, startLine, endLine int) {
 }
 
 var (
-	dispatch           map[string]func(string, *Directive) (*Node, map[string]bool, error)
-	tokenWhitespace    = regexp.MustCompile(`[\t\v\f\r ]+`)
-	tokenEscapeCommand = regexp.MustCompile(`^#[ \t]*escape[ \t]*=[ \t]*(?P<escapechar>.).*$`)
-	tokenComment       = regexp.MustCompile(`^#.*$`)
+	dispatch     map[string]func(string, *directives) (*Node, map[string]bool, error)
+	reWhitespace = regexp.MustCompile(`[\t\v\f\r ]+`)
+	reDirectives = regexp.MustCompile(`^#\s*([a-zA-Z][a-zA-Z0-9]*)\s*=\s*(.+?)\s*$`)
+	reComment    = regexp.MustCompile(`^#.*$`)
 )
 
 // DefaultEscapeToken is the default escape token
 const DefaultEscapeToken = '\\'
 
-// Directive is the structure used during a build run to hold the state of
-// parsing directives.
-type Directive struct {
-	escapeToken           rune           // Current escape token
-	lineContinuationRegex *regexp.Regexp // Current line continuation regex
-	processingComplete    bool           // Whether we are done looking for directives
-	escapeSeen            bool           // Whether the escape directive has been seen
+var validDirectives = map[string]struct{}{
+	"escape": {},
+	"syntax": {},
 }
 
-// setEscapeToken sets the default token for escaping characters in a Dockerfile.
-func (d *Directive) setEscapeToken(s string) error {
-	if s != "`" && s != "\\" {
-		return fmt.Errorf("invalid ESCAPE '%s'. Must be ` or \\", s)
+// directive is the structure used during a build run to hold the state of
+// parsing directives.
+type directives struct {
+	escapeToken           rune                // Current escape token
+	lineContinuationRegex *regexp.Regexp      // Current line continuation regex
+	done                  bool                // Whether we are done looking for directives
+	seen                  map[string]struct{} // Whether the escape directive has been seen
+}
+
+// setEscapeToken sets the default token for escaping characters and as line-
+// continuation token in a Dockerfile. Only ` (backtick) and \ (backslash) are
+// allowed as token.
+func (d *directives) setEscapeToken(s string) error {
+	if s != "`" && s != `\` {
+		return errors.Errorf("invalid escape token '%s' does not match ` or \\", s)
 	}
 	d.escapeToken = rune(s[0])
-	d.lineContinuationRegex = regexp.MustCompile(`\` + s + `[ \t]*$`)
+	// The escape token is used both to escape characters in a line and as line
+	// continuation token. If it's the last non-whitespace token, it is used as
+	// line-continuation token, *unless* preceded by an escape-token.
+	//
+	// The second branch in the regular expression handles line-continuation
+	// tokens on their own line, which don't have any character preceding them.
+	//
+	// Due to Go lacking negative look-ahead matching, this regular expression
+	// does not currently handle a line-continuation token preceded by an *escaped*
+	// escape-token ("foo \\\").
+	d.lineContinuationRegex = regexp.MustCompile(`([^\` + s + `])\` + s + `[ \t]*$|^\` + s + `[ \t]*$`)
 	return nil
 }
 
 // possibleParserDirective looks for parser directives, eg '# escapeToken=<char>'.
 // Parser directives must precede any builder instruction or other comments,
 // and cannot be repeated.
-func (d *Directive) possibleParserDirective(line string) error {
-	if d.processingComplete {
+func (d *directives) possibleParserDirective(line string) error {
+	if d.done {
 		return nil
 	}
 
-	tecMatch := tokenEscapeCommand.FindStringSubmatch(strings.ToLower(line))
-	if len(tecMatch) != 0 {
-		for i, n := range tokenEscapeCommand.SubexpNames() {
-			if n == "escapechar" {
-				if d.escapeSeen {
-					return errors.New("only one escape parser directive can be used")
-				}
-				d.escapeSeen = true
-				return d.setEscapeToken(tecMatch[i])
-			}
-		}
+	match := reDirectives.FindStringSubmatch(line)
+	if len(match) == 0 {
+		d.done = true
+		return nil
 	}
 
-	d.processingComplete = true
+	k := strings.ToLower(match[1])
+	_, ok := validDirectives[k]
+	if !ok {
+		d.done = true
+		return nil
+	}
+
+	if _, ok := d.seen[k]; ok {
+		return errors.Errorf("only one %s parser directive can be used", k)
+	}
+	d.seen[k] = struct{}{}
+
+	if k == "escape" {
+		return d.setEscapeToken(match[2])
+	}
+
 	return nil
 }
 
-// NewDefaultDirective returns a new Directive with the default escapeToken token
-func NewDefaultDirective() *Directive {
-	directive := Directive{}
-	directive.setEscapeToken(string(DefaultEscapeToken))
-	return &directive
+// newDefaultDirectives returns a new directives structure with the default escapeToken token
+func newDefaultDirectives() *directives {
+	d := &directives{
+		seen: map[string]struct{}{},
+	}
+	d.setEscapeToken(string(DefaultEscapeToken))
+	return d
 }
 
 func init() {
@@ -146,7 +179,7 @@ func init() {
 	// reformulating the arguments according to the rules in the parser
 	// functions. Errors are propagated up by Parse() and the resulting AST can
 	// be incorporated directly into the existing AST as a next.
-	dispatch = map[string]func(string, *Directive) (*Node, map[string]bool, error){
+	dispatch = map[string]func(string, *directives) (*Node, map[string]bool, error){
 		command.Add:         parseMaybeJSONToList,
 		command.Arg:         parseNameOrNameVal,
 		command.Cmd:         parseMaybeJSON,
@@ -171,7 +204,7 @@ func init() {
 // newNodeFromLine splits the line into parts, and dispatches to a function
 // based on the command and command arguments. A Node is created from the
 // result of the dispatch.
-func newNodeFromLine(line string, directive *Directive) (*Node, error) {
+func newNodeFromLine(line string, d *directives, comments []string) (*Node, error) {
 	cmd, flags, args, err := splitCommand(line)
 	if err != nil {
 		return nil, err
@@ -182,17 +215,18 @@ func newNodeFromLine(line string, directive *Directive) (*Node, error) {
 	if fn == nil {
 		fn = parseIgnore
 	}
-	next, attrs, err := fn(args, directive)
+	next, attrs, err := fn(args, d)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Node{
-		Value:      cmd,
-		Original:   line,
-		Flags:      flags,
-		Next:       next,
-		Attributes: attrs,
+		Value:       cmd,
+		Original:    line,
+		Flags:       flags,
+		Next:        next,
+		Attributes:  attrs,
+		PrevComment: comments,
 	}, nil
 }
 
@@ -214,11 +248,12 @@ func (r *Result) PrintWarnings(out io.Writer) {
 // Parse reads lines from a Reader, parses the lines into an AST and returns
 // the AST and escape token
 func Parse(rwc io.Reader) (*Result, error) {
-	d := NewDefaultDirective()
+	d := newDefaultDirectives()
 	currentLine := 0
 	root := &Node{StartLine: -1}
 	scanner := bufio.NewScanner(rwc)
 	warnings := []string{}
+	var comments []string
 
 	var err error
 	for scanner.Scan() {
@@ -227,9 +262,17 @@ func Parse(rwc io.Reader) (*Result, error) {
 			// First line, strip the byte-order-marker if present
 			bytesRead = bytes.TrimPrefix(bytesRead, utf8bom)
 		}
+		if isComment(bytesRead) {
+			comment := strings.TrimSpace(string(bytesRead[1:]))
+			if comment == "" {
+				comments = nil
+			} else {
+				comments = append(comments, comment)
+			}
+		}
 		bytesRead, err = processLine(d, bytesRead, true)
 		if err != nil {
-			return nil, err
+			return nil, withLocation(err, currentLine, 0)
 		}
 		currentLine++
 
@@ -243,7 +286,7 @@ func Parse(rwc io.Reader) (*Result, error) {
 		for !isEndOfLine && scanner.Scan() {
 			bytesRead, err := processLine(d, scanner.Bytes(), false)
 			if err != nil {
-				return nil, err
+				return nil, withLocation(err, currentLine, 0)
 			}
 			currentLine++
 
@@ -265,10 +308,11 @@ func Parse(rwc io.Reader) (*Result, error) {
 			warnings = append(warnings, "[WARNING]: Empty continuation line found in:\n    "+line)
 		}
 
-		child, err := newNodeFromLine(line, d)
+		child, err := newNodeFromLine(line, d, comments)
 		if err != nil {
-			return nil, err
+			return nil, withLocation(err, startLine, currentLine)
 		}
+		comments = nil
 		root.AddChild(child, startLine, currentLine)
 	}
 
@@ -277,18 +321,18 @@ func Parse(rwc io.Reader) (*Result, error) {
 	}
 
 	if root.StartLine < 0 {
-		return nil, errors.New("file with no instructions.")
+		return nil, withLocation(errors.New("file with no instructions"), currentLine, 0)
 	}
 
 	return &Result{
 		AST:         root,
 		Warnings:    warnings,
 		EscapeToken: d.escapeToken,
-	}, handleScannerError(scanner.Err())
+	}, withLocation(handleScannerError(scanner.Err()), currentLine, 0)
 }
 
 func trimComments(src []byte) []byte {
-	return tokenComment.ReplaceAll(src, []byte{})
+	return reComment.ReplaceAll(src, []byte{})
 }
 
 func trimWhitespace(src []byte) []byte {
@@ -296,7 +340,7 @@ func trimWhitespace(src []byte) []byte {
 }
 
 func isComment(line []byte) bool {
-	return tokenComment.Match(trimWhitespace(line))
+	return reComment.Match(trimWhitespace(line))
 }
 
 func isEmptyContinuationLine(line []byte) bool {
@@ -305,9 +349,9 @@ func isEmptyContinuationLine(line []byte) bool {
 
 var utf8bom = []byte{0xEF, 0xBB, 0xBF}
 
-func trimContinuationCharacter(line string, d *Directive) (string, bool) {
+func trimContinuationCharacter(line string, d *directives) (string, bool) {
 	if d.lineContinuationRegex.MatchString(line) {
-		line = d.lineContinuationRegex.ReplaceAllString(line, "")
+		line = d.lineContinuationRegex.ReplaceAllString(line, "$1")
 		return line, false
 	}
 	return line, true
@@ -315,7 +359,7 @@ func trimContinuationCharacter(line string, d *Directive) (string, bool) {
 
 // TODO: remove stripLeftWhitespace after deprecation period. It seems silly
 // to preserve whitespace on continuation lines. Why is that done?
-func processLine(d *Directive, token []byte, stripLeftWhitespace bool) ([]byte, error) {
+func processLine(d *directives, token []byte, stripLeftWhitespace bool) ([]byte, error) {
 	if stripLeftWhitespace {
 		token = trimWhitespace(token)
 	}

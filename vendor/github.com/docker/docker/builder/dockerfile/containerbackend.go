@@ -29,7 +29,7 @@ func newContainerManager(docker builder.ExecBackend) *containerManager {
 
 // Create a container
 func (c *containerManager) Create(runConfig *container.Config, hostConfig *container.HostConfig) (container.ContainerCreateCreatedBody, error) {
-	container, err := c.backend.ContainerCreate(types.ContainerCreateConfig{
+	container, err := c.backend.ContainerCreateIgnoreImagesArgsEscaped(types.ContainerCreateConfig{
 		Config:     runConfig,
 		HostConfig: hostConfig,
 	})
@@ -45,7 +45,7 @@ var errCancelled = errors.New("build cancelled")
 // Run a container by ID
 func (c *containerManager) Run(ctx context.Context, cID string, stdout, stderr io.Writer) (err error) {
 	attached := make(chan struct{})
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
 		errCh <- c.backend.ContainerAttachRaw(cID, nil, stdout, stderr, true, attached)
 	}()
