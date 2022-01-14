@@ -203,7 +203,7 @@ func getBranchCommitAndURL() (branch, commit, url string) {
 	repo := os.Getenv("GITHUB_REPOSITORY")
 	commit = os.Getenv("GITHUB_SHA")
 	if _, isPR := os.LookupEnv("GITHUB_HEAD_REF"); isPR {
-		branch = "master"
+		branch = "main"
 	} else {
 		branch = os.Getenv("GITHUB_REF")
 		log.Printf("GITHUB_HEAD_REF is unset (not a PR); using GITHUB_REF=%q", branch)
@@ -213,7 +213,7 @@ func getBranchCommitAndURL() (branch, commit, url string) {
 		repo = "GoogleContainerTools/kaniko"
 	}
 	if branch == "" {
-		branch = "master"
+		branch = "main"
 	}
 	log.Printf("repo=%q / commit=%q / branch=%q", repo, commit, branch)
 	url = "github.com/" + repo
@@ -266,9 +266,9 @@ func testGitBuildcontextHelper(t *testing.T, repo string) {
 	checkContainerDiffOutput(t, diff, expected)
 }
 
-// TestGitBuildcontext explicitly names the master branch
+// TestGitBuildcontext explicitly names the main branch
 // Example:
-//   git://github.com/myuser/repo#refs/heads/master
+//   git://github.com/myuser/repo#refs/heads/main
 func TestGitBuildcontext(t *testing.T) {
 	repo := getGitRepo(false)
 	testGitBuildcontextHelper(t, repo)
