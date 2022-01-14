@@ -278,6 +278,7 @@ func TestGitBuildcontext(t *testing.T) {
 // Example:
 //   git://github.com/myuser/repo
 func TestGitBuildcontextNoRef(t *testing.T) {
+	t.Skip("Docker's behavior is to assume a 'master' branch, which the Kaniko repo doesn't have")
 	_, _, url := getBranchCommitAndURL()
 	testGitBuildcontextHelper(t, url)
 }
