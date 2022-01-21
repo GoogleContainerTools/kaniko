@@ -14,14 +14,17 @@ require (
 	cloud.google.com/go/storage v1.18.2
 	github.com/Azure/azure-storage-blob-go v0.14.0
 	github.com/aws/aws-sdk-go v1.42.38
+	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6
+	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
+	github.com/containerd/cgroups v1.0.2 // indirect
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.2
+	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.7
-	github.com/google/go-containerregistry v0.8.1-0.20220110151055-a61fd0a8e2bb
-	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220120151853-ac864e57b117
+	github.com/google/go-containerregistry v0.8.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/slowjam v1.0.0
 	github.com/karrick/godirwalk v1.16.1
@@ -33,7 +36,7 @@ require (
 	github.com/spf13/afero v1.8.0
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/net v0.0.0-20220114011407-0dd24b26b47d
+	golang.org/x/net v0.0.0-20220121175114-2ed6ce1e1725
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
@@ -72,12 +75,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0 // indirect
 	github.com/aws/smithy-go v1.10.0 // indirect
-	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21 // indirect
 	github.com/cilium/ebpf v0.8.0 // indirect
-	github.com/containerd/cgroups v1.0.2 // indirect
 	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/containerd/continuity v0.2.2 // indirect
 	github.com/containerd/fifo v1.0.0 // indirect
@@ -101,7 +101,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-logr/logr v1.2.2 // indirect
-	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
