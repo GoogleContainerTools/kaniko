@@ -46,10 +46,10 @@ type Error struct {
 	Errors []Diagnostic `json:"errors,omitempty"`
 	// The http status code returned.
 	StatusCode int
+	// The request that failed.
+	Request *http.Request
 	// The raw body if we couldn't understand it.
 	rawBody string
-	// The request that failed.
-	request *http.Request
 }
 
 // Check that Error implements error
@@ -58,8 +58,8 @@ var _ error = (*Error)(nil)
 // Error implements error
 func (e *Error) Error() string {
 	prefix := ""
-	if e.request != nil {
-		prefix = fmt.Sprintf("%s %s: ", e.request.Method, redactURL(e.request.URL))
+	if e.Request != nil {
+		prefix = fmt.Sprintf("%s %s: ", e.Request.Method, redactURL(e.Request.URL))
 	}
 	return prefix + e.responseErr()
 }
@@ -68,7 +68,7 @@ func (e *Error) responseErr() string {
 	switch len(e.Errors) {
 	case 0:
 		if len(e.rawBody) == 0 {
-			if e.request != nil && e.request.Method == http.MethodHead {
+			if e.Request != nil && e.Request.Method == http.MethodHead {
 				return fmt.Sprintf("unexpected status code %d %s (HEAD responses have no body, use GET for details)", e.StatusCode, http.StatusText(e.StatusCode))
 			}
 			return fmt.Sprintf("unexpected status code %d %s", e.StatusCode, http.StatusText(e.StatusCode))
@@ -100,7 +100,7 @@ func (e *Error) Temporary() bool {
 	return true
 }
 
-// TODO(jonjohnsonjr): Consider moving to pkg/internal/redact.
+// TODO(jonjohnsonjr): Consider moving to internal/redact.
 func redactURL(original *url.URL) *url.URL {
 	qs := original.Query()
 	for k, v := range qs {
@@ -154,18 +154,27 @@ const (
 	DeniedErrorCode              ErrorCode = "DENIED"
 	UnsupportedErrorCode         ErrorCode = "UNSUPPORTED"
 	TooManyRequestsErrorCode     ErrorCode = "TOOMANYREQUESTS"
+	UnknownErrorCode             ErrorCode = "UNKNOWN"
+
+	// This isn't defined by either docker or OCI spec, but is defined by docker/distribution:
+	// https://github.com/distribution/distribution/blob/6a977a5a754baa213041443f841705888107362a/registry/api/errcode/register.go#L60
+	UnavailableErrorCode ErrorCode = "UNAVAILABLE"
 )
 
 // TODO: Include other error types.
 var temporaryErrorCodes = map[ErrorCode]struct{}{
 	BlobUploadInvalidErrorCode: {},
 	TooManyRequestsErrorCode:   {},
+	UnknownErrorCode:           {},
+	UnavailableErrorCode:       {},
 }
 
 var temporaryStatusCodes = map[int]struct{}{
+	http.StatusRequestTimeout:      {},
 	http.StatusInternalServerError: {},
 	http.StatusBadGateway:          {},
 	http.StatusServiceUnavailable:  {},
+	http.StatusGatewayTimeout:      {},
 }
 
 // CheckError returns a structured error if the response status is not in codes.
@@ -190,7 +199,7 @@ func CheckError(resp *http.Response, codes ...int) error {
 
 	structuredError.rawBody = string(b)
 	structuredError.StatusCode = resp.StatusCode
-	structuredError.request = resp.Request
+	structuredError.Request = resp.Request
 
 	return structuredError
 }

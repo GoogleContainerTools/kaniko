@@ -297,31 +297,8 @@ type Describable interface {
 // UncompressedToImage.
 func Descriptor(d Describable) (*v1.Descriptor, error) {
 	// If Describable implements Descriptor itself, return that.
-	if wd, ok := d.(withDescriptor); ok {
+	if wd, ok := unwrap(d).(withDescriptor); ok {
 		return wd.Descriptor()
-	}
-
-	// Otherwise, try to unwrap any partial implementations to see
-	// if the wrapped struct implements Descriptor.
-	if ule, ok := d.(*uncompressedLayerExtender); ok {
-		if wd, ok := ule.UncompressedLayer.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
-	}
-	if cle, ok := d.(*compressedLayerExtender); ok {
-		if wd, ok := cle.CompressedLayer.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
-	}
-	if uie, ok := d.(*uncompressedImageExtender); ok {
-		if wd, ok := uie.UncompressedImageCore.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
-	}
-	if cie, ok := d.(*compressedImageExtender); ok {
-		if wd, ok := cie.CompressedImageCore.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
 	}
 
 	// If all else fails, compute the descriptor from the individual methods.
@@ -354,21 +331,8 @@ type withUncompressedSize interface {
 // for streaming layers.
 func UncompressedSize(l v1.Layer) (int64, error) {
 	// If the layer implements UncompressedSize itself, return that.
-	if wus, ok := l.(withUncompressedSize); ok {
+	if wus, ok := unwrap(l).(withUncompressedSize); ok {
 		return wus.UncompressedSize()
-	}
-
-	// Otherwise, try to unwrap any partial implementations to see
-	// if the wrapped struct implements UncompressedSize.
-	if ule, ok := l.(*uncompressedLayerExtender); ok {
-		if wus, ok := ule.UncompressedLayer.(withUncompressedSize); ok {
-			return wus.UncompressedSize()
-		}
-	}
-	if cle, ok := l.(*compressedLayerExtender); ok {
-		if wus, ok := cle.CompressedLayer.(withUncompressedSize); ok {
-			return wus.UncompressedSize()
-		}
 	}
 
 	// The layer doesn't implement UncompressedSize, we need to compute it.
@@ -379,4 +343,47 @@ func UncompressedSize(l v1.Layer) (int64, error) {
 	defer rc.Close()
 
 	return io.Copy(ioutil.Discard, rc)
+}
+
+type withExists interface {
+	Exists() (bool, error)
+}
+
+// Exists checks to see if a layer exists. This is a hack to work around the
+// mistakes of the partial package. Don't use this.
+func Exists(l v1.Layer) (bool, error) {
+	// If the layer implements Exists itself, return that.
+	if we, ok := unwrap(l).(withExists); ok {
+		return we.Exists()
+	}
+
+	// The layer doesn't implement Exists, so we hope that calling Compressed()
+	// is enough to trigger an error if the layer does not exist.
+	rc, err := l.Compressed()
+	if err != nil {
+		return false, err
+	}
+	defer rc.Close()
+
+	// We may want to try actually reading a single byte, but if we need to do
+	// that, we should just fix this hack.
+	return true, nil
+}
+
+// Recursively unwrap our wrappers so that we can check for the original implementation.
+// We might want to expose this?
+func unwrap(i interface{}) interface{} {
+	if ule, ok := i.(*uncompressedLayerExtender); ok {
+		return unwrap(ule.UncompressedLayer)
+	}
+	if cle, ok := i.(*compressedLayerExtender); ok {
+		return unwrap(cle.CompressedLayer)
+	}
+	if uie, ok := i.(*uncompressedImageExtender); ok {
+		return unwrap(uie.UncompressedImageCore)
+	}
+	if cie, ok := i.(*compressedImageExtender); ok {
+		return unwrap(cie.CompressedImageCore)
+	}
+	return i
 }

@@ -16,22 +16,41 @@ type UploadInput struct {
 
 	// The canned ACL to apply to the object. For more information, see Canned ACL
 	// (https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#CannedACL).
+	//
+	// This action is not supported by Amazon S3 on Outposts.
 	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"ObjectCannedACL"`
 
 	// The readable body payload to send to S3.
 	Body io.Reader
 
-	// Bucket name to which the PUT operation was initiated.
+	// The bucket name to which the PUT action was initiated.
 	//
-	// When using this API with an access point, you must direct requests to the
-	// access point hostname. The access point hostname takes the form AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com.
-	// When using this operation using an access point through the AWS SDKs, you
-	// provide the access point ARN in place of the bucket name. For more information
-	// about access point ARNs, see Using Access Points (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-access-points.html)
-	// in the Amazon Simple Storage Service Developer Guide.
+	// When using this action with an access point, you must direct requests to
+	// the access point hostname. The access point hostname takes the form AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com.
+	// When using this action with an access point through the Amazon Web Services
+	// SDKs, you provide the access point ARN in place of the bucket name. For more
+	// information about access point ARNs, see Using access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
+	// in the Amazon S3 User Guide.
+	//
+	// When using this action with Amazon S3 on Outposts, you must direct requests
+	// to the S3 on Outposts hostname. The S3 on Outposts hostname takes the form
+	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com. When
+	// using this action using S3 on Outposts through the Amazon Web Services SDKs,
+	// you provide the Outposts bucket ARN in place of the bucket name. For more
+	// information about S3 on Outposts ARNs, see Using S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// in the Amazon S3 User Guide.
 	//
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
+
+	// Specifies whether Amazon S3 should use an S3 Bucket Key for object encryption
+	// with server-side encryption using AWS KMS (SSE-KMS). Setting this header
+	// to true causes Amazon S3 to use an S3 Bucket Key for object encryption with
+	// SSE-KMS.
+	//
+	// Specifying this header with a PUT action doesn’t affect bucket-level settings
+	// for S3 Bucket Key.
+	BucketKeyEnabled *bool `location:"header" locationName:"x-amz-server-side-encryption-bucket-key-enabled" type:"boolean"`
 
 	// Can be used to specify caching behavior along the request/reply chain. For
 	// more information, see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.9
@@ -63,23 +82,36 @@ type UploadInput struct {
 	// see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17 (http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17).
 	ContentType *string `location:"header" locationName:"Content-Type" type:"string"`
 
+	// The account ID of the expected bucket owner. If the bucket is owned by a
+	// different account, the request will fail with an HTTP 403 (Access Denied)
+	// error.
+	ExpectedBucketOwner *string `location:"header" locationName:"x-amz-expected-bucket-owner" type:"string"`
+
 	// The date and time at which the object is no longer cacheable. For more information,
 	// see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.21 (http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.21).
 	Expires *time.Time `location:"header" locationName:"Expires" type:"timestamp"`
 
 	// Gives the grantee READ, READ_ACP, and WRITE_ACP permissions on the object.
+	//
+	// This action is not supported by Amazon S3 on Outposts.
 	GrantFullControl *string `location:"header" locationName:"x-amz-grant-full-control" type:"string"`
 
 	// Allows grantee to read the object data and its metadata.
+	//
+	// This action is not supported by Amazon S3 on Outposts.
 	GrantRead *string `location:"header" locationName:"x-amz-grant-read" type:"string"`
 
 	// Allows grantee to read the object ACL.
+	//
+	// This action is not supported by Amazon S3 on Outposts.
 	GrantReadACP *string `location:"header" locationName:"x-amz-grant-read-acp" type:"string"`
 
 	// Allows grantee to write the ACL for the applicable object.
+	//
+	// This action is not supported by Amazon S3 on Outposts.
 	GrantWriteACP *string `location:"header" locationName:"x-amz-grant-write-acp" type:"string"`
 
-	// Object key for which the PUT operation was initiated.
+	// Object key for which the PUT action was initiated.
 	//
 	// Key is a required field
 	Key *string `location:"uri" locationName:"Key" min:"1" type:"string" required:"true"`
@@ -94,14 +126,15 @@ type UploadInput struct {
 	// The Object Lock mode that you want to apply to this object.
 	ObjectLockMode *string `location:"header" locationName:"x-amz-object-lock-mode" type:"string" enum:"ObjectLockMode"`
 
-	// The date and time when you want this object's Object Lock to expire.
+	// The date and time when you want this object's Object Lock to expire. Must
+	// be formatted as a timestamp parameter.
 	ObjectLockRetainUntilDate *time.Time `location:"header" locationName:"x-amz-object-lock-retain-until-date" type:"timestamp" timestampFormat:"iso8601"`
 
 	// Confirms that the requester knows that they will be charged for the request.
 	// Bucket owners need not specify this parameter in their requests. For information
 	// about downloading objects from requester pays buckets, see Downloading Objects
 	// in Requestor Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
-	// in the Amazon S3 Developer Guide.
+	// in the Amazon S3 User Guide.
 	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	// Specifies the algorithm to use to when encrypting the object (for example,
@@ -111,7 +144,7 @@ type UploadInput struct {
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
 	// data. This value is used to store the object and then it is discarded; Amazon
 	// S3 does not store the encryption key. The key must be appropriate for use
-	// with the algorithm specified in the x-amz-server-side​-encryption​-customer-algorithm
+	// with the algorithm specified in the x-amz-server-side-encryption-customer-algorithm
 	// header.
 	SSECustomerKey *string `marshal-as:"blob" location:"header" locationName:"x-amz-server-side-encryption-customer-key" type:"string" sensitive:"true"`
 
@@ -120,29 +153,31 @@ type UploadInput struct {
 	// encryption key was transmitted without error.
 	SSECustomerKeyMD5 *string `location:"header" locationName:"x-amz-server-side-encryption-customer-key-MD5" type:"string"`
 
-	// Specifies the AWS KMS Encryption Context to use for object encryption. The
-	// value of this header is a base64-encoded UTF-8 string holding JSON with the
-	// encryption context key-value pairs.
+	// Specifies the Amazon Web Services KMS Encryption Context to use for object
+	// encryption. The value of this header is a base64-encoded UTF-8 string holding
+	// JSON with the encryption context key-value pairs.
 	SSEKMSEncryptionContext *string `location:"header" locationName:"x-amz-server-side-encryption-context" type:"string" sensitive:"true"`
 
 	// If x-amz-server-side-encryption is present and has the value of aws:kms,
-	// this header specifies the ID of the AWS Key Management Service (AWS KMS)
-	// symmetrical customer managed customer master key (CMK) that was used for
-	// the object.
-	//
-	// If the value of x-amz-server-side-encryption is aws:kms, this header specifies
-	// the ID of the symmetric customer managed AWS KMS CMK that will be used for
-	// the object. If you specify x-amz-server-side-encryption:aws:kms, but do not
-	// providex-amz-server-side-encryption-aws-kms-key-id, Amazon S3 uses the AWS
-	// managed CMK in AWS to protect the data.
+	// this header specifies the ID of the Amazon Web Services Key Management Service
+	// (Amazon Web Services KMS) symmetrical customer managed key that was used
+	// for the object. If you specify x-amz-server-side-encryption:aws:kms, but
+	// do not providex-amz-server-side-encryption-aws-kms-key-id, Amazon S3 uses
+	// the Amazon Web Services managed key to protect the data. If the KMS key does
+	// not exist in the same account issuing the command, you must use the full
+	// ARN and not just the ID.
 	SSEKMSKeyId *string `location:"header" locationName:"x-amz-server-side-encryption-aws-kms-key-id" type:"string" sensitive:"true"`
 
 	// The server-side encryption algorithm used when storing this object in Amazon
 	// S3 (for example, AES256, aws:kms).
 	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
-	// If you don't specify, S3 Standard is the default storage class. Amazon S3
-	// supports other storage classes.
+	// By default, Amazon S3 uses the STANDARD Storage Class to store newly created
+	// objects. The STANDARD storage class provides high durability and high availability.
+	// Depending on performance needs, you can specify a different Storage Class.
+	// Amazon S3 on Outposts only uses the OUTPOSTS Storage Class. For more information,
+	// see Storage Classes (https://docs.aws.amazon.com/AmazonS3/latest/dev/storage-class-intro.html)
+	// in the Amazon S3 User Guide.
 	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
 	// The tag-set for the object. The tag-set must be encoded as URL Query parameters.

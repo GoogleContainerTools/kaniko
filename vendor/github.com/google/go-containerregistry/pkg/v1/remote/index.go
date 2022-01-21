@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/go-containerregistry/internal/verify"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -122,6 +123,64 @@ func (r *remoteIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
 	return desc.ImageIndex()
 }
 
+// Workaround for #819.
+func (r *remoteIndex) Layer(h v1.Hash) (v1.Layer, error) {
+	index, err := r.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, childDesc := range index.Manifests {
+		if h == childDesc.Digest {
+			l, err := partial.CompressedToLayer(&remoteLayer{
+				fetcher: r.fetcher,
+				digest:  h,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return &MountableLayer{
+				Layer:     l,
+				Reference: r.Ref.Context().Digest(h.String()),
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("layer not found: %s", h)
+}
+
+// Experiment with a better API for v1.ImageIndex. We might want to move this
+// to partial?
+func (r *remoteIndex) Manifests() ([]partial.Describable, error) {
+	m, err := r.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	manifests := []partial.Describable{}
+	for _, desc := range m.Manifests {
+		switch {
+		case desc.MediaType.IsImage():
+			img, err := r.Image(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, img)
+		case desc.MediaType.IsIndex():
+			idx, err := r.ImageIndex(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, idx)
+		default:
+			layer, err := r.Layer(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, layer)
+		}
+	}
+
+	return manifests, nil
+}
+
 func (r *remoteIndex) imageByPlatform(platform v1.Platform) (v1.Image, error) {
 	desc, err := r.childByPlatform(platform)
 	if err != nil {
@@ -155,7 +214,7 @@ func (r *remoteIndex) childByPlatform(platform v1.Platform) (*Descriptor, error)
 			return r.childDescriptor(childDesc, platform)
 		}
 	}
-	return nil, fmt.Errorf("no child with platform %s/%s in index %s", platform.OS, platform.Architecture, r.Ref)
+	return nil, fmt.Errorf("no child with platform %+v in index %s", platform, r.Ref)
 }
 
 func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
@@ -174,9 +233,20 @@ func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
 // Convert one of this index's child's v1.Descriptor into a remote.Descriptor, with the given platform option.
 func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform) (*Descriptor, error) {
 	ref := r.Ref.Context().Digest(child.Digest.String())
-	manifest, _, err := r.fetchManifest(ref, []types.MediaType{child.MediaType})
-	if err != nil {
-		return nil, err
+	var (
+		manifest []byte
+		err      error
+	)
+	if child.Data != nil {
+		if err := verify.Descriptor(child); err != nil {
+			return nil, err
+		}
+		manifest = child.Data
+	} else {
+		manifest, _, err = r.fetchManifest(ref, []types.MediaType{child.MediaType})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &Descriptor{
 		fetcher: fetcher{

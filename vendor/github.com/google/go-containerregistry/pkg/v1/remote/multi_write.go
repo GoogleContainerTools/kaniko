@@ -15,6 +15,7 @@
 package remote
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -33,7 +34,7 @@ import (
 // Current limitations:
 // - All refs must share the same repository.
 // - Images cannot consist of stream.Layers.
-func MultiWrite(m map[name.Reference]Taggable, options ...Option) error {
+func MultiWrite(m map[name.Reference]Taggable, options ...Option) (rerr error) {
 	// Determine the repository being pushed to; if asked to push to
 	// multiple repositories, give up.
 	var repo, zero name.Repository
@@ -45,23 +46,27 @@ func MultiWrite(m map[name.Reference]Taggable, options ...Option) error {
 		}
 	}
 
+	o, err := makeOptions(repo, options...)
+	if err != nil {
+		return err
+	}
+
 	// Collect unique blobs (layers and config blobs).
 	blobs := map[v1.Hash]v1.Layer{}
 	newManifests := []map[name.Reference]Taggable{}
 	// Separate originally requested images and indexes, so we can push images first.
 	images, indexes := map[name.Reference]Taggable{}, map[name.Reference]Taggable{}
-	var err error
 	for ref, i := range m {
 		if img, ok := i.(v1.Image); ok {
 			images[ref] = i
-			if err := addImageBlobs(img, blobs); err != nil {
+			if err := addImageBlobs(img, blobs, o.allowNondistributableArtifacts); err != nil {
 				return err
 			}
 			continue
 		}
 		if idx, ok := i.(v1.ImageIndex); ok {
 			indexes[ref] = i
-			newManifests, err = addIndexBlobs(idx, blobs, repo, newManifests, 0)
+			newManifests, err = addIndexBlobs(idx, blobs, repo, newManifests, 0, o.allowNondistributableArtifacts)
 			if err != nil {
 				return err
 			}
@@ -70,10 +75,6 @@ func MultiWrite(m map[name.Reference]Taggable, options ...Option) error {
 		return fmt.Errorf("pushable resource was not Image or ImageIndex: %T", i)
 	}
 
-	o, err := makeOptions(repo, options...)
-	if err != nil {
-		return err
-	}
 	// Determine if any of the layers are Mountable, because if so we need
 	// to request Pull scope too.
 	ls := []v1.Layer{}
@@ -86,36 +87,85 @@ func MultiWrite(m map[name.Reference]Taggable, options ...Option) error {
 		return err
 	}
 	w := writer{
-		repo:    repo,
-		client:  &http.Client{Transport: tr},
-		context: o.context,
+		repo:       repo,
+		client:     &http.Client{Transport: tr},
+		context:    o.context,
+		updates:    o.updates,
+		lastUpdate: &v1.Update{},
+		backoff:    o.retryBackoff,
+		predicate:  o.retryPredicate,
+	}
+
+	// Collect the total size of blobs and manifests we're about to write.
+	if o.updates != nil {
+		defer close(o.updates)
+		defer func() { _ = sendError(o.updates, rerr) }()
+		for _, b := range blobs {
+			size, err := b.Size()
+			if err != nil {
+				return err
+			}
+			w.lastUpdate.Total += size
+		}
+		countManifest := func(t Taggable) error {
+			b, err := t.RawManifest()
+			if err != nil {
+				return err
+			}
+			w.lastUpdate.Total += int64(len(b))
+			return nil
+		}
+		for _, i := range images {
+			if err := countManifest(i); err != nil {
+				return err
+			}
+		}
+		for _, nm := range newManifests {
+			for _, i := range nm {
+				if err := countManifest(i); err != nil {
+					return err
+				}
+			}
+		}
+		for _, i := range indexes {
+			if err := countManifest(i); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Upload individual blobs and collect any errors.
 	blobChan := make(chan v1.Layer, 2*o.jobs)
-	var g errgroup.Group
+	ctx := o.context
+	g, gctx := errgroup.WithContext(o.context)
 	for i := 0; i < o.jobs; i++ {
 		// Start N workers consuming blobs to upload.
 		g.Go(func() error {
 			for b := range blobChan {
-				if err := w.uploadOne(b); err != nil {
+				if err := w.uploadOne(gctx, b); err != nil {
 					return err
 				}
 			}
 			return nil
 		})
 	}
-	go func() {
+	g.Go(func() error {
+		defer close(blobChan)
 		for _, b := range blobs {
-			blobChan <- b
+			select {
+			case blobChan <- b:
+			case <-gctx.Done():
+				return gctx.Err()
+			}
 		}
-		close(blobChan)
-	}()
+		return nil
+	})
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	commitMany := func(m map[name.Reference]Taggable) error {
+	commitMany := func(ctx context.Context, m map[name.Reference]Taggable) error {
+		g, ctx := errgroup.WithContext(ctx)
 		// With all of the constituent elements uploaded, upload the manifests
 		// to commit the images and indexes, and collect any errors.
 		type task struct {
@@ -127,7 +177,7 @@ func MultiWrite(m map[name.Reference]Taggable, options ...Option) error {
 			// Start N workers consuming tasks to upload manifests.
 			g.Go(func() error {
 				for t := range taskChan {
-					if err := w.commitManifest(t.i, t.ref); err != nil {
+					if err := w.commitManifest(ctx, t.i, t.ref); err != nil {
 						return err
 					}
 				}
@@ -144,24 +194,24 @@ func MultiWrite(m map[name.Reference]Taggable, options ...Option) error {
 	}
 	// Push originally requested image manifests. These have no
 	// dependencies.
-	if err := commitMany(images); err != nil {
+	if err := commitMany(ctx, images); err != nil {
 		return err
 	}
 	// Push new manifests from lowest levels up.
 	for i := len(newManifests) - 1; i >= 0; i-- {
-		if err := commitMany(newManifests[i]); err != nil {
+		if err := commitMany(ctx, newManifests[i]); err != nil {
 			return err
 		}
 	}
 	// Push originally requested index manifests, which might depend on
 	// newly discovered manifests.
-	return commitMany(indexes)
 
+	return commitMany(ctx, indexes)
 }
 
 // addIndexBlobs adds blobs to the set of blobs we intend to upload, and
 // returns the latest copy of the ordered collection of manifests to upload.
-func addIndexBlobs(idx v1.ImageIndex, blobs map[v1.Hash]v1.Layer, repo name.Repository, newManifests []map[name.Reference]Taggable, lvl int) ([]map[name.Reference]Taggable, error) {
+func addIndexBlobs(idx v1.ImageIndex, blobs map[v1.Hash]v1.Layer, repo name.Repository, newManifests []map[name.Reference]Taggable, lvl int, allowNondistributableArtifacts bool) ([]map[name.Reference]Taggable, error) {
 	if lvl > len(newManifests)-1 {
 		newManifests = append(newManifests, map[name.Reference]Taggable{})
 	}
@@ -177,7 +227,7 @@ func addIndexBlobs(idx v1.ImageIndex, blobs map[v1.Hash]v1.Layer, repo name.Repo
 			if err != nil {
 				return nil, err
 			}
-			newManifests, err = addIndexBlobs(idx, blobs, repo, newManifests, lvl+1)
+			newManifests, err = addIndexBlobs(idx, blobs, repo, newManifests, lvl+1, allowNondistributableArtifacts)
 			if err != nil {
 				return nil, err
 			}
@@ -189,42 +239,59 @@ func addIndexBlobs(idx v1.ImageIndex, blobs map[v1.Hash]v1.Layer, repo name.Repo
 			if err != nil {
 				return nil, err
 			}
-			if err := addImageBlobs(img, blobs); err != nil {
+			if err := addImageBlobs(img, blobs, allowNondistributableArtifacts); err != nil {
 				return nil, err
 			}
 
 			// Also track the sub-image manifest to upload later by digest.
 			newManifests[lvl][repo.Digest(desc.Digest.String())] = img
 		default:
-			return nil, fmt.Errorf("unknown media type: %v", desc.MediaType)
+			// Workaround for #819.
+			if wl, ok := idx.(withLayer); ok {
+				layer, err := wl.Layer(desc.Digest)
+				if err != nil {
+					return nil, err
+				}
+				if err := addLayerBlob(layer, blobs, allowNondistributableArtifacts); err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, fmt.Errorf("unknown media type: %v", desc.MediaType)
+			}
 		}
 	}
 	return newManifests, nil
 }
 
-func addImageBlobs(img v1.Image, blobs map[v1.Hash]v1.Layer) error {
+func addLayerBlob(l v1.Layer, blobs map[v1.Hash]v1.Layer, allowNondistributableArtifacts bool) error {
+	// Ignore foreign layers.
+	mt, err := l.MediaType()
+	if err != nil {
+		return err
+	}
+
+	if mt.IsDistributable() || allowNondistributableArtifacts {
+		d, err := l.Digest()
+		if err != nil {
+			return err
+		}
+
+		blobs[d] = l
+	}
+
+	return nil
+}
+
+func addImageBlobs(img v1.Image, blobs map[v1.Hash]v1.Layer, allowNondistributableArtifacts bool) error {
 	ls, err := img.Layers()
 	if err != nil {
 		return err
 	}
 	// Collect all layers.
 	for _, l := range ls {
-		d, err := l.Digest()
-		if err != nil {
+		if err := addLayerBlob(l, blobs, allowNondistributableArtifacts); err != nil {
 			return err
 		}
-
-		// Ignore foreign layers.
-		mt, err := l.MediaType()
-		if err != nil {
-			return err
-		}
-		if !mt.IsDistributable() {
-			// TODO(jonjohnsonjr): Add "allow-nondistributable-artifacts" option.
-			continue
-		}
-
-		blobs[d] = l
 	}
 
 	// Collect config blob.
@@ -232,10 +299,5 @@ func addImageBlobs(img v1.Image, blobs map[v1.Hash]v1.Layer) error {
 	if err != nil {
 		return err
 	}
-	cld, err := cl.Digest()
-	if err != nil {
-		return err
-	}
-	blobs[cld] = cl
-	return nil
+	return addLayerBlob(cl, blobs, allowNondistributableArtifacts)
 }

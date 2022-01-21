@@ -14,14 +14,14 @@ import (
 // An activated layer must later be deactivated via DeactivateLayer.
 func ActivateLayer(ctx context.Context, path string) (err error) {
 	title := "hcsshim::ActivateLayer"
-	ctx, span := trace.StartSpan(ctx, title)
+	ctx, span := trace.StartSpan(ctx, title) //nolint:ineffassign,staticcheck
 	defer span.End()
 	defer func() { oc.SetSpanStatus(span, err) }()
 	span.AddAttributes(trace.StringAttribute("path", path))
 
 	err = activateLayer(&stdDriverInfo, path)
 	if err != nil {
-		return hcserror.New(err, title+" - failed", "")
+		return hcserror.New(err, title, "")
 	}
 	return nil
 }

@@ -21,14 +21,13 @@ func GetLayerMountPath(ctx context.Context, path string) (_ string, err error) {
 	defer func() { oc.SetSpanStatus(span, err) }()
 	span.AddAttributes(trace.StringAttribute("path", path))
 
-	var mountPathLength uintptr
-	mountPathLength = 0
+	var mountPathLength uintptr = 0
 
 	// Call the procedure itself.
 	log.G(ctx).Debug("Calling proc (1)")
 	err = getLayerMountPath(&stdDriverInfo, path, &mountPathLength, nil)
 	if err != nil {
-		return "", hcserror.New(err, title+" - failed", "(first call)")
+		return "", hcserror.New(err, title, "(first call)")
 	}
 
 	// Allocate a mount path of the returned length.
@@ -42,7 +41,7 @@ func GetLayerMountPath(ctx context.Context, path string) (_ string, err error) {
 	log.G(ctx).Debug("Calling proc (2)")
 	err = getLayerMountPath(&stdDriverInfo, path, &mountPathLength, &mountPathp[0])
 	if err != nil {
-		return "", hcserror.New(err, title+" - failed", "(second call)")
+		return "", hcserror.New(err, title, "(second call)")
 	}
 
 	mountPath := syscall.UTF16ToString(mountPathp[0:])

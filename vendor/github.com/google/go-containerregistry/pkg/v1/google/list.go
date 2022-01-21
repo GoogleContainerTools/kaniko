@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -29,9 +30,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
 
-// ListerOption is a functional option for List and Walk.
+// Option is a functional option for List and Walk.
 // TODO: Can we somehow reuse the remote options here?
-type ListerOption func(*lister) error
+type Option func(*lister) error
 
 type lister struct {
 	auth      authn.Authenticator
@@ -42,7 +43,7 @@ type lister struct {
 	userAgent string
 }
 
-func newLister(repo name.Repository, options ...ListerOption) (*lister, error) {
+func newLister(repo name.Repository, options ...Option) (*lister, error) {
 	l := &lister{
 		auth:      authn.Anonymous,
 		transport: http.DefaultTransport,
@@ -56,19 +57,23 @@ func newLister(repo name.Repository, options ...ListerOption) (*lister, error) {
 		}
 	}
 
-	// Wrap the transport in something that logs requests and responses.
-	// It's expensive to generate the dumps, so skip it if we're writing
-	// to nothing.
-	if logs.Enabled(logs.Debug) {
-		l.transport = transport.NewLogger(l.transport)
-	}
+	// transport.Wrapper is a signal that consumers are opt-ing into providing their own transport without any additional wrapping.
+	// This is to allow consumers full control over the transports logic, such as providing retry logic.
+	if _, ok := l.transport.(*transport.Wrapper); !ok {
+		// Wrap the transport in something that logs requests and responses.
+		// It's expensive to generate the dumps, so skip it if we're writing
+		// to nothing.
+		if logs.Enabled(logs.Debug) {
+			l.transport = transport.NewLogger(l.transport)
+		}
 
-	// Wrap the transport in something that can retry network flakes.
-	l.transport = transport.NewRetry(l.transport)
+		// Wrap the transport in something that can retry network flakes.
+		l.transport = transport.NewRetry(l.transport)
 
-	// Wrap this last to prevent transport.New from double-wrapping.
-	if l.userAgent != "" {
-		l.transport = transport.NewUserAgent(l.transport, l.userAgent)
+		// Wrap this last to prevent transport.New from double-wrapping.
+		if l.userAgent != "" {
+			l.transport = transport.NewUserAgent(l.transport, l.userAgent)
+		}
 	}
 
 	scopes := []string{repo.Scope(transport.PullScope)}
@@ -83,32 +88,99 @@ func newLister(repo name.Repository, options ...ListerOption) (*lister, error) {
 }
 
 func (l *lister) list(repo name.Repository) (*Tags, error) {
-	uri := url.URL{
+	uri := &url.URL{
 		Scheme: repo.Registry.Scheme(),
 		Host:   repo.Registry.RegistryStr(),
 		Path:   fmt.Sprintf("/v2/%s/tags/list", repo.RepositoryStr()),
-	}
-
-	req, err := http.NewRequestWithContext(l.ctx, http.MethodGet, uri.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := l.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if err := transport.CheckError(resp, http.StatusOK); err != nil {
-		return nil, err
+		// ECR returns an error if n > 1000:
+		// https://github.com/google/go-containerregistry/issues/681
+		RawQuery: "n=1000",
 	}
 
 	tags := Tags{}
-	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
-		return nil, err
+
+	// get responses until there is no next page
+	for {
+		select {
+		case <-l.ctx.Done():
+			return nil, l.ctx.Err()
+		default:
+		}
+
+		req, err := http.NewRequest("GET", uri.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		req = req.WithContext(l.ctx)
+
+		resp, err := l.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := transport.CheckError(resp, http.StatusOK); err != nil {
+			return nil, err
+		}
+
+		parsed := Tags{}
+		if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+			return nil, err
+		}
+
+		if err := resp.Body.Close(); err != nil {
+			return nil, err
+		}
+
+		if len(parsed.Manifests) != 0 || len(parsed.Children) != 0 {
+			// We're dealing with GCR, just return directly.
+			return &parsed, nil
+		}
+
+		// This isn't GCR, just append the tags and keep paginating.
+		tags.Tags = append(tags.Tags, parsed.Tags...)
+
+		uri, err = getNextPageURL(resp)
+		if err != nil {
+			return nil, err
+		}
+		// no next page
+		if uri == nil {
+			break
+		}
+		logs.Warn.Printf("saw non-google tag listing response, falling back to pagination")
 	}
 
 	return &tags, nil
+}
+
+// getNextPageURL checks if there is a Link header in a http.Response which
+// contains a link to the next page. If yes it returns the url.URL of the next
+// page otherwise it returns nil.
+func getNextPageURL(resp *http.Response) (*url.URL, error) {
+	link := resp.Header.Get("Link")
+	if link == "" {
+		return nil, nil
+	}
+
+	if link[0] != '<' {
+		return nil, fmt.Errorf("failed to parse link header: missing '<' in: %s", link)
+	}
+
+	end := strings.Index(link, ">")
+	if end == -1 {
+		return nil, fmt.Errorf("failed to parse link header: missing '>' in: %s", link)
+	}
+	link = link[1:end]
+
+	linkURL, err := url.Parse(link)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Request == nil || resp.Request.URL == nil {
+		return nil, nil
+	}
+	linkURL = resp.Request.URL.ResolveReference(linkURL)
+	return linkURL, nil
 }
 
 type rawManifestInfo struct {
@@ -157,7 +229,7 @@ func (m *ManifestInfo) UnmarshalJSON(data []byte) error {
 	}
 
 	if raw.Size != "" {
-		size, err := strconv.ParseUint(string(raw.Size), 10, 64)
+		size, err := strconv.ParseUint(raw.Size, 10, 64)
 		if err != nil {
 			return err
 		}
@@ -165,7 +237,7 @@ func (m *ManifestInfo) UnmarshalJSON(data []byte) error {
 	}
 
 	if raw.Created != "" {
-		created, err := strconv.ParseInt(string(raw.Created), 10, 64)
+		created, err := strconv.ParseInt(raw.Created, 10, 64)
 		if err != nil {
 			return err
 		}
@@ -173,7 +245,7 @@ func (m *ManifestInfo) UnmarshalJSON(data []byte) error {
 	}
 
 	if raw.Uploaded != "" {
-		uploaded, err := strconv.ParseInt(string(raw.Uploaded), 10, 64)
+		uploaded, err := strconv.ParseInt(raw.Uploaded, 10, 64)
 		if err != nil {
 			return err
 		}
@@ -195,7 +267,7 @@ type Tags struct {
 }
 
 // List calls /tags/list for the given repository.
-func List(repo name.Repository, options ...ListerOption) (*Tags, error) {
+func List(repo name.Repository, options ...Option) (*Tags, error) {
 	l, err := newLister(repo, options...)
 	if err != nil {
 		return nil, err
@@ -215,7 +287,7 @@ func List(repo name.Repository, options ...ListerOption) (*Tags, error) {
 // TODO: Do we want a SkipDir error, as in filepath.WalkFunc?
 type WalkFunc func(repo name.Repository, tags *Tags, err error) error
 
-func walk(repo name.Repository, tags *Tags, walkFn WalkFunc, options ...ListerOption) error {
+func walk(repo name.Repository, tags *Tags, walkFn WalkFunc, options ...Option) error {
 	if tags == nil {
 		// This shouldn't happen.
 		return fmt.Errorf("tags nil for %q", repo)
@@ -229,7 +301,7 @@ func walk(repo name.Repository, tags *Tags, walkFn WalkFunc, options ...ListerOp
 		child, err := name.NewRepository(fmt.Sprintf("%s/%s", repo, path), name.StrictValidation)
 		if err != nil {
 			// We don't expect this ever, so don't pass it through to walkFn.
-			return fmt.Errorf("unexpected path failure: %v", err)
+			return fmt.Errorf("unexpected path failure: %w", err)
 		}
 
 		childTags, err := List(child, options...)
@@ -249,7 +321,7 @@ func walk(repo name.Repository, tags *Tags, walkFn WalkFunc, options ...ListerOp
 }
 
 // Walk recursively descends repositories, calling walkFn.
-func Walk(root name.Repository, walkFn WalkFunc, options ...ListerOption) error {
+func Walk(root name.Repository, walkFn WalkFunc, options ...Option) error {
 	tags, err := List(root, options...)
 	if err != nil {
 		return walkFn(root, nil, err)

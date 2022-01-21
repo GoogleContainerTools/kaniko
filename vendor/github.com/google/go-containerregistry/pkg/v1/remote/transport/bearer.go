@@ -17,6 +17,7 @@ package transport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -25,8 +26,9 @@ import (
 	"strings"
 
 	authchallenge "github.com/docker/distribution/registry/client/auth/challenge"
+	"github.com/google/go-containerregistry/internal/redact"
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/internal/redact"
+	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -138,7 +140,8 @@ func (bt *bearerTransport) refresh(ctx context.Context) error {
 		// the Username should be set to <token>, which indicates
 		// we are using an oauth flow.
 		content, err = bt.refreshOauth(ctx)
-		if terr, ok := err.(*Error); ok && terr.StatusCode == http.StatusNotFound {
+		var terr *Error
+		if errors.As(err, &terr) && terr.StatusCode == http.StatusNotFound {
 			// Note: Not all token servers implement oauth2.
 			// If the request to the endpoint returns 404 using the HTTP POST method,
 			// refer to Token Documentation for using the HTTP GET method supported by all token servers.
@@ -262,6 +265,7 @@ func (bt *bearerTransport) refreshOauth(ctx context.Context) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if err := CheckError(resp, http.StatusOK); err != nil {
+		logs.Warn.Printf("No matching credentials were found for %q", bt.registry)
 		return nil, err
 	}
 
@@ -301,6 +305,7 @@ func (bt *bearerTransport) refreshBasic(ctx context.Context) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if err := CheckError(resp, http.StatusOK); err != nil {
+		logs.Warn.Printf("No matching credentials were found for %q", bt.registry)
 		return nil, err
 	}
 

@@ -23,10 +23,10 @@ import (
 	"sync"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
+	"github.com/google/go-containerregistry/internal/and"
+	gestargz "github.com/google/go-containerregistry/internal/estargz"
+	ggzip "github.com/google/go-containerregistry/internal/gzip"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/internal/and"
-	gestargz "github.com/google/go-containerregistry/pkg/v1/internal/estargz"
-	ggzip "github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 

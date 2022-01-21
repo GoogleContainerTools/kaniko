@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/internal/retry"
+	"github.com/google/go-containerregistry/internal/retry"
 )
 
 // Sleep for 0.1, 0.3, 0.9, 2.7 seconds. This should cover networking blips.
@@ -46,8 +46,11 @@ type options struct {
 	predicate retry.Predicate
 }
 
+// Backoff is an alias of retry.Backoff to expose this configuration option to consumers of this lib
+type Backoff = retry.Backoff
+
 // WithRetryBackoff sets the backoff for retry operations.
-func WithRetryBackoff(backoff retry.Backoff) Option {
+func WithRetryBackoff(backoff Backoff) Option {
 	return func(o *options) {
 		o.backoff = backoff
 	}

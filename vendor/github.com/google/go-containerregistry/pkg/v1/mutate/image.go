@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -30,12 +29,14 @@ type image struct {
 	base v1.Image
 	adds []Addendum
 
-	computed   bool
-	configFile *v1.ConfigFile
-	manifest   *v1.Manifest
-	mediaType  *types.MediaType
-	diffIDMap  map[v1.Hash]v1.Layer
-	digestMap  map[v1.Hash]v1.Layer
+	computed        bool
+	configFile      *v1.ConfigFile
+	manifest        *v1.Manifest
+	annotations     map[string]string
+	mediaType       *types.MediaType
+	configMediaType *types.MediaType
+	diffIDMap       map[v1.Hash]v1.Layer
+	digestMap       map[v1.Hash]v1.Layer
 }
 
 var _ v1.Image = (*image)(nil)
@@ -129,13 +130,27 @@ func (i *image) compute() error {
 	manifest.Config.Digest = d
 	manifest.Config.Size = sz
 
-	// With OCI media types, this should not be set, see discussion:
-	// https://github.com/opencontainers/image-spec/pull/795
+	// If Data was set in the base image, we need to update it in the mutated image.
+	if m.Config.Data != nil {
+		manifest.Config.Data = rcfg
+	}
+
+	// If the user wants to mutate the media type of the config
+	if i.configMediaType != nil {
+		manifest.Config.MediaType = *i.configMediaType
+	}
+
 	if i.mediaType != nil {
-		if strings.Contains(string(*i.mediaType), types.OCIVendorPrefix) {
-			manifest.MediaType = ""
-		} else if strings.Contains(string(*i.mediaType), types.DockerVendorPrefix) {
-			manifest.MediaType = *i.mediaType
+		manifest.MediaType = *i.mediaType
+	}
+
+	if i.annotations != nil {
+		if manifest.Annotations == nil {
+			manifest.Annotations = map[string]string{}
+		}
+
+		for k, v := range i.annotations {
+			manifest.Annotations[k] = v
 		}
 	}
 
@@ -150,7 +165,7 @@ func (i *image) compute() error {
 // Layers returns the ordered collection of filesystem layers that comprise this image.
 // The order of the list is oldest/base layer first, and most-recent/top layer last.
 func (i *image) Layers() ([]v1.Layer, error) {
-	if err := i.compute(); err == stream.ErrNotComputed {
+	if err := i.compute(); errors.Is(err, stream.ErrNotComputed) {
 		// Image contains a streamable layer which has not yet been
 		// consumed. Just return the layers we have in case the caller
 		// is going to consume the layers.
@@ -194,7 +209,7 @@ func (i *image) ConfigFile() (*v1.ConfigFile, error) {
 	if err := i.compute(); err != nil {
 		return nil, err
 	}
-	return i.configFile, nil
+	return i.configFile.DeepCopy(), nil
 }
 
 // RawConfigFile returns the serialized bytes of ConfigFile()
@@ -226,7 +241,7 @@ func (i *image) Manifest() (*v1.Manifest, error) {
 	if err := i.compute(); err != nil {
 		return nil, err
 	}
-	return i.manifest, nil
+	return i.manifest.DeepCopy(), nil
 }
 
 // RawManifest returns the serialized bytes of Manifest()

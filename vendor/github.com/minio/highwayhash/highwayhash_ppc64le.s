@@ -1,5 +1,3 @@
-//+build !noasm !appengine
-
 //
 // Minio Cloud Storage, (C) 2018 Minio, Inc.
 //
@@ -15,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+//+build !noasm,!appengine
 
 #include "textflag.h"
 
@@ -108,8 +108,8 @@ TEXT ·updatePpc64Le(SB), NOFRAME|NOSPLIT, $0-32
 	XXPERMDI MUL1_LO, MUL1_LO, $2, MUL1_LO
 	XXPERMDI MUL1_HI, MUL1_HI, $2, MUL1_HI
 
-	// Load constants table pointer
-	MOVD    $·constants(SB), CONSTANTS
+	// Load asmConstants table pointer
+	MOVD    $·asmConstants(SB), CONSTANTS
 	LXVD2X  (CONSTANTS)(R0), ROTATE
 	LXVD2X  (CONSTANTS)(P1), MASK
 	XXLNAND MASK, MASK, MASK
@@ -174,9 +174,9 @@ complete:
 	RET
 
 // Constants table
-DATA ·constants+0x0(SB)/8, $0x0000000000000020
-DATA ·constants+0x8(SB)/8, $0x0000000000000020
-DATA ·constants+0x10(SB)/8, $0x070806090d0a040b // zipper merge constant
-DATA ·constants+0x18(SB)/8, $0x000f010e05020c03 // zipper merge constant
+DATA ·asmConstants+0x0(SB)/8, $0x0000000000000020
+DATA ·asmConstants+0x8(SB)/8, $0x0000000000000020
+DATA ·asmConstants+0x10(SB)/8, $0x070806090d0a040b // zipper merge constant
+DATA ·asmConstants+0x18(SB)/8, $0x000f010e05020c03 // zipper merge constant
 
-GLOBL ·constants(SB), 8, $32
+GLOBL ·asmConstants(SB), 8, $32
