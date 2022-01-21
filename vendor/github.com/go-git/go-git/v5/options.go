@@ -2,16 +2,17 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/protocol/packp/sideband"
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	"golang.org/x/crypto/openpgp"
 )
 
 // SubmoduleRescursivity defines how depth will affect any submodule recursive
@@ -59,6 +60,10 @@ type CloneOptions struct {
 	// Tags describe how the tags will be fetched from the remote repository,
 	// by default is AllTags.
 	Tags TagMode
+	// InsecureSkipTLS skips ssl verify if protocol is https
+	InsecureSkipTLS bool
+	// CABundle specify additional ca bundle with system cert pool
+	CABundle []byte
 }
 
 // Validate validates the fields and sets the default values.
@@ -104,6 +109,10 @@ type PullOptions struct {
 	// Force allows the pull to update a local branch even when the remote
 	// branch does not descend from it.
 	Force bool
+	// InsecureSkipTLS skips ssl verify if protocol is https
+	InsecureSkipTLS bool
+	// CABundle specify additional ca bundle with system cert pool
+	CABundle []byte
 }
 
 // Validate validates the fields and sets the default values.
@@ -154,6 +163,10 @@ type FetchOptions struct {
 	// Force allows the fetch to update a local branch even when the remote
 	// branch does not descend from it.
 	Force bool
+	// InsecureSkipTLS skips ssl verify if protocol is https
+	InsecureSkipTLS bool
+	// CABundle specify additional ca bundle with system cert pool
+	CABundle []byte
 }
 
 // Validate validates the fields and sets the default values.
@@ -193,6 +206,13 @@ type PushOptions struct {
 	// Force allows the push to update a remote branch even when the local
 	// branch does not descend from it.
 	Force bool
+	// InsecureSkipTLS skips ssl verify if protocal is https
+	InsecureSkipTLS bool
+	// CABundle specify additional ca bundle with system cert pool
+	CABundle []byte
+	// RequireRemoteRefs only allows a remote ref to be updated if its current
+	// value is the one specified here.
+	RequireRemoteRefs []config.RefSpec
 }
 
 // Validate validates the fields and sets the default values.
@@ -373,6 +393,30 @@ var (
 	ErrMissingAuthor = errors.New("author field is required")
 )
 
+// AddOptions describes how an `add` operation should be performed
+type AddOptions struct {
+	// All equivalent to `git add -A`, update the index not only where the
+	// working tree has a file matching `Path` but also where the index already
+	// has an entry. This adds, modifies, and removes index entries to match the
+	// working tree.  If no `Path` nor `Glob` is given when `All` option is
+	// used, all files in the entire working tree are updated.
+	All bool
+	// Path is the exact filepath to the file or directory to be added.
+	Path string
+	// Glob adds all paths, matching pattern, to the index. If pattern matches a
+	// directory path, all directory contents are added to the index recursively.
+	Glob string
+}
+
+// Validate validates the fields and sets the default values.
+func (o *AddOptions) Validate(r *Repository) error {
+	if o.Path != "" && o.Glob != "" {
+		return fmt.Errorf("fields Path and Glob are mutual exclusive")
+	}
+
+	return nil
+}
+
 // CommitOptions describes how a commit operation should be performed.
 type CommitOptions struct {
 	// All automatically stage files that have been modified and deleted, but
@@ -464,7 +508,8 @@ var (
 
 // CreateTagOptions describes how a tag object should be created.
 type CreateTagOptions struct {
-	// Tagger defines the signature of the tag creator.
+	// Tagger defines the signature of the tag creator. If Tagger is empty the
+	// Name and Email is read from the config, and time.Now it's used as When.
 	Tagger *object.Signature
 	// Message defines the annotation of the tag. It is canonicalized during
 	// validation into the format expected by git - no leading whitespace and
@@ -478,7 +523,9 @@ type CreateTagOptions struct {
 // Validate validates the fields and sets the default values.
 func (o *CreateTagOptions) Validate(r *Repository, hash plumbing.Hash) error {
 	if o.Tagger == nil {
-		return ErrMissingTagger
+		if err := o.loadConfigTagger(r); err != nil {
+			return err
+		}
 	}
 
 	if o.Message == "" {
@@ -491,10 +538,43 @@ func (o *CreateTagOptions) Validate(r *Repository, hash plumbing.Hash) error {
 	return nil
 }
 
+func (o *CreateTagOptions) loadConfigTagger(r *Repository) error {
+	cfg, err := r.ConfigScoped(config.SystemScope)
+	if err != nil {
+		return err
+	}
+
+	if o.Tagger == nil && cfg.Author.Email != "" && cfg.Author.Name != "" {
+		o.Tagger = &object.Signature{
+			Name:  cfg.Author.Name,
+			Email: cfg.Author.Email,
+			When:  time.Now(),
+		}
+	}
+
+	if o.Tagger == nil && cfg.User.Email != "" && cfg.User.Name != "" {
+		o.Tagger = &object.Signature{
+			Name:  cfg.User.Name,
+			Email: cfg.User.Email,
+			When:  time.Now(),
+		}
+	}
+
+	if o.Tagger == nil {
+		return ErrMissingTagger
+	}
+
+	return nil
+}
+
 // ListOptions describes how a remote list should be performed.
 type ListOptions struct {
 	// Auth credentials, if required, to use with the remote repository.
 	Auth transport.AuthMethod
+	// InsecureSkipTLS skips ssl verify if protocal is https
+	InsecureSkipTLS bool
+	// CABundle specify additional ca bundle with system cert pool
+	CABundle []byte
 }
 
 // CleanOptions describes how a clean should be performed.
@@ -545,6 +625,9 @@ type PlainOpenOptions struct {
 	// DetectDotGit defines whether parent directories should be
 	// walked until a .git directory or file is found.
 	DetectDotGit bool
+	// Enable .git/commondir support (see https://git-scm.com/docs/gitrepository-layout#Documentation/gitrepository-layout.txt).
+	// NOTE: This option will only work with the filesystem storage.
+	EnableDotGitCommonDir bool
 }
 
 // Validate validates the fields and sets the default values.

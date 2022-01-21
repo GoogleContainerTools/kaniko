@@ -23,6 +23,9 @@
 package estargz
 
 import (
+	"archive/tar"
+	"hash"
+	"io"
 	"os"
 	"path"
 	"time"
@@ -72,6 +75,12 @@ const (
 	// of an image manifest.
 	TOCJSONDigestAnnotation = "containerd.io/snapshot/stargz/toc.digest"
 
+	// StoreUncompressedSizeAnnotation is an additional annotation key for eStargz to enable lazy
+	// pulling on containers/storage. Stargz Store is required to expose the layer's uncompressed size
+	// to the runtime but current OCI image doesn't ship this information by default. So we store this
+	// to the special annotation.
+	StoreUncompressedSizeAnnotation = "io.containers.estargz.uncompressed-size"
+
 	// PrefetchLandmark is a file entry which indicates the end position of
 	// prefetch in the stargz file.
 	PrefetchLandmark = ".prefetch.landmark"
@@ -83,8 +92,8 @@ const (
 	landmarkContents = 0xf
 )
 
-// jtoc is the JSON-serialized table of contents index of the files in the stargz file.
-type jtoc struct {
+// JTOC is the JSON-serialized table of contents index of the files in the stargz file.
+type JTOC struct {
 	Version int         `json:"version"`
 	Entries []*TOCEntry `json:"entries"`
 }
@@ -229,7 +238,9 @@ func (fi fileInfo) Size() int64        { return fi.e.Size }
 func (fi fileInfo) ModTime() time.Time { return fi.e.ModTime() }
 func (fi fileInfo) Sys() interface{}   { return fi.e }
 func (fi fileInfo) Mode() (m os.FileMode) {
-	m = os.FileMode(fi.e.Mode) & os.ModePerm
+	// TOCEntry.Mode is tar.Header.Mode so we can understand the these bits using `tar` pkg.
+	m = (&tar.Header{Mode: fi.e.Mode}).FileInfo().Mode() &
+		(os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky)
 	switch fi.e.Type {
 	case "dir":
 		m |= os.ModeDir
@@ -242,7 +253,6 @@ func (fi fileInfo) Mode() (m os.FileMode) {
 	case "fifo":
 		m |= os.ModeNamedPipe
 	}
-	// TODO: ModeSetuid, ModeSetgid, if/as needed.
 	return m
 }
 
@@ -253,4 +263,54 @@ type TOCEntryVerifier interface {
 	// Verifier provides a content verifier that can be used for verifying the
 	// contents of the specified TOCEntry.
 	Verifier(ce *TOCEntry) (digest.Verifier, error)
+}
+
+// Compression provides the compression helper to be used creating and parsing eStargz.
+// This package provides gzip-based Compression by default, but any compression
+// algorithm (e.g. zstd) can be used as long as it implements Compression.
+type Compression interface {
+	Compressor
+	Decompressor
+}
+
+// Compressor represents the helper mothods to be used for creating eStargz.
+type Compressor interface {
+	// Writer returns WriteCloser to be used for writing a chunk to eStargz.
+	// Everytime a chunk is written, the WriteCloser is closed and Writer is
+	// called again for writing the next chunk.
+	Writer(w io.Writer) (io.WriteCloser, error)
+
+	// WriteTOCAndFooter is called to write JTOC to the passed Writer.
+	// diffHash calculates the DiffID (uncompressed sha256 hash) of the blob
+	// WriteTOCAndFooter can optionally write anything that affects DiffID calculation
+	// (e.g. uncompressed TOC JSON).
+	//
+	// This function returns tocDgst that represents the digest of TOC that will be used
+	// to verify this blob when it's parsed.
+	WriteTOCAndFooter(w io.Writer, off int64, toc *JTOC, diffHash hash.Hash) (tocDgst digest.Digest, err error)
+}
+
+// Decompressor represents the helper mothods to be used for parsing eStargz.
+type Decompressor interface {
+	// Reader returns ReadCloser to be used for decompressing file payload.
+	Reader(r io.Reader) (io.ReadCloser, error)
+
+	// FooterSize returns the size of the footer of this blob.
+	FooterSize() int64
+
+	// ParseFooter parses the footer and returns the offset and (compressed) size of TOC.
+	// payloadBlobSize is the (compressed) size of the blob payload (i.e. the size between
+	// the top until the TOC JSON).
+	//
+	// Here, tocSize is optional. If tocSize <= 0, it's by default the size of the range
+	// from tocOffset until the beginning of the footer (blob size - tocOff - FooterSize).
+	ParseFooter(p []byte) (blobPayloadSize, tocOffset, tocSize int64, err error)
+
+	// ParseTOC parses TOC from the passed reader. The reader provides the partial contents
+	// of the underlying blob that has the range specified by ParseFooter method.
+	//
+	// This function returns tocDgst that represents the digest of TOC that will be used
+	// to verify this blob. This must match to the value returned from
+	// Compressor.WriteTOCAndFooter that is used when creating this blob.
+	ParseTOC(r io.Reader) (toc *JTOC, tocDgst digest.Digest, err error)
 }

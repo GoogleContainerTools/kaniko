@@ -87,7 +87,7 @@ func Hasher(name string) (hash.Hash, error) {
 func (h *Hash) parse(unquoted string) error {
 	parts := strings.Split(unquoted, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("too many parts in hash: %s", unquoted)
+		return fmt.Errorf("cannot parse hash: %q", unquoted)
 	}
 
 	rest := strings.TrimLeft(parts[1], "0123456789abcdef")

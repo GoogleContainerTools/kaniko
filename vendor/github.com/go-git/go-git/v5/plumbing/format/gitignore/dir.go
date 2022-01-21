@@ -1,10 +1,10 @@
 package gitignore
 
 import (
+	"bufio"
 	"bytes"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -15,7 +15,6 @@ import (
 const (
 	commentPrefix = "#"
 	coreSection   = "core"
-	eol           = "\n"
 	excludesfile  = "excludesfile"
 	gitDir        = ".git"
 	gitignoreFile = ".gitignore"
@@ -29,11 +28,11 @@ func readIgnoreFile(fs billy.Filesystem, path []string, ignoreFile string) (ps [
 	if err == nil {
 		defer f.Close()
 
-		if data, err := ioutil.ReadAll(f); err == nil {
-			for _, s := range strings.Split(string(data), eol) {
-				if !strings.HasPrefix(s, commentPrefix) && len(strings.TrimSpace(s)) > 0 {
-					ps = append(ps, ParsePattern(s, path))
-				}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			s := scanner.Text()
+			if !strings.HasPrefix(s, commentPrefix) && len(strings.TrimSpace(s)) > 0 {
+				ps = append(ps, ParsePattern(s, path))
 			}
 		}
 	} else if !os.IsNotExist(err) {
@@ -116,16 +115,16 @@ func loadPatterns(fs billy.Filesystem, path string) (ps []Pattern, err error) {
 //
 // The function assumes fs is rooted at the root filesystem.
 func LoadGlobalPatterns(fs billy.Filesystem) (ps []Pattern, err error) {
-	usr, err := user.Current()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return
 	}
 
-	return loadPatterns(fs, fs.Join(usr.HomeDir, gitconfigFile))
+	return loadPatterns(fs, fs.Join(home, gitconfigFile))
 }
 
 // LoadSystemPatterns loads gitignore patterns from from the gitignore file
-// declared in a system's /etc/gitconfig file.  If the ~/.gitconfig file does
+// declared in a system's /etc/gitconfig file.  If the /etc/gitconfig file does
 // not exist the function will return nil.  If the core.excludesfile property
 // is not declared, the function will return nil.  If the file pointed to by
 // the core.excludesfile property does not exist, the function will return nil.

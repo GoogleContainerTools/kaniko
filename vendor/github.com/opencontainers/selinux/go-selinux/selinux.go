@@ -1,7 +1,7 @@
 package selinux
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 )
 
 const (
@@ -11,9 +11,10 @@ const (
 	Permissive = 0
 	// Disabled constant to indicate SELinux is disabled
 	Disabled = -1
-
+	// maxCategory is the maximum number of categories used within containers
+	maxCategory = 1024
 	// DefaultCategoryRange is the upper bound on the category range
-	DefaultCategoryRange = uint32(1024)
+	DefaultCategoryRange = uint32(maxCategory)
 )
 
 var (
@@ -37,6 +38,8 @@ var (
 
 	// CategoryRange allows the upper bound on the category range to be adjusted
 	CategoryRange = DefaultCategoryRange
+
+	privContainerMountLabel string
 )
 
 // Context is a representation of the SELinux label broken into 4 parts
@@ -58,14 +61,28 @@ func ClassIndex(class string) (int, error) {
 	return classIndex(class)
 }
 
-// SetFileLabel sets the SELinux label for this path or returns an error.
+// SetFileLabel sets the SELinux label for this path, following symlinks,
+// or returns an error.
 func SetFileLabel(fpath string, label string) error {
 	return setFileLabel(fpath, label)
 }
 
-// FileLabel returns the SELinux label for this path or returns an error.
+// LsetFileLabel sets the SELinux label for this path, not following symlinks,
+// or returns an error.
+func LsetFileLabel(fpath string, label string) error {
+	return lSetFileLabel(fpath, label)
+}
+
+// FileLabel returns the SELinux label for this path, following symlinks,
+// or returns an error.
 func FileLabel(fpath string) (string, error) {
 	return fileLabel(fpath)
+}
+
+// LfileLabel returns the SELinux label for this path, not following symlinks,
+// or returns an error.
+func LfileLabel(fpath string) (string, error) {
+	return lFileLabel(fpath)
 }
 
 // SetFSCreateLabel tells the kernel what label to use for all file system objects
@@ -252,6 +269,8 @@ func CopyLevel(src, dest string) (string, error) {
 // Chcon changes the fpath file object to the SELinux label label.
 // If fpath is a directory and recurse is true, then Chcon walks the
 // directory tree setting the label.
+//
+// The fpath itself is guaranteed to be relabeled last.
 func Chcon(fpath string, label string, recurse bool) error {
 	return chcon(fpath, label, recurse)
 }
@@ -275,4 +294,11 @@ func DisableSecOpt() []string {
 // file.
 func GetDefaultContextWithLevel(user, level, scon string) (string, error) {
 	return getDefaultContextWithLevel(user, level, scon)
+}
+
+// PrivContainerMountLabel returns mount label for privileged containers
+func PrivContainerMountLabel() string {
+	// Make sure label is initialized.
+	_ = label("")
+	return privContainerMountLabel
 }

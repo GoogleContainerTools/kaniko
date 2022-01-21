@@ -57,7 +57,7 @@ type Encoder interface {
 	// Identifiers of two different encoders should be equal if and only if for every input
 	// object it will be encoded to the same representation by both of them.
 	//
-	// Identifier is inteted for use with CacheableObject#CacheEncode method. In order to
+	// Identifier is intended for use with CacheableObject#CacheEncode method. In order to
 	// correctly handle CacheableObject, Encode() method should look similar to below, where
 	// doEncode() is the encoding logic of implemented encoder:
 	//   func (e *MyEncoder) Encode(obj Object, w io.Writer) error {
@@ -125,6 +125,9 @@ type SerializerInfo struct {
 	// PrettySerializer, if set, can serialize this object in a form biased towards
 	// readability.
 	PrettySerializer Serializer
+	// StrictSerializer, if set, deserializes this object strictly,
+	// erring on unknown fields.
+	StrictSerializer Serializer
 	// StreamSerializer, if set, describes the streaming serialization format
 	// for this media type.
 	StreamSerializer *StreamSerializerInfo

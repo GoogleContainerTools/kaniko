@@ -6,19 +6,19 @@
 
 #include "textflag.h"
 
-DATA ·cons<>+0x00(SB)/8, $0xdbe6d5d5fe4cce2f
-DATA ·cons<>+0x08(SB)/8, $0xa4093822299f31d0
-DATA ·cons<>+0x10(SB)/8, $0x13198a2e03707344
-DATA ·cons<>+0x18(SB)/8, $0x243f6a8885a308d3
-DATA ·cons<>+0x20(SB)/8, $0x3bd39e10cb0ef593
-DATA ·cons<>+0x28(SB)/8, $0xc0acf169b5f18a8c
-DATA ·cons<>+0x30(SB)/8, $0xbe5466cf34e90c6c
-DATA ·cons<>+0x38(SB)/8, $0x452821e638d01377
-GLOBL ·cons<>(SB), (NOPTR+RODATA), $64
+DATA ·asmConstants<>+0x00(SB)/8, $0xdbe6d5d5fe4cce2f
+DATA ·asmConstants<>+0x08(SB)/8, $0xa4093822299f31d0
+DATA ·asmConstants<>+0x10(SB)/8, $0x13198a2e03707344
+DATA ·asmConstants<>+0x18(SB)/8, $0x243f6a8885a308d3
+DATA ·asmConstants<>+0x20(SB)/8, $0x3bd39e10cb0ef593
+DATA ·asmConstants<>+0x28(SB)/8, $0xc0acf169b5f18a8c
+DATA ·asmConstants<>+0x30(SB)/8, $0xbe5466cf34e90c6c
+DATA ·asmConstants<>+0x38(SB)/8, $0x452821e638d01377
+GLOBL ·asmConstants<>(SB), (NOPTR+RODATA), $64
 
-DATA ·zipperMerge<>+0x00(SB)/8, $0xf010e05020c03
-DATA ·zipperMerge<>+0x08(SB)/8, $0x70806090d0a040b
-GLOBL ·zipperMerge<>(SB), (NOPTR+RODATA), $16
+DATA ·asmZipperMerge<>+0x00(SB)/8, $0xf010e05020c03
+DATA ·asmZipperMerge<>+0x08(SB)/8, $0x70806090d0a040b
+GLOBL ·asmZipperMerge<>(SB), (NOPTR+RODATA), $16
 
 #define v00 X0
 #define v01 X1
@@ -104,10 +104,10 @@ GLOBL ·zipperMerge<>(SB), (NOPTR+RODATA), $16
 	PADDQ   t1, v11
 
 // func initializeSSE4(state *[16]uint64, key []byte)
-TEXT ·initializeSSE4(SB), 4, $0-32
+TEXT ·initializeSSE4(SB), NOSPLIT, $0-32
 	MOVQ state+0(FP), AX
 	MOVQ key_base+8(FP), BX
-	MOVQ $·cons<>(SB), CX
+	MOVQ $·asmConstants<>(SB), CX
 
 	MOVOU 0(BX), v00
 	MOVOU 16(BX), v01
@@ -136,7 +136,7 @@ TEXT ·initializeSSE4(SB), 4, $0-32
 	RET
 
 // func updateSSE4(state *[16]uint64, msg []byte)
-TEXT ·updateSSE4(SB), 4, $0-32
+TEXT ·updateSSE4(SB), NOSPLIT, $0-32
 	MOVQ state+0(FP), AX
 	MOVQ msg_base+8(FP), BX
 	MOVQ msg_len+16(FP), CX
@@ -153,7 +153,7 @@ TEXT ·updateSSE4(SB), 4, $0-32
 	MOVOU 96(AX), m10
 	MOVOU 112(AX), m11
 
-	MOVOU ·zipperMerge<>(SB), t2
+	MOVOU ·asmZipperMerge<>(SB), t2
 
 LOOP:
 	MOVOU 0(BX), t0
@@ -178,7 +178,7 @@ DONE:
 	RET
 
 // func finalizeSSE4(out []byte, state *[16]uint64)
-TEXT ·finalizeSSE4(SB), 4, $0-32
+TEXT ·finalizeSSE4(SB), NOSPLIT, $0-32
 	MOVQ state+24(FP), AX
 	MOVQ out_base+0(FP), BX
 	MOVQ out_len+8(FP), CX
@@ -192,7 +192,7 @@ TEXT ·finalizeSSE4(SB), 4, $0-32
 	MOVOU 96(AX), m10
 	MOVOU 112(AX), m11
 
-	MOVOU ·zipperMerge<>(SB), t2
+	MOVOU ·asmZipperMerge<>(SB), t2
 
 	PSHUFD $177, v01, t0
 	PSHUFD $177, v00, t1

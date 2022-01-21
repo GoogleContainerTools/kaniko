@@ -121,12 +121,12 @@ type Patch struct {
 	filePatches []fdiff.FilePatch
 }
 
-func (t *Patch) FilePatches() []fdiff.FilePatch {
-	return t.filePatches
+func (p *Patch) FilePatches() []fdiff.FilePatch {
+	return p.filePatches
 }
 
-func (t *Patch) Message() string {
-	return t.message
+func (p *Patch) Message() string {
+	return p.message
 }
 
 func (p *Patch) Encode(w io.Writer) error {
@@ -198,12 +198,12 @@ func (tf *textFilePatch) Files() (from fdiff.File, to fdiff.File) {
 	return
 }
 
-func (t *textFilePatch) IsBinary() bool {
-	return len(t.chunks) == 0
+func (tf *textFilePatch) IsBinary() bool {
+	return len(tf.chunks) == 0
 }
 
-func (t *textFilePatch) Chunks() []fdiff.Chunk {
-	return t.chunks
+func (tf *textFilePatch) Chunks() []fdiff.Chunk {
+	return tf.chunks
 }
 
 // textChunk is an implementation of fdiff.Chunk interface
@@ -287,8 +287,16 @@ func printStat(fileStats []FileStat) string {
 	for _, fs := range fileStats {
 		addn := float64(fs.Addition)
 		deln := float64(fs.Deletion)
-		adds := strings.Repeat("+", int(math.Floor(addn/scaleFactor)))
-		dels := strings.Repeat("-", int(math.Floor(deln/scaleFactor)))
+		addc := int(math.Floor(addn/scaleFactor))
+		delc := int(math.Floor(deln/scaleFactor))
+		if addc < 0 {
+			addc = 0
+		}
+		if delc < 0 {
+			delc = 0
+		}
+		adds := strings.Repeat("+", addc)
+		dels := strings.Repeat("-", delc)
 		finalOutput += fmt.Sprintf(" %s | %d %s%s\n", fs.Name, (fs.Addition + fs.Deletion), adds, dels)
 	}
 

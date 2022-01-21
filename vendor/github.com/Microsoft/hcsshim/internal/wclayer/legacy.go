@@ -76,7 +76,7 @@ func readTombstones(path string) (map[string]([]string), error) {
 	defer tf.Close()
 	s := bufio.NewScanner(tf)
 	if !s.Scan() || s.Text() != "\xef\xbb\xbfVersion 1.0" {
-		return nil, errors.New("Invalid tombstones file")
+		return nil, errors.New("invalid tombstones file")
 	}
 
 	ts := make(map[string]([]string))
@@ -390,7 +390,7 @@ func (w *legacyLayerWriter) CloseRoots() {
 		w.destRoot = nil
 	}
 	for i := range w.parentRoots {
-		w.parentRoots[i].Close()
+		_ = w.parentRoots[i].Close()
 	}
 	w.parentRoots = nil
 }
@@ -640,7 +640,7 @@ func (w *legacyLayerWriter) Add(name string, fileInfo *winio.FileBasicInfo) erro
 		defer func() {
 			if f != nil {
 				f.Close()
-				safefile.RemoveRelative(name, w.destRoot)
+				_ = safefile.RemoveRelative(name, w.destRoot)
 			}
 		}()
 
@@ -676,7 +676,7 @@ func (w *legacyLayerWriter) Add(name string, fileInfo *winio.FileBasicInfo) erro
 	defer func() {
 		if f != nil {
 			f.Close()
-			safefile.RemoveRelative(fname, w.root)
+			_ = safefile.RemoveRelative(fname, w.root)
 		}
 	}()
 

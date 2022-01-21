@@ -282,14 +282,6 @@ func getNestedString(obj map[string]interface{}, fields ...string) string {
 	return val
 }
 
-func getNestedInt64(obj map[string]interface{}, fields ...string) int64 {
-	val, found, err := NestedInt64(obj, fields...)
-	if !found || err != nil {
-		return 0
-	}
-	return val
-}
-
 func getNestedInt64Pointer(obj map[string]interface{}, fields ...string) *int64 {
 	val, found, err := NestedInt64(obj, fields...)
 	if !found || err != nil {
@@ -390,7 +382,7 @@ func (unstructuredJSONScheme) Identifier() runtime.Identifier {
 
 func (s unstructuredJSONScheme) decode(data []byte) (runtime.Object, error) {
 	type detector struct {
-		Items gojson.RawMessage
+		Items gojson.RawMessage `json:"items"`
 	}
 	var det detector
 	if err := json.Unmarshal(data, &det); err != nil {
@@ -433,7 +425,7 @@ func (unstructuredJSONScheme) decodeToUnstructured(data []byte, unstruct *Unstru
 
 func (s unstructuredJSONScheme) decodeToList(data []byte, list *UnstructuredList) error {
 	type decodeList struct {
-		Items []gojson.RawMessage
+		Items []gojson.RawMessage `json:"items"`
 	}
 
 	var dList decodeList

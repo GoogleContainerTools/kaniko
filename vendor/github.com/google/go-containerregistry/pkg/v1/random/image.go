@@ -81,7 +81,7 @@ func Image(byteSize, layers int64) (v1.Image, error) {
 
 // Layer returns a layer with pseudo-randomly generated content.
 func Layer(byteSize int64, mt types.MediaType) (v1.Layer, error) {
-	fileName := fmt.Sprintf("random_file_%d.txt", mrand.Int())
+	fileName := fmt.Sprintf("random_file_%d.txt", mrand.Int()) //nolint: gosec
 
 	// Hash the contents as we write it out to the buffer.
 	var b bytes.Buffer

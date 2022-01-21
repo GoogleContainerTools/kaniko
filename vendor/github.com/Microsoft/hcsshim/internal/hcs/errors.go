@@ -60,7 +60,7 @@ var (
 	// ErrVmcomputeOperationInvalidState is an error encountered when the compute system is not in a valid state for the requested operation
 	ErrVmcomputeOperationInvalidState = syscall.Errno(0xc0370105)
 
-	// ErrProcNotFound is an error encountered when the the process cannot be found
+	// ErrProcNotFound is an error encountered when a procedure look up fails.
 	ErrProcNotFound = syscall.Errno(0x7f)
 
 	// ErrVmcomputeOperationAccessIsDenied is an error which can be encountered when enumerating compute systems in RS1/RS2
@@ -78,6 +78,13 @@ var (
 
 	// ErrNotSupported is an error encountered when hcs doesn't support the request
 	ErrPlatformNotSupported = errors.New("unsupported platform request")
+
+	// ErrProcessAlreadyStopped is returned by hcs if the process we're trying to kill has already been stopped.
+	ErrProcessAlreadyStopped = syscall.Errno(0x8037011f)
+
+	// ErrInvalidHandle is an error that can be encountrered when querying the properties of a compute system when the handle to that
+	// compute system has already been closed.
+	ErrInvalidHandle = syscall.Errno(0x6)
 )
 
 type ErrorEvent struct {
@@ -171,7 +178,6 @@ type SystemError struct {
 	ID     string
 	Op     string
 	Err    error
-	Extra  string
 	Events []ErrorEvent
 }
 
@@ -181,9 +187,6 @@ func (e *SystemError) Error() string {
 	s := e.Op + " " + e.ID + ": " + e.Err.Error()
 	for _, ev := range e.Events {
 		s += "\n" + ev.String()
-	}
-	if e.Extra != "" {
-		s += "\n(extra info: " + e.Extra + ")"
 	}
 	return s
 }
@@ -198,7 +201,7 @@ func (e *SystemError) Timeout() bool {
 	return ok && err.Timeout()
 }
 
-func makeSystemError(system *System, op string, extra string, err error, events []ErrorEvent) error {
+func makeSystemError(system *System, op string, err error, events []ErrorEvent) error {
 	// Don't double wrap errors
 	if _, ok := err.(*SystemError); ok {
 		return err
@@ -206,7 +209,6 @@ func makeSystemError(system *System, op string, extra string, err error, events 
 	return &SystemError{
 		ID:     system.ID(),
 		Op:     op,
-		Extra:  extra,
 		Err:    err,
 		Events: events,
 	}
@@ -247,12 +249,19 @@ func makeProcessError(process *Process, op string, err error, events []ErrorEven
 // IsNotExist checks if an error is caused by the Container or Process not existing.
 // Note: Currently, ErrElementNotFound can mean that a Process has either
 // already exited, or does not exist. Both IsAlreadyStopped and IsNotExist
-// will currently return true when the error is ErrElementNotFound or ErrProcNotFound.
+// will currently return true when the error is ErrElementNotFound.
 func IsNotExist(err error) bool {
 	err = getInnerError(err)
 	return err == ErrComputeSystemDoesNotExist ||
-		err == ErrElementNotFound ||
-		err == ErrProcNotFound
+		err == ErrElementNotFound
+}
+
+// IsErrorInvalidHandle checks whether the error is the result of an operation carried
+// out on a handle that is invalid/closed. This error popped up while trying to query
+// stats on a container in the process of being stopped.
+func IsErrorInvalidHandle(err error) bool {
+	err = getInnerError(err)
+	return err == ErrInvalidHandle
 }
 
 // IsAlreadyClosed checks if an error is caused by the Container or Process having been
@@ -283,12 +292,12 @@ func IsTimeout(err error) bool {
 // a Container or Process being already stopped.
 // Note: Currently, ErrElementNotFound can mean that a Process has either
 // already exited, or does not exist. Both IsAlreadyStopped and IsNotExist
-// will currently return true when the error is ErrElementNotFound or ErrProcNotFound.
+// will currently return true when the error is ErrElementNotFound.
 func IsAlreadyStopped(err error) bool {
 	err = getInnerError(err)
 	return err == ErrVmcomputeAlreadyStopped ||
-		err == ErrElementNotFound ||
-		err == ErrProcNotFound
+		err == ErrProcessAlreadyStopped ||
+		err == ErrElementNotFound
 }
 
 // IsNotSupported returns a boolean indicating whether the error is caused by
@@ -312,6 +321,13 @@ func IsOperationInvalidState(err error) bool {
 	return err == ErrVmcomputeOperationInvalidState
 }
 
+// IsAccessIsDenied returns true when err is caused by
+// `ErrVmcomputeOperationAccessIsDenied`.
+func IsAccessIsDenied(err error) bool {
+	err = getInnerError(err)
+	return err == ErrVmcomputeOperationAccessIsDenied
+}
+
 func getInnerError(err error) error {
 	switch pe := err.(type) {
 	case nil:
@@ -324,13 +340,4 @@ func getInnerError(err error) error {
 		err = pe.Err
 	}
 	return err
-}
-
-func getOperationLogResult(err error) (string, error) {
-	switch err {
-	case nil:
-		return "Success", nil
-	default:
-		return "Error", err
-	}
 }

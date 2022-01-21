@@ -3,9 +3,9 @@ package git
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	stdioutil "io/ioutil"
 	"os"
 	"path"
@@ -13,6 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/internal/revision"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -22,12 +26,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/storage"
 	"github.com/go-git/go-git/v5/storage/filesystem"
+	"github.com/go-git/go-git/v5/storage/filesystem/dotgit"
 	"github.com/go-git/go-git/v5/utils/ioutil"
 	"github.com/imdario/mergo"
-	"golang.org/x/crypto/openpgp"
-
-	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/osfs"
 )
 
 // GitDirName this is a special folder where all the git stuff is.
@@ -47,6 +48,7 @@ var (
 
 	ErrInvalidReference          = errors.New("invalid reference, should be a tag or a branch")
 	ErrRepositoryNotExists       = errors.New("repository does not exist")
+	ErrRepositoryIncomplete      = errors.New("repository's commondir path does not exist")
 	ErrRepositoryAlreadyExists   = errors.New("repository already exists")
 	ErrRemoteNotFound            = errors.New("remote not found")
 	ErrRemoteExists              = errors.New("remote already exists")
@@ -89,7 +91,7 @@ func Init(s storage.Storer, worktree billy.Filesystem) (*Repository, error) {
 	}
 
 	if worktree == nil {
-		r.setIsBare(true)
+		_ = r.setIsBare(true)
 		return r, nil
 	}
 
@@ -186,10 +188,6 @@ func Open(s storage.Storer, worktree billy.Filesystem) (*Repository, error) {
 // Clone a repository into the given Storer and worktree Filesystem with the
 // given options, if worktree is nil a bare repository is created. If the given
 // storer is not empty ErrRepositoryAlreadyExists is returned.
-//
-// The provided Context must be non-nil. If the context expires before the
-// operation is complete, an error is returned. The context only affects to the
-// transport operations.
 func Clone(s storage.Storer, worktree billy.Filesystem, o *CloneOptions) (*Repository, error) {
 	return CloneContext(context.Background(), s, worktree, o)
 }
@@ -199,7 +197,7 @@ func Clone(s storage.Storer, worktree billy.Filesystem, o *CloneOptions) (*Repos
 // given storer is not empty ErrRepositoryAlreadyExists is returned.
 //
 // The provided Context must be non-nil. If the context expires before the
-// operation is complete, an error is returned. The context only affects to the
+// operation is complete, an error is returned. The context only affects the
 // transport operations.
 func CloneContext(
 	ctx context.Context, s storage.Storer, worktree billy.Filesystem, o *CloneOptions,
@@ -253,7 +251,19 @@ func PlainOpenWithOptions(path string, o *PlainOpenOptions) (*Repository, error)
 		return nil, err
 	}
 
-	s := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
+	var repositoryFs billy.Filesystem
+
+	if o.EnableDotGitCommonDir {
+		dotGitCommon, err := dotGitCommonDirectory(dot)
+		if err != nil {
+			return nil, err
+		}
+		repositoryFs = dotgit.NewRepositoryFilesystem(dot, dotGitCommon)
+	} else {
+		repositoryFs = dot
+	}
+
+	s := filesystem.NewStorage(repositoryFs, cache.NewObjectLRUDefault())
 
 	return Open(s, wt)
 }
@@ -262,10 +272,19 @@ func dotGitToOSFilesystems(path string, detect bool) (dot, wt billy.Filesystem, 
 	if path, err = filepath.Abs(path); err != nil {
 		return nil, nil, err
 	}
+
 	var fs billy.Filesystem
 	var fi os.FileInfo
 	for {
 		fs = osfs.New(path)
+
+		pathinfo, err := fs.Stat("/")
+		if !os.IsNotExist(err) {
+			if !pathinfo.IsDir() && detect {
+				fs = osfs.New(filepath.Dir(path))
+			}
+		}
+
 		fi, err = fs.Stat(GitDirName)
 		if err == nil {
 			// no error; stop
@@ -328,6 +347,38 @@ func dotGitFileToOSFilesystem(path string, fs billy.Filesystem) (bfs billy.Files
 	return osfs.New(fs.Join(path, gitdir)), nil
 }
 
+func dotGitCommonDirectory(fs billy.Filesystem) (commonDir billy.Filesystem, err error) {
+	f, err := fs.Open("commondir")
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := stdioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > 0 {
+		path := strings.TrimSpace(string(b))
+		if filepath.IsAbs(path) {
+			commonDir = osfs.New(path)
+		} else {
+			commonDir = osfs.New(filepath.Join(fs.Root(), path))
+		}
+		if _, err := commonDir.Stat(""); err != nil {
+			if os.IsNotExist(err) {
+				return nil, ErrRepositoryIncomplete
+			}
+
+			return nil, err
+		}
+	}
+
+	return commonDir, nil
+}
+
 // PlainClone a repository into the path with the given options, isBare defines
 // if the new repository will be bare or normal. If the path is not empty
 // ErrRepositoryAlreadyExists is returned.
@@ -342,7 +393,7 @@ func PlainClone(path string, isBare bool, o *CloneOptions) (*Repository, error) 
 // ErrRepositoryAlreadyExists is returned.
 //
 // The provided Context must be non-nil. If the context expires before the
-// operation is complete, an error is returned. The context only affects to the
+// operation is complete, an error is returned. The context only affects the
 // transport operations.
 //
 // TODO(mcuadros): move isBare to CloneOptions in v5
@@ -361,7 +412,7 @@ func PlainCloneContext(ctx context.Context, path string, isBare bool, o *CloneOp
 	err = r.clone(ctx, o)
 	if err != nil && err != ErrRepositoryAlreadyExists {
 		if cleanup {
-			cleanUpDir(path, cleanupParent)
+			_ = cleanUpDir(path, cleanupParent)
 		}
 	}
 
@@ -377,7 +428,7 @@ func newRepository(s storage.Storer, worktree billy.Filesystem) *Repository {
 }
 
 func checkIfCleanupIsNeeded(path string) (cleanup bool, cleanParent bool, err error) {
-	fi, err := os.Stat(path)
+	fi, err := osfs.Default.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return true, true, nil
@@ -390,20 +441,13 @@ func checkIfCleanupIsNeeded(path string) (cleanup bool, cleanParent bool, err er
 		return false, false, fmt.Errorf("path is not a directory: %s", path)
 	}
 
-	f, err := os.Open(path)
+	files, err := osfs.Default.ReadDir(path)
 	if err != nil {
 		return false, false, err
 	}
 
-	defer ioutil.CheckClose(f, &err)
-
-	_, err = f.Readdirnames(1)
-	if err == io.EOF {
+	if len(files) == 0 {
 		return true, false, nil
-	}
-
-	if err != nil {
-		return false, false, err
 	}
 
 	return false, false, nil
@@ -411,23 +455,16 @@ func checkIfCleanupIsNeeded(path string) (cleanup bool, cleanParent bool, err er
 
 func cleanUpDir(path string, all bool) error {
 	if all {
-		return os.RemoveAll(path)
+		return util.RemoveAll(osfs.Default, path)
 	}
 
-	f, err := os.Open(path)
+	files, err := osfs.Default.ReadDir(path)
 	if err != nil {
 		return err
 	}
 
-	defer ioutil.CheckClose(f, &err)
-
-	names, err := f.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range names {
-		if err := os.RemoveAll(filepath.Join(path, name)); err != nil {
+	for _, fi := range files {
+		if err := util.RemoveAll(osfs.Default, osfs.Default.Join(path, fi.Name())); err != nil {
 			return err
 		}
 	}
@@ -785,12 +822,14 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 	}
 
 	ref, err := r.fetchAndUpdateReferences(ctx, &FetchOptions{
-		RefSpecs:   c.Fetch,
-		Depth:      o.Depth,
-		Auth:       o.Auth,
-		Progress:   o.Progress,
-		Tags:       o.Tags,
-		RemoteName: o.RemoteName,
+		RefSpecs:        c.Fetch,
+		Depth:           o.Depth,
+		Auth:            o.Auth,
+		Progress:        o.Progress,
+		Tags:            o.Tags,
+		RemoteName:      o.RemoteName,
+		InsecureSkipTLS: o.InsecureSkipTLS,
+		CABundle:        o.CABundle,
 	}, o.ReferenceName)
 	if err != nil {
 		return err
@@ -836,11 +875,13 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 			Name:  branchName,
 			Merge: branchRef,
 		}
+
 		if o.RemoteName == "" {
 			b.Remote = "origin"
 		} else {
 			b.Remote = o.RemoteName
 		}
+
 		if err := r.CreateBranch(b); err != nil {
 			return err
 		}
@@ -1043,7 +1084,7 @@ func (r *Repository) Fetch(o *FetchOptions) error {
 // no changes to be fetched, or an error.
 //
 // The provided Context must be non-nil. If the context expires before the
-// operation is complete, an error is returned. The context only affects to the
+// operation is complete, an error is returned. The context only affects the
 // transport operations.
 func (r *Repository) FetchContext(ctx context.Context, o *FetchOptions) error {
 	if err := o.Validate(); err != nil {
@@ -1070,7 +1111,7 @@ func (r *Repository) Push(o *PushOptions) error {
 // FetchOptions.RemoteName.
 //
 // The provided Context must be non-nil. If the context expires before the
-// operation is complete, an error is returned. The context only affects to the
+// operation is complete, an error is returned. The context only affects the
 // transport operations.
 func (r *Repository) PushContext(ctx context.Context, o *PushOptions) error {
 	if err := o.Validate(); err != nil {
@@ -1379,7 +1420,7 @@ func (r *Repository) Worktree() (*Worktree, error) {
 // resolve to a commit hash, not a tree or annotated tag.
 //
 // Implemented resolvers : HEAD, branch, tag, heads/branch, refs/heads/branch,
-// refs/tags/tag, refs/remotes/origin/branch, refs/remotes/origin/HEAD, tilde and caret (HEAD~1, master~^, tag~2, ref/heads/master~1, ...), selection by text (HEAD^{/fix nasty bug})
+// refs/tags/tag, refs/remotes/origin/branch, refs/remotes/origin/HEAD, tilde and caret (HEAD~1, master~^, tag~2, ref/heads/master~1, ...), selection by text (HEAD^{/fix nasty bug}), hash (prefix and full)
 func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error) {
 	p := revision.NewParserFromString(string(rev))
 
@@ -1392,17 +1433,13 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 	var commit *object.Commit
 
 	for _, item := range items {
-		switch item.(type) {
+		switch item := item.(type) {
 		case revision.Ref:
-			revisionRef := item.(revision.Ref)
+			revisionRef := item
 
 			var tryHashes []plumbing.Hash
 
-			maybeHash := plumbing.NewHash(string(revisionRef))
-
-			if !maybeHash.IsZero() {
-				tryHashes = append(tryHashes, maybeHash)
-			}
+			tryHashes = append(tryHashes, r.resolveHashPrefix(string(revisionRef))...)
 
 			for _, rule := range append([]string{"%s"}, plumbing.RefRevParseRules...) {
 				ref, err := storer.ResolveReference(r.Storer, plumbing.ReferenceName(fmt.Sprintf(rule, revisionRef)))
@@ -1447,7 +1484,7 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 			}
 
 		case revision.CaretPath:
-			depth := item.(revision.CaretPath).Depth
+			depth := item.Depth
 
 			if depth == 0 {
 				break
@@ -1475,7 +1512,7 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 
 			commit = c
 		case revision.TildePath:
-			for i := 0; i < item.(revision.TildePath).Depth; i++ {
+			for i := 0; i < item.Depth; i++ {
 				c, err := commit.Parents().Next()
 
 				if err != nil {
@@ -1487,8 +1524,8 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 		case revision.CaretReg:
 			history := object.NewCommitPreorderIter(commit, nil, nil)
 
-			re := item.(revision.CaretReg).Regexp
-			negate := item.(revision.CaretReg).Negate
+			re := item.Regexp
+			negate := item.Negate
 
 			var c *object.Commit
 
@@ -1518,6 +1555,49 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 	}
 
 	return &commit.Hash, nil
+}
+
+// resolveHashPrefix returns a list of potential hashes that the given string
+// is a prefix of. It quietly swallows errors, returning nil.
+func (r *Repository) resolveHashPrefix(hashStr string) []plumbing.Hash {
+	// Handle complete and partial hashes.
+	// plumbing.NewHash forces args into a full 20 byte hash, which isn't suitable
+	// for partial hashes since they will become zero-filled.
+
+	if hashStr == "" {
+		return nil
+	}
+	if len(hashStr) == len(plumbing.ZeroHash)*2 {
+		// Only a full hash is possible.
+		hexb, err := hex.DecodeString(hashStr)
+		if err != nil {
+			return nil
+		}
+		var h plumbing.Hash
+		copy(h[:], hexb)
+		return []plumbing.Hash{h}
+	}
+
+	// Partial hash.
+	// hex.DecodeString only decodes to complete bytes, so only works with pairs of hex digits.
+	evenHex := hashStr[:len(hashStr)&^1]
+	hexb, err := hex.DecodeString(evenHex)
+	if err != nil {
+		return nil
+	}
+	candidates := expandPartialHash(r.Storer, hexb)
+	if len(evenHex) == len(hashStr) {
+		// The prefix was an exact number of bytes.
+		return candidates
+	}
+	// Do another prefix check to ensure the dangling nybble is correct.
+	var hashes []plumbing.Hash
+	for _, h := range candidates {
+		if strings.HasPrefix(h.String(), hashStr) {
+			hashes = append(hashes, h)
+		}
+	}
+	return hashes
 }
 
 type RepackConfig struct {
@@ -1611,4 +1691,32 @@ func (r *Repository) createNewObjectPack(cfg *RepackConfig) (h plumbing.Hash, er
 	}
 
 	return h, err
+}
+
+func expandPartialHash(st storer.EncodedObjectStorer, prefix []byte) (hashes []plumbing.Hash) {
+	// The fast version is implemented by storage/filesystem.ObjectStorage.
+	type fastIter interface {
+		HashesWithPrefix(prefix []byte) ([]plumbing.Hash, error)
+	}
+	if fi, ok := st.(fastIter); ok {
+		h, err := fi.HashesWithPrefix(prefix)
+		if err != nil {
+			return nil
+		}
+		return h
+	}
+
+	// Slow path.
+	iter, err := st.IterEncodedObjects(plumbing.AnyObject)
+	if err != nil {
+		return nil
+	}
+	iter.ForEach(func(obj plumbing.EncodedObject) error {
+		h := obj.Hash()
+		if bytes.HasPrefix(h[:], prefix) {
+			hashes = append(hashes, h)
+		}
+		return nil
+	})
+	return
 }

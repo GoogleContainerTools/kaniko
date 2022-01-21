@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -120,7 +121,7 @@ const (
 )
 
 // MustParse turns the given string into a quantity or panics; for tests
-// or others cases where you know the string is valid.
+// or other cases where you know the string is valid.
 func MustParse(str string) Quantity {
 	q, err := ParseQuantity(str)
 	if err != nil {
@@ -442,6 +443,26 @@ func (q *Quantity) CanonicalizeBytes(out []byte) (result, suffix []byte) {
 	}
 }
 
+// AsApproximateFloat64 returns a float64 representation of the quantity which may
+// lose precision. If the value of the quantity is outside the range of a float64
+// +Inf/-Inf will be returned.
+func (q *Quantity) AsApproximateFloat64() float64 {
+	var base float64
+	var exponent int
+	if q.d.Dec != nil {
+		base, _ = big.NewFloat(0).SetInt(q.d.Dec.UnscaledBig()).Float64()
+		exponent = int(-q.d.Dec.Scale())
+	} else {
+		base = float64(q.i.value)
+		exponent = int(q.i.scale)
+	}
+	if exponent == 0 {
+		return base
+	}
+
+	return base * math.Pow10(exponent)
+}
+
 // AsInt64 returns a representation of the current value as an int64 if a fast conversion
 // is possible. If false is returned, callers must use the inf.Dec form of this quantity.
 func (q *Quantity) AsInt64() (int64, bool) {
@@ -598,6 +619,9 @@ const int64QuantityExpectedBytes = 18
 // String is an expensive operation and caching this result significantly reduces the cost of
 // normal parse / marshal operations on Quantity.
 func (q *Quantity) String() string {
+	if q == nil {
+		return "<nil>"
+	}
 	if len(q.s) == 0 {
 		result := make([]byte, 0, int64QuantityExpectedBytes)
 		number, suffix := q.CanonicalizeBytes(result)
@@ -660,6 +684,15 @@ func (q *Quantity) UnmarshalJSON(value []byte) error {
 	// This copy is safe because parsed will not be referred to again.
 	*q = parsed
 	return nil
+}
+
+// NewDecimalQuantity returns a new Quantity representing the given
+// value in the given format.
+func NewDecimalQuantity(b inf.Dec, format Format) *Quantity {
+	return &Quantity{
+		d:      infDecAmount{&b},
+		Format: format,
+	}
 }
 
 // NewQuantity returns a new Quantity representing the given
@@ -730,4 +763,31 @@ func (q *Quantity) SetScaled(value int64, scale Scale) {
 	q.s = ""
 	q.d.Dec = nil
 	q.i = int64Amount{value: value, scale: scale}
+}
+
+// QuantityValue makes it possible to use a Quantity as value for a command
+// line parameter.
+//
+// +protobuf=true
+// +protobuf.embed=string
+// +protobuf.options.marshal=false
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+// +k8s:deepcopy-gen=true
+type QuantityValue struct {
+	Quantity
+}
+
+// Set implements pflag.Value.Set and Go flag.Value.Set.
+func (q *QuantityValue) Set(s string) error {
+	quantity, err := ParseQuantity(s)
+	if err != nil {
+		return err
+	}
+	q.Quantity = quantity
+	return nil
+}
+
+// Type implements pflag.Value.Type.
+func (q QuantityValue) Type() string {
+	return "quantity"
 }
