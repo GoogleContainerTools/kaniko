@@ -11,10 +11,12 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"go.opencensus.io/plugin/ochttp"
 	"golang.org/x/oauth2"
@@ -162,23 +164,49 @@ var appengineUrlfetchHook func(context.Context) http.RoundTripper
 
 // defaultBaseTransport returns the base HTTP transport.
 // On App Engine, this is urlfetch.Transport.
-// If TLSCertificate is available, return a custom Transport with TLSClientConfig.
-// Otherwise, return http.DefaultTransport.
+// Otherwise, use a default transport, taking most defaults from
+// http.DefaultTransport.
+// If TLSCertificate is available, set TLSClientConfig as well.
 func defaultBaseTransport(ctx context.Context, clientCertSource cert.Source) http.RoundTripper {
 	if appengineUrlfetchHook != nil {
 		return appengineUrlfetchHook(ctx)
 	}
 
+	// Copy http.DefaultTransport except for MaxIdleConnsPerHost setting,
+	// which is increased due to reported performance issues under load in the GCS
+	// client. Transport.Clone is only available in Go 1.13 and up.
+	trans := clonedTransport(http.DefaultTransport)
+	if trans == nil {
+		trans = fallbackBaseTransport()
+	}
+	trans.MaxIdleConnsPerHost = 100
+
 	if clientCertSource != nil {
-		// TODO (cbro): copy default transport settings from http.DefaultTransport
-		return &http.Transport{
-			TLSClientConfig: &tls.Config{
-				GetClientCertificate: clientCertSource,
-			},
+		trans.TLSClientConfig = &tls.Config{
+			GetClientCertificate: clientCertSource,
 		}
 	}
 
-	return http.DefaultTransport
+	return trans
+}
+
+// fallbackBaseTransport is used in <go1.13 as well as in the rare case if
+// http.DefaultTransport has been reassigned something that's not a
+// *http.Transport.
+func fallbackBaseTransport() *http.Transport {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 }
 
 func addOCTransport(trans http.RoundTripper, settings *internal.DialSettings) http.RoundTripper {
@@ -241,7 +269,7 @@ func getEndpoint(settings *internal.DialSettings, clientCertSource cert.Source) 
 	if settings.Endpoint == "" {
 		mtlsMode := getMTLSMode()
 		if mtlsMode == mTLSModeAlways || (clientCertSource != nil && mtlsMode == mTLSModeAuto) {
-			return generateDefaultMtlsEndpoint(settings.DefaultEndpoint), nil
+			return settings.DefaultMTLSEndpoint, nil
 		}
 		return settings.DefaultEndpoint, nil
 	}
@@ -273,27 +301,4 @@ func mergeEndpoints(base, newHost string) (string, error) {
 	}
 	u.Host = newHost
 	return u.String(), nil
-}
-
-// generateDefaultMtlsEndpoint attempts to derive the mTLS version of the
-// defaultEndpoint via regex, and returns defaultEndpoint if unsuccessful.
-//
-// We need to applying the following 2 transformations:
-// 1. pubsub.googleapis.com to pubsub.mtls.googleapis.com
-// 2. pubsub.sandbox.googleapis.com to pubsub.mtls.sandbox.googleapis.com
-//
-// TODO(andyzhao): In the future, the mTLS endpoint will be read from the Discovery Document
-// and passed in as defaultMtlsEndpoint instead of generated from defaultEndpoint,
-// and this function will be removed.
-func generateDefaultMtlsEndpoint(defaultEndpoint string) string {
-	var domains = []string{
-		".sandbox.googleapis.com", // must come first because .googleapis.com is a substring
-		".googleapis.com",
-	}
-	for _, domain := range domains {
-		if strings.Contains(defaultEndpoint, domain) {
-			return strings.Replace(defaultEndpoint, domain, ".mtls"+domain, -1)
-		}
-	}
-	return defaultEndpoint
 }
