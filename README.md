@@ -655,6 +655,15 @@ To collect and publish the image's build information using the Jenkins Artifacto
 This flag allows you to pass in ARG values at build time, similarly to Docker.
 You can set it multiple times for multiple arguments.
 
+Note that passing values that contain spaces is not natively suppored - you need to ensure that the IFS is set to null before your executor command.
+You can set this by adding `export IFS=''` before your executor call. 
+See the following example
+
+```bash
+export IFS=''
+/kaniko/executor --build-arg "MY_VAR='value with spaces'" ...
+```
+
 #### --cache
 
 Set this flag as `--cache=true` to opt into caching with kaniko.
