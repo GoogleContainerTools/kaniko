@@ -538,7 +538,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.8.0
+# github.com/google/go-containerregistry v0.8.1-0.20220128225446-c63684ed5f15
 ## explicit; go 1.14
 github.com/google/go-containerregistry/internal/and
 github.com/google/go-containerregistry/internal/estargz
@@ -609,7 +609,7 @@ github.com/karrick/godirwalk
 # github.com/kevinburke/ssh_config v1.1.0
 ## explicit
 github.com/kevinburke/ssh_config
-# github.com/klauspost/compress v1.14.1
+# github.com/klauspost/compress v1.14.2
 ## explicit; go 1.15
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -659,8 +659,8 @@ github.com/morikuni/aec
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.0.2
-## explicit
+# github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198
+## explicit; go 1.11
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.1.0 => github.com/opencontainers/runc v1.0.0-rc92
@@ -769,7 +769,7 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
-# golang.org/x/net v0.0.0-20220121175114-2ed6ce1e1725
+# golang.org/x/net v0.0.0-20220127074510-2fabfed7e28f
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -849,7 +849,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5
+# google.golang.org/genproto v0.0.0-20220126215142-9970aeb2e350
 ## explicit; go 1.11
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -859,7 +859,7 @@ google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/storage/v2
 google.golang.org/genproto/googleapis/type/date
 google.golang.org/genproto/googleapis/type/expr
-# google.golang.org/grpc v1.43.0
+# google.golang.org/grpc v1.44.0
 ## explicit; go 1.14
 google.golang.org/grpc
 google.golang.org/grpc/attributes
