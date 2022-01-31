@@ -64,7 +64,7 @@ jobs:
 
     # Setup auth if not a PR.
     - if: github.event_name != 'pull_request'
-      uses: google-github-actions/setup-gcloud@v0.3.0
+      uses: google-github-actions/setup-gcloud@v0.4.0
       with:
         service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
         project_id: kaniko-project
