@@ -1,0 +1,25 @@
+name: Analyze
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+
+    - uses: github/codeql-action/init@v1
+      with:
+        languages: go
+    - uses: github/codeql-action/autobuild@v1
+    - uses: github/codeql-action/analyze@v1
