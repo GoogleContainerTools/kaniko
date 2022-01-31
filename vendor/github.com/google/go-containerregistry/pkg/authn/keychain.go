@@ -101,10 +101,8 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 		}
 	} else {
 		f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers/auth.json"))
-		if os.IsNotExist(err) {
+		if err != nil {
 			return Anonymous, nil
-		} else if err != nil {
-			return nil, err
 		}
 		defer f.Close()
 		cf, err = config.LoadFromReader(f)
@@ -156,9 +154,14 @@ func NewKeychainFromHelper(h Helper) Keychain { return wrapper{h} }
 type wrapper struct{ h Helper }
 
 func (w wrapper) Resolve(r Resource) (Authenticator, error) {
-	u, p, err := w.h.Get(r.String())
+	u, p, err := w.h.Get(r.RegistryStr())
 	if err != nil {
 		return Anonymous, nil
+	}
+	// If the secret being stored is an identity token, the Username should be set to <token>
+	// ref: https://docs.docker.com/engine/reference/commandline/login/#credential-helper-protocol
+	if u == "<token>" {
+		return FromConfig(AuthConfig{Username: u, IdentityToken: p}), nil
 	}
 	return FromConfig(AuthConfig{Username: u, Password: p}), nil
 }
