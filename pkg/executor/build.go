@@ -227,6 +227,11 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 	if !s.opts.Cache {
 		return nil
 	}
+	var buildArgs = s.args.Clone()
+	// Restore build args back to their original values
+	defer func() {
+		s.args = buildArgs
+	}()
 
 	stopCache := false
 	// Possibly replace commands with their cached implementations.
