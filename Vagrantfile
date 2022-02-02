@@ -33,7 +33,8 @@ Vagrant.configure("2") do |config|
     rm gsutil.tar.gz
     ln -s /opt/gsutil/gsutil /usr/local/bin
 
-    export GODLURL=https://golang.org/$(curl https://golang.org/dl/ | hxnormalize -x | hxselect -s "\n" "#page a.downloadBox" | cut -d = -f 3 | cut -d '"' -f 2 | grep linux)
+    export GODLURL=https://go.dev/dl/$(curl --silent --show-error https://go.dev/dl/ | hxnormalize -x | hxselect -s "\n" "span, #filename" | grep linux | cut -d '>' -f 2 | cut -d '<' -f 1)
+    echo "Downloading go from: $GODLURL"
     wget --quiet $GODLURL
     tar -C /usr/local -xzf go*.linux-amd64.tar.gz
     echo 'export PATH=$PATH:/usr/local/go/bin:/go/bin' > /etc/profile.d/go-path.sh
@@ -45,6 +46,8 @@ Vagrant.configure("2") do |config|
     docker run --rm  -d -p 5000:5000 --name registry -e DEBUG=true registry:2
     echo 'export IMAGE_REPO=localhost:5000' > /etc/profile.d/local-registry.sh
     chmod a+x /etc/profile.d/local-registry.sh
+    export PATH=$PATH:/usr/local/go/bin:/go/bin
+    export GOPATH=/go
     go get github.com/google/go-containerregistry/cmd/crane
   SHELL
 end
