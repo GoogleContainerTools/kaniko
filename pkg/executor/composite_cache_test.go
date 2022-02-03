@@ -68,10 +68,7 @@ func Test_CompositeCache_Hash(t *testing.T) {
 }
 
 func Test_CompositeCache_AddPath_dir(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("/tmp", "foo")
-	if err != nil {
-		t.Errorf("got error setting up test %v", err)
-	}
+	tmpDir := t.TempDir()
 
 	content := `meow meow meow`
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, "foo.txt"), []byte(content), 0777); err != nil {
@@ -158,14 +155,10 @@ func createFilesystemStructure(root string, directories, files []string) error {
 	return nil
 }
 
-func setIgnoreContext(content string) (util.FileContext, error) {
+func setIgnoreContext(t *testing.T, content string) (util.FileContext, error) {
 	var fileContext util.FileContext
-	dockerIgnoreDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return fileContext, err
-	}
-	defer os.RemoveAll(dockerIgnoreDir)
-	err = ioutil.WriteFile(dockerIgnoreDir+".dockerignore", []byte(content), 0644)
+	dockerIgnoreDir := t.TempDir()
+	err := ioutil.WriteFile(dockerIgnoreDir+".dockerignore", []byte(content), 0644)
 	if err != nil {
 		return fileContext, err
 	}
@@ -218,21 +211,13 @@ func Test_CompositeKey_AddPath_Works(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testDir1, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir1)
-			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			testDir1 := t.TempDir()
+			err := createFilesystemStructure(testDir1, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			testDir2, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir2)
+			testDir2 := t.TempDir()
 			err = createFilesystemStructure(testDir2, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
@@ -291,21 +276,13 @@ func Test_CompositeKey_AddPath_WithExtraFile_Works(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testDir1, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir1)
-			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			testDir1 := t.TempDir()
+			err := createFilesystemStructure(testDir1, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			testDir2, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir2)
+			testDir2 := t.TempDir()
 			err = createFilesystemStructure(testDir2, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
@@ -369,21 +346,13 @@ func Test_CompositeKey_AddPath_WithExtraDir_Works(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testDir1, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir1)
-			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			testDir1 := t.TempDir()
+			err := createFilesystemStructure(testDir1, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			testDir2, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir2)
+			testDir2 := t.TempDir()
 			err = createFilesystemStructure(testDir2, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
@@ -443,28 +412,20 @@ func Test_CompositeKey_AddPath_WithExtraFilIgnored_Works(t *testing.T) {
 		},
 	}
 
-	fileContext, err := setIgnoreContext("**/extra")
+	fileContext, err := setIgnoreContext(t, "**/extra")
 	if err != nil {
 		t.Fatalf("Error setting exlusion context: %s", err)
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testDir1, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir1)
+			testDir1 := t.TempDir()
 			err = createFilesystemStructure(testDir1, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			testDir2, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir2)
+			testDir2 := t.TempDir()
 			err = createFilesystemStructure(testDir2, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
@@ -524,28 +485,20 @@ func Test_CompositeKey_AddPath_WithExtraDirIgnored_Works(t *testing.T) {
 		},
 	}
 
-	fileContext, err := setIgnoreContext("**/extra")
+	fileContext, err := setIgnoreContext(t, "**/extra")
 	if err != nil {
 		t.Fatalf("Error setting exlusion context: %s", err)
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testDir1, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir1)
-			err = createFilesystemStructure(testDir1, test.directories, test.files)
+			testDir1 := t.TempDir()
+			err := createFilesystemStructure(testDir1, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			testDir2, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatalf("Error creating tempdir: %s", err)
-			}
-			defer os.RemoveAll(testDir2)
+			testDir2 := t.TempDir()
 			err = createFilesystemStructure(testDir2, test.directories, test.files)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)

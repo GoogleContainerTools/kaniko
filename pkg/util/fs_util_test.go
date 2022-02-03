@@ -40,10 +40,7 @@ import (
 )
 
 func Test_DetectFilesystemSkiplist(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("Error creating tempdir: %s", err)
-	}
+	testDir := t.TempDir()
 	fileContents := `
 	228 122 0:90 / / rw,relatime - aufs none rw,si=f8e2406af90782bc,dio,dirperm1
 	229 228 0:98 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
@@ -59,7 +56,7 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 		t.Fatalf("Error writing file contents to %s: %s", path, err)
 	}
 
-	err = DetectFilesystemIgnoreList(path)
+	err := DetectFilesystemIgnoreList(path)
 	expectedSkiplist := []IgnoreListEntry{
 		{"/kaniko", false},
 		{"/proc", false},
@@ -155,11 +152,7 @@ var tests = []struct {
 
 func Test_RelativeFiles(t *testing.T) {
 	for _, test := range tests {
-		testDir, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatalf("err setting up temp dir: %v", err)
-		}
-		defer os.RemoveAll(testDir)
+		testDir := t.TempDir()
 		if err := testutil.SetupFiles(testDir, test.files); err != nil {
 			t.Fatalf("err setting up files: %v", err)
 		}
@@ -659,11 +652,7 @@ func Test_UnTar(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			testDir, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 			if err := createUncompressedTar(tc.setupTarContents, tc.tarFileName, testDir); err != nil {
 				t.Fatal(err)
 			}
@@ -812,15 +801,11 @@ func TestExtractFile(t *testing.T) {
 			tc := tc
 			t.Parallel()
 			r := ""
-			var err error
 
 			if tc.tmpdir != "" {
 				r = tc.tmpdir
 			} else {
-				r, err = ioutil.TempDir("", "")
-				if err != nil {
-					t.Fatal(err)
-				}
+				r = t.TempDir()
 			}
 			defer os.RemoveAll(r)
 
@@ -863,14 +848,10 @@ func TestCopySymlink(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc
 			t.Parallel()
-			r, err := ioutil.TempDir("", "")
+			r := t.TempDir()
 			os.MkdirAll(filepath.Join(r, filepath.Dir(tc.linkTarget)), 0777)
 			tc.linkTarget = filepath.Join(r, tc.linkTarget)
 			ioutil.WriteFile(tc.linkTarget, nil, 0644)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(r)
 
 			if tc.beforeLink != nil {
 				if err := tc.beforeLink(r); err != nil {
@@ -994,10 +975,7 @@ func Test_correctDockerignoreFileIsUsed(t *testing.T) {
 
 func Test_CopyFile_skips_self(t *testing.T) {
 	t.Parallel()
-	tempDir, err := ioutil.TempDir("", "kaniko_test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tempDir := t.TempDir()
 
 	tempFile := filepath.Join(tempDir, "foo")
 	expected := "bar"
@@ -1037,17 +1015,12 @@ func fakeExtract(dest string, hdr *tar.Header, tr io.Reader) error {
 func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	root, err := ioutil.TempDir("", "layers-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	root := t.TempDir()
 	// Write a whiteout path
 	d1 := []byte("Hello World\n")
 	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
 		t.Fatal(err)
 	}
-
-	defer os.Remove(root)
 
 	opts := []FSOpt{
 		// I'd rather use the real func (util.ExtractFile)
@@ -1138,16 +1111,12 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	root, err := ioutil.TempDir("", "layers-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	root := t.TempDir()
 	// Write a whiteout path
 	d1 := []byte("Hello World\n")
 	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(root)
 
 	opts := []FSOpt{
 		// I'd rather use the real func (util.ExtractFile)
@@ -1242,11 +1211,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	root, err := ioutil.TempDir("", "layers-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(root)
+	root := t.TempDir()
 	// Write a whiteout path
 	fileContents := []byte("Hello World\n")
 	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
@@ -1388,11 +1353,7 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 func Test_GetFSFromLayers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	root, err := ioutil.TempDir("", "layers-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(root)
+	root := t.TempDir()
 
 	opts := []FSOpt{
 		// I'd rather use the real func (util.ExtractFile)
@@ -1536,12 +1497,7 @@ func TestInitIgnoreList(t *testing.T) {
 }
 
 func Test_setFileTimes(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	p := filepath.Join(testDir, "foo.txt")
 

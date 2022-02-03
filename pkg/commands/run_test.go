@@ -125,11 +125,8 @@ func Test_addDefaultHOME(t *testing.T) {
 	}
 }
 
-func prepareTarFixture(fileNames []string) ([]byte, error) {
-	dir, err := ioutil.TempDir("/tmp", "tar-fixture")
-	if err != nil {
-		return nil, err
-	}
+func prepareTarFixture(t *testing.T, fileNames []string) ([]byte, error) {
+	dir := t.TempDir()
 
 	content := `
 Meow meow meow meow
@@ -174,7 +171,7 @@ meow meow meow meow
 }
 
 func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
-	tarContent, err := prepareTarFixture([]string{"foo.txt"})
+	tarContent, err := prepareTarFixture(t, []string{"foo.txt"})
 	if err != nil {
 		t.Errorf("couldn't prepare tar fixture %v", err)
 	}
@@ -318,10 +315,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 }
 
 func TestSetWorkDirIfExists(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "workdir")
-	if err != nil {
-		t.Error(err)
-	}
+	testDir := t.TempDir()
 	testutil.CheckDeepEqual(t, testDir, setWorkDirIfExists(testDir))
 	testutil.CheckDeepEqual(t, "", setWorkDirIfExists("doesnot-exists"))
 }
