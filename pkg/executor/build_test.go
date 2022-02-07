@@ -33,6 +33,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
+	"github.com/containerd/containerd/platforms"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -371,6 +372,7 @@ COPY --from=second /bar /bat
 			ioutil.WriteFile(f.Name(), []byte(tt.args.dockerfile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
+				CustomPlatform: platforms.DefaultString(),
 			}
 			testStages, metaArgs, err := dockerfile.ParseStages(opts)
 			if err != nil {
