@@ -51,12 +51,7 @@ func Test_ResolvePaths(t *testing.T) {
 	}
 
 	t.Run("list of files", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "snapshot-test")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		defer os.RemoveAll(dir)
+		dir := t.TempDir()
 
 		files := []string{
 			"/foo/bar.txt",
@@ -187,10 +182,7 @@ func Test_ResolvePaths(t *testing.T) {
 
 func Test_resolveSymlinkAncestor(t *testing.T) {
 	setupDirs := func(t *testing.T) (string, string) {
-		testDir, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testDir := t.TempDir()
 
 		targetDir := filepath.Join(testDir, "bar", "baz")
 

@@ -35,11 +35,7 @@ var uncompressedTars = []string{"uncompressed", "uncompressed.tar"}
 var compressedTars = []string{"compressed", "compressed.tar.gz"}
 
 func Test_IsLocalTarArchive(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("err setting up temp dir: %v", err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 	if err := setUpFilesAndTars(testDir); err != nil {
 		t.Fatal(err)
 	}
@@ -61,11 +57,7 @@ func Test_IsLocalTarArchive(t *testing.T) {
 }
 
 func Test_AddFileToTar(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("err setting up temp dir: %v", err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	path := filepath.Join(testDir, regularFiles[0])
 	if err := ioutil.WriteFile(path, []byte("hello"), os.ModePerm); err != nil {

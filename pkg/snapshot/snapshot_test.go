@@ -32,7 +32,7 @@ import (
 )
 
 func TestSnapshotFSFileChange(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTest()
+	testDir, snapshotter, cleanup, err := setUpTest(t)
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -98,7 +98,7 @@ func TestSnapshotFSFileChange(t *testing.T) {
 }
 
 func TestSnapshotFSIsReproducible(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTest()
+	testDir, snapshotter, cleanup, err := setUpTest(t)
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -137,7 +137,7 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 }
 
 func TestSnapshotFSChangePermissions(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTest()
+	testDir, snapshotter, cleanup, err := setUpTest(t)
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -198,7 +198,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 }
 
 func TestSnapshotFiles(t *testing.T) {
-	testDir, snapshotter, cleanup, err := setUpTest()
+	testDir, snapshotter, cleanup, err := setUpTest(t)
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
@@ -250,7 +250,7 @@ func TestSnapshotFiles(t *testing.T) {
 }
 
 func TestEmptySnapshotFS(t *testing.T) {
-	_, snapshotter, cleanup, err := setUpTest()
+	_, snapshotter, cleanup, err := setUpTest(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,11 +305,10 @@ func TestFileWithLinks(t *testing.T) {
 
 	for _, tt := range tcs {
 		t.Run(tt.name, func(t *testing.T) {
-			testDir, cleanup, err := setUpTestDir()
+			testDir, err := setUpTestDir(t)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer cleanup()
 			if err := setupSymlink(testDir, link, tt.linkFileTarget); err != nil {
 				t.Fatalf("could not set up symlink due to %s", err)
 			}
@@ -343,7 +342,7 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 	filesInTars := [][]string{}
 
 	for i := 0; i <= 2; i++ {
-		testDir, snapshotter, cleanup, err := setUpTest()
+		testDir, snapshotter, cleanup, err := setUpTest(t)
 		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 		defer cleanup()
 
@@ -392,7 +391,7 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 }
 
 func TestSnapshotWithForceBuildMetadataSet(t *testing.T) {
-	_, snapshotter, cleanup, err := setUpTest()
+	_, snapshotter, cleanup, err := setUpTest(t)
 	defer cleanup()
 
 	if err != nil {
@@ -412,7 +411,7 @@ func TestSnapshotWithForceBuildMetadataSet(t *testing.T) {
 }
 
 func TestSnapshotWithForceBuildMetadataIsNotSet(t *testing.T) {
-	_, snapshotter, cleanup, err := setUpTest()
+	_, snapshotter, cleanup, err := setUpTest(t)
 	defer cleanup()
 
 	if err != nil {
@@ -452,7 +451,7 @@ func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
 	filesInTars := [][]string{}
 
 	for i := 0; i <= 2; i++ {
-		testDir, snapshotter, cleanup, err := setUpTest()
+		testDir, snapshotter, cleanup, err := setUpTest(t)
 		testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 		defer cleanup()
 
@@ -514,7 +513,7 @@ func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
 }
 
 func TestSnapshotOmitsUnameGname(t *testing.T) {
-	_, snapshotter, cleanup, err := setUpTest()
+	_, snapshotter, cleanup, err := setUpTest(t)
 
 	defer cleanup()
 	if err != nil {
@@ -560,11 +559,8 @@ func sortAndCompareFilepaths(t *testing.T, testDir string, expected []string, ac
 	testutil.CheckDeepEqual(t, expectedFullPaths, actual)
 }
 
-func setUpTestDir() (string, func(), error) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", nil, errors.Wrap(err, "setting up temp dir")
-	}
+func setUpTestDir(t *testing.T) (string, error) {
+	testDir := t.TempDir()
 	files := map[string]string{
 		"foo":         "baz1",
 		"bar/bat":     "baz2",
@@ -573,26 +569,19 @@ func setUpTestDir() (string, func(), error) {
 	}
 	// Set up initial files
 	if err := testutil.SetupFiles(testDir, files); err != nil {
-		return "", nil, errors.Wrap(err, "setting up file system")
+		return "", errors.Wrap(err, "setting up file system")
 	}
 
-	cleanup := func() {
-		os.RemoveAll(testDir)
-	}
-
-	return testDir, cleanup, nil
+	return testDir, nil
 }
 
-func setUpTest() (string, *Snapshotter, func(), error) {
-	testDir, dirCleanUp, err := setUpTestDir()
+func setUpTest(t *testing.T) (string, *Snapshotter, func(), error) {
+	testDir, err := setUpTestDir(t)
 	if err != nil {
 		return "", nil, nil, err
 	}
-	snapshotPath, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", nil, nil, errors.Wrap(err, "setting up temp dir")
-	}
 
+	snapshotPath := t.TempDir()
 	snapshotPathPrefix = snapshotPath
 
 	// Take the initial snapshot
@@ -605,9 +594,7 @@ func setUpTest() (string, *Snapshotter, func(), error) {
 	original := config.KanikoDir
 	config.KanikoDir = testDir
 	cleanup := func() {
-		os.RemoveAll(snapshotPath)
 		config.KanikoDir = original
-		dirCleanUp()
 	}
 
 	return testDir, snapshotter, cleanup, nil

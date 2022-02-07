@@ -119,10 +119,7 @@ COPY --from=first copied another`)
 }
 
 func setupMultistageTests(t *testing.T) (string, func()) {
-	testDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testDir := t.TempDir()
 
 	// Create workspace with files, dirs, and symlinks
 	// workspace tree:

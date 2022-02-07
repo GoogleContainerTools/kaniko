@@ -150,11 +150,7 @@ func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func TestOCILayoutPath(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("could not create temp dir: %s", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	image, err := random.Image(1024, 4)
 	if err != nil {
@@ -338,11 +334,7 @@ func TestHelperProcess(t *testing.T) {
 }
 
 func TestWriteDigestFile(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "*")
-	if err != nil {
-		t.Fatalf("could not create temp dir: %s", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	t.Run("parent directory does not exist", func(t *testing.T) {
 		err := writeDigestFile(tmpDir+"/test/df", []byte("test"))

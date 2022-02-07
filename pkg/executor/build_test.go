@@ -430,15 +430,11 @@ func Test_filesToSave(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir, err := ioutil.TempDir("", "")
+			tmpDir := t.TempDir()
 			original := config.RootDir
 			config.RootDir = tmpDir
-			if err != nil {
-				t.Errorf("error creating tmpdir: %s", err)
-			}
 			defer func() {
 				config.RootDir = original
-				os.RemoveAll(tmpDir)
 			}()
 
 			for _, f := range tt.files {
@@ -762,10 +758,7 @@ func Test_stageBuilder_build(t *testing.T) {
 				},
 			}
 
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
+			destDir := t.TempDir()
 			return testcase{
 				description:       "fake command cache enabled but key not in cache",
 				config:            &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
@@ -795,10 +788,7 @@ func Test_stageBuilder_build(t *testing.T) {
 				},
 			}
 
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
+			destDir := t.TempDir()
 			return testcase{
 				description: "fake command cache enabled and key in cache",
 				opts:        &config.KanikoOptions{Cache: true},
@@ -831,10 +821,7 @@ func Test_stageBuilder_build(t *testing.T) {
 				},
 			}
 
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
+			destDir := t.TempDir()
 			return testcase{
 				description: "fake command cache enabled with tar compression disabled and key in cache",
 				opts:        &config.KanikoOptions{Cache: true, CompressedCaching: false},
@@ -932,10 +919,7 @@ COPY %s foo.txt
 			dir, filenames := tempDirAndFile(t)
 			filename := filenames[0]
 			tarContent := []byte{}
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
+			destDir := t.TempDir()
 			filePath := filepath.Join(dir, filename)
 			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
 			ch.AddPath(filePath, util.FileContext{})
@@ -993,10 +977,7 @@ COPY %s foo.txt
 			filename := filenames[0]
 			tarContent := generateTar(t, filename)
 
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
+			destDir := t.TempDir()
 			filePath := filepath.Join(dir, filename)
 
 			ch := NewCompositeCache("", "RUN foobar")
@@ -1070,10 +1051,7 @@ COPY %s bar.txt
 			filename := filenames[0]
 			tarContent := generateTar(t, filename)
 
-			destDir, err := ioutil.TempDir("", "baz")
-			if err != nil {
-				t.Errorf("could not create temp dir %v", err)
-			}
+			destDir := t.TempDir()
 
 			filePath := filepath.Join(dir, filename)
 
@@ -1081,7 +1059,7 @@ COPY %s bar.txt
 			ch.AddPath(filePath, util.FileContext{})
 
 			// copy hash
-			_, err = ch.Hash()
+			_, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
 			}
@@ -1372,13 +1350,10 @@ func getCommands(fileContext util.FileContext, cmds []instructions.Command, cach
 func tempDirAndFile(t *testing.T) (string, []string) {
 	filenames := []string{"bar.txt"}
 
-	dir, err := ioutil.TempDir("", "foo")
-	if err != nil {
-		t.Errorf("could not create temp dir %v", err)
-	}
+	dir := t.TempDir()
 	for _, filename := range filenames {
 		filepath := filepath.Join(dir, filename)
-		err = ioutil.WriteFile(filepath, []byte(`meow`), 0777)
+		err := ioutil.WriteFile(filepath, []byte(`meow`), 0777)
 		if err != nil {
 			t.Errorf("could not create temp file %v", err)
 		}
