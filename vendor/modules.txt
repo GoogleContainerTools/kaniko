@@ -708,7 +708,7 @@ github.com/sergi/go-diff/diffmatchpatch
 # github.com/sirupsen/logrus v1.8.1
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/spf13/afero v1.8.0
+# github.com/spf13/afero v1.8.1
 ## explicit; go 1.13
 github.com/spf13/afero
 github.com/spf13/afero/mem
