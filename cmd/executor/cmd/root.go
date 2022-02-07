@@ -32,7 +32,9 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/containerd/containerd/platforms"
 	"github.com/genuinetools/bpfd/proc"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -222,6 +224,14 @@ func addKanikoOptionsFlags() {
 	// Allow setting --registry-mirror using an environment variable.
 	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
 		opts.RegistryMirrors.Set(val)
+	}
+
+	// Default the custom platform flag to our current platform, and validate it.
+	if opts.CustomPlatform == "" {
+		opts.CustomPlatform = platforms.DefaultString()
+	}
+	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
+		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
 	}
 }
 

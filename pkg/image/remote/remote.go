@@ -17,7 +17,6 @@ limitations under the License.
 package remote
 
 import (
-	"runtime"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -129,28 +128,11 @@ func setNewRegistry(ref name.Reference, newReg name.Registry) name.Reference {
 func remoteOptions(registryName string, opts config.RegistryOptions, customPlatform string) []remote.Option {
 	tr := util.MakeTransport(opts, registryName)
 
-	// on which v1.Platform is this currently running?
-	platform := currentPlatform(customPlatform)
-
-	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(platform)}
-}
-
-// CurrentPlatform returns the v1.Platform on which the code runs
-func currentPlatform(customPlatform string) v1.Platform {
-	if customPlatform != "" {
-		customPlatformArray := strings.Split(customPlatform, "/")
-		imagePlatform := v1.Platform{}
-		imagePlatform.OS = customPlatformArray[0]
-		if len(customPlatformArray) > 1 {
-			imagePlatform.Architecture = customPlatformArray[1]
-			if len(customPlatformArray) > 2 {
-				imagePlatform.Variant = customPlatformArray[2]
-			}
-		}
-		return imagePlatform
+	// The platform value has previously been validated.
+	platform, err := v1.ParsePlatform(customPlatform)
+	if err != nil {
+		logrus.Fatalf("Invalid platform %q: %v", customPlatform, err)
 	}
-	return v1.Platform{
-		OS:           runtime.GOOS,
-		Architecture: runtime.GOARCH,
-	}
+
+	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(*platform)}
 }
