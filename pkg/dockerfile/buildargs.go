@@ -17,7 +17,6 @@ limitations under the License.
 package dockerfile
 
 import (
-	"sort"
 	"strings"
 
 	d "github.com/docker/docker/builder/dockerfile"
@@ -56,9 +55,7 @@ func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 	resultEnv := make([]string, len(envs))
 	copy(resultEnv, envs)
 	filtered := b.FilterAllowed(envs)
-	resultEnv = append(resultEnv, filtered...)
-	sort.Strings(resultEnv)
-	return resultEnv
+	return append(resultEnv, filtered...)
 }
 
 // AddMetaArgs adds the supplied args map to b's allowedMetaArgs

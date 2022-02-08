@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -181,6 +182,9 @@ func initConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.Con
 func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache, args *dockerfile.BuildArgs, env []string) (CompositeCache, error) {
 	// First replace all the environment variables or args in the command
 	replacementEnvs := args.ReplacementEnvs(env)
+	// The sort order of `replacementEnvs` is basically undefined, sort it
+	// so we can ensure a stable cache key.
+	sort.Strings(replacementEnvs)
 	resolvedCmd, err := util.ResolveEnvironmentReplacement(command.String(), replacementEnvs, false)
 	if err != nil {
 		return compositeKey, err
