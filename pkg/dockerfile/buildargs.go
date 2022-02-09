@@ -51,8 +51,11 @@ func (b *BuildArgs) Clone() *BuildArgs {
 
 // ReplacementEnvs returns a list of filtered environment variables
 func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
+	// Ensure that we operate on a new array and do not modify the underlying array
+	resultEnv := make([]string, len(envs))
+	copy(resultEnv, envs)
 	filtered := b.FilterAllowed(envs)
-	return append(envs, filtered...)
+	return append(resultEnv, filtered...)
 }
 
 // AddMetaArgs adds the supplied args map to b's allowedMetaArgs
