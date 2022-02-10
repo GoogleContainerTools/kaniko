@@ -24,7 +24,10 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/logging"
+	"github.com/containerd/containerd/platforms"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -84,6 +87,14 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().VarP(&opts.RegistryMirrors, "registry-mirror", "", "Registry mirror to use as pull-through cache instead of docker.io. Set it repeatedly for multiple mirrors.")
 	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "customPlatform", "", "", "Specify the build platform if different from the current host")
+
+	// Default the custom platform flag to our current platform, and validate it.
+	if opts.CustomPlatform == "" {
+		opts.CustomPlatform = platforms.DefaultString()
+	}
+	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
+		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
+	}
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
