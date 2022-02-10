@@ -93,6 +93,7 @@ k8s-executor-build-push:
 	docker push $(REGISTRY)/executor:latest
 
 .PHONY: images
+images: DOCKER_BUILDKIT=1
 images:
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
