@@ -81,8 +81,7 @@ Once you have the correct access, you can kick off a release.
     git tag v1.2.0
     git push remote v1.2.0
     ```
-3.  Pushing a tag to remote with above naming convention will trigger the Google Cloud Build release trigger set up for [`kaniko-project`](https://pantheon.corp.google.com/cloud-build/triggers/edit/762dd3f7-fac0-41a0-812a-539a2d1ff7e1?project=kaniko-project)
-If you are not a member of this projects no need to worry. This trigger will take about 10-15 mins to execute and create 6 new images
+3.  Pushing a tag to remote with above naming convention will trigger the Github workflow action defined [here](https://github.com/GoogleContainerTools/kaniko/blob/main/.github/workflows/images.yaml) It takes 20-30 mins for the job to finish and push images to [`kaniko-project`](https://pantheon.corp.google.com/gcr/images/kaniko-project?orgonly=true&project=kaniko-project&supportedpurview=organizationId)
 ```
 gcr.io/kaniko-project/executor:latest
 gcr.io/kaniko-project/executor:vX.Y.Z
