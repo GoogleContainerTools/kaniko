@@ -55,8 +55,9 @@ func ParseArg(key string, val *string, env []string, ba *dockerfile.BuildArgs) (
 		}
 		resolvedValue = &value
 	} else {
-		meta := ba.GetAllMeta()
-		if value, ok := meta[resolvedKey]; ok {
+		if value, ok := ba.GetAllAllowed()[resolvedKey]; ok {
+			resolvedValue = &value
+		} else if value, ok := ba.GetAllMeta()[resolvedKey]; ok {
 			resolvedValue = &value
 		}
 	}

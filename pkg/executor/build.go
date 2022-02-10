@@ -84,7 +84,7 @@ type stageBuilder struct {
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
-func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string, fileContext util.FileContext) (*stageBuilder, error) {
+func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string, fileContext util.FileContext) (*stageBuilder, error) {
 	sourceImage, err := image_util.RetrieveSourceImage(stage, opts)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,11 @@ func newStageBuilder(opts *config.KanikoOptions, stage config.KanikoStage, cross
 		s.cmds = append(s.cmds, command)
 	}
 
-	s.args = dockerfile.NewBuildArgs(s.opts.BuildArgs)
+	if args != nil {
+		s.args = args.Clone()
+	} else {
+		s.args = dockerfile.NewBuildArgs(s.opts.BuildArgs)
+	}
 	s.args.AddMetaArgs(s.stage.MetaArgs)
 	return s, nil
 }
@@ -615,8 +619,13 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	}
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
+	var args *dockerfile.BuildArgs
+
 	for index, stage := range kanikoStages {
-		sb, err := newStageBuilder(opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx, fileContext)
+
+		sb, err := newStageBuilder(args, opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx, fileContext)
+		args = sb.args
+
 		if err != nil {
 			return nil, err
 		}
