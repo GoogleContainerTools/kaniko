@@ -24,7 +24,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.7
-	github.com/google/go-containerregistry v0.8.1-0.20220128225446-c63684ed5f15
+	github.com/google/go-containerregistry v0.8.1-0.20220214202839-625fe7b4276a
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/slowjam v1.0.0
 	github.com/karrick/godirwalk v1.16.1

@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"time"
 
@@ -155,7 +154,7 @@ func (gs gcloudSource) Token() (*oauth2.Token, error) {
 	cmd.Stdout = &out
 
 	// Don't attempt to interpret stderr, just pass it through.
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = logs.Warn.Writer()
 
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("error executing `gcloud config config-helper`: %w", err)
