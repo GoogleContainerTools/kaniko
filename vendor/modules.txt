@@ -103,7 +103,7 @@ github.com/ProtonMail/go-crypto/openpgp/s2k
 # github.com/acomagu/bufpipe v1.0.3
 ## explicit; go 1.12
 github.com/acomagu/bufpipe
-# github.com/aws/aws-sdk-go v1.42.47
+# github.com/aws/aws-sdk-go v1.42.52
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn

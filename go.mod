@@ -13,7 +13,7 @@ replace (
 require (
 	cloud.google.com/go/storage v1.20.0
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/aws/aws-sdk-go v1.42.47
+	github.com/aws/aws-sdk-go v1.42.52
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
 	github.com/containerd/cgroups v1.0.2 // indirect
@@ -40,6 +40,8 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
+
+require github.com/containerd/containerd v1.5.9
 
 require (
 	cloud.google.com/go v0.100.2 // indirect
@@ -76,7 +78,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cilium/ebpf v0.8.0 // indirect
-	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/containerd/continuity v0.2.2 // indirect
 	github.com/containerd/fifo v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.10.1 // indirect
