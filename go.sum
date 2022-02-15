@@ -807,6 +807,8 @@ github.com/google/go-containerregistry v0.1.2/go.mod h1:GPivBPgdAyd2SU+vf6EpsgOt
 github.com/google/go-containerregistry v0.5.1/go.mod h1:Ct15B4yir3PLOP5jsy0GNeYVaIZs/MK/Jz5any1wFW0=
 github.com/google/go-containerregistry v0.8.1-0.20220128225446-c63684ed5f15 h1:yzCJSh/ZFHLiZ92yidtkRRENjtJML4teFEch7vzuL+U=
 github.com/google/go-containerregistry v0.8.1-0.20220128225446-c63684ed5f15/go.mod h1:cwx3SjrH84Rh9VFJSIhPh43ovyOp3DCWgY3h8nWmdGQ=
+github.com/google/go-containerregistry v0.8.1-0.20220214202839-625fe7b4276a h1:dc718J30nnewleBWCCDQXgpWeZWp17cgTmw6mpbF0xM=
+github.com/google/go-containerregistry v0.8.1-0.20220214202839-625fe7b4276a/go.mod h1:cwx3SjrH84Rh9VFJSIhPh43ovyOp3DCWgY3h8nWmdGQ=
 github.com/google/go-github v17.0.0+incompatible h1:N0LgJ1j65A7kfXrZnUDaYCs/Sf4rEjNlfyDHW9dolSY=
 github.com/google/go-github v17.0.0+incompatible/go.mod h1:zLgOLi98H3fifZn+44m+umXrS52loVEgC2AApnigrVQ=
 github.com/google/go-github/v28 v28.1.1/go.mod h1:bsqJWQX05omyWVmc00nEUql9mhQyv38lDZ8kPZcQVoM=

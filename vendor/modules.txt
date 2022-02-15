@@ -538,7 +538,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.8.1-0.20220128225446-c63684ed5f15
+# github.com/google/go-containerregistry v0.8.1-0.20220214202839-625fe7b4276a
 ## explicit; go 1.14
 github.com/google/go-containerregistry/internal/and
 github.com/google/go-containerregistry/internal/estargz
