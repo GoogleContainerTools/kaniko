@@ -176,7 +176,7 @@ github.com/aws/aws-sdk-go-v2/internal/sdkio
 github.com/aws/aws-sdk-go-v2/internal/strings
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/config v1.13.0
+# github.com/aws/aws-sdk-go-v2/config v1.13.1
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/config
 # github.com/aws/aws-sdk-go-v2/credentials v1.8.0
@@ -198,7 +198,7 @@ github.com/aws/aws-sdk-go-v2/internal/configsources
 # github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.2.0
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
-# github.com/aws/aws-sdk-go-v2/internal/ini v1.3.4
+# github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/ini
 # github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0
@@ -241,7 +241,7 @@ github.com/aws/smithy-go/time
 github.com/aws/smithy-go/transport/http
 github.com/aws/smithy-go/transport/http/internal/io
 github.com/aws/smithy-go/waiter
-# github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6
+# github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220216180153-3d7835abdf40
 ## explicit; go 1.13
 github.com/awslabs/amazon-ecr-credential-helper/ecr-login
 github.com/awslabs/amazon-ecr-credential-helper/ecr-login/api
@@ -795,7 +795,7 @@ golang.org/x/oauth2/jwt
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/syncmap
-# golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
+# golang.org/x/sys v0.0.0-20220209214540-3681064d5158
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs

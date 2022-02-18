@@ -277,6 +277,8 @@ github.com/aws/aws-sdk-go-v2 v1.13.0/go.mod h1:L6+ZpqHaLbAaxsqV0L4cvxZY7QupWJB4f
 github.com/aws/aws-sdk-go-v2/config v1.5.0/go.mod h1:RWlPOAW3E3tbtNAqTwvSW54Of/yP3oiZXMI0xfUdjyA=
 github.com/aws/aws-sdk-go-v2/config v1.13.0 h1:1ij3YPk13RrIn1h+pH+dArh3lNPD5JSAP+ifOkNhnB0=
 github.com/aws/aws-sdk-go-v2/config v1.13.0/go.mod h1:Pjv2OafecIn+4miw9VFDCr06YhKyf/oKOkIcpQOgWKk=
+github.com/aws/aws-sdk-go-v2/config v1.13.1 h1:yLv8bfNoT4r+UvUKQKqRtdnvuWGMK5a82l4ru9Jvnuo=
+github.com/aws/aws-sdk-go-v2/config v1.13.1/go.mod h1:Ba5Z4yL/UGbjQUzsiaN378YobhFo0MLfueXGiOsYtEs=
 github.com/aws/aws-sdk-go-v2/credentials v1.3.1/go.mod h1:r0n73xwsIVagq8RsxmZbGSRQFj9As3je72C2WzUIToc=
 github.com/aws/aws-sdk-go-v2/credentials v1.8.0 h1:8Ow0WcyDesGNL0No11jcgb1JAtE+WtubqXjgxau+S0o=
 github.com/aws/aws-sdk-go-v2/credentials v1.8.0/go.mod h1:gnMo58Vwx3Mu7hj1wpcG8DI0s57c9o42UQ6wgTQT5to=
@@ -290,6 +292,8 @@ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.2.0/go.mod h1:BsCSJHx5DnDX
 github.com/aws/aws-sdk-go-v2/internal/ini v1.1.1/go.mod h1:Zy8smImhTdOETZqfyn01iNOe0CNggVbPjCajyaz6Gvg=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.4 h1:0NrDHIwS1LIR750ltj6ciiu4NZLpr9rgq8vHi/4QD4s=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.4/go.mod h1:R3sWUqPcfXSiF/LSFJhjyJmpg9uV6yP2yv3YZZjldVI=
+github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5 h1:ixotxbfTCFpqbuwFv/RcZwyzhkxPSYDYEMcj4niB5Uk=
+github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5/go.mod h1:R3sWUqPcfXSiF/LSFJhjyJmpg9uV6yP2yv3YZZjldVI=
 github.com/aws/aws-sdk-go-v2/service/ecr v1.4.1/go.mod h1:FglZcyeiBqcbvyinl+n14aT/EWC7S1MIH+Gan2iizt0=
 github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 h1:AAZJJAENsQ4yYbnfvqPZT8Nc1YlEd5CZ4usymlC2b4U=
 github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0/go.mod h1:a3WUi3JjM3MFtIYenSYPJ7UZPXsw7U7vzebnynxucks=
@@ -310,6 +314,8 @@ github.com/aws/smithy-go v1.10.0 h1:gsoZQMNHnX+PaghNw4ynPsyGP7aUCqx5sY2dlPQsZ0w=
 github.com/aws/smithy-go v1.10.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6 h1:eZSlkTaUtlhgnbn4gOl2Y248cXT+T/jtOww+pQ8m3ow=
 github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6/go.mod h1:8vJsEZ4iRqG+Vx6pKhWK6U00qcj0KC37IsfszMkY6UE=
+github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220216180153-3d7835abdf40 h1:skzbn0VkQsUGOtr8M0A2xSjZsnLvq/FaFUOd81FUu9A=
+github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220216180153-3d7835abdf40/go.mod h1:8vJsEZ4iRqG+Vx6pKhWK6U00qcj0KC37IsfszMkY6UE=
 github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59/go.mod h1:q/89r3U2H7sSsE2t6Kca0lfwTK8JdoNGS/yzM/4iH5I=
 github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
@@ -1986,6 +1992,8 @@ golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220110181412-a018aaa089fe/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 h1:XfKQ4OlFl8okEOr5UvAqFRVj8pY/4yfcXrddB8qAbU0=
 golang.org/x/sys v0.0.0-20220114195835-da31bd327af9/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220209214540-3681064d5158 h1:rm+CHSpPEEW2IsXUib1ThaHIjuBVZjxNgSKmBLFfD4c=
+golang.org/x/sys v0.0.0-20220209214540-3681064d5158/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201117132131-f5c789dd3221/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 h1:JGgROgKl9N8DuW20oFS5gxc+lE67/N3FcwmBPMe7ArY=
