@@ -17,8 +17,9 @@ limitations under the License.
 package creds
 
 import (
+	"io/ioutil"
+
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
-	"github.com/awslabs/amazon-ecr-credential-helper/ecr-login/api"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/google"
@@ -29,7 +30,7 @@ func GetKeychain() authn.Keychain {
 	return authn.NewMultiKeychain(
 		authn.DefaultKeychain,
 		google.Keychain,
-		authn.NewKeychainFromHelper(ecr.ECRHelper{ClientFactory: api.DefaultClientFactory{}}),
+		authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogOutput(ioutil.Discard))),
 		authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
 	)
 }

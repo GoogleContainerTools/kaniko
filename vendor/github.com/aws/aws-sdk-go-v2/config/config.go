@@ -181,7 +181,9 @@ func (cs configs) ResolveConfig(f func(configs []interface{}) error) error {
 func LoadDefaultConfig(ctx context.Context, optFns ...func(*LoadOptions) error) (cfg aws.Config, err error) {
 	var options LoadOptions
 	for _, optFn := range optFns {
-		optFn(&options)
+		if err := optFn(&options); err != nil {
+			return aws.Config{}, err
+		}
 	}
 
 	// assign Load Options to configs

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -1051,12 +1050,9 @@ func (e CredentialRequiresARNError) Error() string {
 }
 
 func userHomeDir() string {
-	if runtime.GOOS == "windows" { // Windows
-		return os.Getenv("USERPROFILE")
-	}
-
-	// *nix
-	return os.Getenv("HOME")
+	// Ignore errors since we only care about Windows and *nix.
+	homedir, _ := os.UserHomeDir()
+	return homedir
 }
 
 func oneOrNone(bs ...bool) bool {
