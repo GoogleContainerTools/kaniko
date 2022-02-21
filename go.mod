@@ -16,7 +16,7 @@ require (
 	github.com/aws/aws-sdk-go v1.42.52
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220216180153-3d7835abdf40
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
-	github.com/containerd/cgroups v1.0.2 // indirect
+	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 	github.com/go-git/go-billy/v5 v5.3.1
@@ -41,7 +41,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
 
-require github.com/containerd/containerd v1.5.9
+require github.com/containerd/containerd v1.6.0
 
 require (
 	cloud.google.com/go v0.100.2 // indirect
