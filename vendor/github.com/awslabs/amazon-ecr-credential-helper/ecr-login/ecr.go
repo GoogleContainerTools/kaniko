@@ -33,18 +33,28 @@ type ECRHelper struct {
 
 type Option func(*ECRHelper)
 
+// WithClientFactory sets the ClientFactory used to make API requests.
 func WithClientFactory(clientFactory api.ClientFactory) Option {
 	return func(e *ECRHelper) {
 		e.clientFactory = clientFactory
 	}
 }
 
-func WithLogOutput(w io.Writer) Option {
+// WithLogger sets a new logger instance that writes to the given writer,
+// instead of the default writer which writes to stderr.
+//
+// This can be useful if callers want to redirect logging emitted by this tool
+// to another location.
+func WithLogger(w io.Writer) Option {
 	return func(e *ECRHelper) {
-		e.logger.Out = w
+		logger := logrus.New()
+		logger.Out = w
+		e.logger = logger
 	}
 }
 
+// NewECRHelper returns a new ECRHelper with the given options to override
+// default behavior.
 func NewECRHelper(opts ...Option) *ECRHelper {
 	e := &ECRHelper{
 		clientFactory: api.DefaultClientFactory{},
