@@ -41,7 +41,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
 
-require github.com/containerd/containerd v1.6.0
+require github.com/containerd/containerd v1.6.1
 
 require (
 	cloud.google.com/go v0.100.2 // indirect
