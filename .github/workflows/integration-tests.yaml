@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ['main']
 
+permissions:
+  contents: read
+
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -22,11 +25,11 @@ jobs:
         - k8s-executor-build-push integration-test-k8s
 
     steps:
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2
       with:
         go-version: 1.17
-    - uses: actions/checkout@v3
-    - uses: docker/setup-buildx-action@v1
+    - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415 # v3
+    - uses: docker/setup-buildx-action@94ab11c41e45d028884a99163086648e898eed25 # v1
 
     - run: make install-container-diff minikube-setup
     - run: make ${{ matrix.make-target }}
