@@ -43,7 +43,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/s390x
           image-name: gcr.io/kaniko-project/executor
           tag: ${{ github.sha }}-debug
-          release_tag: debug
+          release-tag: debug
 
         - image: executor-slim
           dockerfile: ./deploy/Dockerfile_slim
@@ -109,7 +109,18 @@ jobs:
     - if: startsWith(github.ref, 'refs/tags/v')
       name: Apply release tags
       run: |
-        crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
-            ${{ matrix.image-name }}:${GITHUB_REF/refs\/tags\//}
+        tag=${GITHUB_REF/refs\/tags\//}
+
+        # Tag :latest, :debug, :slim
         crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
             ${{ matrix.image-name }}:${{ matrix.release-tag }}
+
+        if [[ ${{ matrix.release-tag }} -eq "latest" ]]; then
+          # Tag :latest images as :v1.X.Y
+          crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
+              ${{ matrix.image-name }}:${tag}
+        else
+          # Or tag :v1.X.Y-debug and :v1.X.Y-slim
+          crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
+              ${{ matrix.image-name }}:${tag}-${{ matrix.release-tag }}
+        fi
