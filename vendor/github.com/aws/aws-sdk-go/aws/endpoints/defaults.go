@@ -2874,6 +2874,9 @@ var awsPartition = partition{
 					Region: "ap-southeast-2",
 				}: endpoint{},
 				endpointKey{
+					Region: "ap-southeast-3",
+				}: endpoint{},
+				endpointKey{
 					Region: "ca-central-1",
 				}: endpoint{},
 				endpointKey{
@@ -11066,6 +11069,18 @@ var awsPartition = partition{
 		},
 		"ivs": service{
 			Endpoints: serviceEndpoints{
+				endpointKey{
+					Region: "ap-northeast-1",
+				}: endpoint{},
+				endpointKey{
+					Region: "ap-northeast-2",
+				}: endpoint{},
+				endpointKey{
+					Region: "ap-south-1",
+				}: endpoint{},
+				endpointKey{
+					Region: "eu-central-1",
+				}: endpoint{},
 				endpointKey{
 					Region: "eu-west-1",
 				}: endpoint{},
@@ -24217,6 +24232,14 @@ var awsusgovPartition = partition{
 			},
 		},
 		"autoscaling": service{
+			Defaults: endpointDefaults{
+				defaultKey{}: endpoint{},
+				defaultKey{
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "autoscaling.{region}.{dnsSuffix}",
+				},
+			},
 			Endpoints: serviceEndpoints{
 				endpointKey{
 					Region: "us-gov-east-1",
@@ -24401,20 +24424,40 @@ var awsusgovPartition = partition{
 		"cloudtrail": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
-					Region: "us-gov-east-1",
+					Region: "fips-us-gov-east-1",
 				}: endpoint{
 					Hostname: "cloudtrail.us-gov-east-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-east-1",
 					},
+					Deprecated: boxedTrue,
 				},
 				endpointKey{
-					Region: "us-gov-west-1",
+					Region: "fips-us-gov-west-1",
 				}: endpoint{
 					Hostname: "cloudtrail.us-gov-west-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-west-1",
 					},
+					Deprecated: boxedTrue,
+				},
+				endpointKey{
+					Region: "us-gov-east-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-east-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "cloudtrail.us-gov-east-1.amazonaws.com",
+				},
+				endpointKey{
+					Region: "us-gov-west-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-west-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "cloudtrail.us-gov-west-1.amazonaws.com",
 				},
 			},
 		},
@@ -25406,20 +25449,40 @@ var awsusgovPartition = partition{
 		"events": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
-					Region: "us-gov-east-1",
+					Region: "fips-us-gov-east-1",
 				}: endpoint{
 					Hostname: "events.us-gov-east-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-east-1",
 					},
+					Deprecated: boxedTrue,
 				},
 				endpointKey{
-					Region: "us-gov-west-1",
+					Region: "fips-us-gov-west-1",
 				}: endpoint{
 					Hostname: "events.us-gov-west-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-west-1",
 					},
+					Deprecated: boxedTrue,
+				},
+				endpointKey{
+					Region: "us-gov-east-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-east-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "events.us-gov-east-1.amazonaws.com",
+				},
+				endpointKey{
+					Region: "us-gov-west-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-west-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "events.us-gov-west-1.amazonaws.com",
 				},
 			},
 		},
@@ -26290,20 +26353,40 @@ var awsusgovPartition = partition{
 		"logs": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
-					Region: "us-gov-east-1",
+					Region: "fips-us-gov-east-1",
 				}: endpoint{
 					Hostname: "logs.us-gov-east-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-east-1",
 					},
+					Deprecated: boxedTrue,
 				},
 				endpointKey{
-					Region: "us-gov-west-1",
+					Region: "fips-us-gov-west-1",
 				}: endpoint{
 					Hostname: "logs.us-gov-west-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-west-1",
 					},
+					Deprecated: boxedTrue,
+				},
+				endpointKey{
+					Region: "us-gov-east-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-east-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "logs.us-gov-east-1.amazonaws.com",
+				},
+				endpointKey{
+					Region: "us-gov-west-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-west-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "logs.us-gov-west-1.amazonaws.com",
 				},
 			},
 		},
@@ -27639,21 +27722,43 @@ var awsusgovPartition = partition{
 		"sns": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
-					Region: "us-gov-east-1",
+					Region: "fips-us-gov-east-1",
 				}: endpoint{
 					Hostname: "sns.us-gov-east-1.amazonaws.com",
 					CredentialScope: credentialScope{
 						Region: "us-gov-east-1",
 					},
+					Deprecated: boxedTrue,
+				},
+				endpointKey{
+					Region: "fips-us-gov-west-1",
+				}: endpoint{
+					Hostname: "sns.us-gov-west-1.amazonaws.com",
+					CredentialScope: credentialScope{
+						Region: "us-gov-west-1",
+					},
+					Deprecated: boxedTrue,
+				},
+				endpointKey{
+					Region: "us-gov-east-1",
+				}: endpoint{},
+				endpointKey{
+					Region:  "us-gov-east-1",
+					Variant: fipsVariant,
+				}: endpoint{
+					Hostname: "sns.us-gov-east-1.amazonaws.com",
 				},
 				endpointKey{
 					Region: "us-gov-west-1",
 				}: endpoint{
+					Protocols: []string{"http", "https"},
+				},
+				endpointKey{
+					Region:  "us-gov-west-1",
+					Variant: fipsVariant,
+				}: endpoint{
 					Hostname:  "sns.us-gov-west-1.amazonaws.com",
 					Protocols: []string{"http", "https"},
-					CredentialScope: credentialScope{
-						Region: "us-gov-west-1",
-					},
 				},
 			},
 		},
