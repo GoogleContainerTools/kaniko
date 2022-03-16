@@ -31,6 +31,7 @@ import (
 
 	"github.com/minio/highwayhash"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 // Hasher returns a hash function, used in snapshotting to determine if a file has changed
@@ -56,6 +57,10 @@ func Hasher() func(string) (string, error) {
 		h.Write([]byte(strconv.FormatUint(uint64(fi.Sys().(*syscall.Stat_t).Gid), 36)))
 
 		if fi.Mode().IsRegular() {
+			capability, _ := Lgetxattr(p, "security.capability")
+			if capability != nil {
+				h.Write(capability)
+			}
 			f, err := os.Open(p)
 			if err != nil {
 				return "", err
@@ -171,4 +176,29 @@ func Retry(operation retryFunc, retryCount int, initialDelayMilliseconds int) er
 	}
 
 	return err
+}
+
+func Lgetxattr(path string, attr string) ([]byte, error) {
+	// Start with a 128 length byte array
+	dest := make([]byte, 128)
+	sz, errno := unix.Lgetxattr(path, attr, dest)
+
+	for errno == unix.ERANGE {
+		// Buffer too small, use zero-sized buffer to get the actual size
+		sz, errno = unix.Lgetxattr(path, attr, []byte{})
+		if errno != nil {
+			return nil, errno
+		}
+		dest = make([]byte, sz)
+		sz, errno = unix.Lgetxattr(path, attr, dest)
+	}
+
+	switch {
+	case errno == unix.ENODATA:
+		return nil, nil
+	case errno != nil:
+		return nil, errno
+	}
+
+	return dest[:sz], nil
 }
