@@ -18,8 +18,9 @@ package config
 
 import (
 	"fmt"
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"os"
+
+	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 var RootDir string
