@@ -1,5 +1,7 @@
-// Package proc provides tools for inspecting proc.
-package proc
+// Package util proc provides tools for inspecting proc.
+package util
+
+// Part of https://github.com/genuinetools/bpfd/blob/a4bfa5e3e9d1bfdbc56268a36a0714911ae9b6bf/proc/proc.go
 
 import (
 	"bytes"

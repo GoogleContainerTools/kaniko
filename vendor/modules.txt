@@ -445,9 +445,6 @@ github.com/emirpasic/gods/utils
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
-# github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
-## explicit
-github.com/genuinetools/bpfd/proc
 # github.com/go-git/gcfg v1.5.0
 ## explicit
 github.com/go-git/gcfg
