@@ -58,6 +58,7 @@ type KanikoOptions struct {
 	CustomPlatform         string
 	Bucket                 string
 	TarPath                string
+	KanikoDir              string
 	Target                 string
 	CacheRepo              string
 	DigestFile             string
