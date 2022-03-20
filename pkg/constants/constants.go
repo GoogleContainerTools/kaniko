@@ -16,11 +16,6 @@ limitations under the License.
 
 package constants
 
-import (
-// "fmt"
-// "os"
-)
-
 const (
 	// RootDir is the path to the root directory
 	RootDir = "/"
