@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -36,7 +37,7 @@ type GCS struct {
 
 func (g *GCS) UnpackTarFromBuildContext() (string, error) {
 	bucket, item := util.GetBucketAndItem(g.context)
-	return constants.BuildContextDir, unpackTarFromGCSBucket(bucket, item, constants.BuildContextDir)
+	return kConfig.BuildContextDir, unpackTarFromGCSBucket(bucket, item, kConfig.BuildContextDir)
 }
 
 func UploadToBucket(r io.Reader, dest string) error {

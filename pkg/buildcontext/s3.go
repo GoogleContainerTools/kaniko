@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/aws/aws-sdk-go/aws"
@@ -56,7 +57,7 @@ func (s *S3) UnpackTarFromBuildContext() (string, error) {
 		return bucket, err
 	}
 	downloader := s3manager.NewDownloader(sess)
-	directory := constants.BuildContextDir
+	directory := kConfig.BuildContextDir
 	tarPath := filepath.Join(directory, constants.ContextTar)
 	if err := os.MkdirAll(directory, 0750); err != nil {
 		return directory, err

@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -39,7 +40,7 @@ func (h *HTTPSTar) UnpackTarFromBuildContext() (directory string, err error) {
 	logrus.Info("Retrieving https tar file")
 
 	// Create directory and target file for downloading the context file
-	directory = constants.BuildContextDir
+	directory = kConfig.BuildContextDir
 	tarPath := filepath.Join(directory, constants.ContextTar)
 	file, err := util.CreateTargetTarfile(tarPath)
 	if err != nil {

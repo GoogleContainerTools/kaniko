@@ -19,9 +19,7 @@ package buildcontext
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strings"
-
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -31,8 +29,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/sirupsen/logrus"
-
-	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"os"
+	"strings"
 )
 
 const (
@@ -57,7 +55,7 @@ type Git struct {
 
 // UnpackTarFromBuildContext will provide the directory where Git Repository is Cloned
 func (g *Git) UnpackTarFromBuildContext() (string, error) {
-	directory := constants.BuildContextDir
+	directory := kConfig.BuildContextDir
 	parts := strings.Split(g.context, "#")
 	url := getGitPullMethod() + "://" + parts[0]
 	options := git.CloneOptions{
