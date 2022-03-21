@@ -22,6 +22,8 @@ const (
 
 	IgnoreListPath = "/proc/self/mountinfo"
 
+	DefaultKanikoPath = "/kaniko"
+
 	Author = "kaniko"
 
 	// ContextTar is the default name of the tar uploaded to GCS buckets
