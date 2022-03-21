@@ -30,7 +30,7 @@ var KanikoDir = func() string {
 	if kd, ok := os.LookupEnv("KANIKO_DIR"); ok {
 		return kd
 	}
-	return "/kaniko"
+	return constants.DefaultKanikoPath
 }()
 
 // DockerfilePath is the path the Dockerfile is copied to
