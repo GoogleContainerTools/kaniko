@@ -1,7 +1,22 @@
-// Package util proc provides tools for inspecting proc.
-package util
+/*
+Copyright 2022 Google LLC
 
-// Part of https://github.com/genuinetools/bpfd/blob/a4bfa5e3e9d1bfdbc56268a36a0714911ae9b6bf/proc/proc.go
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Ported from https://github.com/genuinetools/bpfd/blob/a4bfa5e3e9d1bfdbc56268a36a0714911ae9b6bf/proc/proc.go
+
+package proc
 
 import (
 	"fmt"
