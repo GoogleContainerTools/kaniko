@@ -67,6 +67,12 @@ var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
+
+			err := checkKanikoDir(os.Getenv("KANIKO_DIR"))
+			if err != nil {
+				return err
+			}
+
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
 
 			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
@@ -232,6 +238,24 @@ func addHiddenFlags(cmd *cobra.Command) {
 	pflag.CommandLine.MarkHidden("azure-container-registry-config")
 	// Hide this flag as we want to encourage people to use the --context flag instead
 	cmd.PersistentFlags().MarkHidden("bucket")
+}
+
+// checkKanikoDir will check whether the executor is operating in the default '/kaniko' directory,
+// conducting the relevant operations if it is not
+func checkKanikoDir(dir string) error {
+	if dir != constants.DefaultKanikoPath {
+
+		err := os.MkdirAll(dir, os.ModeDir)
+		if err != nil {
+			return err
+		}
+
+		err = os.Rename(constants.DefaultKanikoPath, dir)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func checkContained() bool {
