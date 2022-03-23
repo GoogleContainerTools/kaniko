@@ -18,7 +18,6 @@ require (
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/docker/docker v20.10.13+incompatible
-	github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/godbus/dbus/v5 v5.0.6 // indirect

@@ -653,9 +653,6 @@ github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa/go.mod h1:KnogPXt
 github.com/fullstorydev/grpcurl v1.6.0/go.mod h1:ZQ+ayqbKMJNhzLmbpCiurTVlaK2M/3nqZCxaQ2Ze/sM=
 github.com/fzipp/gocyclo v0.3.1/go.mod h1:DJHO6AUmbdqj2ET4Z9iArSuwWgYDRryYt2wASxc7x3E=
 github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
-github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8 h1:4gvqvgeXA3WeVPFfudNMwxdSLT2o7ZOQQUFPeEa86aM=
-github.com/genuinetools/bpfd v0.0.2-0.20190525234658-c12d8cd9aac8/go.mod h1:O3IeOSRt7TXBSKb3hmOpQdlusALsEbNF+niGBqgKCs0=
-github.com/genuinetools/pkg v0.0.0-20181004225747-e152a0f47ee4/go.mod h1:XTcrCYlXPxnxL2UpnwuRn7tcaTn9HAhxFoFJucootk8=
 github.com/getsentry/raven-go v0.2.0/go.mod h1:KungGk8q33+aIAZUIVWZDr2OfAEBsO49PX4NzFV5kcQ=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
