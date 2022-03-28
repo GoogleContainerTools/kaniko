@@ -494,23 +494,10 @@ Please ensure, kaniko pod is running in the namespace and with a Kubernetes Serv
 #### Pushing to Amazon ECR
 
 The Amazon ECR [credential helper](https://github.com/awslabs/amazon-ecr-credential-helper) is built into the kaniko executor image.
-To configure credentials, you will need to do the following:
 
-1. Update the `credsStore` section of [config.json](https://github.com/awslabs/amazon-ecr-credential-helper#configuration):
+1. Configure credentials
 
-  ```json
-  { "credsStore": "ecr-login" }
-  ```
-
-  You can mount in the new config as a configMap:
-
-  ```shell
-  kubectl create configmap docker-config --from-file=<path to config.json>
-  ```
-
-2. Configure credentials
-
-    1. You can use instance roles when pushing to ECR from a EC2 instance or from EKS, by [configuring the instance role permissions](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html).
+    1. You can use instance roles when pushing to ECR from a EC2 instance or from EKS, by [configuring the instance role permissions](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html) (the AWS managed policy `EC2InstanceProfileForImageBuilderECRContainerBuilds` provides broad permissions to upload ECR images and may be used as configuration baseline). Additionally, set `AWS_SDK_LOAD_CONFIG=true` as environment variable within the kaniko pod. If running on an EC2 instance with an instance profile, you may also need to set `AWS_EC2_METADATA_DISABLED=true` for kaniko to pick up the correct credentials.
 
     2. Or you can create a Kubernetes secret for your `~/.aws/credentials` file so that credentials can be accessed within the cluster.
     To create the secret, run:
@@ -535,16 +522,11 @@ spec:
     - "--context=s3://<bucket name>/<path to .tar.gz>"
     - "--destination=<aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:my-tag>"
     volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker/
     # when not using instance role
     - name: aws-secret
       mountPath: /root/.aws/
   restartPolicy: Never
   volumes:
-  - name: docker-config
-    configMap:
-      name: docker-config
   # when not using instance role
   - name: aws-secret
     secret:
