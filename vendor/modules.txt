@@ -275,8 +275,8 @@ github.com/containerd/cgroups
 github.com/containerd/cgroups/stats/v1
 github.com/containerd/cgroups/v2
 github.com/containerd/cgroups/v2/stats
-# github.com/containerd/containerd v1.6.1
-## explicit; go 1.16
+# github.com/containerd/containerd v1.6.2
+## explicit; go 1.17
 github.com/containerd/containerd/cio
 github.com/containerd/containerd/defaults
 github.com/containerd/containerd/errdefs
