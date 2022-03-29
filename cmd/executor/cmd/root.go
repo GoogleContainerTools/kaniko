@@ -68,7 +68,7 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 
-			if err := checkKanikoDir(os.Getenv("KANIKO_DIR")); err != nil {
+			if err := checkKanikoDir(config.KanikoDir); err != nil {
 				return err
 			}
 
