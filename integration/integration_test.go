@@ -375,6 +375,7 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	checkContainerDiffOutput(t, diff, expected)
 }
 
+// TestKanikoDir tests that a build that sets --kaniko-dir produces the same output as the equivalent docker build.
 func TestKanikoDir(t *testing.T) {
 	repo := getGitRepo(false)
 	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
