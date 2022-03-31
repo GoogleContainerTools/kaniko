@@ -36,7 +36,8 @@ import (
 
 type RunCommand struct {
 	BaseCommand
-	cmd *instructions.RunCommand
+	cmd      *instructions.RunCommand
+	shdCache bool
 }
 
 // for testing
@@ -193,7 +194,7 @@ func (r *RunCommand) RequiresUnpackedFS() bool {
 }
 
 func (r *RunCommand) ShouldCacheOutput() bool {
-	return true
+	return r.shdCache
 }
 
 type CachingRunCommand struct {
