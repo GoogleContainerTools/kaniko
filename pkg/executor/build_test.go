@@ -372,7 +372,7 @@ COPY --from=second /bar /bat
 			ioutil.WriteFile(f.Name(), []byte(tt.args.dockerfile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
-				CustomPlatform: platforms.DefaultString(),
+				CustomPlatform: platforms.Format(platforms.Normalize(platforms.DefaultSpec())),
 			}
 			testStages, metaArgs, err := dockerfile.ParseStages(opts)
 			if err != nil {

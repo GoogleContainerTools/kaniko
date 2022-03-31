@@ -224,7 +224,7 @@ func addKanikoOptionsFlags() {
 
 	// Default the custom platform flag to our current platform, and validate it.
 	if opts.CustomPlatform == "" {
-		opts.CustomPlatform = platforms.DefaultString()
+		opts.CustomPlatform = platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
 	}
 	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
 		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
