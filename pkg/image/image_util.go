@@ -92,7 +92,7 @@ func RetrieveSourceImage(stage config.KanikoStage, opts *config.KanikoOptions) (
 }
 
 func tarballImage(index int) (v1.Image, error) {
-	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, strconv.Itoa(index))
+	tarPath := filepath.Join(config.KanikoIntermediateStagesDir, strconv.Itoa(index))
 	logrus.Infof("Base image from previous stage %d found, using saved tar at path %s", index, tarPath)
 	return tarball.ImageFromPath(tarPath, nil)
 }

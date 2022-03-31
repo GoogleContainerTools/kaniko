@@ -20,26 +20,14 @@ const (
 	// RootDir is the path to the root directory
 	RootDir = "/"
 
-	// KanikoDir is the path to the Kaniko directory
-	KanikoDir = "/kaniko"
-
 	IgnoreListPath = "/proc/self/mountinfo"
+
+	DefaultKanikoPath = "/kaniko"
 
 	Author = "kaniko"
 
-	// DockerfilePath is the path the Dockerfile is copied to
-	DockerfilePath = "/kaniko/Dockerfile"
-
 	// ContextTar is the default name of the tar uploaded to GCS buckets
 	ContextTar = "context.tar.gz"
-
-	// BuildContextDir is the directory a build context will be unpacked into,
-	// for example, a tarball from a GCS bucket will be unpacked here
-	BuildContextDir = "/kaniko/buildcontext/"
-
-	// KanikoIntermediateStagesDir is where we will store intermediate stages
-	// as tarballs in case they are needed later on
-	KanikoIntermediateStagesDir = "/kaniko/stages"
 
 	// Various snapshot modes:
 	SnapshotModeTime = "time"

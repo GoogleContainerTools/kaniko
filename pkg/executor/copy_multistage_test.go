@@ -177,7 +177,6 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	}
 	config.IgnoreListPath = mFile
 	return testDir, func() {
-		config.KanikoDir = constants.KanikoDir
 		config.RootDir = constants.RootDir
 		config.IgnoreListPath = constants.IgnoreListPath
 	}

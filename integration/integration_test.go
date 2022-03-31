@@ -375,6 +375,46 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	checkContainerDiffOutput(t, diff, expected)
 }
 
+// TestKanikoDir tests that a build that sets --kaniko-dir produces the same output as the equivalent docker build.
+func TestKanikoDir(t *testing.T) {
+	repo := getGitRepo(false)
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
+
+	// Build with docker
+	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerCmd := exec.Command("docker",
+		append([]string{"build",
+			"-t", dockerImage,
+			"-f", dockerfile,
+			repo})...)
+	out, err := RunCommandWithoutTest(dockerCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
+	}
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"--kaniko-dir", "/not-kaniko",
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	out, err = RunCommandWithoutTest(kanikoCmd)
+	if err != nil {
+		t.Errorf("Failed to build image %s with kaniko command %q: %v %s", dockerImage, kanikoCmd.Args, err, string(out))
+	}
+
+	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
+
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	checkContainerDiffOutput(t, diff, expected)
+}
+
 func TestBuildWithLabels(t *testing.T) {
 	repo := getGitRepo(false)
 	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_test_label", integrationPath, dockerfilesPath)

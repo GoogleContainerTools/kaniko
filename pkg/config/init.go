@@ -17,15 +17,36 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
 
 var RootDir string
-var KanikoDir string
+
+// KanikoDir is the path to the Kaniko directory
+var KanikoDir = func() string {
+	if kd, ok := os.LookupEnv("KANIKO_DIR"); ok {
+		return kd
+	}
+	return constants.DefaultKanikoPath
+}()
+
+// DockerfilePath is the path the Dockerfile is copied to
+var DockerfilePath = fmt.Sprintf("%s/Dockerfile", KanikoDir)
+
+// BuildContextDir is the directory a build context will be unpacked into,
+// for example, a tarball from a GCS bucket will be unpacked here
+var BuildContextDir = fmt.Sprintf("%s/buildcontext/", KanikoDir)
+
+// KanikoIntermediateStagesDir is where we will store intermediate stages
+// as tarballs in case they are needed later on
+var KanikoIntermediateStagesDir = fmt.Sprintf("%s/stages/", KanikoDir)
+
 var IgnoreListPath string
 
 func init() {
 	RootDir = constants.RootDir
-	KanikoDir = constants.KanikoDir
 	IgnoreListPath = constants.IgnoreListPath
 }

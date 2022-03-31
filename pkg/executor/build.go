@@ -829,7 +829,7 @@ func saveStageAsTarball(path string, image v1.Image) error {
 	if err != nil {
 		return err
 	}
-	tarPath := filepath.Join(constants.KanikoIntermediateStagesDir, path)
+	tarPath := filepath.Join(config.KanikoIntermediateStagesDir, path)
 	logrus.Infof("Storing source image from stage %s at path %s", path, tarPath)
 	if err := os.MkdirAll(filepath.Dir(tarPath), 0750); err != nil {
 		return err

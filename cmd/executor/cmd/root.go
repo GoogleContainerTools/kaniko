@@ -67,6 +67,11 @@ var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
+
+			if err := checkKanikoDir(config.KanikoDir); err != nil {
+				return err
+			}
+
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
 
 			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
@@ -182,6 +187,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerifyPull, "skip-tls-verify-pull", "", false, "Pull from insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().IntVar(&opts.PushRetry, "push-retry", 0, "Number of retries for the push operation")
 	RootCmd.PersistentFlags().IntVar(&opts.ImageFSExtractRetry, "image-fs-extract-retry", 0, "Number of retries for image FS extraction")
+	RootCmd.PersistentFlags().StringVarP(&opts.KanikoDir, "kaniko-dir", "", "/kaniko", "Path to the kaniko directory")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
@@ -231,6 +237,22 @@ func addHiddenFlags(cmd *cobra.Command) {
 	pflag.CommandLine.MarkHidden("azure-container-registry-config")
 	// Hide this flag as we want to encourage people to use the --context flag instead
 	cmd.PersistentFlags().MarkHidden("bucket")
+}
+
+// checkKanikoDir will check whether the executor is operating in the default '/kaniko' directory,
+// conducting the relevant operations if it is not
+func checkKanikoDir(dir string) error {
+	if dir != constants.DefaultKanikoPath {
+
+		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+			return err
+		}
+
+		if err := os.Rename(constants.DefaultKanikoPath, dir); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func checkContained() bool {
@@ -289,16 +311,16 @@ func resolveEnvironmentBuildArgs(arguments []string, resolver func(string) strin
 // copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
 // it won't be copied into the image
 func copyDockerfile() error {
-	if _, err := util.CopyFile(opts.DockerfilePath, constants.DockerfilePath, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
+	if _, err := util.CopyFile(opts.DockerfilePath, config.DockerfilePath, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 		return errors.Wrap(err, "copying dockerfile")
 	}
 	dockerignorePath := opts.DockerfilePath + ".dockerignore"
 	if util.FilepathExists(dockerignorePath) {
-		if _, err := util.CopyFile(dockerignorePath, constants.DockerfilePath+".dockerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
+		if _, err := util.CopyFile(dockerignorePath, config.DockerfilePath+".dockerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 			return errors.Wrap(err, "copying Dockerfile.dockerignore")
 		}
 	}
-	opts.DockerfilePath = constants.DockerfilePath
+	opts.DockerfilePath = config.DockerfilePath
 	return nil
 }
 
