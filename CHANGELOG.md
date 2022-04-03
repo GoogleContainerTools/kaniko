@@ -1,3 +1,110 @@
+# v1.8.1 Release 2022-04-01
+This is Apr's 2022 release.
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.8.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.8.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.8.1-slim
+```
+
+* Use canonical platform values. Fix 1995. [#2025](https://github.com/GoogleContainerTools/kaniko/pull/2025)
+* feat: kaniko dir config option [#1997](https://github.com/GoogleContainerTools/kaniko/pull/1997)
+* Bump github.com/aws/aws-sdk-go from 1.43.17 to 1.43.26 [#2018](https://github.com/GoogleContainerTools/kaniko/pull/2018)
+* Bump github.com/containerd/containerd from 1.6.1 to 1.6.2 [#2017](https://github.com/GoogleContainerTools/kaniko/pull/2017)
+* Bump github.com/docker/docker from 20.10.13+incompatible to 20.10.14+incompatible [#2016](https://github.com/GoogleContainerTools/kaniko/pull/2016)
+* README.md: Update docs on building for AWS ECR [#2020](https://github.com/GoogleContainerTools/kaniko/pull/2020)
+* Move and fix GetContainerRuntime check from bpfd proc [#1996](https://github.com/GoogleContainerTools/kaniko/pull/1996)
+* Fix minor glitch in the SVG logos [#2004](https://github.com/GoogleContainerTools/kaniko/pull/2004)
+* Add SVG logos [#2002](https://github.com/GoogleContainerTools/kaniko/pull/2002)
+* Bump github/codeql-action from 1.1.3 to 1.1.5 [#2000](https://github.com/GoogleContainerTools/kaniko/pull/2000)
+* Fix - Incomplete regular expression for hostnames [#1993](https://github.com/GoogleContainerTools/kaniko/pull/1993)
+* Bump github.com/spf13/cobra from 1.3.0 to 1.4.0 [#1985](https://github.com/GoogleContainerTools/kaniko/pull/1985)
+* Bump github.com/aws/aws-sdk-go from 1.43.12 to 1.43.17 [#1986](https://github.com/GoogleContainerTools/kaniko/pull/1986)
+* Bump github.com/spf13/afero from 1.8.1 to 1.8.2 [#1987](https://github.com/GoogleContainerTools/kaniko/pull/1987)
+* Bump github.com/docker/docker from 20.10.12+incompatible to 20.10.13+incompatible [#1988](https://github.com/GoogleContainerTools/kaniko/pull/1988)
+* Fix image tags in release workflow [#1977](https://github.com/GoogleContainerTools/kaniko/pull/1977)
+* Use canonical platform values. Fix 1995. [#2025](https://github.com/GoogleContainerTools/kaniko/pull/2025)
+* feat: kaniko dir config option [#1997](https://github.com/GoogleContainerTools/kaniko/pull/1997)
+* Bump github.com/aws/aws-sdk-go from 1.43.17 to 1.43.26 [#2018](https://github.com/GoogleContainerTools/kaniko/pull/2018)
+* Bump github.com/containerd/containerd from 1.6.1 to 1.6.2 [#2017](https://github.com/GoogleContainerTools/kaniko/pull/2017)
+* Bump github.com/docker/docker from 20.10.13+incompatible to 20.10.14+incompatible [#2016](https://github.com/GoogleContainerTools/kaniko/pull/2016)
+* README.md: Update docs on building for AWS ECR [#2020](https://github.com/GoogleContainerTools/kaniko/pull/2020)
+* Move and fix GetContainerRuntime check from bpfd proc [#1996](https://github.com/GoogleContainerTools/kaniko/pull/1996)
+* Fix minor glitch in the SVG logos [#2004](https://github.com/GoogleContainerTools/kaniko/pull/2004)
+* Add SVG logos [#2002](https://github.com/GoogleContainerTools/kaniko/pull/2002)
+* Bump github/codeql-action from 1.1.3 to 1.1.5 [#2000](https://github.com/GoogleContainerTools/kaniko/pull/2000)
+* Fix - Incomplete regular expression for hostnames [#1993](https://github.com/GoogleContainerTools/kaniko/pull/1993)
+* Bump github.com/spf13/cobra from 1.3.0 to 1.4.0 [#1985](https://github.com/GoogleContainerTools/kaniko/pull/1985)
+* Bump github.com/aws/aws-sdk-go from 1.43.12 to 1.43.17 [#1986](https://github.com/GoogleContainerTools/kaniko/pull/1986)
+* Bump github.com/spf13/afero from 1.8.1 to 1.8.2 [#1987](https://github.com/GoogleContainerTools/kaniko/pull/1987)
+* Bump github.com/docker/docker from 20.10.12+incompatible to 20.10.13+incompatible [#1988](https://github.com/GoogleContainerTools/kaniko/pull/1988)
+* Fix image tags in release workflow [#1977](https://github.com/GoogleContainerTools/kaniko/pull/1977)
+Huge thank you for this release towards our contributors:
+- Aaruni Aggarwal
+- Adrian Newby
+- Anbraten
+- Andrei Kvapil
+- ankitm123
+- Benjamin Krenn
+- Bernardo Marques
+- Chuang Wang
+- Dávid Szakállas
+- Dawei Ma
+- dependabot[bot]
+- Diego Gonzalez
+- ejose19
+- Eng Zer Jun
+- Florian Apolloner
+- François JACQUES
+- Gabriel Nützi
+- Gilbert Gilb's
+- Guillaume Calmettes
+- Herman
+- Igor Scheller
+- Jack
+- Jake Sanders
+- Janosch Maier
+- Jason Hall
+- Jasper Ben Orschulko
+- jeunii
+- Jose Donizetti
+- Kamal Nasser
+- Kun Lu
+- Lars Seipel
+- Liwen Guo
+- Matt Moore
+- Max Walther
+- Mikhail Vasin
+- Naveen
+- nihilo
+- Oliver Gregorius
+- Pat Litke
+- Patrick Barker
+- priyawadhwa
+- Rhianna
+- Sebastiaan Tammer
+- Sigurd Spieckermann
+- Silvano Cirujano Cuesta
+- Tejal Desai
+- Travis DePrato
+- Wolfgang Walther
+- wwade
+- Yahav Itzhak
+- ygelfand
+
+
 # v1.8.0 Release 2022-03-08
 This is Mar's 2022 release.
 
