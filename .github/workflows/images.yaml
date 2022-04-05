@@ -115,7 +115,7 @@ jobs:
         crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
             ${{ matrix.image-name }}:${{ matrix.release-tag }}
 
-        if [[ ${{ matrix.release-tag }} -eq "latest" ]]; then
+        if [[ "${{ matrix.release-tag }}" == "latest" ]]; then
           # Tag :latest images as :v1.X.Y
           crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
               ${{ matrix.image-name }}:${tag}
