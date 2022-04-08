@@ -420,7 +420,7 @@ func (s *stageBuilder) build() error {
 				logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
 
 				// Push layer to cache (in parallel) now along with new config file
-				if command.ShouldCacheOutput() {
+				if command.ShouldCacheOutput() && ! s.opts.NoPushCache {
 					cacheGroup.Go(func() error {
 						return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
 					})
