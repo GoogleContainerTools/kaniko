@@ -93,6 +93,7 @@ require (
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/swarmkit v1.12.1-0.20180726190244-7567d47988d8 // indirect
+	github.com/ePirat/docker-credential-gitlabci v1.0.0
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
