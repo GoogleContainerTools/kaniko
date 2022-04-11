@@ -5,13 +5,13 @@ cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
-# cloud.google.com/go/compute v1.2.0
-## explicit; go 1.11
+# cloud.google.com/go/compute v1.5.0
+## explicit; go 1.15
 cloud.google.com/go/compute/metadata
-# cloud.google.com/go/iam v0.1.1
-## explicit; go 1.11
+# cloud.google.com/go/iam v0.3.0
+## explicit; go 1.15
 cloud.google.com/go/iam
-# cloud.google.com/go/storage v1.21.0
+# cloud.google.com/go/storage v1.22.0
 ## explicit; go 1.15
 cloud.google.com/go/storage
 cloud.google.com/go/storage/internal
@@ -575,11 +575,14 @@ github.com/google/slowjam/pkg/stacklog
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
-# github.com/googleapis/gax-go/v2 v2.1.1
-## explicit; go 1.11
+# github.com/googleapis/gax-go/v2 v2.2.0
+## explicit; go 1.15
 github.com/googleapis/gax-go/v2
 github.com/googleapis/gax-go/v2/apierror
 github.com/googleapis/gax-go/v2/apierror/internal/proto
+# github.com/googleapis/go-type-adapters v1.0.0
+## explicit; go 1.11
+github.com/googleapis/go-type-adapters/adapters
 # github.com/hashicorp/go-immutable-radix v1.3.1
 ## explicit
 github.com/hashicorp/go-immutable-radix
@@ -767,7 +770,7 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
-# golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+# golang.org/x/net v0.0.0-20220325170049-de3da57026de
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -780,7 +783,7 @@ golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+# golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 ## explicit; go 1.11
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
@@ -793,7 +796,7 @@ golang.org/x/oauth2/jwt
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/syncmap
-# golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9
+# golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -814,7 +817,7 @@ golang.org/x/time/rate
 ## explicit; go 1.11
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.69.0
+# google.golang.org/api v0.74.0
 ## explicit; go 1.15
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -847,7 +850,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220216160803-4663080d8bc8
+# google.golang.org/genproto v0.0.0-20220405205423-9d709892a2bf
 ## explicit; go 1.15
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -855,9 +858,14 @@ google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/storage/v2
+google.golang.org/genproto/googleapis/type/color
 google.golang.org/genproto/googleapis/type/date
+google.golang.org/genproto/googleapis/type/datetime
+google.golang.org/genproto/googleapis/type/decimal
 google.golang.org/genproto/googleapis/type/expr
-# google.golang.org/grpc v1.44.0
+google.golang.org/genproto/googleapis/type/fraction
+google.golang.org/genproto/googleapis/type/month
+# google.golang.org/grpc v1.45.0
 ## explicit; go 1.14
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -916,8 +924,8 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.27.1
-## explicit; go 1.9
+# google.golang.org/protobuf v1.28.0
+## explicit; go 1.11
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
@@ -952,6 +960,7 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/timestamppb
+google.golang.org/protobuf/types/known/wrapperspb
 # gopkg.in/warnings.v0 v0.1.2
 ## explicit
 gopkg.in/warnings.v0
