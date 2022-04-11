@@ -604,6 +604,8 @@ github.com/docker/swarmkit v1.12.1-0.20180726190244-7567d47988d8/go.mod h1:n3Z4l
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
+github.com/ePirat/docker-credential-gitlabci v1.0.0 h1:YRkUSvkON6rT88vtscClAmPEYWhtltGEAuRVYtz1/+Y=
+github.com/ePirat/docker-credential-gitlabci v1.0.0/go.mod h1:Ptmh+D0lzBQtgb6+QHjXl9HqOn3T1P8fKUHldiSQQGA=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=

@@ -434,6 +434,9 @@ github.com/docker/swarmkit/log
 github.com/docker/swarmkit/manager/raftselector
 github.com/docker/swarmkit/protobuf/plugin
 github.com/docker/swarmkit/protobuf/ptypes
+# github.com/ePirat/docker-credential-gitlabci v1.0.0
+## explicit; go 1.17
+github.com/ePirat/docker-credential-gitlabci/pkg/credhelper
 # github.com/emirpasic/gods v1.12.0
 ## explicit
 github.com/emirpasic/gods/containers
