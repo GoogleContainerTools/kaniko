@@ -261,6 +261,9 @@ func Test_targetStage(t *testing.T) {
 	FROM scratch AS second
 	COPY --from=0 /hi /hi2
 
+	FROM scratch AS UPPER_CASE
+	COPY --from=0 /hi /hi2
+
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
@@ -281,9 +284,15 @@ func Test_targetStage(t *testing.T) {
 			shouldErr:   false,
 		},
 		{
+			name:        "test valid upper case target",
+			target:      "UPPER_CASE",
+			targetIndex: 2,
+			shouldErr:   false,
+		},
+		{
 			name:        "test no target",
 			target:      "",
-			targetIndex: 2,
+			targetIndex: 3,
 			shouldErr:   false,
 		},
 		{
