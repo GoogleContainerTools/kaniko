@@ -197,7 +197,7 @@ func targetStage(stages []instructions.Stage, target string) (int, error) {
 		return len(stages) - 1, nil
 	}
 	for i, stage := range stages {
-		if stage.Name == target {
+		if strings.EqualFold(stage.Name, target) {
 			return i, nil
 		}
 	}
