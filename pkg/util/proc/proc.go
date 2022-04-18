@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -140,6 +141,13 @@ func GetContainerRuntime(tgid, pid int) ContainerRuntime {
 		return runtime
 	}
 
+	// Docker was not detected at this point.
+	// An overlay mount on "/" may indicate we're under containerd or other runtime.
+	a = readFileString("/proc/mounts")
+	if m, _ := regexp.MatchString("^[^ ]+ / overlay", a); m {
+		return RuntimeKubernetes
+	}
+
 	return RuntimeNotFound
 }
 
@@ -154,6 +162,8 @@ func detectContainerFiles() ContainerRuntime {
 		{RuntimePodman, "/run/.containerenv"},
 		// https://github.com/moby/moby/issues/18355
 		{RuntimeDocker, "/.dockerenv"},
+		// Detect the presence of a serviceaccount secret mounted in the default location
+		{RuntimeKubernetes, "/var/run/secrets/kubernetes.io/serviceaccount"},
 	}
 
 	for i := range files {
