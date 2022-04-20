@@ -62,7 +62,7 @@ func (l *LayeredMap) Key() (string, error) {
 	return util.SHA256(c)
 }
 
-// GetFlattenedPathsForWhiteOut returns all paths in the current FS
+// getFlattenedPaths returns all existing paths in the current FS
 func (l *LayeredMap) getFlattenedPaths() map[string]struct{} {
 	paths := map[string]struct{}{}
 	for _, l := range l.layers {
