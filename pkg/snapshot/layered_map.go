@@ -26,6 +26,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,15 +62,18 @@ func (l *LayeredMap) Key() (string, error) {
 	return util.SHA256(c)
 }
 
-// GetFlattenedPathsForWhiteOut returns all paths in the current FS
-func (l *LayeredMap) getFlattenedPathsForWhiteOut() map[string]struct{} {
+// getFlattenedPaths returns all existing paths in the current FS
+func (l *LayeredMap) getFlattenedPaths() map[string]struct{} {
 	paths := map[string]struct{}{}
 	for _, l := range l.layers {
 		for p := range l {
-			if strings.HasPrefix(filepath.Base(p), ".wh.") {
-				delete(paths, p)
+			basename := filepath.Base(p)
+			if strings.HasPrefix(basename, archive.WhiteoutPrefix) {
+				deletedFile := filepath.Join(filepath.Dir(p), strings.TrimPrefix(basename, archive.WhiteoutPrefix))
+				delete(paths, deletedFile)
+			} else {
+				paths[p] = struct{}{}
 			}
-			paths[p] = struct{}{}
 		}
 	}
 	return paths
