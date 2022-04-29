@@ -160,7 +160,7 @@ func readSecurityXattrToTarHeader(path string, hdr *tar.Header) error {
 
 func (t *Tar) Whiteout(p string) error {
 	dir := filepath.Dir(p)
-	name := ".wh." + filepath.Base(p)
+	name := archive.WhiteoutPrefix + filepath.Base(p)
 
 	th := &tar.Header{
 		// Docker uses no leading / in the tarball

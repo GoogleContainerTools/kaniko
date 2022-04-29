@@ -34,6 +34,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/docker/docker/builder/dockerignore"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/fileutils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/karrick/godirwalk"
@@ -176,10 +177,10 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
 
-			if strings.HasPrefix(base, ".wh.") {
+			if strings.HasPrefix(base, archive.WhiteoutPrefix) {
 				logrus.Debugf("Whiting out %s", path)
 
-				name := strings.TrimPrefix(base, ".wh.")
+				name := strings.TrimPrefix(base, archive.WhiteoutPrefix)
 				path := filepath.Join(dir, name)
 
 				if CheckIgnoreList(path) {

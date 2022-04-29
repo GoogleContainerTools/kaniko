@@ -93,7 +93,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 	// Get whiteout paths
 	filesToWhiteout := []string{}
 	if shdCheckDelete {
-		_, deletedFiles := util.WalkFS(s.directory, s.l.getFlattenedPathsForWhiteOut(), func(s string) (bool, error) {
+		_, deletedFiles := util.WalkFS(s.directory, s.l.getFlattenedPaths(), func(s string) (bool, error) {
 			return true, nil
 		})
 		// The paths left here are the ones that have been deleted in this layer.
@@ -159,7 +159,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	s.l.Snapshot()
 
-	changedPaths, deletedPaths := util.WalkFS(s.directory, s.l.getFlattenedPathsForWhiteOut(), s.l.CheckFileChange)
+	changedPaths, deletedPaths := util.WalkFS(s.directory, s.l.getFlattenedPaths(), s.l.CheckFileChange)
 	timer := timing.Start("Resolving Paths")
 
 	filesToAdd := []string{}
