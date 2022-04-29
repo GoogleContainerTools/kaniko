@@ -68,7 +68,15 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 
-			if err := checkKanikoDir(config.KanikoDir); err != nil {
+			// Command line flag takes precedence over the KANIKO_DIR environment variable.
+			dir := func() string {
+				if opts.KanikoDir != constants.DefaultKanikoPath {
+					return opts.KanikoDir
+				}
+				return config.KanikoDir
+			}()
+
+			if err := checkKanikoDir(dir); err != nil {
 				return err
 			}
 
