@@ -69,12 +69,10 @@ var RootCmd = &cobra.Command{
 		if cmd.Use == "executor" {
 
 			// Command line flag takes precedence over the KANIKO_DIR environment variable.
-			dir := func() string {
-				if opts.KanikoDir != constants.DefaultKanikoPath {
-					return opts.KanikoDir
-				}
-				return config.KanikoDir
-			}()
+			dir := config.KanikoDir
+			if opts.KanikoDir != constants.DefaultKanikoPath {
+				dir = opts.KanikoDir
+			}
 
 			if err := checkKanikoDir(dir); err != nil {
 				return err
