@@ -58,9 +58,10 @@ func (pb PageBlobURL) GetAccountInfo(ctx context.Context) (*BlobGetAccountInfoRe
 
 // Create creates a page blob of the specified length. Call PutPage to upload data to a page blob.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/put-blob.
-func (pb PageBlobURL) Create(ctx context.Context, size int64, sequenceNumber int64, h BlobHTTPHeaders, metadata Metadata, ac BlobAccessConditions, tier PremiumPageBlobAccessTierType, blobTagsMap BlobTagsMap, cpk ClientProvidedKeyOptions) (*PageBlobCreateResponse, error) {
+func (pb PageBlobURL) Create(ctx context.Context, size int64, sequenceNumber int64, h BlobHTTPHeaders, metadata Metadata, ac BlobAccessConditions, tier PremiumPageBlobAccessTierType, blobTagsMap BlobTagsMap, cpk ClientProvidedKeyOptions, immutability ImmutabilityPolicyOptions) (*PageBlobCreateResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := ac.ModifiedAccessConditions.pointers()
 	blobTagsString := SerializeBlobTagsHeader(blobTagsMap)
+	immutabilityExpiry, immutabilityMode, legalHold := immutability.pointers()
 	return pb.pbClient.Create(ctx, 0, size, nil, tier,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, h.ContentMD5, &h.CacheControl,
 		metadata, ac.LeaseAccessConditions.pointers(), &h.ContentDisposition,
@@ -70,6 +71,8 @@ func (pb PageBlobURL) Create(ctx context.Context, size int64, sequenceNumber int
 		nil, // Blob tags
 		&sequenceNumber, nil,
 		blobTagsString, // Blob tags
+		// immutability policy
+		immutabilityExpiry, immutabilityMode, legalHold,
 	)
 }
 
@@ -100,7 +103,7 @@ func (pb PageBlobURL) UploadPages(ctx context.Context, offset int64, body io.Rea
 // The destOffset specifies the start offset of data in page blob will be written to.
 // The count must be a multiple of 512 bytes.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/put-page-from-url.
-func (pb PageBlobURL) UploadPagesFromURL(ctx context.Context, sourceURL url.URL, sourceOffset int64, destOffset int64, count int64, transactionalMD5 []byte, destinationAccessConditions PageBlobAccessConditions, sourceAccessConditions ModifiedAccessConditions, cpk ClientProvidedKeyOptions) (*PageBlobUploadPagesFromURLResponse, error) {
+func (pb PageBlobURL) UploadPagesFromURL(ctx context.Context, sourceURL url.URL, sourceOffset int64, destOffset int64, count int64, transactionalMD5 []byte, destinationAccessConditions PageBlobAccessConditions, sourceAccessConditions ModifiedAccessConditions, cpk ClientProvidedKeyOptions, sourceAuthorization TokenCredential) (*PageBlobUploadPagesFromURLResponse, error) {
 	ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag := destinationAccessConditions.ModifiedAccessConditions.pointers()
 	sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatchETag, sourceIfNoneMatchETag := sourceAccessConditions.pointers()
 	ifSequenceNumberLessThanOrEqual, ifSequenceNumberLessThan, ifSequenceNumberEqual := destinationAccessConditions.SequenceNumberAccessConditions.pointers()
@@ -112,7 +115,7 @@ func (pb PageBlobURL) UploadPagesFromURL(ctx context.Context, sourceURL url.URL,
 		ifSequenceNumberLessThanOrEqual, ifSequenceNumberLessThan, ifSequenceNumberEqual,
 		ifModifiedSince, ifUnmodifiedSince, ifMatchETag, ifNoneMatchETag,
 		nil, // Blob ifTags
-		sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatchETag, sourceIfNoneMatchETag, nil)
+		sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatchETag, sourceIfNoneMatchETag, nil, tokenCredentialPointers(sourceAuthorization))
 }
 
 // ClearPages frees the specified pages from the page blob.
