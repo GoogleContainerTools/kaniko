@@ -252,6 +252,10 @@ func checkKanikoDir(dir string) error {
 		if _, err := util.CopyDir(constants.DefaultKanikoPath, dir, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 			return err
 		}
+
+		if err := os.RemoveAll(constants.DefaultKanikoPath); err != nil {
+			return err
+		}
 	}
 	return nil
 }
