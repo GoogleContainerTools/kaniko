@@ -251,12 +251,7 @@ func addHiddenFlags(cmd *cobra.Command) {
 // conducting the relevant operations if it is not
 func checkKanikoDir(dir string) error {
 	if dir != constants.DefaultKanikoPath {
-
-		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
-			return err
-		}
-
-		if err := os.Rename(constants.DefaultKanikoPath, dir); err != nil {
+		if _, err := util.CopyDir(constants.DefaultKanikoPath, dir, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
 			return err
 		}
 	}
