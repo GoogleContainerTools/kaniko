@@ -275,7 +275,7 @@ github.com/containerd/cgroups
 github.com/containerd/cgroups/stats/v1
 github.com/containerd/cgroups/v2
 github.com/containerd/cgroups/v2/stats
-# github.com/containerd/containerd v1.6.2
+# github.com/containerd/containerd v1.6.4
 ## explicit; go 1.17
 github.com/containerd/containerd/cio
 github.com/containerd/containerd/defaults
@@ -667,7 +667,7 @@ github.com/opencontainers/go-digest
 ## explicit; go 1.11
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.0 => github.com/opencontainers/runc v1.0.0-rc92
+# github.com/opencontainers/runc v1.1.1 => github.com/opencontainers/runc v1.0.0-rc92
 ## explicit; go 1.14
 github.com/opencontainers/runc/libcontainer/cgroups
 github.com/opencontainers/runc/libcontainer/configs
@@ -676,7 +676,7 @@ github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/opencontainers/selinux v1.10.0
+# github.com/opencontainers/selinux v1.10.1
 ## explicit; go 1.13
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
