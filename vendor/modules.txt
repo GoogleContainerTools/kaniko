@@ -607,7 +607,7 @@ github.com/jbenet/go-context/io
 # github.com/jmespath/go-jmespath v0.4.0
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
-# github.com/karrick/godirwalk v1.16.1
+# github.com/karrick/godirwalk v1.17.0
 ## explicit; go 1.13
 github.com/karrick/godirwalk
 # github.com/kevinburke/ssh_config v1.1.0
