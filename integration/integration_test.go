@@ -66,7 +66,16 @@ const (
 	 	"Adds": [],
 	 	"Dels": []
        }
-     }
+     },
+     {
+	"Image1": "%s",
+	"Image2": "%s",
+	"DiffType": "History",
+	"Diff": {
+		  "Adds": [],
+		  "Dels": []
+	}
+      }
    ]`
 )
 
@@ -187,7 +196,7 @@ func TestRun(t *testing.T) {
 
 			diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 			checkContainerDiffOutput(t, diff, expected)
 
 		})
@@ -262,7 +271,7 @@ func testGitBuildcontextHelper(t *testing.T, repo string) {
 
 	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
 }
 
@@ -331,7 +340,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 
 	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
 }
 
@@ -371,7 +380,7 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 
 	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
 }
 
@@ -411,7 +420,7 @@ func TestKanikoDir(t *testing.T) {
 
 	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
 }
 
@@ -454,7 +463,7 @@ func TestBuildWithLabels(t *testing.T) {
 
 	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 	checkContainerDiffOutput(t, diff, expected)
 }
 
@@ -565,7 +574,7 @@ func TestCache(t *testing.T) {
 
 			diff := containerDiff(t, kanikoVersion0, kanikoVersion1)
 
-			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
+			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
 			checkContainerDiffOutput(t, diff, expected)
 		})
 	}
@@ -601,7 +610,7 @@ func TestRelativePaths(t *testing.T) {
 
 		diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImage, "--no-cache")
 
-		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
+		expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage, dockerImage, kanikoImage)
 		checkContainerDiffOutput(t, diff, expected)
 	})
 }
@@ -893,7 +902,7 @@ func meetsRequirements() bool {
 func containerDiff(t *testing.T, image1, image2 string, flags ...string) []byte {
 	flags = append([]string{"diff"}, flags...)
 	flags = append(flags, image1, image2,
-		"-q", "--type=file", "--type=metadata", "--json")
+		"-q", "--type=file", "--type=metadata", "--type=history", "--json")
 
 	containerdiffCmd := exec.Command("container-diff", flags...)
 	diff := RunCommand(containerdiffCmd, t)

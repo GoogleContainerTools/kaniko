@@ -142,7 +142,7 @@ func TestBuildWithStdin(t *testing.T) {
 
 	diff := containerDiff(t, daemonPrefix+dockerImage, kanikoImageStdin, "--no-cache")
 
-	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImageStdin, dockerImage, kanikoImageStdin)
+	expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImageStdin, dockerImage, kanikoImageStdin, dockerImage, kanikoImageStdin)
 	checkContainerDiffOutput(t, diff, expected)
 
 	if err := os.RemoveAll(testDirLongPath); err != nil {
