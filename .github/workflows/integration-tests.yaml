@@ -29,7 +29,7 @@ jobs:
       with:
         go-version: 1.17
     - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415 # v3
-    - uses: docker/setup-buildx-action@94ab11c41e45d028884a99163086648e898eed25 # v1
+    - uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6 # v1
 
     - run: make install-container-diff minikube-setup
     - run: make ${{ matrix.make-target }}
