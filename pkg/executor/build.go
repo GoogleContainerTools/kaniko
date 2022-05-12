@@ -623,7 +623,17 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 
 	for index, stage := range kanikoStages {
 
-		sb, err := newStageBuilder(args, opts, stage, crossStageDependencies, digestToCacheKey, stageIdxToDigest, stageNameToIdx, fileContext)
+		sb, err := newStageBuilder(
+			args, opts, stage,
+			crossStageDependencies,
+			digestToCacheKey,
+			stageIdxToDigest,
+			stageNameToIdx,
+			fileContext)
+
+		logrus.Infof("Building stage '%v' [idx: '%v', base-idx: '%v']",
+			stage.BaseName, stage.Index, stage.BaseImageIndex)
+
 		args = sb.args
 
 		if err != nil {

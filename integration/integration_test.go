@@ -531,6 +531,8 @@ func TestLayers(t *testing.T) {
 }
 
 func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
+	t.Logf("Building image '%v'...", dockerfile)
+
 	if err := imageBuilder.BuildImage(t, config, dockerfilesPath, dockerfile); err != nil {
 		t.Errorf("Error building image: %s", err)
 		t.FailNow()
