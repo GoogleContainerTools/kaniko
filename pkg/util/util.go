@@ -71,6 +71,12 @@ func Hasher() func(string) (string, error) {
 			if _, err := io.CopyBuffer(h, f, *buf); err != nil {
 				return "", err
 			}
+		} else if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			linkPath, err := os.Readlink(p)
+			if err != nil {
+				return "", err
+			}
+			h.Write([]byte(linkPath))
 		}
 
 		return hex.EncodeToString(h.Sum(nil)), nil
@@ -101,6 +107,12 @@ func CacheHasher() func(string) (string, error) {
 			if _, err := io.Copy(h, f); err != nil {
 				return "", err
 			}
+		} else if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			linkPath, err := os.Readlink(p)
+			if err != nil {
+				return "", err
+			}
+			h.Write([]byte(linkPath))
 		}
 
 		return hex.EncodeToString(h.Sum(nil)), nil
