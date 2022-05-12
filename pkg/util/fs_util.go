@@ -178,17 +178,17 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 			dir := filepath.Dir(path)
 
 			if strings.HasPrefix(base, archive.WhiteoutPrefix) {
-				logrus.Debugf("Whiting out %s", path)
+				logrus.Tracef("Whiting out %s", path)
 
 				name := strings.TrimPrefix(base, archive.WhiteoutPrefix)
 				path := filepath.Join(dir, name)
 
 				if CheckIgnoreList(path) {
-					logrus.Debugf("Not deleting %s, as it's ignored", path)
+					logrus.Tracef("Not deleting %s, as it's ignored", path)
 					continue
 				}
 				if childDirInIgnoreList(path) {
-					logrus.Debugf("Not deleting %s, as it contains a ignored path", path)
+					logrus.Tracef("Not deleting %s, as it contains a ignored path", path)
 					continue
 				}
 
@@ -197,7 +197,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				}
 
 				if !cfg.includeWhiteout {
-					logrus.Debug("not including whiteout files")
+					logrus.Trace("not including whiteout files")
 					continue
 				}
 
@@ -357,7 +357,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 		if CheckIgnoreList(abs) {
-			logrus.Tracef("skipping symlink from %s to %s because %s is ignored", hdr.Linkname, path, hdr.Linkname)
+			logrus.Tracef("skipping link from %s to %s because %s is ignored", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
 		// The base directory for a link may not exist before it is created.
@@ -995,22 +995,28 @@ type walkFSResult struct {
 	existingPaths map[string]struct{}
 }
 
-// WalkFS given a directory and list of existing files,
-// returns a list of changed filed determined by changeFunc and a list
-// of deleted files.
-// It timesout after 90 mins. Can be configured via setting an environment variable
+// WalkFS given a directory dir and list of existing files existingPaths,
+// returns a list of changed files determined by `changeFunc` and a list
+// of deleted files. Input existingPaths is changed inside this function and
+// returned as deleted files map.
+// It timesout after 90 mins which can be configured via setting an environment variable
 // SNAPSHOT_TIMEOUT in the kaniko pod definition.
-func WalkFS(dir string, existingPaths map[string]struct{}, changeFunc func(string) (bool, error)) ([]string, map[string]struct{}) {
+func WalkFS(
+	dir string,
+	existingPaths map[string]struct{},
+	changeFunc func(string) (bool, error)) ([]string, map[string]struct{}) {
+
 	timeOutStr := os.Getenv(snapshotTimeout)
 	if timeOutStr == "" {
-		logrus.Tracef("%s environment not set. Using default snapshot timeout %s", snapshotTimeout, defaultTimeout)
+		logrus.Tracef("Environment '%s' not set. Using default snapshot timeout '%s'", snapshotTimeout, defaultTimeout)
 		timeOutStr = defaultTimeout
 	}
 	timeOut, err := time.ParseDuration(timeOutStr)
 	if err != nil {
-		logrus.Fatalf("could not parse duration %s", timeOutStr)
+		logrus.Fatalf("Could not parse duration '%s'", timeOutStr)
 	}
 	timer := timing.Start("Walking filesystem with timeout")
+
 	ch := make(chan walkFSResult, 1)
 
 	go func() {
@@ -1031,28 +1037,38 @@ func WalkFS(dir string, existingPaths map[string]struct{}, changeFunc func(strin
 
 func gowalkDir(dir string, existingPaths map[string]struct{}, changeFunc func(string) (bool, error)) walkFSResult {
 	foundPaths := make([]string, 0)
-	godirwalk.Walk(dir, &godirwalk.Options{
-		Callback: func(path string, ent *godirwalk.Dirent) error {
-			logrus.Tracef("Analyzing path %s", path)
-			if IsInIgnoreList(path) {
-				if IsDestDir(path) {
-					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			delete(existingPaths, path)
-			if t, err := changeFunc(path); err != nil {
-				return err
-			} else if t {
-				foundPaths = append(foundPaths, path)
+	deletedFiles := existingPaths // Make a reference.
+
+	callback := func(path string, ent *godirwalk.Dirent) error {
+		logrus.Tracef("Analyzing path '%s'", path)
+
+		if IsInIgnoreList(path) {
+			if IsDestDir(path) {
+				logrus.Tracef("Skipping paths under '%s', as it is an ignored directory", path)
+				return filepath.SkipDir
 			}
 			return nil
-		},
-		Unsorted: true,
-	},
-	)
-	return walkFSResult{foundPaths, existingPaths}
+		}
+
+		// File is existing on disk, remove it from deleted files.
+		delete(deletedFiles, path)
+
+		if isChanged, err := changeFunc(path); err != nil {
+			return err
+		} else if isChanged {
+			foundPaths = append(foundPaths, path)
+		}
+
+		return nil
+	}
+
+	godirwalk.Walk(dir,
+		&godirwalk.Options{
+			Callback: callback,
+			Unsorted: true,
+		})
+
+	return walkFSResult{foundPaths, deletedFiles}
 }
 
 // GetFSInfoMap given a directory gets a map of FileInfo for all files

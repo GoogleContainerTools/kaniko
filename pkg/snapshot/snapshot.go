@@ -49,6 +49,7 @@ func NewSnapshotter(l *LayeredMap, d string) *Snapshotter {
 
 // Init initializes a new snapshotter
 func (s *Snapshotter) Init() error {
+	logrus.Info("Initializing snapshotter ...")
 	_, _, err := s.scanFullFilesystem()
 	return err
 }
@@ -75,41 +76,39 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 
 	filesToAdd, err := filesystem.ResolvePaths(files, s.ignorelist)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	logrus.Info("Taking snapshot of files...")
-	logrus.Debugf("Taking snapshot of files %v", filesToAdd)
 
 	sort.Strings(filesToAdd)
+	logrus.Debugf("Adding to layer: %v", filesToAdd)
 
-	// Add files to the layered map
+	// Add files to current layer.
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
-			return "", fmt.Errorf("unable to add file %s to layered map: %s", file, err)
+			return "", fmt.Errorf("Unable to add file %s to layered map: %w", file, err)
 		}
 	}
 
 	// Get whiteout paths
-	filesToWhiteout := []string{}
+	var filesToWhiteout []string
 	if shdCheckDelete {
-		_, deletedFiles := util.WalkFS(s.directory, s.l.getFlattenedPaths(), func(s string) (bool, error) {
+		_, deletedFiles := util.WalkFS(s.directory, s.l.GetCurrentPaths(), func(s string) (bool, error) {
 			return true, nil
 		})
-		// The paths left here are the ones that have been deleted in this layer.
-		for path := range deletedFiles {
-			// Only add the whiteout if the directory for the file still exists.
-			dir := filepath.Dir(path)
-			if _, ok := deletedFiles[dir]; !ok {
-				if s.l.MaybeAddWhiteout(path) {
-					logrus.Debugf("Adding whiteout for %s", path)
-					filesToWhiteout = append(filesToWhiteout, path)
-				}
+
+		logrus.Debugf("Deleting in layer: %v", deletedFiles)
+		// Whiteout files in current layer.
+		for file := range deletedFiles {
+			if err := s.l.AddWhiteout(file); err != nil {
+				return "", fmt.Errorf("Unable to whiteout file %s in layered map: %w", file, err)
 			}
 		}
-	}
 
-	sort.Strings(filesToWhiteout)
+		filesToWhiteout = removeObsoleteWhiteouts(deletedFiles)
+		sort.Strings(filesToWhiteout)
+	}
 
 	t := util.NewTar(f)
 	defer t.Close()
@@ -159,7 +158,9 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	s.l.Snapshot()
 
-	changedPaths, deletedPaths := util.WalkFS(s.directory, s.l.getFlattenedPaths(), s.l.CheckFileChange)
+	logrus.Debugf("Current image filesystem: %v", s.l.currentImage)
+
+	changedPaths, deletedPaths := util.WalkFS(s.directory, s.l.GetCurrentPaths(), s.l.CheckFileChange)
 	timer := timing.Start("Resolving Paths")
 
 	filesToAdd := []string{}
@@ -169,41 +170,55 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	}
 	for _, path := range resolvedFiles {
 		if util.CheckIgnoreList(path) {
-			logrus.Tracef("Not adding %s to layer, as it's ignored", path)
+			logrus.Debugf("Not adding %s to layer, as it's ignored", path)
 			continue
 		}
 		filesToAdd = append(filesToAdd, path)
 	}
 
-	// The paths left here are the ones that have been deleted in this layer.
-	filesToWhiteOut := []string{}
-	for path := range deletedPaths {
-		// Only add the whiteout if the directory for the file still exists.
-		dir := filepath.Dir(path)
-		if _, ok := deletedPaths[dir]; !ok {
-			if s.l.MaybeAddWhiteout(path) {
-				logrus.Debugf("Adding whiteout for %s", path)
-				filesToWhiteOut = append(filesToWhiteOut, path)
-			}
-		}
-	}
-	timing.DefaultRun.Stop(timer)
-
-	sort.Strings(filesToAdd)
-	sort.Strings(filesToWhiteOut)
+	logrus.Debugf("Adding to layer: %v", filesToAdd)
+	logrus.Debugf("Deleting in layer: %v", deletedPaths)
 
 	// Add files to the layered map
 	for _, file := range filesToAdd {
 		if err := s.l.Add(file); err != nil {
-			return nil, nil, fmt.Errorf("unable to add file %s to layered map: %s", file, err)
+			return nil, nil, fmt.Errorf("Unable to add file %s to layered map: %w", file, err)
 		}
 	}
-	return filesToAdd, filesToWhiteOut, nil
+	for file := range deletedPaths {
+		if err := s.l.AddWhiteout(file); err != nil {
+			return nil, nil, fmt.Errorf("Unable to whiteout file %s in layered map: %w", file, err)
+		}
+	}
+
+	filesToWhiteout := removeObsoleteWhiteouts(deletedPaths)
+	timing.DefaultRun.Stop(timer)
+
+	sort.Strings(filesToAdd)
+	sort.Strings(filesToWhiteout)
+
+	return filesToAdd, filesToWhiteout, nil
+}
+
+// removeObsoleteWhiteouts filters deleted files according to their parents delete status.
+func removeObsoleteWhiteouts(deletedFiles map[string]struct{}) (filesToWhiteout []string) {
+
+	for path := range deletedFiles {
+		// Only add the whiteout if the directory for the file still exists.
+		dir := filepath.Dir(path)
+		if _, ok := deletedFiles[dir]; !ok {
+			logrus.Tracef("Adding whiteout for %s", path)
+			filesToWhiteout = append(filesToWhiteout, path)
+		}
+	}
+
+	return filesToWhiteout
 }
 
 func writeToTar(t util.Tar, files, whiteouts []string) error {
 	timer := timing.Start("Writing tar file")
 	defer timing.DefaultRun.Stop(timer)
+
 	// Now create the tar.
 	for _, path := range whiteouts {
 		if err := t.Whiteout(path); err != nil {
