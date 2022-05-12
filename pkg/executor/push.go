@@ -123,7 +123,7 @@ func writeDigestFile(path string, digestByteArray []byte) error {
 	parentDir := filepath.Dir(path)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(parentDir, 0700); err != nil {
-			logrus.Debugf("error creating %s, %s", parentDir, err)
+			logrus.Debugf("Error creating %s, %s", parentDir, err)
 			return err
 		}
 		logrus.Tracef("Created directory %v", parentDir)

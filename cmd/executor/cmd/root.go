@@ -122,7 +122,7 @@ var RootCmd = &cobra.Command{
 			if !force {
 				exit(errors.New("kaniko should only be run inside of a container, run with the --force flag if you are sure you want to continue"))
 			}
-			logrus.Warn("kaniko is being run outside of a container. This can have dangerous effects on your system")
+			logrus.Warn("Kaniko is being run outside of a container. This can have dangerous effects on your system")
 		}
 		if !opts.NoPush || opts.CacheRepo != "" {
 			if err := executor.CheckPushPermissions(opts); err != nil {
@@ -152,11 +152,11 @@ var RootCmd = &cobra.Command{
 				return
 			}
 			if strings.HasPrefix(benchmarkFile, "gs://") {
-				logrus.Info("uploading to gcs")
+				logrus.Info("Uploading to gcs")
 				if err := buildcontext.UploadToBucket(strings.NewReader(s), benchmarkFile); err != nil {
 					logrus.Infof("Unable to upload %s due to %v", benchmarkFile, err)
 				}
-				logrus.Infof("benchmark file written at %s", benchmarkFile)
+				logrus.Infof("Benchmark file written at %s", benchmarkFile)
 			} else {
 				f, err := os.Create(benchmarkFile)
 				if err != nil {
@@ -165,7 +165,7 @@ var RootCmd = &cobra.Command{
 				}
 				defer f.Close()
 				f.WriteString(s)
-				logrus.Infof("benchmark file written at %s", benchmarkFile)
+				logrus.Infof("Benchmark file written at %s", benchmarkFile)
 			}
 		}
 	},

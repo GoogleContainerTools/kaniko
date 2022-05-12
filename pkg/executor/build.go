@@ -222,7 +222,7 @@ func (s *stageBuilder) populateCopyCmdCompositeKey(command fmt.Stringer, from st
 			ds := digest
 			cacheKey, ok := s.digestToCacheKey[ds]
 			if ok {
-				logrus.Debugf("adding digest %v from previous stage to composite key for %v", ds, command.String())
+				logrus.Debugf("Adding digest %v from previous stage to composite key for %v", ds, command.String())
 				compositeKey.AddKey(cacheKey)
 			}
 		}
@@ -260,13 +260,13 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 			return err
 		}
 
-		logrus.Debugf("optimize: composite key for command %v %v", command.String(), compositeKey)
+		logrus.Debugf("Optimize: composite key for command %v %v", command.String(), compositeKey)
 		ck, err := compositeKey.Hash()
 		if err != nil {
 			return errors.Wrap(err, "failed to hash composite key")
 		}
 
-		logrus.Debugf("optimize: cache key for command %v %v", command.String(), ck)
+		logrus.Debugf("Optimize: cache key for command %v %v", command.String(), ck)
 		s.finalCacheKey = ck
 
 		if command.ShouldCacheOutput() && !stopCache {
@@ -395,7 +395,7 @@ func (s *stageBuilder) build() error {
 		timing.DefaultRun.Stop(t)
 
 		if !s.shouldTakeSnapshot(index, command.MetadataOnly()) && !s.opts.ForceBuildMetadata {
-			logrus.Debugf("build: skipping snapshot for [%v]", command.String())
+			logrus.Debugf("Build: skipping snapshot for [%v]", command.String())
 			continue
 		}
 		if isCacheCommand {
@@ -411,13 +411,13 @@ func (s *stageBuilder) build() error {
 			}
 
 			if s.opts.Cache {
-				logrus.Debugf("build: composite key for command %v %v", command.String(), compositeKey)
+				logrus.Debugf("Build: composite key for command %v %v", command.String(), compositeKey)
 				ck, err := compositeKey.Hash()
 				if err != nil {
 					return errors.Wrap(err, "failed to hash composite key")
 				}
 
-				logrus.Debugf("build: cache key for command %v %v", command.String(), ck)
+				logrus.Debugf("Build: cache key for command %v %v", command.String(), ck)
 
 				// Push layer to cache (in parallel) now along with new config file
 				if command.ShouldCacheOutput() {
@@ -433,7 +433,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	if err := cacheGroup.Wait(); err != nil {
-		logrus.Warnf("error uploading layer to cache: %s", err)
+		logrus.Warnf("Error uploading layer to cache: %s", err)
 	}
 
 	return nil
@@ -672,10 +672,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 
 		stageIdxToDigest[fmt.Sprintf("%d", sb.stage.Index)] = d.String()
-		logrus.Debugf("mapping stage idx %v to digest %v", sb.stage.Index, d.String())
+		logrus.Debugf("Mapping stage idx %v to digest %v", sb.stage.Index, d.String())
 
 		digestToCacheKey[d.String()] = sb.finalCacheKey
-		logrus.Debugf("mapping digest %v to cachekey %v", d.String(), sb.finalCacheKey)
+		logrus.Debugf("Mapping digest %v to cachekey %v", d.String(), sb.finalCacheKey)
 
 		if stage.Final {
 			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
@@ -827,7 +827,7 @@ func extractImageToDependencyDir(name string, image v1.Image) error {
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}
-	logrus.Debugf("trying to extract to %s", dependencyDir)
+	logrus.Debugf("Trying to extract to %s", dependencyDir)
 	_, err := util.GetFSFromImage(dependencyDir, image, util.ExtractFile)
 	return err
 }

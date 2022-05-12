@@ -70,7 +70,7 @@ func (t *Tar) AddFileToTar(p string) error {
 		}
 	}
 	if i.Mode()&os.ModeSocket != 0 {
-		logrus.Infof("ignoring socket %s, not adding to tar", i.Name())
+		logrus.Infof("Ignoring socket %s, not adding to tar", i.Name())
 		return nil
 	}
 	hdr, err := tar.FileInfoHeader(i, linkDst)

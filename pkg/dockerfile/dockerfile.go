@@ -176,7 +176,7 @@ func extractValFromQuotes(val string) (string, error) {
 	}
 
 	if leader != tail {
-		logrus.Infof("leader %s tail %s", leader, tail)
+		logrus.Infof("Leader %s tail %s", leader, tail)
 		return "", errors.New("quotes wrapping arg values must be matched")
 	}
 

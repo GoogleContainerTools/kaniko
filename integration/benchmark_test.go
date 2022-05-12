@@ -169,7 +169,7 @@ func runInGcloud(dir string, num int) (string, error) {
 	copyCommand := exec.Command("gsutil", "cp", src, dest)
 	_, err = RunCommandWithoutTest(copyCommand)
 	if err != nil {
-		return "", fmt.Errorf("failed to download file to GCS bucket %s: %s", src, err)
+		return "", fmt.Errorf("failed to download file to GCS bucket %s: %w", src, err)
 	}
 	return tmpDir, nil
 }

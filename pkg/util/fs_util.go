@@ -197,7 +197,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				}
 
 				if !cfg.includeWhiteout {
-					logrus.Trace("not including whiteout files")
+					logrus.Trace("Not including whiteout files")
 					continue
 				}
 
@@ -301,13 +301,13 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 	}
 	switch hdr.Typeflag {
 	case tar.TypeReg:
-		logrus.Tracef("creating file %s", path)
+		logrus.Tracef("Creating file %s", path)
 
 		// It's possible a file is in the tar before its directory,
 		// or a file was copied over a directory prior to now
 		fi, err := os.Stat(dir)
 		if os.IsNotExist(err) || !fi.IsDir() {
-			logrus.Debugf("base %s for file %s does not exist. Creating.", base, path)
+			logrus.Debugf("Base %s for file %s does not exist. Creating.", base, path)
 
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return err
@@ -345,19 +345,19 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 
 		currFile.Close()
 	case tar.TypeDir:
-		logrus.Tracef("creating dir %s", path)
+		logrus.Tracef("Creating dir %s", path)
 		if err := mkdirAllWithPermissions(path, mode, int64(uid), int64(gid)); err != nil {
 			return err
 		}
 
 	case tar.TypeLink:
-		logrus.Tracef("link from %s to %s", hdr.Linkname, path)
+		logrus.Tracef("Link from %s to %s", hdr.Linkname, path)
 		abs, err := filepath.Abs(hdr.Linkname)
 		if err != nil {
 			return err
 		}
 		if CheckIgnoreList(abs) {
-			logrus.Tracef("skipping link from %s to %s because %s is ignored", hdr.Linkname, path, hdr.Linkname)
+			logrus.Tracef("Skipping link from %s to %s because %s is ignored", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
 		// The base directory for a link may not exist before it is created.
@@ -377,7 +377,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 
 	case tar.TypeSymlink:
-		logrus.Tracef("symlink from %s to %s", hdr.Linkname, path)
+		logrus.Tracef("Symlink from %s to %s", hdr.Linkname, path)
 		// The base directory for a symlink may not exist before it is created.
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
@@ -559,7 +559,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 
 // AddVolumePath adds the given path to the volume ignorelist.
 func AddVolumePathToIgnoreList(path string) {
-	logrus.Infof("adding volume %s to ignorelist", path)
+	logrus.Infof("Adding volume %s to ignorelist", path)
 	ignorelist = append(ignorelist, IgnoreListEntry{
 		Path:            path,
 		PrefixMatchOnly: true,
@@ -667,7 +667,7 @@ func CopySymlink(src, dest string, context FileContext) (bool, error) {
 	}
 	link, err := os.Readlink(src)
 	if err != nil {
-		logrus.Debugf("could not read link for %s", src)
+		logrus.Debugf("Could not read link for %s", src)
 	}
 	return false, os.Symlink(link, dest)
 }
@@ -733,13 +733,13 @@ func (c FileContext) ExcludesFile(path string) bool {
 		var err error
 		path, err = filepath.Rel(c.Root, path)
 		if err != nil {
-			logrus.Errorf("unable to get relative path, including %s in build: %v", path, err)
+			logrus.Errorf("Unable to get relative path, including %s in build: %v", path, err)
 			return false
 		}
 	}
 	match, err := fileutils.Matches(path, c.ExcludedFiles)
 	if err != nil {
-		logrus.Errorf("error matching, including %s in build: %v", path, err)
+		logrus.Errorf("Error matching, including %s in build: %v", path, err)
 		return false
 	}
 	return match
@@ -779,7 +779,7 @@ func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) erro
 	// Check if a file already exists on the path, if yes then delete it
 	info, err := os.Stat(path)
 	if err == nil && !info.IsDir() {
-		logrus.Tracef("removing file because it needs to be a directory %s", path)
+		logrus.Tracef("Removing file because it needs to be a directory %s", path)
 		if err := os.Remove(path); err != nil {
 			return errors.Wrapf(err, "error removing %s to make way for new directory.", path)
 		}
@@ -817,12 +817,12 @@ func setFileTimes(path string, aTime, mTime time.Time) error {
 	// converted into a valid argument to the syscall that os.Chtimes uses. If mTime or
 	// aTime are zero we convert them to the zero value for Unix Epoch.
 	if mTime.IsZero() {
-		logrus.Tracef("mod time for %s is zero, converting to zero for epoch", path)
+		logrus.Tracef("Mod time for %s is zero, converting to zero for epoch", path)
 		mTime = time.Unix(0, 0)
 	}
 
 	if aTime.IsZero() {
-		logrus.Tracef("access time for %s is zero, converting to zero for epoch", path)
+		logrus.Tracef("Access time for %s is zero, converting to zero for epoch", path)
 		aTime = time.Unix(0, 0)
 	}
 
@@ -845,7 +845,7 @@ func setFileTimes(path string, aTime, mTime time.Time) error {
 func CreateTargetTarfile(tarpath string) (*os.File, error) {
 	baseDir := filepath.Dir(tarpath)
 	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
-		logrus.Debugf("baseDir %s for file %s does not exist. Creating.", baseDir, tarpath)
+		logrus.Debugf("BaseDir %s for file %s does not exist. Creating.", baseDir, tarpath)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return nil, err
 		}
@@ -963,12 +963,12 @@ func CopyOwnership(src string, destDir string, root string) error {
 func createParentDirectory(path string) error {
 	baseDir := filepath.Dir(path)
 	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
-		logrus.Tracef("baseDir %s for file %s does not exist. Creating.", baseDir, path)
+		logrus.Tracef("BaseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err
 		}
 	} else if IsSymlink(info) {
-		logrus.Infof("destination cannot be a symlink %v", baseDir)
+		logrus.Infof("Destination cannot be a symlink %v", baseDir)
 		return errors.New("destination cannot be a symlink")
 	}
 	return nil
@@ -1030,7 +1030,7 @@ func WalkFS(
 		return res.filesAdded, res.existingPaths
 	case <-time.After(timeOut):
 		timing.DefaultRun.Stop(timer)
-		logrus.Fatalf("timed out snapshotting FS in %s", timeOutStr)
+		logrus.Fatalf("Timed out snapshotting FS in %s", timeOutStr)
 		return nil, nil
 	}
 }

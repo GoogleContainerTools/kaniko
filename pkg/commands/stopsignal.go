@@ -32,7 +32,7 @@ type StopSignalCommand struct {
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
 func (s *StopSignalCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: STOPSIGNAL")
+	logrus.Info("Cmd: STOPSIGNAL")
 
 	// resolve possible environment variables
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)

@@ -31,17 +31,17 @@ func CreateIntegrationTarball() (string, error) {
 	log.Println("Creating tarball of integration test files to use as build context")
 	dir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("Failed find path to integration dir: %s", err)
+		return "", fmt.Errorf("Failed find path to integration dir: %w", err)
 	}
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return "", fmt.Errorf("Failed to create temporary directory to hold tarball: %s", err)
+		return "", fmt.Errorf("Failed to create temporary directory to hold tarball: %w", err)
 	}
 	contextFile := fmt.Sprintf("%s/context_%d.tar.gz", tempDir, time.Now().UnixNano())
 	cmd := exec.Command("tar", "-C", dir, "-zcvf", contextFile, ".")
 	_, err = RunCommandWithoutTest(cmd)
 	if err != nil {
-		return "", fmt.Errorf("Failed to create build context tarball from integration dir: %s", err)
+		return "", fmt.Errorf("Failed to create build context tarball from integration dir: %w", err)
 	}
 	return contextFile, err
 }
@@ -57,7 +57,7 @@ func UploadFileToBucket(gcsBucket string, filePath string, gcsPath string) (stri
 	if err != nil {
 		log.Printf("Error uploading file %s to GCS at %s: %s", filePath, dst, err)
 		log.Println(string(out))
-		return "", fmt.Errorf("Failed to copy tarball to GCS bucket %s: %s", gcsBucket, err)
+		return "", fmt.Errorf("Failed to copy tarball to GCS bucket %s: %w", gcsBucket, err)
 	}
 
 	return dst, nil
@@ -69,7 +69,7 @@ func DeleteFromBucket(path string) error {
 	cmd := exec.Command("gsutil", "rm", path)
 	_, err := RunCommandWithoutTest(cmd)
 	if err != nil {
-		return fmt.Errorf("Failed to delete file %s from GCS: %s", path, err)
+		return fmt.Errorf("Failed to delete file %s from GCS: %w", path, err)
 	}
 	return err
 }

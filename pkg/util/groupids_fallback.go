@@ -43,7 +43,7 @@ type group struct {
 
 // groupIDs returns all of the group ID's a user is a member of
 func groupIDs(u *user.User) ([]string, error) {
-	logrus.Infof("performing slow lookup of group ids for %s", u.Username)
+	logrus.Infof("Performing slow lookup of group ids for %s", u.Username)
 
 	f, err := os.Open(groupFile)
 	if err != nil {

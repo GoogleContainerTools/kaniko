@@ -339,7 +339,7 @@ func (fms *fileMetadataStore) getOrphan() ([]roLayer, error) {
 			}
 			cacheID := strings.TrimSpace(string(contentBytes))
 			if cacheID == "" {
-				logrus.Error("invalid cache ID")
+				logrus.Error("Invalid cache ID")
 				continue
 			}
 
