@@ -906,16 +906,13 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	err = otiai10Cpy.Copy(src, destFile)
-	if err != nil {
+	if err := otiai10Cpy.Copy(src, destFile); err != nil {
 		return errors.Wrap(err, "copying file")
 	}
-	err = CopyOwnership(src, destDir, root)
-	if err != nil {
+	if err := CopyOwnership(src, destDir, root); err != nil {
 		return errors.Wrap(err, "copying ownership")
 	}
-	err = os.Chmod(destFile, fi.Mode())
-	if err != nil {
+	if err := os.Chmod(destFile, fi.Mode()); err != nil {
 		return errors.Wrap(err, "copying file mode")
 	}
 	return nil
