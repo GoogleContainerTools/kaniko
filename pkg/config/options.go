@@ -69,6 +69,7 @@ type KanikoOptions struct {
 	SingleSnapshot         bool
 	Reproducible           bool
 	NoPush                 bool
+	NoPushCache            bool
 	Cache                  bool
 	Cleanup                bool
 	CompressedCaching      bool

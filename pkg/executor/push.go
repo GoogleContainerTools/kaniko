@@ -79,12 +79,11 @@ var (
 func CheckPushPermissions(opts *config.KanikoOptions) error {
 	targets := opts.Destinations
 	// When no push and no push cache are set, we don't need to check permissions
-	if opts.NoPush && opt.noPushCache {
+	if opts.NoPush && opts.NoPushCache {
 		targets = []string{}
-	}
-	// When no push is set, we want to check permissions for the cache repo
-	// instead of the destinations
-	else if opts.NoPush && ! opt.noPushCache {
+	} else if opts.NoPush && !opts.NoPushCache {
+		// When no push is set, we want to check permissions for the cache repo
+		// instead of the destinations
 		targets = []string{opts.CacheRepo}
 	}
 
