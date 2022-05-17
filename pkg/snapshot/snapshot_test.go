@@ -585,7 +585,7 @@ func setUpTest(t *testing.T) (string, *Snapshotter, func(), error) {
 	snapshotPathPrefix = snapshotPath
 
 	// Take the initial snapshot
-	l := NewLayeredMap(util.Hasher(), util.CacheHasher())
+	l := NewLayeredMap(util.Hasher())
 	snapshotter := NewSnapshotter(l, testDir)
 	if err := snapshotter.Init(); err != nil {
 		return "", nil, nil, errors.Wrap(err, "initializing snapshotter")

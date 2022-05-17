@@ -108,7 +108,7 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 	if err != nil {
 		return nil, err
 	}
-	l := snapshot.NewLayeredMap(hasher, util.CacheHasher())
+	l := snapshot.NewLayeredMap(hasher)
 	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
 
 	digest, err := sourceImage.Digest()

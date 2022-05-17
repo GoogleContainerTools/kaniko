@@ -61,8 +61,8 @@ func Test_CacheKey(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lm1 := LayeredMap{layers: []map[string]string{test.map1}}
-			lm2 := LayeredMap{layers: []map[string]string{test.map2}}
+			lm1 := LayeredMap{adds: []map[string]string{test.map1}, deletes: []map[string]struct{}{nil, nil}}
+			lm2 := LayeredMap{adds: []map[string]string{test.map2}, deletes: []map[string]struct{}{nil, nil}}
 			k1, err := lm1.Key()
 			if err != nil {
 				t.Fatalf("error getting key for map 1: %v", err)
@@ -106,8 +106,8 @@ func Test_FlattenPaths(t *testing.T) {
 	}
 
 	lm := LayeredMap{
-		layers:    []map[string]string{layers[0]},
-		whiteouts: []map[string]struct{}{whiteouts[0]}}
+		adds:    []map[string]string{layers[0]},
+		deletes: []map[string]struct{}{whiteouts[0]}}
 
 	paths := lm.GetCurrentPaths()
 
@@ -124,8 +124,8 @@ func Test_FlattenPaths(t *testing.T) {
 	assertPath("b", true)
 
 	lm = LayeredMap{
-		layers:    []map[string]string{layers[0], layers[1]},
-		whiteouts: []map[string]struct{}{whiteouts[0], whiteouts[1]}}
+		adds:    []map[string]string{layers[0], layers[1]},
+		deletes: []map[string]struct{}{whiteouts[0], whiteouts[1]}}
 	paths = lm.GetCurrentPaths()
 
 	assertPath("a", false)
@@ -133,8 +133,8 @@ func Test_FlattenPaths(t *testing.T) {
 	assertPath("c", true)
 
 	lm = LayeredMap{
-		layers:    []map[string]string{layers[0], layers[1], layers[2]},
-		whiteouts: []map[string]struct{}{whiteouts[0], whiteouts[1], whiteouts[2]}}
+		adds:    []map[string]string{layers[0], layers[1], layers[2]},
+		deletes: []map[string]struct{}{whiteouts[0], whiteouts[1], whiteouts[2]}}
 	paths = lm.GetCurrentPaths()
 
 	assertPath("a", true)

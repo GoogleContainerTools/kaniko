@@ -101,7 +101,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 		logrus.Debugf("Deleting in layer: %v", deletedFiles)
 		// Whiteout files in current layer.
 		for file := range deletedFiles {
-			if err := s.l.AddWhiteout(file); err != nil {
+			if err := s.l.AddDelete(file); err != nil {
 				return "", fmt.Errorf("Unable to whiteout file %s in layered map: %w", file, err)
 			}
 		}
@@ -186,7 +186,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		}
 	}
 	for file := range deletedPaths {
-		if err := s.l.AddWhiteout(file); err != nil {
+		if err := s.l.AddDelete(file); err != nil {
 			return nil, nil, fmt.Errorf("Unable to whiteout file %s in layered map: %w", file, err)
 		}
 	}
