@@ -244,6 +244,7 @@ func (d *DockerFileBuilder) BuildDockerImage(t *testing.T, imageRepo, dockerfile
 
 	dockerArgs := []string{
 		"build",
+		"--no-cache",
 		"-t", dockerImage,
 	}
 
