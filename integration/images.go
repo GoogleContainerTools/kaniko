@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
 const (
@@ -82,7 +83,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_scratch":                {"--single-snapshot"},
 	"Dockerfile_test_maintainer":             {"--single-snapshot"},
 	"Dockerfile_test_target":                 {"--target=second"},
-	"Dockerfile_test_snapshotter_ignorelist": {"--use-new-run=true", "-v=debug"},
+	"Dockerfile_test_snapshotter_ignorelist": {"--use-new-run=true", "-v=trace"},
 }
 
 // output check to do when building with kaniko
@@ -98,8 +99,8 @@ var outputChecks = map[string]func(string, []byte) error{
 		}
 
 		for _, s := range []string{
-			"resolved symlink /hello to /dev/null",
-			"path /dev/null is ignored, ignoring it",
+			"Resolved symlink /hello to /dev/null",
+			"Path /dev/null is ignored, ignoring it",
 		} {
 			if !strings.Contains(string(out), s) {
 				return fmt.Errorf("output must contain %s", s)
@@ -219,6 +220,11 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 			"-v", filepath.Dir(serviceAccount)+":/secret/")
 	} else {
 		flags = append(flags, "-v", os.Getenv("HOME")+"/.config/gcloud:/root/.config/gcloud")
+
+		dockerConfig := os.Getenv("HOME") + "/.docker/config.json"
+		if util.FilepathExists(dockerConfig) {
+			flags = append(flags, "-v", dockerConfig+":/root/.docker/config.json", "-e", "DOCKER_CONFIG=/root/.docker")
+		}
 	}
 	return flags
 }

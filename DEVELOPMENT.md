@@ -74,7 +74,7 @@ The helper script to install and run lint is placed here at the root of project.
 
 ```shell
 ./hack/linter.sh
-``` 
+```
 
 To fix any `gofmt` issues, you can simply run `gofmt` with `-w` flag like this
 
@@ -99,6 +99,8 @@ To run integration tests with your GCloud Storage, you will also need the follow
 * A bucket in [GCS](https://cloud.google.com/storage/) which you have write access to via
   the user currently logged into `gcloud`
 * An image repo which you have write access to via the user currently logged into `gcloud`
+* A docker account and a `~/.docker/config.json` with login credentials if you run
+  into rate limiting problems during tests.
 
 Once this step done, you must override the project using environment variables:
 
@@ -162,9 +164,9 @@ These tests will be kicked off by [reviewers](#reviews) for submitted PRs using 
 
 ### Benchmarking
 
-The goal is for Kaniko to be at least as fast at building Dockerfiles as Docker is, and to that end, we've built 
+The goal is for Kaniko to be at least as fast at building Dockerfiles as Docker is, and to that end, we've built
 in benchmarking to check the speed of not only each full run, but also how long each step of each run takes. To turn
-on benchmarking, just set the `BENCHMARK_FILE` environment variable, and kaniko will output all the benchmark info 
+on benchmarking, just set the `BENCHMARK_FILE` environment variable, and kaniko will output all the benchmark info
 of each run to that file location.
 
 ```shell
@@ -174,7 +176,7 @@ gcr.io/kaniko-project/executor:latest \
 --dockerfile=<path to Dockerfile> --context=/workspace \
 --destination=gcr.io/my-repo/my-image
 ```
-Additionally, the integration tests can output benchmarking information to a `benchmarks` directory under the 
+Additionally, the integration tests can output benchmarking information to a `benchmarks` directory under the
 `integration` directory if the `BENCHMARK` environment variable is set to `true.`
 
 ```shell
