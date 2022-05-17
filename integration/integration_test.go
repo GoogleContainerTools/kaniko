@@ -623,14 +623,15 @@ func TestExitCodePropagation(t *testing.T) {
 	t.Run("test error code propagation", func(t *testing.T) {
 		// building the image with docker should fail with exit code 42
 		dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_exit_code_propagation")
-		dockerCmd := exec.Command("docker",
-			append([]string{"build",
-				"-t", dockerImage,
-				"-f", dockerfile,
-				context})...)
-		_, kanikoErr := RunCommandWithoutTest(dockerCmd)
+		dockerFlags := []string{
+			"build",
+			"-t", dockerImage,
+			"-f", dockerfile}
+		dockerCmd := exec.Command("docker", append(dockerFlags, context)...)
+
+		out, kanikoErr := RunCommandWithoutTest(dockerCmd)
 		if kanikoErr == nil {
-			t.Fatal("docker build did not produce an error")
+			t.Fatalf("docker build did not produce an error:\n%s", out)
 		}
 		var dockerCmdExitErr *exec.ExitError
 		var dockerExitCode int
@@ -638,32 +639,43 @@ func TestExitCodePropagation(t *testing.T) {
 		if errors.As(kanikoErr, &dockerCmdExitErr) {
 			dockerExitCode = dockerCmdExitErr.ExitCode()
 			testutil.CheckDeepEqual(t, 42, dockerExitCode)
+			if t.Failed() {
+				t.Fatalf("Output was:\n%s", out)
+			}
 		} else {
-			t.Fatalf("did not produce the expected error")
+			t.Fatalf("did not produce the expected error:\n%s", out)
 		}
 
 		//try to build the same image with kaniko the error code should match with the one from the plain docker build
 		contextVolume := fmt.Sprintf("%s:/workspace", context)
-		dockerCmdWithKaniko := exec.Command("docker", append([]string{
+
+		dockerFlags = []string{
 			"run",
 			"-v", contextVolume,
-			ExecutorImage,
+		}
+		dockerFlags = addServiceAccountFlags(dockerFlags, "")
+		dockerFlags = append(dockerFlags, ExecutorImage,
 			"-c", "dir:///workspace/",
 			"-f", "./Dockerfile_exit_code_propagation",
 			"--no-push",
 			"--force", // TODO: detection of whether kaniko is being run inside a container might be broken?
-		})...)
+		)
 
-		_, kanikoErr = RunCommandWithoutTest(dockerCmdWithKaniko)
+		dockerCmdWithKaniko := exec.Command("docker", dockerFlags...)
+
+		out, kanikoErr = RunCommandWithoutTest(dockerCmdWithKaniko)
 		if kanikoErr == nil {
-			t.Fatal("the kaniko build did not produce the expected error")
+			t.Fatalf("the kaniko build did not produce the expected error:\n%s", out)
 		}
 
 		var kanikoExitErr *exec.ExitError
 		if errors.As(kanikoErr, &kanikoExitErr) {
 			testutil.CheckDeepEqual(t, dockerExitCode, kanikoExitErr.ExitCode())
+			if t.Failed() {
+				t.Fatalf("Output was:\n%s", out)
+			}
 		} else {
-			t.Fatalf("did not produce the expected error")
+			t.Fatalf("did not produce the expected error:\n%s", out)
 		}
 	})
 }
@@ -802,19 +814,19 @@ func checkLayers(t *testing.T, image1, image2 string, offset int) {
 func getImageDetails(image string) (*imageDetails, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't parse referance to image %s: %s", image, err)
+		return nil, fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
 	}
 	imgRef, err := daemon.Image(ref)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't get reference to image %s from daemon: %s", image, err)
+		return nil, fmt.Errorf("Couldn't get reference to image %s from daemon: %w", image, err)
 	}
 	layers, err := imgRef.Layers()
 	if err != nil {
-		return nil, fmt.Errorf("Error getting layers for image %s: %s", image, err)
+		return nil, fmt.Errorf("Error getting layers for image %s: %w", image, err)
 	}
 	digest, err := imgRef.Digest()
 	if err != nil {
-		return nil, fmt.Errorf("Error getting digest for image %s: %s", image, err)
+		return nil, fmt.Errorf("Error getting digest for image %s: %w", image, err)
 	}
 	return &imageDetails{
 		name:      image,
