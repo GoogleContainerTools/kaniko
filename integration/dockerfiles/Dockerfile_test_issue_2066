@@ -6,4 +6,5 @@ RUN apt install -y libbsd0
 RUN ls -al /usr/lib/x86_64-linux-gnu/libbsd.so.0
 
 FROM base as b
+# Fails on main@28432d3c before #2066, the symlink is not existing here.
 RUN ls -al /usr/lib/x86_64-linux-gnu/libbsd.so.0
