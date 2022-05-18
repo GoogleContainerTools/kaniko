@@ -80,8 +80,8 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 		}
 	}
 
-	logrus.Infof("cmd: %s", newCommand[0])
-	logrus.Infof("args: %s", newCommand[1:])
+	logrus.Infof("Cmd: %s", newCommand[0])
+	logrus.Infof("Args: %s", newCommand[1:])
 
 	cmd := exec.Command(newCommand[0], newCommand[1:]...)
 

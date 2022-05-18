@@ -39,7 +39,7 @@ type UserCommand struct {
 }
 
 func (r *UserCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: USER")
+	logrus.Info("Cmd: USER")
 	u := r.cmd.User
 	userAndGroup := strings.Split(u, ":")
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)

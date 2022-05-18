@@ -34,14 +34,14 @@ type RunMarkerCommand struct {
 
 func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// run command `touch filemarker`
-	logrus.Debugf("using new RunMarker command")
+	logrus.Debugf("Using new RunMarker command")
 	prevFilesMap, _ := util.GetFSInfoMap("/", map[string]os.FileInfo{})
 	if err := runCommandInExec(config, buildArgs, r.cmd); err != nil {
 		return err
 	}
 	_, r.Files = util.GetFSInfoMap("/", prevFilesMap)
 
-	logrus.Debugf("files changed %s", r.Files)
+	logrus.Debugf("Files changed %s", r.Files)
 	return nil
 }
 

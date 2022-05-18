@@ -34,7 +34,7 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "lookup")
 	}
-	logrus.Infof("util.Lookup returned: %+v", u)
+	logrus.Infof("Util.Lookup returned: %+v", u)
 
 	var groups []uint32
 

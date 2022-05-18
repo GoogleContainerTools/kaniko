@@ -42,7 +42,7 @@ func ResolvePaths(paths []string, wl []util.IgnoreListEntry) (pathsToAdd []strin
 	for _, f := range paths {
 		// If the given path is part of the ignorelist ignore it
 		if util.IsInProvidedIgnoreList(f, wl) {
-			logrus.Debugf("path %s is in list to ignore, ignoring it", f)
+			logrus.Debugf("Path %s is in list to ignore, ignoring it", f)
 			continue
 		}
 
@@ -52,7 +52,7 @@ func ResolvePaths(paths []string, wl []util.IgnoreListEntry) (pathsToAdd []strin
 		}
 
 		if f != link {
-			logrus.Tracef("updated link %s to %s", f, link)
+			logrus.Tracef("Updated link %s to %s", f, link)
 		}
 
 		if !fileSet[link] {
@@ -67,21 +67,21 @@ func ResolvePaths(paths []string, wl []util.IgnoreListEntry) (pathsToAdd []strin
 		evaled, e = filepath.EvalSymlinks(f)
 		if e != nil {
 			if !os.IsNotExist(e) {
-				logrus.Errorf("couldn't eval %s with link %s", f, link)
+				logrus.Errorf("Couldn't eval %s with link %s", f, link)
 				return
 			}
 
-			logrus.Debugf("symlink path %s, target does not exist", f)
+			logrus.Tracef("Symlink path %s, target does not exist", f)
 			continue
 		}
 		if f != evaled {
-			logrus.Debugf("resolved symlink %s to %s", f, evaled)
+			logrus.Tracef("Resolved symlink %s to %s", f, evaled)
 		}
 
 		// If the given path is a symlink and the target is part of the ignorelist
 		// ignore the target
 		if util.CheckProvidedIgnoreList(evaled, wl) {
-			logrus.Debugf("path %s is ignored, ignoring it", evaled)
+			logrus.Debugf("Path %s is ignored, ignoring it", evaled)
 			continue
 		}
 

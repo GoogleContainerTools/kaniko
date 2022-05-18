@@ -58,7 +58,7 @@ func setupTestTemp(t *testing.T) string {
 
 	srcPath, err := filepath.Abs("../../integration/context")
 	if err != nil {
-		logrus.Fatalf("error getting abs path %s", srcPath)
+		logrus.Fatalf("Error getting abs path %s", srcPath)
 	}
 	cperr := filepath.Walk(srcPath,
 		func(path string, info os.FileInfo, err error) error {
@@ -98,7 +98,7 @@ func setupTestTemp(t *testing.T) string {
 			return nil
 		})
 	if cperr != nil {
-		logrus.Fatalf("error populating temp dir %s", cperr)
+		logrus.Fatalf("Error populating temp dir %s", cperr)
 	}
 
 	return tempDir
@@ -301,7 +301,7 @@ func TestCopyExecuteCmd(t *testing.T) {
 					t.Error()
 				}
 				for _, file := range files {
-					logrus.Debugf("file: %v", file.Name())
+					logrus.Debugf("File: %v", file.Name())
 					dirList = append(dirList, file.Name())
 				}
 			} else {

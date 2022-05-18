@@ -38,7 +38,7 @@ type WorkdirCommand struct {
 var mkdir = os.MkdirAll
 
 func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	logrus.Info("cmd: workdir")
+	logrus.Info("Cmd: workdir")
 	workdirPath := w.cmd.Path
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	resolvedWorkingDir, err := util.ResolveEnvironmentReplacement(workdirPath, replacementEnvs, true)
