@@ -23,5 +23,6 @@ RUN \
   ls -lh /usr/local/bin/top1
 FROM base as final
 COPY --from=build ["/usr/local/bin/top1", "/usr/local/bin/"]
+RUN [ -u /usr/local/bin/top1 ]
 LABEL \
   description="Testing setuid behavior in Kaniko"
