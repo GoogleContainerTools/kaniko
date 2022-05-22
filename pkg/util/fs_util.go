@@ -892,7 +892,11 @@ func getSymlink(path string) error {
 func CopyFileOrSymlink(src string, destDir string, root string) error {
 	destFile := filepath.Join(destDir, src)
 	src = filepath.Join(root, src)
-	if fi, _ := os.Lstat(src); IsSymlink(fi) {
+	fi, err := os.Lstat(src)
+	if err != nil {
+		return errors.Wrap(err, "getting file info")
+	}
+	if IsSymlink(fi) {
 		link, err := os.Readlink(src)
 		if err != nil {
 			return errors.Wrap(err, "copying file or symlink")
@@ -902,13 +906,14 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	err := otiai10Cpy.Copy(src, destFile)
-	if err != nil {
+	if err := otiai10Cpy.Copy(src, destFile); err != nil {
 		return errors.Wrap(err, "copying file")
 	}
-	err = CopyOwnership(src, destDir, root)
-	if err != nil {
+	if err := CopyOwnership(src, destDir, root); err != nil {
 		return errors.Wrap(err, "copying ownership")
+	}
+	if err := os.Chmod(destFile, fi.Mode()); err != nil {
+		return errors.Wrap(err, "copying file mode")
 	}
 	return nil
 }
