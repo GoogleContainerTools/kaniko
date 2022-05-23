@@ -291,7 +291,7 @@ func (hooks *Hooks) MarshalJSON() ([]byte, error) {
 			case CommandHook:
 				serializableHooks = append(serializableHooks, chook)
 			default:
-				logrus.Warnf("Cannot serialize hook of type %T, skipping", hook)
+				logrus.Warnf("cannot serialize hook of type %T, skipping", hook)
 			}
 		}
 

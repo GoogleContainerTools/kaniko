@@ -132,7 +132,7 @@ func removeDockerfile(c modifiableContext, filesToRemove ...string) error {
 	for _, fileToRemove := range filesToRemove {
 		if rm, _ := fileutils.Matches(fileToRemove, excludes); rm {
 			if err := c.Remove(fileToRemove); err != nil {
-				logrus.Errorf("Failed to remove %s: %v", fileToRemove, err)
+				logrus.Errorf("failed to remove %s: %v", fileToRemove, err)
 			}
 		}
 	}

@@ -324,9 +324,8 @@ github.com/docker/cli/cli/config/types
 github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
-github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v20.10.14+incompatible
+# github.com/docker/docker v20.10.16+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
