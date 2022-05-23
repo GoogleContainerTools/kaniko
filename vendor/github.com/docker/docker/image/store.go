@@ -69,19 +69,19 @@ func (is *store) restore() error {
 	err := is.fs.Walk(func(dgst digest.Digest) error {
 		img, err := is.Get(IDFromDigest(dgst))
 		if err != nil {
-			logrus.Errorf("Invalid image %v, %v", dgst, err)
+			logrus.Errorf("invalid image %v, %v", dgst, err)
 			return nil
 		}
 		var l layer.Layer
 		if chainID := img.RootFS.ChainID(); chainID != "" {
 			if !system.IsOSSupported(img.OperatingSystem()) {
-				logrus.Errorf("Not restoring image with unsupported operating system %v, %v, %s", dgst, chainID, img.OperatingSystem())
+				logrus.Errorf("not restoring image with unsupported operating system %v, %v, %s", dgst, chainID, img.OperatingSystem())
 				return nil
 			}
 			l, err = is.lss[img.OperatingSystem()].Get(chainID)
 			if err != nil {
 				if err == layer.ErrLayerDoesNotExist {
-					logrus.Errorf("Layer does not exist, not restoring image %v, %v, %s", dgst, chainID, img.OperatingSystem())
+					logrus.Errorf("layer does not exist, not restoring image %v, %v, %s", dgst, chainID, img.OperatingSystem())
 					return nil
 				}
 				return err
@@ -244,7 +244,7 @@ func (is *store) Delete(id ID) ([]layer.Metadata, error) {
 	}
 
 	if err := is.digestSet.Remove(id.Digest()); err != nil {
-		logrus.Errorf("Error removing %s from digest set: %q", id, err)
+		logrus.Errorf("error removing %s from digest set: %q", id, err)
 	}
 	delete(is.images, id)
 	is.fs.Delete(id.Digest())
@@ -330,7 +330,7 @@ func (is *store) imagesMap(all bool) map[ID]*Image {
 		}
 		img, err := is.Get(id)
 		if err != nil {
-			logrus.Errorf("Invalid image access: %q, error: %q", id, err)
+			logrus.Errorf("invalid image access: %q, error: %q", id, err)
 			continue
 		}
 		images[id] = img

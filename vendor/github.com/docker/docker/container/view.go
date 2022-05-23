@@ -382,7 +382,7 @@ func (v *memdbView) transform(container *Container) *Snapshot {
 		for port, bindings := range container.NetworkSettings.Ports {
 			p, err := nat.ParsePort(port.Port())
 			if err != nil {
-				logrus.Warnf("Invalid port map %+v", err)
+				logrus.Warnf("invalid port map %+v", err)
 				continue
 			}
 			if len(bindings) == 0 {
@@ -395,7 +395,7 @@ func (v *memdbView) transform(container *Container) *Snapshot {
 			for _, binding := range bindings {
 				h, err := nat.ParsePort(binding.HostPort)
 				if err != nil {
-					logrus.Warnf("Invalid host port map %+v", err)
+					logrus.Warnf("invalid host port map %+v", err)
 					continue
 				}
 				snapshot.Ports = append(snapshot.Ports, types.Port{

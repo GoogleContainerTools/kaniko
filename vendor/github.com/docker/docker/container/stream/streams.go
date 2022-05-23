@@ -122,7 +122,7 @@ func (c *Config) CopyToPipe(iop *cio.DirectIO) {
 		c.wg.Add(1)
 		go func() {
 			if _, err := pools.Copy(w, r); err != nil {
-				logrus.Errorf("Stream copy error: %v", err)
+				logrus.Errorf("stream copy error: %v", err)
 			}
 			r.Close()
 			c.wg.Done()
@@ -141,7 +141,7 @@ func (c *Config) CopyToPipe(iop *cio.DirectIO) {
 			go func() {
 				pools.Copy(iop.Stdin, stdin)
 				if err := iop.Stdin.Close(); err != nil {
-					logrus.Warnf("Failed to close stdin: %v", err)
+					logrus.Warnf("failed to close stdin: %v", err)
 				}
 			}()
 		}

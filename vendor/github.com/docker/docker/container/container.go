@@ -681,7 +681,7 @@ func (container *Container) InitializeStdio(iop *cio.DirectIO) (cio.IO, error) {
 	if container.StreamConfig.Stdin() == nil && !container.Config.Tty {
 		if iop.Stdin != nil {
 			if err := iop.Stdin.Close(); err != nil {
-				logrus.Warnf("Error closing stdin: %+v", err)
+				logrus.Warnf("error closing stdin: %+v", err)
 			}
 		}
 	}
