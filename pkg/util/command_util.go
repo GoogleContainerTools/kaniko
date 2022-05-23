@@ -364,6 +364,7 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 // Extract user and group id from a string formatted 'user:group'.
 // If fallbackToUID is set, the gid is equal to uid if the group is not specified
 // otherwise gid is set to zero.
+// UserID and GroupID don't need to be present on the system.
 func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
 	userAndGroup := strings.Split(userGroupString, ":")
 	userStr := userAndGroup[0]
