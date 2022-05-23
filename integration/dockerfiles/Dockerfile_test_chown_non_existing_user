@@ -1,0 +1,6 @@
+FROM debian:10.2 AS first
+
+RUN echo "hello world" >/tmp/hello
+
+FROM debian:10.2 as second
+COPY --from second --chown 999:999 /tmp/hello /hello
