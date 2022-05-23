@@ -619,7 +619,7 @@ func TestGetUserGroup(t *testing.T) {
 			},
 			expectedU: 1001,
 			expectedG: 2000,
-			shdErr: false,
+			shdErr:    false,
 		},
 	}
 	for _, tc := range tests {
