@@ -30,7 +30,7 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 		return nil, errors.Wrap(err, "get uid/gid")
 	}
 
-	u, err := Lookup(userStr)
+	u, err := LookupUser(userStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "lookup")
 	}

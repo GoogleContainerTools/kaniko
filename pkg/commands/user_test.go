@@ -115,7 +115,7 @@ func TestUpdateUser(t *testing.T) {
 			}
 			return nil, fmt.Errorf("error while looking up user")
 		}
-		defer func() { Lookup = util.Lookup }()
+		defer func() { Lookup = util.LookupUser }()
 		buildArgs := dockerfile.NewBuildArgs([]string{})
 		err := cmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedUID, cfg.User)

@@ -555,28 +555,32 @@ func Test_RemoteUrls(t *testing.T) {
 
 func TestGetUserGroup(t *testing.T) {
 	tests := []struct {
-		description string
-		chown       string
-		env         []string
-		mock        func(string, bool) (uint32, uint32, error)
-		expectedU   int64
-		expectedG   int64
-		shdErr      bool
+		description  string
+		chown        string
+		env          []string
+		mockIDGetter func(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error)
+		// needed, in case uid is a valid number, but group is a name
+		mockGroupIDGetter func(groupStr string) (*user.Group, error)
+		expectedU         int64
+		expectedG         int64
+		shdErr            bool
 	}{
 		{
 			description: "non empty chown",
 			chown:       "some:some",
 			env:         []string{},
-			mock:        func(string, bool) (uint32, uint32, error) { return 100, 1000, nil },
-			expectedU:   100,
-			expectedG:   1000,
+			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+				return 100, 1000, nil
+			},
+			expectedU: 100,
+			expectedG: 1000,
 		},
 		{
 			description: "non empty chown with env replacement",
 			chown:       "some:$foo",
 			env:         []string{"foo=key"},
-			mock: func(c string, t bool) (uint32, uint32, error) {
-				if c == "some:key" {
+			mockIDGetter: func(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
+				if userStr == "some" && groupStr == "key" {
 					return 10, 100, nil
 				}
 				return 0, 0, fmt.Errorf("did not resolve environment variable")
@@ -586,18 +590,48 @@ func TestGetUserGroup(t *testing.T) {
 		},
 		{
 			description: "empty chown string",
-			mock: func(c string, t bool) (uint32, uint32, error) {
+			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
 				return 0, 0, fmt.Errorf("should not be called")
 			},
 			expectedU: -1,
 			expectedG: -1,
 		},
+		{
+			description: "with uid instead of username",
+			chown:       "1001:1001",
+			env:         []string{},
+			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+				return 0, 0, fmt.Errorf("should not be called")
+			},
+			expectedU: 1001,
+			expectedG: 1001,
+		},
+		{
+			description: "uid but group is a name",
+			chown:       "1001:mygroup",
+			env:         []string{},
+			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+				return 0, 0, fmt.Errorf("should not be called")
+			},
+			mockGroupIDGetter: func(groupStr string) (*user.Group, error) {
+				// random uid for mygroup since it's a test
+				return &user.Group{Gid: "2000"}, nil
+			},
+			expectedU: 1001,
+			expectedG: 2000,
+			shdErr: false,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			original := getUIDAndGID
-			defer func() { getUIDAndGID = original }()
-			getUIDAndGID = tc.mock
+			originalIDGetter := getIdsFromUsernameAndGroup
+			originalGroupIDGetter := getGroupFromStr
+			defer func() {
+				getIdsFromUsernameAndGroup = originalIDGetter
+				getGroupFromStr = originalGroupIDGetter
+			}()
+			getIdsFromUsernameAndGroup = tc.mockIDGetter
+			getGroupFromStr = tc.mockGroupIDGetter
 			uid, gid, err := GetUserGroup(tc.chown, tc.env)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, uid, tc.expectedU)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, gid, tc.expectedG)
@@ -686,6 +720,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 	for _, tt := range testCases {
 		uid, gid, err := GetUIDAndGIDFromString(tt, false)
 		if uid != uint32(expectedU) || gid != uint32(expectedG) || err != nil {
+			t.Logf("Error: %v", err)
 			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d", tt, expectedU, expectedG,
 				uid, gid)
 		}

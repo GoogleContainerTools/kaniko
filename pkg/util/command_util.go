@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	reflect "reflect"
 	"strconv"
 	"strings"
 
@@ -39,7 +38,8 @@ import (
 
 // for testing
 var (
-	getUIDAndGID = GetUIDAndGIDFromString
+	getIdsFromUsernameAndGroup = getIdsFromUsernameAndGroupImpl
+	getGroupFromStr            = getGroup
 )
 
 const (
@@ -353,7 +353,7 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 		return -1, -1, err
 	}
 
-	uid32, gid32, err := getUIDAndGID(chown, true)
+	uid32, gid32, err := GetUIDAndGIDFromString(chown, true)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -372,48 +372,45 @@ func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32,
 		groupStr = userAndGroup[1]
 	}
 
-	if reflect.TypeOf(userStr).String() == "int" {
-		return 0, 0, nil
-	}
-
-	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
+	// checkif userStr is a valid id
+	uid, err := strconv.ParseUint(userStr, 10, 32)
 	if err != nil {
-		return 0, 0, err
+		return getIdsFromUsernameAndGroup(userStr, groupStr, fallbackToUID)
 	}
 
-	// uid and gid need to be fit into uint32
-	uid64, err := strconv.ParseUint(uidStr, 10, 32)
+	gid, err := strconv.ParseUint(groupStr, 10, 32)
 	if err != nil {
-		return 0, 0, err
+		// check if the group is specified as a string
+		group, err := getGroupFromStr(groupStr)
+		if err != nil && !fallbackToUID {
+			return 0, 0, err
+		}
+		gid, err := strconv.ParseUint(group.Gid, 10, 32)
+		if err != nil && !fallbackToUID {
+			// no fallback and group is not a valid uid (this should never be the case, because then the whole group is malformed)
+			return 0, 0, err
+		} else if err != nil && fallbackToUID {
+			return uint32(uid), uint32(uid), nil
+		}
+		return uint32(uid), uint32(gid), nil
 	}
 
-	gid64, err := strconv.ParseUint(gidStr, 10, 32)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return uint32(uid64), uint32(gid64), nil
+	return uint32(uid), uint32(gid), nil
 }
 
-func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (string, string, error) {
+func getIdsFromUsernameAndGroupImpl(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
 	// Lookup by username
-	userObj, err := Lookup(userStr)
+	userObj, err := LookupUser(userStr)
 	if err != nil {
-		return "", "", err
+		return 0, 0, err
 	}
 
 	// Same dance with groups
 	var group *user.Group
 	if groupStr != "" {
-		group, err = user.LookupGroup(groupStr)
+		group, err = getGroupFromStr(groupStr)
 		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); !ok {
-				return "", "", err
-			}
-			group, err = user.LookupGroupId(groupStr)
-			if err != nil {
-				return "", "", err
-			}
+			return 0, 0, err
 		}
 	}
 
@@ -426,10 +423,32 @@ func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (s
 		gid = group.Gid
 	}
 
-	return uid, gid, nil
+	uid64, err := strconv.ParseUint(uid, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+	gid64, err := strconv.ParseUint(gid, 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+	return uint32(uid64), uint32(gid64), nil
 }
 
-func Lookup(userStr string) (*user.User, error) {
+func getGroup(groupStr string) (*user.Group, error) {
+	group, err := user.LookupGroup(groupStr)
+	if err != nil {
+		if _, ok := err.(user.UnknownGroupError); !ok {
+			return nil, err
+		}
+		group, err = user.LookupGroupId(groupStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return group, nil
+}
+
+func LookupUser(userStr string) (*user.User, error) {
 	userObj, err := user.Lookup(userStr)
 	if err != nil {
 		if _, ok := err.(user.UnknownUserError); !ok {
