@@ -18,6 +18,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
@@ -285,7 +287,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 	if _, present := d.filesBuilt[dockerfile]; present {
 		return nil
 	}
-	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
+	gcsBucket, gcsClient, serviceAccount, imageRepo := config.gcsBucket,config.gcsClient, config.serviceAccount, config.imageRepo
 
 	var buildArgs []string
 	buildArgFlag := "--build-arg"
@@ -318,7 +320,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	timer = timing.Start(dockerfile + "_kaniko")
 	if _, err := buildKanikoImage(t.Logf, dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
-		contextDir, gcsBucket, serviceAccount, true); err != nil {
+		contextDir, gcsBucket, gcsClient, serviceAccount, true); err != nil {
 		return err
 	}
 	timing.DefaultRun.Stop(timer)
@@ -443,6 +445,7 @@ func buildKanikoImage(
 	kanikoImage string,
 	contextDir string,
 	gcsBucket string,
+	gcsClient *storage.Client,
 	serviceAccount string,
 	shdUpload bool,
 ) (string, error) {
@@ -457,7 +460,7 @@ func buildKanikoImage(
 			benchmarkFile := path.Join(benchmarkDir, dockerfile)
 			fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
 			dst := path.Join("benchmarks", fileName)
-			defer UploadFileToBucket(gcsBucket, benchmarkFile, dst)
+			defer UploadFileToBucket(context.Background(), gcsBucket, benchmarkFile, dst, gcsClient)
 		}
 	}
 

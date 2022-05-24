@@ -134,30 +134,12 @@ go test ./integration -v --bucket $GCS_BUCKET --repo $IMAGE_REPO -run TestLayers
 
 These tests will be kicked off by [reviewers](#reviews) for submitted PRs by the kokoro task.
 
-#### Local repository
+#### Local integration tests
 
-To run integration tests locally against a local registry, install a local docker registry
-
-```shell
-docker run --rm  -d -p 5000:5000 --name registry registry:2
-```
-
-Then export the `IMAGE_REPO` variable with  the `localhost:5000`value
+To run integration tests locally against a local registry and gcs bucket, set the LOCAL environment variable
 
 ```shell
-export IMAGE_REPO=localhost:5000
-```
-
-And run the integration tests
-
-```shell
-make integration-test
-```
-
-You can also run tests with `go test`, for example to run tests individually:
-
-```shell
-go test ./integration -v --repo localhost:5000 -run TestLayers/test_layer_Dockerfile_test_copy_bucket
+LOCAL=1 make integration-test
 ```
 
 These tests will be kicked off by [reviewers](#reviews) for submitted PRs using GitHub Actions.

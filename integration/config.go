@@ -16,7 +16,11 @@ limitations under the License.
 
 package integration
 
-import "strings"
+import (
+	"strings"
+
+	"cloud.google.com/go/storage"
+)
 
 type integrationTestConfig struct {
 	gcsBucket          string
@@ -25,6 +29,7 @@ type integrationTestConfig struct {
 	hardlinkBaseImage  string
 	serviceAccount     string
 	dockerMajorVersion int
+	gcsClient          *storage.Client
 }
 
 const gcrRepoPrefix string = "gcr.io/"

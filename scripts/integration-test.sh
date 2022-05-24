@@ -13,9 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -ex
+set -e
 
-GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
+function start_local_registry {
+  docker start registry || docker run --name registry -d -p 5000:5000 registry:2
+}
+
+function start_fake_gcs_server {
+  # run in network host, because kaniko will be run there too
+  docker start fake-gcs-server || docker run -d --net=host --name fake-gcs-server fsouza/fake-gcs-server -scheme http
+}
+
+GCS_BUCKET="${GCS_BUCKET:-kaniko-test-bucket}"
 IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 
 docker version
@@ -23,4 +32,13 @@ docker version
 echo "Running integration tests..."
 make out/executor
 make out/warmer
-go test ./integration/... --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 50m "$@"
+
+if [[ -n $LOCAL ]]; then
+ echo "running in local mode, mocking registry and gcs bucket..."
+  start_local_registry
+  start_fake_gcs_server
+  IMAGE_REPO="localhost:5000/kaniko-test"
+  go test -v ./integration/... --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 50m --gcs-endpoint "http://fake-gcs-server:4443" --disable-gcs-auth "$@" 
+else
+  go test -v ./integration/... --bucket "${GCS_BUCKET}" --repo "${IMAGE_REPO}" --timeout 50m "$@"
+fi
