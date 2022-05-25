@@ -25,7 +25,7 @@ import (
 )
 
 func SyscallCredentials(userStr string) (*syscall.Credential, error) {
-	uid, gid, err := GetUIDAndGIDFromString(userStr, true)
+	uid, gid, err := getUIDAndGIDFromString(userStr, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "get uid/gid")
 	}

@@ -596,42 +596,14 @@ func TestGetUserGroup(t *testing.T) {
 			expectedU: -1,
 			expectedG: -1,
 		},
-		{
-			description: "with uid instead of username",
-			chown:       "1001:1001",
-			env:         []string{},
-			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
-				return 0, 0, fmt.Errorf("should not be called")
-			},
-			expectedU: 1001,
-			expectedG: 1001,
-		},
-		{
-			description: "uid but group is a name",
-			chown:       "1001:mygroup",
-			env:         []string{},
-			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
-				return 0, 0, fmt.Errorf("should not be called")
-			},
-			mockGroupIDGetter: func(groupStr string) (*user.Group, error) {
-				// random uid for mygroup since it's a test
-				return &user.Group{Gid: "2000"}, nil
-			},
-			expectedU: 1001,
-			expectedG: 2000,
-			shdErr:    false,
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			originalIDGetter := getIdsFromUsernameAndGroup
-			originalGroupIDGetter := getGroupFromStr
+			originalIDGetter := GetUIDAndGID
 			defer func() {
-				getIdsFromUsernameAndGroup = originalIDGetter
-				getGroupFromStr = originalGroupIDGetter
+				GetUIDAndGID = originalIDGetter
 			}()
-			getIdsFromUsernameAndGroup = tc.mockIDGetter
-			getGroupFromStr = tc.mockGroupIDGetter
+			GetUIDAndGID = tc.mockIDGetter
 			uid, gid, err := GetUserGroup(tc.chown, tc.env)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, uid, tc.expectedU)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, gid, tc.expectedG)
@@ -709,19 +681,140 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 	}
 	primaryGroup := primaryGroupObj.Name
 
-	testCases := []string{
-		fmt.Sprintf("%s:%s", currentUser.Uid, currentUser.Gid),
-		fmt.Sprintf("%s:%s", currentUser.Username, currentUser.Gid),
-		fmt.Sprintf("%s:%s", currentUser.Uid, primaryGroup),
-		fmt.Sprintf("%s:%s", currentUser.Username, primaryGroup),
+	type args struct {
+		userGroupStr  string
+		fallbackToUID bool
 	}
-	expectedU, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
-	expectedG, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
+
+	type expected struct {
+		userID  uint32
+		groupID uint32
+	}
+
+	expectedCurrentUserID, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
+	expectedCurrentUserGID, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
+
+	expectedCurrentUser := expected{
+		userID:  uint32(expectedCurrentUserID),
+		groupID: uint32(expectedCurrentUserGID),
+	}
+
+	testCases := []struct {
+		testname string
+		args     args
+		expected expected
+		wantErr  bool
+	}{
+		{
+			testname: "current user uid and gid",
+			args: args{
+				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Uid, currentUser.Gid),
+			},
+			expected: expectedCurrentUser,
+		},
+		{
+			testname: "current user username and gid",
+			args: args{
+				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Username, currentUser.Gid),
+			},
+			expected: expectedCurrentUser,
+		},
+		{
+			testname: "current user username and primary group",
+			args: args{
+				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Username, primaryGroup),
+			},
+			expected: expectedCurrentUser,
+		},
+		{
+			testname: "current user uid and primary group",
+			args: args{
+				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Uid, primaryGroup),
+			},
+			expected: expectedCurrentUser,
+		},
+		{
+			testname: "non-existing valid uid and gid",
+			args: args{
+				userGroupStr: fmt.Sprintf("%d:%d", 1001, 50000),
+			},
+			expected: expected{
+				userID:  1001,
+				groupID: 50000,
+			},
+		},
+		{
+			testname: "uid and existing group",
+			args: args{
+				userGroupStr: fmt.Sprintf("%d:%s", 1001, primaryGroup),
+			},
+			expected: expected{
+				userID:  1001,
+				groupID: uint32(expectedCurrentUserGID),
+			},
+		},
+		{
+			testname: "uid and non existing group-name with fallbackToUID",
+			args: args{
+				userGroupStr:  fmt.Sprintf("%d:%s", 1001, "hello-world-group"),
+				fallbackToUID: true,
+			},
+			expected: expected{
+				userID:  1001,
+				groupID: 1001,
+			},
+		},
+		{
+			testname: "uid and non existing group-name",
+			args: args{
+				userGroupStr: fmt.Sprintf("%d:%s", 1001, "hello-world-group"),
+			},
+			wantErr: true,
+		},
+		{
+			testname: "name and non existing gid",
+			args: args{
+				userGroupStr: fmt.Sprintf("%s:%d", currentUser.Username, 50000),
+			},
+			expected: expected{
+				userID:  expectedCurrentUser.userID,
+				groupID: 50000,
+			},
+		},
+		{
+			testname: "only uid and fallback is false",
+			args: args{
+				userGroupStr:  fmt.Sprintf("%d", expectedCurrentUserID),
+				fallbackToUID: false,
+			},
+			wantErr: true,
+		},
+		{
+			testname: "only uid and fallback is true",
+			args: args{
+				userGroupStr:  fmt.Sprintf("%d", expectedCurrentUserID),
+				fallbackToUID: true,
+			},
+			expected: expected{
+				userID:  expectedCurrentUser.userID,
+				groupID: expectedCurrentUser.userID,
+			},
+		},
+		{
+			testname: "non-existing user without group",
+			args: args{
+				userGroupStr: "helloworlduser",
+			},
+			wantErr: true,
+		},
+	}
 	for _, tt := range testCases {
-		uid, gid, err := GetUIDAndGIDFromString(tt, false)
-		if uid != uint32(expectedU) || gid != uint32(expectedG) || err != nil {
-			t.Logf("Error: %v", err)
-			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d", tt, expectedU, expectedG,
+		uid, gid, err := getUIDAndGIDFromString(tt.args.userGroupStr, tt.args.fallbackToUID)
+		testutil.CheckError(t, tt.wantErr, err)
+		if uid != tt.expected.userID || gid != tt.expected.groupID {
+			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d",
+				tt.args.userGroupStr,
+				tt.expected.userID, tt.expected.groupID,
 				uid, gid)
 		}
 	}

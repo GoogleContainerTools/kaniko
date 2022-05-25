@@ -14,14 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+#set -e
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 RESET='\033[0m'
 
 echo "Running go tests..."
-go test -cover -v -timeout 60s `go list ./... | grep -v vendor | grep -v integration` | sed ''/PASS/s//$(printf "${GREEN}PASS${RESET}")/'' | sed ''/FAIL/s//$(printf "${RED}FAIL${RESET}")/''
+go test -cover -coverprofile=out/coverage.out -v -timeout 60s `go list ./... | grep -v vendor | grep -v integration` | sed ''/PASS/s//$(printf "${GREEN}PASS${RESET}")/'' | sed ''/FAIL/s//$(printf "${RED}FAIL${RESET}")/''
 GO_TEST_EXIT_CODE=${PIPESTATUS[0]}
 if [[ $GO_TEST_EXIT_CODE -ne 0 ]]; then
     exit $GO_TEST_EXIT_CODE
@@ -29,9 +31,9 @@ fi
 
 echo "Running validation scripts..."
 scripts=(
-    "hack/boilerplate.sh"
-    "hack/gofmt.sh"
-    "hack/linter.sh"
+    "$DIR/../hack/boilerplate.sh"
+    "$DIR/../hack/gofmt.sh"
+    "$DIR/../hack/linter.sh"
 )
 fail=0
 for s in "${scripts[@]}"
@@ -44,4 +46,5 @@ do
         fail=1
     fi
 done
+    go tool cover -html=$DIR/../out/coverage.out
 exit $fail
