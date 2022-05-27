@@ -18,7 +18,6 @@ package commands
 import (
 	"archive/tar"
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -38,7 +37,6 @@ func Test_addDefaultHOME(t *testing.T) {
 		user        string
 		mockUser    *user.User
 		lookupError error
-		mockUserID  *user.User
 		initial     []string
 		expected    []string
 	}{
@@ -81,19 +79,18 @@ func Test_addDefaultHOME(t *testing.T) {
 			},
 		},
 		{
-			name:        "USER is set using the UID",
-			user:        "newuser",
-			lookupError: errors.New("User not found"),
-			mockUserID: &user.User{
-				Username: "user",
-				HomeDir:  "/home/user",
+			name: "USER is set using the UID",
+			user: "1000",
+			mockUser: &user.User{
+				Username: "1000",
+				HomeDir:  "/",
 			},
 			initial: []string{
 				"PATH=/something/else",
 			},
 			expected: []string{
 				"PATH=/something/else",
-				"HOME=/home/user",
+				"HOME=/",
 			},
 		},
 		{
@@ -113,11 +110,10 @@ func Test_addDefaultHOME(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			original := userLookup
 			userLookup = func(username string) (*user.User, error) { return test.mockUser, test.lookupError }
-			userLookupID = func(username string) (*user.User, error) { return test.mockUserID, nil }
 			defer func() {
-				userLookup = user.Lookup
-				userLookupID = user.LookupId
+				userLookup = original
 			}()
 			actual, err := addDefaultHOME(test.user, test.initial)
 			testutil.CheckErrorAndDeepEqual(t, false, err, test.expected, actual)

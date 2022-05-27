@@ -38,7 +38,7 @@ import (
 
 // for testing
 var (
-	GetUIDAndGID = getUIDAndGID
+	getUIDAndGIDFunc = getUIDAndGID
 )
 
 const (
@@ -371,11 +371,15 @@ func getUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32,
 	if len(userAndGroup) > 1 {
 		groupStr = userAndGroup[1]
 	}
-	return GetUIDAndGID(userStr, groupStr, fallbackToUID)
+	return getUIDAndGIDFunc(userStr, groupStr, fallbackToUID)
 }
 
 func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
-	uid32, err := LookupUID(userStr)
+	user, err := LookupUser(userStr)
+	if err != nil {
+		return 0, 0, err
+	}
+	uid32, err := getUID(user.Uid)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -389,8 +393,6 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 	}
 	return uid32, uint32(gid), nil
 }
-
-func getUID()
 
 // getGID tries to parse the gid or falls back to getGroupFromName if it's not an id
 func getGID(groupStr string, fallbackToUID bool) (uint32, error) {
@@ -435,40 +437,38 @@ func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 	}
 }
 
+// LookupUser will try to lookup the userStr inside the passwd file.
+// If the user does not exists, the function will fallback to parsing the userStr as an uid.
 func LookupUser(userStr string) (*user.User, error) {
 	userObj, err := user.Lookup(userStr)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); !ok {
-			// try parsing the UID
+		unknownUserErr := new(user.UnknownUserError)
+		// only return if it's not an unknown user error
+		if !errors.As(err, unknownUserErr) {
 			return nil, err
 		}
 
 		// Lookup by id
-		u, e := user.LookupId(userStr)
-		if e != nil {
-			return nil, err
+		userObj, err = user.LookupId(userStr)
+		if err != nil {
+			uid, err := getUID(userStr)
+			if err != nil {
+				return nil, err
+			}
+			userObj = &user.User{
+				Uid:     fmt.Sprint(uid),
+				HomeDir: "/",
+			}
 		}
-
-		userObj = u
 	}
-
 	return userObj, nil
 }
 
-func LookupUID(userStr string) (uint32, error) {
+func getUID(userStr string) (uint32, error) {
 	// checkif userStr is a valid id
 	uid, err := strconv.ParseUint(userStr, 10, 32)
 	if err != nil {
-		// userStr is not a valid uid, so lookup the name
-		user, err := LookupUser(userStr)
-		if err != nil {
-			return 0, err
-		}
-		// returned uid of the user is not a valid uid. This is rarely the case
-		uid, err = strconv.ParseUint(user.Uid, 10, 32)
-		if err != nil {
-			return 0, err
-		}
+		return 0, err
 	}
 	return uint32(uid), nil
 }

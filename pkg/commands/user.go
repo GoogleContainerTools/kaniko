@@ -30,7 +30,7 @@ import (
 
 // for testing
 var (
-	Lookup = util.LookupUser
+	lookup = util.LookupUser
 )
 
 type UserCommand struct {

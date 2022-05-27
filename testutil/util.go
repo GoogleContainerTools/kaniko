@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -39,6 +41,38 @@ func SetupFiles(path string, files map[string]string) error {
 		}
 	}
 	return nil
+}
+
+type CurrentUser struct {
+	Username     string
+	UID          uint32
+	GID          uint32
+	PrimaryGroup string
+}
+
+func GetCurrentUser(t *testing.T) CurrentUser {
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Cannot get current user: %s", err)
+	}
+	groups, err := currentUser.GroupIds()
+	if err != nil || len(groups) == 0 {
+		t.Fatalf("Cannot get groups for current user: %s", err)
+	}
+	primaryGroupObj, err := user.LookupGroupId(groups[0])
+	if err != nil {
+		t.Fatalf("Could not lookup name of group %s: %s", groups[0], err)
+	}
+	primaryGroup := primaryGroupObj.Name
+	uid, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
+	gid, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
+
+	return CurrentUser{
+		UID:          uint32(uid),
+		GID:          uint32(gid),
+		PrimaryGroup: primaryGroup,
+		Username:     currentUser.Username,
+	}
 }
 
 func CheckDeepEqual(t *testing.T, expected, actual interface{}) {

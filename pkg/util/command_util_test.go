@@ -21,7 +21,6 @@ import (
 	"os/user"
 	"reflect"
 	"sort"
-	"strconv"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -599,11 +598,11 @@ func TestGetUserGroup(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			originalIDGetter := GetUIDAndGID
+			originalIDGetter := getUIDAndGIDFunc
 			defer func() {
-				GetUIDAndGID = originalIDGetter
+				getUIDAndGIDFunc = originalIDGetter
 			}()
-			GetUIDAndGID = tc.mockIDGetter
+			getUIDAndGIDFunc = tc.mockIDGetter
 			uid, gid, err := GetUserGroup(tc.chown, tc.env)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, uid, tc.expectedU)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, gid, tc.expectedG)
@@ -667,19 +666,7 @@ func TestResolveEnvironmentReplacementList(t *testing.T) {
 }
 
 func Test_GetUIDAndGIDFromString(t *testing.T) {
-	currentUser, err := user.Current()
-	if err != nil {
-		t.Fatalf("Cannot get current user: %s", err)
-	}
-	groups, err := currentUser.GroupIds()
-	if err != nil || len(groups) == 0 {
-		t.Fatalf("Cannot get groups for current user: %s", err)
-	}
-	primaryGroupObj, err := user.LookupGroupId(groups[0])
-	if err != nil {
-		t.Fatalf("Could not lookup name of group %s: %s", groups[0], err)
-	}
-	primaryGroup := primaryGroupObj.Name
+	currentUser := testutil.GetCurrentUser(t)
 
 	type args struct {
 		userGroupStr  string
@@ -691,12 +678,9 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		groupID uint32
 	}
 
-	expectedCurrentUserID, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
-	expectedCurrentUserGID, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
-
 	expectedCurrentUser := expected{
-		userID:  uint32(expectedCurrentUserID),
-		groupID: uint32(expectedCurrentUserGID),
+		userID:  currentUser.UID,
+		groupID: currentUser.GID,
 	}
 
 	testCases := []struct {
@@ -708,28 +692,28 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "current user uid and gid",
 			args: args{
-				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Uid, currentUser.Gid),
+				userGroupStr: fmt.Sprintf("%d:%d", currentUser.UID, currentUser.GID),
 			},
 			expected: expectedCurrentUser,
 		},
 		{
 			testname: "current user username and gid",
 			args: args{
-				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Username, currentUser.Gid),
+				userGroupStr: fmt.Sprintf("%s:%d", currentUser.Username, currentUser.GID),
 			},
 			expected: expectedCurrentUser,
 		},
 		{
 			testname: "current user username and primary group",
 			args: args{
-				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Username, primaryGroup),
+				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Username, currentUser.PrimaryGroup),
 			},
 			expected: expectedCurrentUser,
 		},
 		{
 			testname: "current user uid and primary group",
 			args: args{
-				userGroupStr: fmt.Sprintf("%s:%s", currentUser.Uid, primaryGroup),
+				userGroupStr: fmt.Sprintf("%d:%s", currentUser.UID, currentUser.PrimaryGroup),
 			},
 			expected: expectedCurrentUser,
 		},
@@ -746,11 +730,11 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "uid and existing group",
 			args: args{
-				userGroupStr: fmt.Sprintf("%d:%s", 1001, primaryGroup),
+				userGroupStr: fmt.Sprintf("%d:%s", 1001, currentUser.PrimaryGroup),
 			},
 			expected: expected{
 				userID:  1001,
-				groupID: uint32(expectedCurrentUserGID),
+				groupID: uint32(currentUser.GID),
 			},
 		},
 		{
@@ -784,7 +768,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "only uid and fallback is false",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", expectedCurrentUserID),
+				userGroupStr:  fmt.Sprintf("%d", currentUser.UID),
 				fallbackToUID: false,
 			},
 			wantErr: true,
@@ -792,7 +776,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "only uid and fallback is true",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", expectedCurrentUserID),
+				userGroupStr:  fmt.Sprintf("%d", currentUser.UID),
 				fallbackToUID: true,
 			},
 			expected: expected{
@@ -812,7 +796,8 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		uid, gid, err := getUIDAndGIDFromString(tt.args.userGroupStr, tt.args.fallbackToUID)
 		testutil.CheckError(t, tt.wantErr, err)
 		if uid != tt.expected.userID || gid != tt.expected.groupID {
-			t.Errorf("Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d",
+			t.Errorf("%v failed. Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d",
+				tt.testname,
 				tt.args.userGroupStr,
 				tt.expected.userID, tt.expected.groupID,
 				uid, gid)
