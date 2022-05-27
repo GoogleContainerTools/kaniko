@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/vbatts/tar-split/archive/tar"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 )
 
 // CreateIntegrationTarball will take the contents of the integration directory and write
@@ -51,7 +51,7 @@ func CreateIntegrationTarball() (string, error) {
 	gzipWriter := gzip.NewWriter(file)
 	defer gzipWriter.Close()
 
-	tarWriter := tar.NewWriter(gzipWriter)
+	tarWriter := util.NewTar(gzipWriter)
 	defer tarWriter.Close()
 
 	walkFn := func(path string, d fs.DirEntry, err error) error {
@@ -61,27 +61,7 @@ func CreateIntegrationTarball() (string, error) {
 		if filepath.IsAbs(path) {
 			return fmt.Errorf("path %v is no absolute, cant read file", path)
 		}
-
-		body, err := ioutil.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("reading file at %v: %w", path, err)
-		}
-
-		if body != nil {
-			hdr := &tar.Header{
-				Name: filepath.Base(path),
-				Mode: int64(0644),
-				Size: int64(len(body)),
-			}
-			if err := tarWriter.WriteHeader(hdr); err != nil {
-				// better to just log the error instead of returning
-				fmt.Printf("writing tar header for file %v: %v\n", path, err)
-			}
-			if _, err := tarWriter.Write(body); err != nil {
-				fmt.Printf("writing file %v into tar archive: %v\n", path, err)
-			}
-		}
-		return nil
+		return tarWriter.AddFileToTar(path)
 	}
 
 	err = filepath.WalkDir(dir, walkFn)
