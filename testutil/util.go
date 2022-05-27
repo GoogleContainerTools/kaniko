@@ -23,7 +23,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -44,9 +43,8 @@ func SetupFiles(path string, files map[string]string) error {
 }
 
 type CurrentUser struct {
-	Username     string
-	UID          uint32
-	GID          uint32
+	*user.User
+
 	PrimaryGroup string
 }
 
@@ -64,14 +62,10 @@ func GetCurrentUser(t *testing.T) CurrentUser {
 		t.Fatalf("Could not lookup name of group %s: %s", groups[0], err)
 	}
 	primaryGroup := primaryGroupObj.Name
-	uid, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
-	gid, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
 
 	return CurrentUser{
-		UID:          uint32(uid),
-		GID:          uint32(gid),
+		User:         currentUser,
 		PrimaryGroup: primaryGroup,
-		Username:     currentUser.Username,
 	}
 }
 

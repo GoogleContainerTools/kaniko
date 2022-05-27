@@ -453,7 +453,8 @@ func LookupUser(userStr string) (*user.User, error) {
 		if err != nil {
 			uid, err := getUID(userStr)
 			if err != nil {
-				return nil, err
+				// at this point, the user does not exist and the userStr is not a valid number.
+				return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
 			}
 			userObj = &user.User{
 				Uid:     fmt.Sprint(uid),

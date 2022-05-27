@@ -21,6 +21,7 @@ import (
 	"os/user"
 	"reflect"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
@@ -678,9 +679,11 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		groupID uint32
 	}
 
+	currentUserUid, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
+	currentUserGid, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
 	expectedCurrentUser := expected{
-		userID:  currentUser.UID,
-		groupID: currentUser.GID,
+		userID:  uint32(currentUserUid),
+		groupID: uint32(currentUserGid),
 	}
 
 	testCases := []struct {
@@ -692,14 +695,14 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "current user uid and gid",
 			args: args{
-				userGroupStr: fmt.Sprintf("%d:%d", currentUser.UID, currentUser.GID),
+				userGroupStr: fmt.Sprintf("%d:%d", currentUserUid, currentUserGid),
 			},
 			expected: expectedCurrentUser,
 		},
 		{
 			testname: "current user username and gid",
 			args: args{
-				userGroupStr: fmt.Sprintf("%s:%d", currentUser.Username, currentUser.GID),
+				userGroupStr: fmt.Sprintf("%s:%d", currentUser.Username, currentUserGid),
 			},
 			expected: expectedCurrentUser,
 		},
@@ -713,7 +716,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "current user uid and primary group",
 			args: args{
-				userGroupStr: fmt.Sprintf("%d:%s", currentUser.UID, currentUser.PrimaryGroup),
+				userGroupStr: fmt.Sprintf("%d:%s", currentUserUid, currentUser.PrimaryGroup),
 			},
 			expected: expectedCurrentUser,
 		},
@@ -734,7 +737,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 			},
 			expected: expected{
 				userID:  1001,
-				groupID: uint32(currentUser.GID),
+				groupID: uint32(currentUserGid),
 			},
 		},
 		{
@@ -768,7 +771,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "only uid and fallback is false",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", currentUser.UID),
+				userGroupStr:  fmt.Sprintf("%d", currentUserUid),
 				fallbackToUID: false,
 			},
 			wantErr: true,
@@ -776,7 +779,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "only uid and fallback is true",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", currentUser.UID),
+				userGroupStr:  fmt.Sprintf("%d", currentUserUid),
 				fallbackToUID: true,
 			},
 			expected: expected{
@@ -803,4 +806,52 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 				uid, gid)
 		}
 	}
+}
+
+func TestLookupUser(t *testing.T) {
+	currentUser := testutil.GetCurrentUser(t)
+
+	type args struct {
+		userStr string
+	}
+	tests := []struct {
+		testname string
+		args     args
+		expected *user.User
+		wantErr  bool
+	}{
+		{
+			testname: "non-existing user",
+			args: args{
+				userStr: "foobazbar",
+			},
+			wantErr: true,
+		},
+		{
+			testname: "uid",
+			args: args{
+				userStr: "30000",
+			},
+			expected: &user.User{
+				Uid:     "30000",
+				HomeDir: "/",
+			},
+			wantErr: false,
+		},
+		{
+			testname: "current user",
+			args: args{
+				userStr: currentUser.Username,
+			},
+			expected: currentUser.User,
+			wantErr:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			got, err := LookupUser(tt.args.userStr)
+			testutil.CheckErrorAndDeepEqual(t, tt.wantErr, err, tt.expected, got)
+		})
+	}
+
 }
