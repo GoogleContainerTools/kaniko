@@ -903,19 +903,22 @@ func initIntegrationTestConfig() *integrationTestConfig {
 		c.imageRepo = c.imageRepo + "/"
 	}
 
-	var opts []option.ClientOption
-	if gcsEndpoint != "" {
-		opts = append(opts, option.WithEndpoint(gcsEndpoint))
-	}
-	if disableGcsAuth {
-		opts = append(opts, option.WithoutAuthentication())
-	}
+	if c.gcsBucket != "" {
+		var opts []option.ClientOption
+		if gcsEndpoint != "" {
+			opts = append(opts, option.WithEndpoint(gcsEndpoint))
+		}
+		if disableGcsAuth {
+			opts = append(opts, option.WithoutAuthentication())
+		}
 
-	gcsClient, err := newStorageClient(context.Background(), opts...)
-	if err != nil {
-		log.Fatalf("Could not create a new Google Storage Client: %s", err)
+		gcsClient, err := newStorageClient(context.Background(), opts...)
+		if err != nil {
+			log.Fatalf("Could not create a new Google Storage Client: %s", err)
+		}
+		c.gcsClient = gcsClient
 	}
-	c.gcsClient = gcsClient
+	
 	c.dockerMajorVersion = getDockerMajorVersion()
 	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
 	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"

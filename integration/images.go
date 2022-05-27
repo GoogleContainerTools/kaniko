@@ -163,7 +163,9 @@ func GetVersionedKanikoImage(imageRepo, dockerfile string, version int) string {
 // If the file is one we are intentionally
 // skipping, it will not be included in the returned list.
 func FindDockerFiles(dockerfilesPattern string) ([]string, error) {
-	allDockerfiles, err := filepath.Glob(filepath.Join("dockerfiles", dockerfilesPattern))
+	pattern := filepath.Join("dockerfiles", dockerfilesPattern)
+	fmt.Printf("finding docker images with pattern %v\n", pattern)
+	allDockerfiles, err := filepath.Glob(pattern)
 	if err != nil {
 		return []string{}, fmt.Errorf("Failed to find docker files with pattern %s: %w", dockerfilesPattern, err)
 	}

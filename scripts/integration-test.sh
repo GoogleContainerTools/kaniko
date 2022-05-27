@@ -19,12 +19,12 @@ function start_local_registry {
   docker start registry || docker run --name registry -d -p 5000:5000 registry:2
 }
 
+# TODO: to get this working, we need a way to override the gcs endpoint of kaniko at runtime
 function start_fake_gcs_server {
-  # run in network host, because kaniko will be run there too
-  docker start fake-gcs-server || docker run -d --net=host --name fake-gcs-server fsouza/fake-gcs-server -scheme http
+  docker start fake-gcs-server || docker run -d -p 4443:4443 --name fake-gcs-server fsouza/fake-gcs-server -scheme http
 }
 
-GCS_BUCKET="${GCS_BUCKET:-kaniko-test-bucket}"
+GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
 IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 
 docker version
@@ -34,10 +34,9 @@ make out/executor
 make out/warmer
 
 FLAGS=(
-  "--bucket=${GCS_BUCKET}"
-  "--repo=${IMAGE_REPO}"
   "--timeout=50m"
 )
+
 if [[ -n $DOCKERFILE_PATTERN ]]; then
   FLAGS+=("--dockerfiles-pattern=$DOCKERFILE_PATTERN")
 fi
@@ -45,12 +44,19 @@ fi
 if [[ -n $LOCAL ]]; then
   echo "running in local mode, mocking registry and gcs bucket..."
   start_local_registry
-  start_fake_gcs_server
+  #start_fake_gcs_server
+  
   IMAGE_REPO="localhost:5000/kaniko-test"
-  FLAGS+=(
-    "--gcs-endpoint=http://fake-gcs-server:4443"
-    "--disable-gcs-auth"
-  )
+  # FLAGS+=(
+  #   "--gcs-endpoint=http://localhost:4443"
+  #   "--disable-gcs-auth"
+  # )
+  GCS_BUCKET=""
 fi
 
-go test ./integration/... "${FLAGS[@]}" "$@" 
+FLAGS+=(
+  "--bucket=${GCS_BUCKET}"
+  "--repo=${IMAGE_REPO}"
+)
+
+go test -v ./integration/... "${FLAGS[@]}" "$@" 

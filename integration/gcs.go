@@ -93,8 +93,8 @@ func bucketNameFromUri(bucketURI string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if url.Scheme != "gs://" {
-		return "", fmt.Errorf("%v is not a valid gc uri", bucketURI)
+	if url.Scheme != "gs" {
+		return "", fmt.Errorf("%v is not a valid google cloud storage uri", bucketURI)
 	}
 	return url.Host, nil
 }
