@@ -19,11 +19,9 @@ package integration
 import (
 	"compress/gzip"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -51,22 +49,10 @@ func CreateIntegrationTarball() (string, error) {
 	gzipWriter := gzip.NewWriter(file)
 	defer gzipWriter.Close()
 
-	tarWriter := util.NewTar(gzipWriter)
-	defer tarWriter.Close()
-
-	walkFn := func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if filepath.IsAbs(path) {
-			return fmt.Errorf("path %v is no absolute, cant read file", path)
-		}
-		return tarWriter.AddFileToTar(path)
-	}
-
-	err = filepath.WalkDir(dir, walkFn)
+	err = util.CreateTarballOfDirectory(dir, file)
 	if err != nil {
-		return "", fmt.Errorf("walking dir %v and creating tar: %w", dir, err)
+		return "", fmt.Errorf("creating tarball of integration dir: %w", err)
 	}
+
 	return contextFilePath, nil
 }
