@@ -34,6 +34,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util/bucket"
 )
 
 const (
@@ -289,7 +290,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 	if _, present := d.filesBuilt[dockerfile]; present {
 		return nil
 	}
-	gcsBucket, gcsClient, serviceAccount, imageRepo := config.gcsBucket,config.gcsClient, config.serviceAccount, config.imageRepo
+	gcsBucket, gcsClient, serviceAccount, imageRepo := config.gcsBucket, config.gcsClient, config.serviceAccount, config.imageRepo
 
 	var buildArgs []string
 	buildArgFlag := "--build-arg"
@@ -462,7 +463,11 @@ func buildKanikoImage(
 			benchmarkFile := path.Join(benchmarkDir, dockerfile)
 			fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
 			dst := path.Join("benchmarks", fileName)
-			defer UploadFileToBucket(context.Background(), gcsBucket, benchmarkFile, dst, gcsClient)
+			file, err := os.Open(benchmarkFile)
+			if err != nil {
+				return "", err
+			}
+			defer bucket.Upload(context.Background(), gcsBucket, dst, file, gcsClient)
 		}
 	}
 

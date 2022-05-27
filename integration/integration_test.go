@@ -38,6 +38,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util/bucket"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
@@ -88,26 +89,30 @@ func getDockerMajorVersion() int {
 
 func launchTests(m *testing.M) (int, error) {
 	if config.isGcrRepository() {
-		contextFile, err := CreateIntegrationTarball()
+		contextFilePath, err := CreateIntegrationTarball()
 		if err != nil {
 			return 1, errors.Wrap(err, "Failed to create tarball of integration files for build context")
 		}
 
-		bucketName, err := bucketNameFromUri(config.gcsBucket)
+		bucketName, item, err := bucket.GetNameAndFilepathFromURI(config.gcsBucket)
 		if err != nil {
 			return 1, errors.Wrap(err, "failed to get bucket name from uri")
 		}
-		fileInBucket, err := UploadFileToBucket(context.Background(), config.gcsBucket, contextFile, contextFile, config.gcsClient)
+		contextFile, err := os.Open(contextFilePath)
+		if err != nil {
+			return 1, fmt.Errorf("failed to read file at path %v: %w", contextFilePath, err)
+		}
+		err = bucket.Upload(context.Background(), bucketName, item, contextFile, config.gcsClient)
 		if err != nil {
 			return 1, errors.Wrap(err, "Failed to upload build context")
 		}
 
-		if err = os.Remove(contextFile); err != nil {
-			return 1, errors.Wrap(err, fmt.Sprintf("Failed to remove tarball at %s", contextFile))
+		if err = os.Remove(contextFilePath); err != nil {
+			return 1, errors.Wrap(err, fmt.Sprintf("Failed to remove tarball at %s", contextFilePath))
 		}
 
 		deleteFunc := func() {
-			DeleteFromBucket(context.Background(), bucketName, fileInBucket, config.gcsClient)
+			bucket.Delete(context.Background(), bucketName, item, config.gcsClient)
 		}
 		RunOnInterrupt(deleteFunc)
 		defer deleteFunc()
@@ -912,13 +917,13 @@ func initIntegrationTestConfig() *integrationTestConfig {
 			opts = append(opts, option.WithoutAuthentication())
 		}
 
-		gcsClient, err := newStorageClient(context.Background(), opts...)
+		gcsClient, err := bucket.NewClient(context.Background(), opts...)
 		if err != nil {
 			log.Fatalf("Could not create a new Google Storage Client: %s", err)
 		}
 		c.gcsClient = gcsClient
 	}
-	
+
 	c.dockerMajorVersion = getDockerMajorVersion()
 	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
 	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
