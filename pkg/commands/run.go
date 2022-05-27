@@ -40,7 +40,7 @@ type RunCommand struct {
 
 // for testing
 var (
-	userLookup   = util.LookupUser
+	userLookup = util.LookupUser
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -149,6 +149,7 @@ func addDefaultHOME(u string, envs []string) ([]string, error) {
 	// Otherwise the user is set to uid and HOME is /
 	userObj, err := userLookup(u)
 	if err != nil {
+		return nil, fmt.Errorf("lookup user %v: %w", u, err)
 	}
 
 	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, userObj.HomeDir)), nil
