@@ -128,11 +128,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if allDockerfiles, err = FindDockerFiles(dockerfilesPath); err != nil {
+	config = initIntegrationTestConfig()
+	if allDockerfiles, err = FindDockerFiles(config.dockerfilesPattern); err != nil {
 		fmt.Println("Coudn't create map of dockerfiles", err)
 		os.Exit(1)
 	} else {
-		config = initIntegrationTestConfig()
 		exitCode, err := launchTests(m)
 		if err != nil {
 			fmt.Println(err)
@@ -876,6 +876,8 @@ func initIntegrationTestConfig() *integrationTestConfig {
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
 	flag.StringVar(&gcsEndpoint, "gcs-endpoint", "", "Custom endpoint for GCS. Used for local integration tests")
 	flag.BoolVar(&disableGcsAuth, "disable-gcs-auth", false, "Disable GCS Authentication. Used for local integration tests")
+	// adds the possibility to run a single dockerfile. This is useful since running all images can exhaust the dockerhub pull limit
+	flag.StringVar(&c.dockerfilesPattern, "dockerfiles-pattern", "Dockerfile_test*", "The pattern to match dockerfiles with")
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {

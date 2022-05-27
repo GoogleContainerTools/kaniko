@@ -160,12 +160,12 @@ func GetVersionedKanikoImage(imageRepo, dockerfile string, version int) string {
 }
 
 // FindDockerFiles will look for test docker files in the directory dockerfilesPath.
-// These files must start with `Dockerfile_test`. If the file is one we are intentionally
+// If the file is one we are intentionally
 // skipping, it will not be included in the returned list.
-func FindDockerFiles(dockerfilesPath string) ([]string, error) {
-	allDockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
+func FindDockerFiles(dockerfilesPattern string) ([]string, error) {
+	allDockerfiles, err := filepath.Glob(filepath.Join("dockerfiles", dockerfilesPattern))
 	if err != nil {
-		return []string{}, fmt.Errorf("Failed to find docker files at %s: %w", dockerfilesPath, err)
+		return []string{}, fmt.Errorf("Failed to find docker files with pattern %s: %w", dockerfilesPattern, err)
 	}
 
 	var dockerfiles []string

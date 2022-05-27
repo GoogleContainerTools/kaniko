@@ -30,6 +30,7 @@ type integrationTestConfig struct {
 	serviceAccount     string
 	dockerMajorVersion int
 	gcsClient          *storage.Client
+	dockerfilesPattern string
 }
 
 const gcrRepoPrefix string = "gcr.io/"
