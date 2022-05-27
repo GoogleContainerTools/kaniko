@@ -32,6 +32,13 @@ func TestSyscallCredentials(t *testing.T) {
 	gid, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
 	currentUserGid32 := uint32(gid)
 
+	currentUserGroupIDsU32 := []uint32{}
+	currentUserGroupIDs, _ := currentUser.GroupIds()
+	for _, id := range currentUserGroupIDs {
+		id32, _ := strconv.ParseUint(id, 10, 32)
+		currentUserGroupIDsU32 = append(currentUserGroupIDsU32, uint32(id32))
+	}
+
 	type args struct {
 		userStr string
 	}
@@ -79,7 +86,7 @@ func TestSyscallCredentials(t *testing.T) {
 			want: &syscall.Credential{
 				Uid:    currentUserUid32,
 				Gid:    50000,
-				Groups: []uint32{currentUserGid32},
+				Groups: currentUserGroupIDsU32,
 			},
 		},
 	}
