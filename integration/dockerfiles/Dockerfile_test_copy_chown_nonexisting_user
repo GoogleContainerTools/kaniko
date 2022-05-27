@@ -16,7 +16,7 @@ FROM debian:9.11
 RUN echo "hey" > /tmp/foo
 
 FROM debian:9.11
+RUN groupadd testgroup
 COPY --from=0 --chown=1001:1001 /tmp/foo /tmp/baz
-COPY --from=0 --chown=testuser:testgroup /tmp/foo /tmp/baz
-COPY --from=0 --chown=testuser:1001 /tmp/foo /tmp/baz
+# with existing group
 COPY --from=0 --chown=1001:testgroup /tmp/foo /tmp/baz

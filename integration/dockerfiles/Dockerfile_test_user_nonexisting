@@ -13,9 +13,13 @@
 # limitations under the License.
 
 FROM debian:9.11
-USER testuser:testgroup
-RUN echo "hey" > /tmp/foo
-USER testuser:1001
-RUN echo "hey2" >> /tmp/foo
+USER 1001:1001
+RUN echo "hey2" > /tmp/foo
 USER 1001
+RUN echo "hello" > /tmp/foobar
+
+# With existing group
+USER root
+RUN groupadd testgroup
+USER 1001:testgroup
 RUN echo "hello" > /tmp/foobar
