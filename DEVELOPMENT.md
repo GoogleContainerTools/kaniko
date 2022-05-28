@@ -86,6 +86,8 @@ find . -name "*.go" | grep -v vendor/ | xargs gofmt -l -s -w
 
 Currently the integration tests that live in [`integration`](./integration) can be run against your own gcloud space or a local registry.
 
+These tests will be kicked off by [reviewers](#reviews) for submitted PRs using GitHub Actions.
+
 In either case, you will need the following tools:
 
 * [`container-diff`](https://github.com/GoogleContainerTools/container-diff#installation)
@@ -142,7 +144,17 @@ To run integration tests locally against a local registry and gcs bucket, set th
 LOCAL=1 make integration-test
 ```
 
-These tests will be kicked off by [reviewers](#reviews) for submitted PRs using GitHub Actions.
+#### Running integration tests for a specific dockerfile
+
+In order to test only specific dockerfiles during local integration testing, you can specify a pattern to match against inside the integration/dockerfiles directory.
+
+```shell
+DOCKERFILE_PATTERN="Dockerfile_test_add*" make integration-test-run
+```
+
+This will only run dockerfiles that match the pattern `Dockerfile_test_add*`
+
+
 
 ### Benchmarking
 
