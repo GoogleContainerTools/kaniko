@@ -134,16 +134,16 @@ func TestMain(m *testing.M) {
 	}
 
 	config = initIntegrationTestConfig()
-	if allDockerfiles, err = FindDockerFiles(config.dockerfilesPattern); err != nil {
+	if allDockerfiles, err = FindDockerFiles(dockerfilesPath, config.dockerfilesPattern); err != nil {
 		fmt.Println("Coudn't create map of dockerfiles", err)
 		os.Exit(1)
-	} else {
-		exitCode, err := launchTests(m)
-		if err != nil {
-			fmt.Println(err)
-		}
-		os.Exit(exitCode)
 	}
+
+	exitCode, err := launchTests(m)
+	if err != nil {
+		fmt.Println(err)
+	}
+	os.Exit(exitCode)
 
 }
 
