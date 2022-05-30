@@ -293,7 +293,7 @@ func IsInitialized(driverHome string) bool {
 		return false
 	}
 	if err != nil {
-		logrus.Warnf("Graphdriver.IsInitialized: stat failed: %v", err)
+		logrus.Warnf("graphdriver.IsInitialized: stat failed: %v", err)
 	}
 	return !isEmptyDir(driverHome)
 }

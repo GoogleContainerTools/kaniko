@@ -1,4 +1,3 @@
-//go:build linux || freebsd || openbsd
 // +build linux freebsd openbsd
 
 // Package kernel provides helper function to get, parse and compare kernel
@@ -26,7 +25,7 @@ func GetKernelVersion() (*VersionInfo, error) {
 // the given version.
 func CheckKernelVersion(k, major, minor int) bool {
 	if v, err := GetKernelVersion(); err != nil {
-		logrus.Warnf("Error getting kernel version: %s", err)
+		logrus.Warnf("error getting kernel version: %s", err)
 	} else {
 		if CompareKernelVersion(*v, VersionInfo{Kernel: k, Major: major, Minor: minor}) < 0 {
 			return false

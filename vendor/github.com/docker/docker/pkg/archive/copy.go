@@ -108,7 +108,7 @@ func TarResourceRebase(sourcePath, rebaseName string) (content io.ReadCloser, er
 	sourceDir, sourceBase := SplitPathDirEntry(sourcePath)
 	opts := TarResourceRebaseOpts(sourceBase, rebaseName)
 
-	logrus.Debugf("Copying %q from %q", sourceBase, sourceDir)
+	logrus.Debugf("copying %q from %q", sourceBase, sourceDir)
 	return TarWithOptions(sourceDir, opts)
 }
 
