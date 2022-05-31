@@ -430,6 +430,67 @@ func TestSnapshotWithForceBuildMetadataIsNotSet(t *testing.T) {
 	}
 }
 
+func TestSnapshotIncludesParentDirBeforeWhiteoutFile(t *testing.T) {
+	testDir, snapshotter, cleanup, err := setUpTest(t)
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Take a snapshot
+	filesToSnapshot := []string{filepath.Join(testDir, "kaniko/file", "bar/bat")}
+	_, err = snapshotter.TakeSnapshot(filesToSnapshot, false, false)
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+
+	// Add a file
+	newFiles := map[string]string{
+		"kaniko/new-file": "baz",
+	}
+	if err := testutil.SetupFiles(testDir, newFiles); err != nil {
+		t.Fatalf("Error setting up fs: %s", err)
+	}
+	filesToSnapshot = append(filesToSnapshot, filepath.Join(testDir, "kaniko/new-file"))
+
+	// Delete files
+	filesToDelete := []string{"kaniko/file", "bar"}
+	for _, fn := range filesToDelete {
+		err = os.RemoveAll(filepath.Join(testDir, fn))
+		if err != nil {
+			t.Fatalf("Error deleting file: %s", err)
+		}
+	}
+
+	// Take a snapshot again
+	tarPath, err := snapshotter.TakeSnapshot(filesToSnapshot, true, false)
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+
+	actualFiles, err := listFilesInTar(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+	expectedFiles := []string{
+		filepath.Join(testDirWithoutLeadingSlash, "kaniko/.wh.file"),
+		filepath.Join(testDirWithoutLeadingSlash, "kaniko/new-file"),
+		filepath.Join(testDirWithoutLeadingSlash, ".wh.bar"),
+		"/",
+	}
+	for parentDir := filepath.Dir(expectedFiles[0]); parentDir != "."; parentDir = filepath.Dir(parentDir) {
+		expectedFiles = append(expectedFiles, parentDir+"/")
+	}
+
+	// Sorting does the right thing in this case. The expected order for a directory is:
+	// Parent dirs first, then whiteout files in the directory, then other files in that directory
+	sort.Strings(expectedFiles)
+
+	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
+}
+
 func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
 	newFiles := map[string]string{
 		"foo":     "newbaz1",
@@ -598,4 +659,24 @@ func setUpTest(t *testing.T) (string, *Snapshotter, func(), error) {
 	}
 
 	return testDir, snapshotter, cleanup, nil
+}
+
+func listFilesInTar(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(f)
+	var files []string
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, hdr.Name)
+	}
+	return files, nil
 }
