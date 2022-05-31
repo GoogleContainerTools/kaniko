@@ -117,19 +117,10 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 		t.Fatalf("Error taking snapshot of fs: %s", err)
 	}
 
-	f, err := os.Open(tarPath)
+	// Check contents of the snapshot, make sure contents are sorted by name
+	filesInTar, err := listFilesInTar(tarPath)
 	if err != nil {
 		t.Fatal(err)
-	}
-	// Check contents of the snapshot, make sure contents are sorted by name
-	tr := tar.NewReader(f)
-	var filesInTar []string
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		filesInTar = append(filesInTar, hdr.Name)
 	}
 	if !sort.StringsAreSorted(filesInTar) {
 		t.Fatalf("Expected the file in the tar archive were sorted, actual list was not sorted: %v", filesInTar)
@@ -227,23 +218,12 @@ func TestSnapshotFiles(t *testing.T) {
 		expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
 	}
 
-	f, err := os.Open(tarPath)
+	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
+	actualFiles, err := listFilesInTar(tarPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
-	tr := tar.NewReader(f)
-	var actualFiles []string
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		actualFiles = append(actualFiles, hdr.Name)
-	}
+
 	sort.Strings(expectedFiles)
 	sort.Strings(actualFiles)
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
@@ -321,7 +301,7 @@ func TestFileWithLinks(t *testing.T) {
 	}
 }
 
-func TestSnasphotPreservesFileOrder(t *testing.T) {
+func TestSnapshotPreservesFileOrder(t *testing.T) {
 	newFiles := map[string]string{
 		"foo":     "newbaz1",
 		"bar/bat": "baz",
@@ -366,21 +346,14 @@ func TestSnasphotPreservesFileOrder(t *testing.T) {
 			t.Fatalf("Error taking snapshot of fs: %s", err)
 		}
 
-		f, err := os.Open(tarPath)
+		filesInTar, err := listFilesInTar(tarPath)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tr := tar.NewReader(f)
+
 		filesInTars = append(filesInTars, []string{})
-		for {
-			hdr, err := tr.Next()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(hdr.Name, testDirWithoutLeadingSlash))
+		for _, fn := range filesInTar {
+			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(fn, testDirWithoutLeadingSlash))
 		}
 	}
 
@@ -491,7 +464,7 @@ func TestSnapshotIncludesParentDirBeforeWhiteoutFile(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
 }
 
-func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
+func TestSnapshotPreservesWhiteoutOrder(t *testing.T) {
 	newFiles := map[string]string{
 		"foo":     "newbaz1",
 		"bar/bat": "baz",
@@ -549,21 +522,14 @@ func TestSnasphotPreservesWhiteoutOrder(t *testing.T) {
 			t.Fatalf("Error taking snapshot of fs: %s", err)
 		}
 
-		f, err := os.Open(tarPath)
+		filesInTar, err := listFilesInTar(tarPath)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tr := tar.NewReader(f)
+
 		filesInTars = append(filesInTars, []string{})
-		for {
-			hdr, err := tr.Next()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(hdr.Name, testDirWithoutLeadingSlash))
+		for _, fn := range filesInTar {
+			filesInTars[i] = append(filesInTars[i], strings.TrimPrefix(fn, testDirWithoutLeadingSlash))
 		}
 	}
 
