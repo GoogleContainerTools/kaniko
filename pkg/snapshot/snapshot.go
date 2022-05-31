@@ -220,33 +220,41 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	defer timing.DefaultRun.Stop(timer)
 
 	// Now create the tar.
+	addedPaths := make(map[string]bool)
+
 	for _, path := range whiteouts {
+		if err := addParentDirectories(t, addedPaths, path); err != nil {
+			return err
+		}
 		if err := t.Whiteout(path); err != nil {
 			return err
 		}
 	}
 
-	addedPaths := make(map[string]bool)
 	for _, path := range files {
-		if _, fileExists := addedPaths[path]; fileExists {
-			continue
+		if err := addParentDirectories(t, addedPaths, path); err != nil {
+			return err
 		}
-		for _, parentPath := range util.ParentDirectories(path) {
-			if parentPath == "/" {
-				continue
-			}
-			if _, dirExists := addedPaths[parentPath]; dirExists {
-				continue
-			}
-			if err := t.AddFileToTar(parentPath); err != nil {
-				return err
-			}
-			addedPaths[parentPath] = true
+		if _, pathAdded := addedPaths[path]; pathAdded {
+			continue
 		}
 		if err := t.AddFileToTar(path); err != nil {
 			return err
 		}
 		addedPaths[path] = true
+	}
+	return nil
+}
+
+func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) error {
+	for _, parentPath := range util.ParentDirectories(path) {
+		if _, pathAdded := addedPaths[parentPath]; pathAdded {
+			continue
+		}
+		if err := t.AddFileToTar(parentPath); err != nil {
+			return err
+		}
+		addedPaths[parentPath] = true
 	}
 	return nil
 }
