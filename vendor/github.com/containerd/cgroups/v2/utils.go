@@ -253,7 +253,7 @@ func getStatFileContentUint64(filePath string) uint64 {
 
 	res, err := parseUint(trimmed, 10, 64)
 	if err != nil {
-		logrus.Errorf("Unable to parse %q as a uint from Cgroup file %q", string(contents), filePath)
+		logrus.Errorf("unable to parse %q as a uint from Cgroup file %q", string(contents), filePath)
 		return res
 	}
 

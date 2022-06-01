@@ -1,4 +1,3 @@
-//go:build !windows
 // +build !windows
 
 package container // import "github.com/docker/docker/container"
@@ -145,7 +144,7 @@ func (container *Container) CopyImagePathContent(v volume.Volume, destination st
 
 	defer func() {
 		if err := v.Unmount(id); err != nil {
-			logrus.Warnf("Error while unmounting volume %s: %v", v.Name(), err)
+			logrus.Warnf("error while unmounting volume %s: %v", v.Name(), err)
 		}
 	}()
 	if err := label.Relabel(path, container.MountLabel, true); err != nil && !errors.Is(err, syscall.ENOTSUP) {

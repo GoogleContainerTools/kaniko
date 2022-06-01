@@ -85,7 +85,7 @@ func (fl *follow) waitRead() error {
 		}
 		return errRetry
 	case err := <-fl.fileWatcher.Errors():
-		logrus.Debugf("Logger got error watching file: %v", err)
+		logrus.Debugf("logger got error watching file: %v", err)
 		// Something happened, let's try and stay alive and create a new watcher
 		if fl.retries <= 5 {
 			fl.fileWatcher.Close()

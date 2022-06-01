@@ -165,7 +165,7 @@ func gzDecompress(ctx context.Context, buf io.Reader) (io.ReadCloser, error) {
 
 	unpigzPath, err := exec.LookPath("unpigz")
 	if err != nil {
-		logrus.Debugf("Unpigz binary not found, falling back to go gzip library")
+		logrus.Debugf("unpigz binary not found, falling back to go gzip library")
 		return gzip.NewReader(buf)
 	}
 
