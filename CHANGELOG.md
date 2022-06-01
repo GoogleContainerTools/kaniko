@@ -1,3 +1,173 @@
+# v1.9.0 Release 2022-08-09
+
+## Highlights
+- Installed binaries are missing from image [#2049](https://github.com/GoogleContainerTools/kaniko/issues/2049)
+- proc: detect kubernetes runtime by mounts [#2054](https://github.com/GoogleContainerTools/kaniko/pull/2054)
+- Fixes #2046: make target stage lookup case insensitive [#2047](https://github.com/GoogleContainerTools/kaniko/pull/2047)
+- fix: Refactor LayersMap to correct old strange code behavior [#2066](https://github.com/GoogleContainerTools/kaniko/pull/2066)
+- Fix missing setuid flags on COPY --from=build operation [#2089](https://github.com/GoogleContainerTools/kaniko/pull/2089)
+- Fixes #2046: make target stage lookup case insensitive [#2047](https://github.com/GoogleContainerTools/kaniko/pull/2047)
+- Add GitLab CI credentials helper [#2040]((https://github.com/GoogleContainerTools/kaniko/pull/2040))
+- and a number of dependency bumps
+
+
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.9.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.9.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.9.1-slim
+```
+
+* add cache option for run command [#2032](https://github.com/GoogleContainerTools/kaniko/pull/2032)
+* fix: kaniko dir env unused [#2067](https://github.com/GoogleContainerTools/kaniko/pull/2067)
+* fix: getUIDandGID is able to resolve non-existing users and groups [#2106](https://github.com/GoogleContainerTools/kaniko/pull/2106)
+* fix(Dockerfile): use temporary busybox mount to create /kaniko directory [#2155](https://github.com/GoogleContainerTools/kaniko/pull/2155)
+* Fix the /kaniko directory permissions in container [#2009](https://github.com/GoogleContainerTools/kaniko/pull/2009)
+* ci(setup-minikube): use cri-dockerd [#2149](https://github.com/GoogleContainerTools/kaniko/pull/2149)
+* CA certificates tasks in kaniko images [#2142](https://github.com/GoogleContainerTools/kaniko/pull/2142)
+* refactor: simpler local integration tests [#2110](https://github.com/GoogleContainerTools/kaniko/pull/2110)
+* fix: use refrence should after err handles [#2128](https://github.com/GoogleContainerTools/kaniko/pull/2128)
+* fix: Add test for issue #2049 [#2114](https://github.com/GoogleContainerTools/kaniko/pull/2114)
+* Bump ossf/scorecard-action from 1.0.4 to 1.1.1 [#2116](https://github.com/GoogleContainerTools/kaniko/pull/2116)
+* Bump github.com/aws/aws-sdk-go from 1.43.36 to 1.44.24 [#2111](https://github.com/GoogleContainerTools/kaniko/pull/2111)
+* Bump actions/setup-go from 3.0.0 to 3.2.0 [#2112](https://github.com/GoogleContainerTools/kaniko/pull/2112)
+* Write parent directories to tar before whiteout files [#2113](https://github.com/GoogleContainerTools/kaniko/pull/2113)
+* fix(ci): Docker build for issue 1837 [#2095](https://github.com/GoogleContainerTools/kaniko/pull/2095)
+* Update Azure credHelpers docs [#2109](https://github.com/GoogleContainerTools/kaniko/pull/2109)
+* Fix missing setuid flags on COPY --from=build operation [#2089](https://github.com/GoogleContainerTools/kaniko/pull/2089)
+* fix: `COPY --chown` regression tests [#2097](https://github.com/GoogleContainerTools/kaniko/pull/2097)
+* fix: Regression test for #2066 [#2096](https://github.com/GoogleContainerTools/kaniko/pull/2096)
+* fix: Refactor `LayersMap` to correct old strange code behavior [#2066](https://github.com/GoogleContainerTools/kaniko/pull/2066)
+* fix: Main [#2094](https://github.com/GoogleContainerTools/kaniko/pull/2094)
+* feat: add flag to disable pushing cache [#2038](https://github.com/GoogleContainerTools/kaniko/pull/2038)
+* hasher: hash security.capability attributes [#1994](https://github.com/GoogleContainerTools/kaniko/pull/1994)
+* Documentation: Clarify README.md blurb on `--cache-copy-layers` [#2064](https://github.com/GoogleContainerTools/kaniko/pull/2064)
+* Fix release tagging workflow [#2034](https://github.com/GoogleContainerTools/kaniko/pull/2034)
+* Bump docker/setup-buildx-action from 1.6.0 to 2 [#2081](https://github.com/GoogleContainerTools/kaniko/pull/2081)
+* Bump go-containerregistry dependency [#2076](https://github.com/GoogleContainerTools/kaniko/pull/2076)
+* Fix: Flatten layer function needs to return existing files in the layer correctly [#2057](https://github.com/GoogleContainerTools/kaniko/pull/2057)
+* fix: Remove hardcoded whiteout prefix [#2056](https://github.com/GoogleContainerTools/kaniko/pull/2056)
+* proc: detect kubernetes runtime by mounts [#2054](https://github.com/GoogleContainerTools/kaniko/pull/2054)
+* Fixes #2046: make target stage lookup case insensitive [#2047](https://github.com/GoogleContainerTools/kaniko/pull/2047)
+* Add GitLab CI credentials helper [#2040](https://github.com/GoogleContainerTools/kaniko/pull/2040)
+* Bump sigstore/cosign-installer from b4f55743d10d066fee1de1cf0fa26069700c0195 to 2.2.0 [#2044](https://github.com/GoogleContainerTools/kaniko/pull/2044)
+* Bump github/codeql-action from 2.1.6 to 2.1.8 [#2043](https://github.com/GoogleContainerTools/kaniko/pull/2043)
+* Bump github.com/aws/aws-sdk-go from 1.43.31 to 1.43.36 [#2042](https://github.com/GoogleContainerTools/kaniko/pull/2042)
+* Bump cloud.google.com/go/storage from 1.21.0 to 1.22.0 [#2041](https://github.com/GoogleContainerTools/kaniko/pull/2041)
+* add cache option for run command [#2032](https://github.com/GoogleContainerTools/kaniko/pull/2032)
+* fix: kaniko dir env unused [#2067](https://github.com/GoogleContainerTools/kaniko/pull/2067)
+* fix: getUIDandGID is able to resolve non-existing users and groups [#2106](https://github.com/GoogleContainerTools/kaniko/pull/2106)
+* fix(Dockerfile): use temporary busybox mount to create /kaniko directory [#2155](https://github.com/GoogleContainerTools/kaniko/pull/2155)
+* Fix the /kaniko directory permissions in container [#2009](https://github.com/GoogleContainerTools/kaniko/pull/2009)
+* ci(setup-minikube): use cri-dockerd [#2149](https://github.com/GoogleContainerTools/kaniko/pull/2149)
+* CA certificates tasks in kaniko images [#2142](https://github.com/GoogleContainerTools/kaniko/pull/2142)
+* refactor: simpler local integration tests [#2110](https://github.com/GoogleContainerTools/kaniko/pull/2110)
+* fix: use refrence should after err handles [#2128](https://github.com/GoogleContainerTools/kaniko/pull/2128)
+* fix: Add test for issue #2049 [#2114](https://github.com/GoogleContainerTools/kaniko/pull/2114)
+* Bump ossf/scorecard-action from 1.0.4 to 1.1.1 [#2116](https://github.com/GoogleContainerTools/kaniko/pull/2116)
+* Bump github.com/aws/aws-sdk-go from 1.43.36 to 1.44.24 [#2111](https://github.com/GoogleContainerTools/kaniko/pull/2111)
+* Bump actions/setup-go from 3.0.0 to 3.2.0 [#2112](https://github.com/GoogleContainerTools/kaniko/pull/2112)
+* Write parent directories to tar before whiteout files [#2113](https://github.com/GoogleContainerTools/kaniko/pull/2113)
+* fix(ci): Docker build for issue 1837 [#2095](https://github.com/GoogleContainerTools/kaniko/pull/2095)
+* Update Azure credHelpers docs [#2109](https://github.com/GoogleContainerTools/kaniko/pull/2109)
+* Fix missing setuid flags on COPY --from=build operation [#2089](https://github.com/GoogleContainerTools/kaniko/pull/2089)
+* fix: `COPY --chown` regression tests [#2097](https://github.com/GoogleContainerTools/kaniko/pull/2097)
+* fix: Regression test for #2066 [#2096](https://github.com/GoogleContainerTools/kaniko/pull/2096)
+* fix: Refactor `LayersMap` to correct old strange code behavior [#2066](https://github.com/GoogleContainerTools/kaniko/pull/2066)
+* fix: Main [#2094](https://github.com/GoogleContainerTools/kaniko/pull/2094)
+* feat: add flag to disable pushing cache [#2038](https://github.com/GoogleContainerTools/kaniko/pull/2038)
+* hasher: hash security.capability attributes [#1994](https://github.com/GoogleContainerTools/kaniko/pull/1994)
+* Documentation: Clarify README.md blurb on `--cache-copy-layers` [#2064](https://github.com/GoogleContainerTools/kaniko/pull/2064)
+* Fix release tagging workflow [#2034](https://github.com/GoogleContainerTools/kaniko/pull/2034)
+* Bump docker/setup-buildx-action from 1.6.0 to 2 [#2081](https://github.com/GoogleContainerTools/kaniko/pull/2081)
+* Bump go-containerregistry dependency [#2076](https://github.com/GoogleContainerTools/kaniko/pull/2076)
+* Fix: Flatten layer function needs to return existing files in the layer correctly [#2057](https://github.com/GoogleContainerTools/kaniko/pull/2057)
+* fix: Remove hardcoded whiteout prefix [#2056](https://github.com/GoogleContainerTools/kaniko/pull/2056)
+* proc: detect kubernetes runtime by mounts [#2054](https://github.com/GoogleContainerTools/kaniko/pull/2054)
+* Fixes #2046: make target stage lookup case insensitive [#2047](https://github.com/GoogleContainerTools/kaniko/pull/2047)
+* Add GitLab CI credentials helper [#2040](https://github.com/GoogleContainerTools/kaniko/pull/2040)
+* Bump sigstore/cosign-installer from b4f55743d10d066fee1de1cf0fa26069700c0195 to 2.2.0 [#2044](https://github.com/GoogleContainerTools/kaniko/pull/2044)
+* Bump github/codeql-action from 2.1.6 to 2.1.8 [#2043](https://github.com/GoogleContainerTools/kaniko/pull/2043)
+* Bump github.com/aws/aws-sdk-go from 1.43.31 to 1.43.36 [#2042](https://github.com/GoogleContainerTools/kaniko/pull/2042)
+* Bump cloud.google.com/go/storage from 1.21.0 to 1.22.0 [#2041](https://github.com/GoogleContainerTools/kaniko/pull/2041)
+Huge thank you for this release towards our contributors: 
+- Aaruni Aggarwal
+- Adrian Newby
+- Anbraten
+- Andreas Fleig
+- Andrei Kvapil
+- ankitm123
+- Benjamin Krenn
+- Bernardo Marques
+- Chuang Wang
+- claudex
+- Dávid Szakállas
+- Dawei Ma
+- dependabot[bot]
+- Diego Gonzalez
+- ejose19
+- Eng Zer Jun
+- ePirat
+- Florian Apolloner
+- François JACQUES
+- Gabriel Nützi
+- Gilbert Gilb's
+- Guillaume Calmettes
+- Herman
+- Hingbong Lo
+- Igor Scheller
+- Ishant Mrinal Haloi
+- Jack
+- Jake Sanders
+- Janosch Maier
+- Jason D'Amour
+- Jason Hall
+- Jasper Ben Orschulko
+- jeunii
+- Jose Donizetti
+- Kamal Nasser
+- Konstantin Demin
+- Kun Lu
+- Lars Seipel
+- Liwen Guo
+- Lukas
+- Matt Moore
+- Max Walther
+- Mikhail Vasin
+- Naveen
+- nihilo
+- Oliver Gregorius
+- Pat Litke
+- Patrick Barker
+- priyawadhwa
+- Ramy
+- Rhianna
+- Sebastiaan Tammer
+- Sigurd Spieckermann
+- Silvano Cirujano Cuesta
+- Tejal Desai
+- Tony De La Nuez
+- Travis DePrato
+- Víctor
+- Wolfgang Walther
+- wwade
+- Yahav Itzhak
+- ygelfand
+- Yonatan Koren
+- zhouhaibing089
+
 # v1.8.1 Release 2022-04-01
 This is Apr's 2022 release.
 
