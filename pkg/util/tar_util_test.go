@@ -132,48 +132,34 @@ func createTar(testdir string, writer io.Writer) error {
 }
 
 func Test_CreateTarballOfDirectory(t *testing.T) {
-	tests := []struct {
-		name    string
-		wantF   string
-		wantErr bool
-	}{
-		{
-			name:    "temp dir",
-			wantF:   "hello from 1\nhello from 2",
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			createFilesInTempDir(t, tmpDir)
-			f := &bytes.Buffer{}
-			err := CreateTarballOfDirectory(tmpDir, f)
-			testutil.CheckError(t, tt.wantErr, err)
+	tmpDir := t.TempDir()
+	wantErr := false
+	createFilesInTempDir(t, tmpDir)
+	f := &bytes.Buffer{}
+	err := CreateTarballOfDirectory(tmpDir, f)
+	testutil.CheckError(t, wantErr, err)
 
-			extracedFilesDir := filepath.Join(tmpDir, "extracted")
-			err = os.Mkdir(extracedFilesDir, 0755)
-			if err != nil {
-				t.Error(err)
-				return
-			}
-			files, err := UnTar(f, extracedFilesDir)
-			testutil.CheckError(t, tt.wantErr, err)
-			for _, filePath := range files {
-				fileInfo, err := os.Lstat(filePath)
-				testutil.CheckError(t, tt.wantErr, err)
-				if fileInfo.IsDir() {
-					// skip directory
-					continue
-				}
-				file, err := os.Open(filePath)
-				testutil.CheckError(t, tt.wantErr, err)
-				body, err := io.ReadAll(file)
-				testutil.CheckError(t, tt.wantErr, err)
-				index := filepath.Base(filePath)
-				testutil.CheckDeepEqual(t, string(body), fmt.Sprintf("hello from %s\n", index))
-			}
-		})
+	extracedFilesDir := filepath.Join(tmpDir, "extracted")
+	err = os.Mkdir(extracedFilesDir, 0755)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	files, err := UnTar(f, extracedFilesDir)
+	testutil.CheckError(t, wantErr, err)
+	for _, filePath := range files {
+		fileInfo, err := os.Lstat(filePath)
+		testutil.CheckError(t, wantErr, err)
+		if fileInfo.IsDir() {
+			// skip directory
+			continue
+		}
+		file, err := os.Open(filePath)
+		testutil.CheckError(t, wantErr, err)
+		body, err := io.ReadAll(file)
+		testutil.CheckError(t, wantErr, err)
+		index := filepath.Base(filePath)
+		testutil.CheckDeepEqual(t, string(body), fmt.Sprintf("hello from %s\n", index))
 	}
 }
 

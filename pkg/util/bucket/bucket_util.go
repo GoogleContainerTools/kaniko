@@ -28,14 +28,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-// func GetBucketAndItem(context string) (string, string) {
-// 	split := strings.SplitN(context, "/", 2)
-// 	if len(split) == 2 && split[1] != "" {
-// 		return split[0], split[1]
-// 	}
-// 	return split[0], constants.ContextTar
-// }
-
+// Upload uploads everything from Reader to the bucket under path
 func Upload(ctx context.Context, bucketName string, path string, r io.Reader, client *storage.Client) error {
 	bucket := client.Bucket(bucketName)
 	w := bucket.Object(path).NewWriter(ctx)

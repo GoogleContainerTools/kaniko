@@ -20,6 +20,8 @@ function start_local_registry {
 }
 
 # TODO: to get this working, we need a way to override the gcs endpoint of kaniko at runtime
+# If this is done, integration test main includes flags --gcs-endpoint and --disable-gcs-auth
+# to mock the gcs endpoints and upload files to the fake-gcs-server
 function start_fake_gcs_server {
   docker start fake-gcs-server || docker run -d -p 4443:4443 --name fake-gcs-server fsouza/fake-gcs-server -scheme http
 }
@@ -44,13 +46,8 @@ fi
 if [[ -n $LOCAL ]]; then
   echo "running in local mode, mocking registry and gcs bucket..."
   start_local_registry
-  #start_fake_gcs_server
   
   IMAGE_REPO="localhost:5000/kaniko-test"
-  # FLAGS+=(
-  #   "--gcs-endpoint=http://localhost:4443"
-  #   "--disable-gcs-auth"
-  # )
   GCS_BUCKET=""
 fi
 
