@@ -58,22 +58,22 @@ func TestSyscallCredentials(t *testing.T) {
 		{
 			name: "non-existing uid without group",
 			args: args{
-				userStr: "1001",
+				userStr: "50000",
 			},
 			want: &syscall.Credential{
-				Uid: 1001,
+				Uid: 50000,
 				// because fallback is enabled
-				Gid:    1001,
+				Gid:    50000,
 				Groups: []uint32{},
 			},
 		},
 		{
 			name: "non-existing uid with existing gid",
 			args: args{
-				userStr: fmt.Sprintf("1001:%d", currentUserGid32),
+				userStr: fmt.Sprintf("50000:%d", currentUserGid32),
 			},
 			want: &syscall.Credential{
-				Uid:    1001,
+				Uid:    50000,
 				Gid:    currentUserGid32,
 				Groups: []uint32{},
 			},
