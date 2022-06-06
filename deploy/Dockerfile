@@ -32,7 +32,7 @@ RUN go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/doc
 RUN go install github.com/chrismellard/docker-credential-acr-env@09e2b5a8ac86c3ec347b2473e42b34367d8fa419
 
 # Add .docker config dir
-RUN mkdir -p /kaniko/.docker
+RUN mkdir -m 777 -p /kaniko/.docker
 
 COPY . .
 RUN \
@@ -50,15 +50,15 @@ RUN \
   cat /etc/ssl/certs/* > /ca-certificates.crt
 
 FROM scratch
-COPY --from=0 /src/out/executor /kaniko/executor
+COPY --from=0 --chmod=777 /src/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
 COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
-ENV HOME /root
-ENV USER root
+#ENV HOME /root
+#ENV USER root
 ENV PATH /usr/local/bin:/kaniko
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENV DOCKER_CONFIG /kaniko/.docker/
