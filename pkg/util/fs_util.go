@@ -599,6 +599,11 @@ func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
 // DetermineTargetFileOwnership returns the user provided uid/gid combination.
 // If they are set to -1, the uid/gid from the original file is used.
 func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64) {
+
+	if uid <= DoNotChangeUID && gid <= DoNotChangeGID {
+		return uid, gid // do not need to do chown
+	}
+
 	if uid <= DoNotChangeUID {
 		uid = int64(fi.Sys().(*syscall.Stat_t).Uid)
 	}
@@ -791,20 +796,31 @@ func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) erro
 	if err := os.MkdirAll(path, mode); err != nil {
 		return err
 	}
-	if uid > math.MaxUint32 || gid > math.MaxUint32 {
-		// due to https://github.com/golang/go/issues/8537
-		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", uint64(math.MaxUint32)))
-	}
-	if err := os.Chown(path, int(uid), int(gid)); err != nil {
+
+	if err := conditionalChown(path, uid, gid); err != nil {
 		return err
 	}
+
 	// In some cases, MkdirAll doesn't change the permissions, so run Chmod
 	// Must chmod after chown because chown resets the file mode.
 	return os.Chmod(path, mode)
 }
 
-func setFilePermissions(path string, mode os.FileMode, uid, gid int) error {
-	if err := os.Chown(path, uid, gid); err != nil {
+func conditionalChown(path string, uid, gid int64) error {
+	if uid != DoNotChangeUID && gid != DoNotChangeGID {
+		if uid > math.MaxUint32 || gid > math.MaxUint32 {
+			// due to https://github.com/golang/go/issues/8537
+			return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", uint64(math.MaxUint32)))
+		}
+		if err := os.Chown(path, int(uid), int(gid)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func setFilePermissions(path string, mode os.FileMode, uid, gid int64) error {
+	if err := conditionalChown(path, uid, gid); err != nil {
 		return err
 	}
 	// manually set permissions on file, since the default umask (022) will interfere
@@ -961,7 +977,7 @@ func CopyOwnership(src string, destDir string, root string) error {
 			return errors.Wrap(err, "reading ownership")
 		}
 		stat := info.Sys().(*syscall.Stat_t)
-		return os.Chown(destPath, int(stat.Uid), int(stat.Gid))
+		return conditionalChown(destPath, stat.Uid, stat.Gid)
 	})
 }
 
