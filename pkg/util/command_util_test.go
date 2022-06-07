@@ -679,11 +679,11 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		groupID uint32
 	}
 
-	currentUserUid, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
-	currentUserGid, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
+	currentUserUID, _ := strconv.ParseUint(currentUser.Uid, 10, 32)
+	currentUserGID, _ := strconv.ParseUint(currentUser.Gid, 10, 32)
 	expectedCurrentUser := expected{
-		userID:  uint32(currentUserUid),
-		groupID: uint32(currentUserGid),
+		userID:  uint32(currentUserUID),
+		groupID: uint32(currentUserGID),
 	}
 
 	testCases := []struct {
@@ -695,14 +695,14 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "current user uid and gid",
 			args: args{
-				userGroupStr: fmt.Sprintf("%d:%d", currentUserUid, currentUserGid),
+				userGroupStr: fmt.Sprintf("%d:%d", currentUserUID, currentUserGID),
 			},
 			expected: expectedCurrentUser,
 		},
 		{
 			testname: "current user username and gid",
 			args: args{
-				userGroupStr: fmt.Sprintf("%s:%d", currentUser.Username, currentUserGid),
+				userGroupStr: fmt.Sprintf("%s:%d", currentUser.Username, currentUserGID),
 			},
 			expected: expectedCurrentUser,
 		},
@@ -716,7 +716,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "current user uid and primary group",
 			args: args{
-				userGroupStr: fmt.Sprintf("%d:%s", currentUserUid, currentUser.PrimaryGroup),
+				userGroupStr: fmt.Sprintf("%d:%s", currentUserUID, currentUser.PrimaryGroup),
 			},
 			expected: expectedCurrentUser,
 		},
@@ -737,7 +737,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 			},
 			expected: expected{
 				userID:  1001,
-				groupID: uint32(currentUserGid),
+				groupID: uint32(currentUserGID),
 			},
 		},
 		{
@@ -771,7 +771,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "only uid and fallback is false",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", currentUserUid),
+				userGroupStr:  fmt.Sprintf("%d", currentUserUID),
 				fallbackToUID: false,
 			},
 			wantErr: true,
@@ -779,7 +779,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		{
 			testname: "only uid and fallback is true",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", currentUserUid),
+				userGroupStr:  fmt.Sprintf("%d", currentUserUID),
 				fallbackToUID: true,
 			},
 			expected: expected{

@@ -391,7 +391,7 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 		}
 		return 0, 0, err
 	}
-	return uid32, uint32(gid), nil
+	return uid32, gid, nil
 }
 
 // getGID tries to parse the gid or falls back to getGroupFromName if it's not an id
@@ -432,9 +432,8 @@ func (e fallbackToUIDErrorType) Error() string {
 func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 	if fallbackToUID {
 		return fallbackToUIDError
-	} else {
-		return err
 	}
+	return err
 }
 
 // LookupUser will try to lookup the userStr inside the passwd file.

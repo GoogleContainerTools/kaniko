@@ -16,12 +16,10 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"os/user"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
 
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -109,13 +107,6 @@ func TestUpdateUser(t *testing.T) {
 				User: test.user,
 			},
 		}
-		lookup = func(_ string) (*user.User, error) {
-			if test.userObj != nil {
-				return test.userObj, nil
-			}
-			return nil, fmt.Errorf("error while looking up user")
-		}
-		defer func() { lookup = util.LookupUser }()
 		buildArgs := dockerfile.NewBuildArgs([]string{})
 		err := cmd.ExecuteCommand(cfg, buildArgs)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedUID, cfg.User)
