@@ -331,7 +331,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 			return err
 		}
 
-		if err = setFilePermissions(path, mode, uid, gid); err != nil {
+		if err = setFilePermissions(path, mode, int64(uint32(uid)), int64(uint32(gid))); err != nil {
 			return err
 		}
 
@@ -554,7 +554,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 	if _, err := io.Copy(dest, reader); err != nil {
 		return errors.Wrap(err, "copying file")
 	}
-	return setFilePermissions(path, perm, int(uid), int(gid))
+	return setFilePermissions(path, perm, int64(uid), int64(gid))
 }
 
 // AddVolumePath adds the given path to the volume ignorelist.
@@ -819,6 +819,7 @@ func conditionalChown(path string, uid, gid int64) error {
 	return nil
 }
 
+
 func setFilePermissions(path string, mode os.FileMode, uid, gid int64) error {
 	if err := conditionalChown(path, uid, gid); err != nil {
 		return err
@@ -977,7 +978,7 @@ func CopyOwnership(src string, destDir string, root string) error {
 			return errors.Wrap(err, "reading ownership")
 		}
 		stat := info.Sys().(*syscall.Stat_t)
-		return conditionalChown(destPath, stat.Uid, stat.Gid)
+		return conditionalChown(destPath, int64(stat.Uid), int64(stat.Gid))
 	})
 }
 
