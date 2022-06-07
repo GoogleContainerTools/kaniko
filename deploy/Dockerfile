@@ -57,7 +57,7 @@ COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential
 COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
-#ENV HOME /root
+ENV HOME /kaniko
 #ENV USER root
 ENV PATH /usr/local/bin:/kaniko
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
