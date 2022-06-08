@@ -634,11 +634,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		logrus.Infof("Building stage '%v' [idx: '%v', base-idx: '%v']",
 			stage.BaseName, stage.Index, stage.BaseImageIndex)
 
-		args = sb.args
 
 		if err != nil {
 			return nil, err
 		}
+		args = sb.args
 		if err := sb.build(); err != nil {
 			return nil, errors.Wrap(err, "error building stage")
 		}
