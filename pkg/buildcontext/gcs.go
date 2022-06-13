@@ -82,6 +82,9 @@ func getTarFromBucket(bucketName, filepathInBucket, directory string) (string, e
 	}
 	// Get the tarfile context.tar.gz from the GCS bucket, and save it to a tar object
 	reader, err := bucket.ReadCloser(ctx, bucketName, filepathInBucket, client)
+	if err != nil {
+		return "", err
+	}
 	defer reader.Close()
 	tarPath := filepath.Join(directory, constants.ContextTar)
 	if err := util.CreateFile(tarPath, reader, 0600, 0, 0); err != nil {

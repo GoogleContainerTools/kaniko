@@ -26,7 +26,6 @@ function start_fake_gcs_server {
   docker start fake-gcs-server || docker run -d -p 4443:4443 --name fake-gcs-server fsouza/fake-gcs-server -scheme http
 }
 
-GCS_BUCKET="${GCS_BUCKET:-gs://kaniko-test-bucket}"
 IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 
 docker version
