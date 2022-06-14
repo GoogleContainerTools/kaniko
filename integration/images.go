@@ -18,6 +18,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,8 +31,10 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util/bucket"
 )
 
 const (
@@ -157,13 +160,16 @@ func GetVersionedKanikoImage(imageRepo, dockerfile string, version int) string {
 	return strings.ToLower(imageRepo + kanikoPrefix + dockerfile + strconv.Itoa(version))
 }
 
-// FindDockerFiles will look for test docker files in the directory dockerfilesPath.
-// These files must start with `Dockerfile_test`. If the file is one we are intentionally
+// FindDockerFiles will look for test docker files in the directory dir
+// and match the files against dockerfilesPattern.
+// If the file is one we are intentionally
 // skipping, it will not be included in the returned list.
-func FindDockerFiles(dockerfilesPath string) ([]string, error) {
-	allDockerfiles, err := filepath.Glob(path.Join(dockerfilesPath, "Dockerfile_test*"))
+func FindDockerFiles(dir, dockerfilesPattern string) ([]string, error) {
+	pattern := filepath.Join(dir, dockerfilesPattern)
+	fmt.Printf("finding docker images with pattern %v\n", pattern)
+	allDockerfiles, err := filepath.Glob(pattern)
 	if err != nil {
-		return []string{}, fmt.Errorf("Failed to find docker files at %s: %w", dockerfilesPath, err)
+		return []string{}, fmt.Errorf("Failed to find docker files with pattern %s: %w", dockerfilesPattern, err)
 	}
 
 	var dockerfiles []string
@@ -285,7 +291,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 	if _, present := d.filesBuilt[dockerfile]; present {
 		return nil
 	}
-	gcsBucket, serviceAccount, imageRepo := config.gcsBucket, config.serviceAccount, config.imageRepo
+	gcsBucket, gcsClient, serviceAccount, imageRepo := config.gcsBucket, config.gcsClient, config.serviceAccount, config.imageRepo
 
 	var buildArgs []string
 	buildArgFlag := "--build-arg"
@@ -318,7 +324,7 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 	kanikoImage := GetKanikoImage(imageRepo, dockerfile)
 	timer = timing.Start(dockerfile + "_kaniko")
 	if _, err := buildKanikoImage(t.Logf, dockerfilesPath, dockerfile, buildArgs, additionalKanikoFlags, kanikoImage,
-		contextDir, gcsBucket, serviceAccount, true); err != nil {
+		contextDir, gcsBucket, gcsClient, serviceAccount, true); err != nil {
 		return err
 	}
 	timing.DefaultRun.Stop(timer)
@@ -443,6 +449,7 @@ func buildKanikoImage(
 	kanikoImage string,
 	contextDir string,
 	gcsBucket string,
+	gcsClient *storage.Client,
 	serviceAccount string,
 	shdUpload bool,
 ) (string, error) {
@@ -457,7 +464,11 @@ func buildKanikoImage(
 			benchmarkFile := path.Join(benchmarkDir, dockerfile)
 			fileName := fmt.Sprintf("run_%s_%s", time.Now().Format("2006-01-02-15:04"), dockerfile)
 			dst := path.Join("benchmarks", fileName)
-			defer UploadFileToBucket(gcsBucket, benchmarkFile, dst)
+			file, err := os.Open(benchmarkFile)
+			if err != nil {
+				return "", err
+			}
+			defer bucket.Upload(context.Background(), gcsBucket, dst, file, gcsClient)
 		}
 	}
 

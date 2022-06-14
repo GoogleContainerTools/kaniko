@@ -86,6 +86,8 @@ find . -name "*.go" | grep -v vendor/ | xargs gofmt -l -s -w
 
 Currently the integration tests that live in [`integration`](./integration) can be run against your own gcloud space or a local registry.
 
+These tests will be kicked off by [reviewers](#reviews) for submitted PRs using GitHub Actions.
+
 In either case, you will need the following tools:
 
 * [`container-diff`](https://github.com/GoogleContainerTools/container-diff#installation)
@@ -134,33 +136,25 @@ go test ./integration -v --bucket $GCS_BUCKET --repo $IMAGE_REPO -run TestLayers
 
 These tests will be kicked off by [reviewers](#reviews) for submitted PRs by the kokoro task.
 
-#### Local repository
+#### Local integration tests
 
-To run integration tests locally against a local registry, install a local docker registry
-
-```shell
-docker run --rm  -d -p 5000:5000 --name registry registry:2
-```
-
-Then export the `IMAGE_REPO` variable with  the `localhost:5000`value
+To run integration tests locally against a local registry and gcs bucket, set the LOCAL environment variable
 
 ```shell
-export IMAGE_REPO=localhost:5000
+LOCAL=1 make integration-test
 ```
 
-And run the integration tests
+#### Running integration tests for a specific dockerfile
+
+In order to test only specific dockerfiles during local integration testing, you can specify a pattern to match against inside the integration/dockerfiles directory.
 
 ```shell
-make integration-test
+DOCKERFILE_PATTERN="Dockerfile_test_add*" make integration-test-run
 ```
 
-You can also run tests with `go test`, for example to run tests individually:
+This will only run dockerfiles that match the pattern `Dockerfile_test_add*`
 
-```shell
-go test ./integration -v --repo localhost:5000 -run TestLayers/test_layer_Dockerfile_test_copy_bucket
-```
 
-These tests will be kicked off by [reviewers](#reviews) for submitted PRs using GitHub Actions.
 
 ### Benchmarking
 

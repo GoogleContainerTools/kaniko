@@ -17,6 +17,7 @@ limitations under the License.
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -33,9 +34,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/pkg/errors"
+	"google.golang.org/api/option"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util/bucket"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
@@ -86,22 +89,33 @@ func getDockerMajorVersion() int {
 
 func launchTests(m *testing.M) (int, error) {
 	if config.isGcrRepository() {
-		contextFile, err := CreateIntegrationTarball()
+		contextFilePath, err := CreateIntegrationTarball()
 		if err != nil {
 			return 1, errors.Wrap(err, "Failed to create tarball of integration files for build context")
 		}
 
-		fileInBucket, err := UploadFileToBucket(config.gcsBucket, contextFile, contextFile)
+		bucketName, item, err := bucket.GetNameAndFilepathFromURI(config.gcsBucket)
+		if err != nil {
+			return 1, errors.Wrap(err, "failed to get bucket name from uri")
+		}
+		contextFile, err := os.Open(contextFilePath)
+		if err != nil {
+			return 1, fmt.Errorf("failed to read file at path %v: %w", contextFilePath, err)
+		}
+		err = bucket.Upload(context.Background(), bucketName, item, contextFile, config.gcsClient)
 		if err != nil {
 			return 1, errors.Wrap(err, "Failed to upload build context")
 		}
 
-		if err = os.Remove(contextFile); err != nil {
-			return 1, errors.Wrap(err, fmt.Sprintf("Failed to remove tarball at %s", contextFile))
+		if err = os.Remove(contextFilePath); err != nil {
+			return 1, errors.Wrap(err, fmt.Sprintf("Failed to remove tarball at %s", contextFilePath))
 		}
 
-		RunOnInterrupt(func() { DeleteFromBucket(fileInBucket) })
-		defer DeleteFromBucket(fileInBucket)
+		deleteFunc := func() {
+			bucket.Delete(context.Background(), bucketName, item, config.gcsClient)
+		}
+		RunOnInterrupt(deleteFunc)
+		defer deleteFunc()
 	}
 	if err := buildRequiredImages(); err != nil {
 		return 1, errors.Wrap(err, "Error while building images")
@@ -119,17 +133,17 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if allDockerfiles, err = FindDockerFiles(dockerfilesPath); err != nil {
+	config = initIntegrationTestConfig()
+	if allDockerfiles, err = FindDockerFiles(dockerfilesPath, config.dockerfilesPattern); err != nil {
 		fmt.Println("Coudn't create map of dockerfiles", err)
 		os.Exit(1)
-	} else {
-		config = initIntegrationTestConfig()
-		exitCode, err := launchTests(m)
-		if err != nil {
-			fmt.Println(err)
-		}
-		os.Exit(exitCode)
 	}
+
+	exitCode, err := launchTests(m)
+	if err != nil {
+		fmt.Println(err)
+	}
+	os.Exit(exitCode)
 
 }
 
@@ -859,9 +873,16 @@ func (i imageDetails) String() string {
 
 func initIntegrationTestConfig() *integrationTestConfig {
 	var c integrationTestConfig
+
+	var gcsEndpoint string
+	var disableGcsAuth bool
 	flag.StringVar(&c.gcsBucket, "bucket", "gs://kaniko-test-bucket", "The gcs bucket argument to uploaded the tar-ed contents of the `integration` dir to.")
 	flag.StringVar(&c.imageRepo, "repo", "gcr.io/kaniko-test", "The (docker) image repo to build and push images to during the test. `gcloud` must be authenticated with this repo or serviceAccount must be set.")
 	flag.StringVar(&c.serviceAccount, "serviceAccount", "", "The path to the service account push images to GCR and upload/download files to GCS.")
+	flag.StringVar(&gcsEndpoint, "gcs-endpoint", "", "Custom endpoint for GCS. Used for local integration tests")
+	flag.BoolVar(&disableGcsAuth, "disable-gcs-auth", false, "Disable GCS Authentication. Used for local integration tests")
+	// adds the possibility to run a single dockerfile. This is useful since running all images can exhaust the dockerhub pull limit
+	flag.StringVar(&c.dockerfilesPattern, "dockerfiles-pattern", "Dockerfile_test*", "The pattern to match dockerfiles with")
 	flag.Parse()
 
 	if len(c.serviceAccount) > 0 {
@@ -886,6 +907,23 @@ func initIntegrationTestConfig() *integrationTestConfig {
 	if !strings.HasSuffix(c.imageRepo, "/") {
 		c.imageRepo = c.imageRepo + "/"
 	}
+
+	if c.gcsBucket != "" {
+		var opts []option.ClientOption
+		if gcsEndpoint != "" {
+			opts = append(opts, option.WithEndpoint(gcsEndpoint))
+		}
+		if disableGcsAuth {
+			opts = append(opts, option.WithoutAuthentication())
+		}
+
+		gcsClient, err := bucket.NewClient(context.Background(), opts...)
+		if err != nil {
+			log.Fatalf("Could not create a new Google Storage Client: %s", err)
+		}
+		c.gcsClient = gcsClient
+	}
+
 	c.dockerMajorVersion = getDockerMajorVersion()
 	c.onbuildBaseImage = c.imageRepo + "onbuild-base:latest"
 	c.hardlinkBaseImage = c.imageRepo + "hardlink-base:latest"
@@ -893,7 +931,7 @@ func initIntegrationTestConfig() *integrationTestConfig {
 }
 
 func meetsRequirements() bool {
-	requiredTools := []string{"container-diff", "gsutil"}
+	requiredTools := []string{"container-diff"}
 	hasRequirements := true
 	for _, tool := range requiredTools {
 		_, err := exec.LookPath(tool)
