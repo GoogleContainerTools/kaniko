@@ -21,7 +21,10 @@ BIN=${DIR}/bin
 
 if [ ! -x "${BIN}/golangci-lint" ]; then
 	echo "Installing GolangCI-Lint"
-	"${DIR}/install_golint.sh" -b "${BIN}" v1.23.7
+
+	# https://golangci-lint.run/usage/install/#linux-and-windows
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${BIN} v1.45.2
+	golangci-lint --version
 fi
 
 "${BIN}/golangci-lint" run
