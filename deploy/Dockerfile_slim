@@ -27,18 +27,13 @@ RUN \
     make GOARCH=$TARGETARCH
 
 # Generate latest ca-certificates
-
 FROM debian:buster-slim AS certs
-
-RUN \
-  apt update && \
-  apt install -y ca-certificates && \
-  cat /etc/ssl/certs/* > /ca-certificates.crt
+RUN apt update && apt install -y ca-certificates
 
 FROM scratch
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY files/nsswitch.conf /etc/nsswitch.conf
-COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
 ENV HOME /root
 ENV USER root
 ENV PATH /usr/local/bin:/kaniko

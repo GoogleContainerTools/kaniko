@@ -42,13 +42,8 @@ RUN \
     make GOARCH=$TARGETARCH out/warmer
 
 # Generate latest ca-certificates
-
 FROM debian:buster-slim AS certs
-
-RUN \
-  apt update && \
-  apt install -y ca-certificates && \
-  cat /etc/ssl/certs/* > /ca-certificates.crt
+RUN apt update && apt install -y ca-certificates
 
 FROM scratch
 COPY --from=0 /src/out/executor /kaniko/executor
@@ -65,7 +60,7 @@ COPY --from=busybox:1.32.0 /*lib /lib
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
 
-COPY --from=certs /ca-certificates.crt /kaniko/ssl/certs/
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
