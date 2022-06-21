@@ -24,7 +24,7 @@ if [ ! -x "${BIN}/golangci-lint" ]; then
 
 	# https://golangci-lint.run/usage/install/#linux-and-windows
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${BIN} v1.45.2
-	golangci-lint --version
+	"${BIN}/golangci-lint" --version
 fi
 
 "${BIN}/golangci-lint" run
