@@ -76,7 +76,7 @@ func (s *fs) Walk(f DigestWalkFunc) error {
 	for _, v := range dir {
 		dgst := digest.NewDigestFromHex(string(digest.Canonical), v.Name())
 		if err := dgst.Validate(); err != nil {
-			logrus.Debugf("Skipping invalid digest %s: %s", dgst, err)
+			logrus.Debugf("skipping invalid digest %s: %s", dgst, err)
 			continue
 		}
 		if err := f(dgst); err != nil {

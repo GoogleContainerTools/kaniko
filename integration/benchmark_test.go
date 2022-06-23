@@ -60,7 +60,7 @@ func TestSnapshotBenchmark(t *testing.T) {
 				buildArgs := []string{"--build-arg", fmt.Sprintf("NUM=%d", num)}
 				var benchmarkDir string
 				benchmarkDir, *err = buildKanikoImage(t.Logf, "", dockerfile,
-					buildArgs, []string{}, kanikoImage, contextDir, config.gcsBucket,
+					buildArgs, []string{}, kanikoImage, contextDir, config.gcsBucket, config.gcsClient,
 					config.serviceAccount, false)
 				if *err != nil {
 					return

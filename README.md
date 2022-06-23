@@ -550,7 +550,7 @@ To configure credentials, you will need to do the following:
   it is better to configure the credential tool only for your ACR registries by using `credHelpers` instead of `credsStore`:
   
   ```json
-  { "credHelpers": {"mycr.azurecr.io": "acr"} }
+  { "credHelpers": {"mycr.azurecr.io": "acr-env"} }
   ```
   
   You can mount in the new config as a configMap:

@@ -1,0 +1,9 @@
+integration/**/*
+scripts/**/*
+hack/**/*
+examples/**/*
+docs/**/*
+.github/**/*
+logo/**/*
+out/**/*
+

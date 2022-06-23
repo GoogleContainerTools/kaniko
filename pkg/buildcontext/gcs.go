@@ -17,15 +17,15 @@ limitations under the License.
 package buildcontext
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"cloud.google.com/go/storage"
 	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/util/bucket"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
@@ -36,27 +36,24 @@ type GCS struct {
 }
 
 func (g *GCS) UnpackTarFromBuildContext() (string, error) {
-	bucket, item := util.GetBucketAndItem(g.context)
-	return kConfig.BuildContextDir, unpackTarFromGCSBucket(bucket, item, kConfig.BuildContextDir)
+	bucketName, filepath, err := bucket.GetNameAndFilepathFromURI(g.context)
+	if err != nil {
+		return "", fmt.Errorf("getting bucketname and filepath from context: %w", err)
+	}
+	return kConfig.BuildContextDir, unpackTarFromGCSBucket(bucketName, filepath, kConfig.BuildContextDir)
 }
 
 func UploadToBucket(r io.Reader, dest string) error {
 	ctx := context.Background()
-	context := strings.SplitAfter(dest, "://")[1]
-	bucketName, item := util.GetBucketAndItem(context)
-	client, err := storage.NewClient(ctx)
+	bucketName, filepath, err := bucket.GetNameAndFilepathFromURI(dest)
+	if err != nil {
+		return fmt.Errorf("getting bucketname and filepath from dest: %w", err)
+	}
+	client, err := bucket.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	bucket := client.Bucket(bucketName)
-	w := bucket.Object(item).NewWriter(ctx)
-	if _, err := io.Copy(w, r); err != nil {
-		return err
-	}
-	if err := w.Close(); err != nil {
-		return err
-	}
-	return nil
+	return bucket.Upload(ctx, bucketName, filepath, r, client)
 }
 
 // unpackTarFromGCSBucket unpacks the context.tar.gz file in the given bucket to the given directory
@@ -77,15 +74,14 @@ func unpackTarFromGCSBucket(bucketName, item, directory string) error {
 
 // getTarFromBucket gets context.tar.gz from the GCS bucket and saves it to the filesystem
 // It returns the path to the tar file
-func getTarFromBucket(bucketName, item, directory string) (string, error) {
+func getTarFromBucket(bucketName, filepathInBucket, directory string) (string, error) {
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
+	client, err := bucket.NewClient(ctx)
 	if err != nil {
 		return "", err
 	}
-	bucket := client.Bucket(bucketName)
 	// Get the tarfile context.tar.gz from the GCS bucket, and save it to a tar object
-	reader, err := bucket.Object(item).NewReader(ctx)
+	reader, err := bucket.ReadCloser(ctx, bucketName, filepathInBucket, client)
 	if err != nil {
 		return "", err
 	}

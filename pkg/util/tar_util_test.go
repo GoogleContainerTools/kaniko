@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -128,4 +129,47 @@ func createTar(testdir string, writer io.Writer) error {
 		}
 	}
 	return nil
+}
+
+func Test_CreateTarballOfDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	wantErr := false
+	createFilesInTempDir(t, tmpDir)
+	f := &bytes.Buffer{}
+	err := CreateTarballOfDirectory(tmpDir, f)
+	testutil.CheckError(t, wantErr, err)
+
+	extracedFilesDir := filepath.Join(tmpDir, "extracted")
+	err = os.Mkdir(extracedFilesDir, 0755)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	files, err := UnTar(f, extracedFilesDir)
+	testutil.CheckError(t, wantErr, err)
+	for _, filePath := range files {
+		fileInfo, err := os.Lstat(filePath)
+		testutil.CheckError(t, wantErr, err)
+		if fileInfo.IsDir() {
+			// skip directory
+			continue
+		}
+		file, err := os.Open(filePath)
+		testutil.CheckError(t, wantErr, err)
+		body, err := io.ReadAll(file)
+		testutil.CheckError(t, wantErr, err)
+		index := filepath.Base(filePath)
+		testutil.CheckDeepEqual(t, string(body), fmt.Sprintf("hello from %s\n", index))
+	}
+}
+
+func createFilesInTempDir(t *testing.T, tmpDir string) {
+	for i := 0; i < 2; i++ {
+		fName := filepath.Join(tmpDir, fmt.Sprint(i))
+		content := fmt.Sprintf("hello from %d\n", i)
+		if err := os.WriteFile(fName, []byte(content), 0666); err != nil {
+			t.Error(err)
+			return
+		}
+	}
 }

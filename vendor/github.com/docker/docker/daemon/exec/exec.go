@@ -71,7 +71,7 @@ func (c *Config) InitializeStdio(iop *cio.DirectIO) (cio.IO, error) {
 	if c.StreamConfig.Stdin() == nil && !c.Tty && runtime.GOOS == "windows" {
 		if iop.Stdin != nil {
 			if err := iop.Stdin.Close(); err != nil {
-				logrus.Errorf("Error closing exec stdin: %+v", err)
+				logrus.Errorf("error closing exec stdin: %+v", err)
 			}
 		}
 	}

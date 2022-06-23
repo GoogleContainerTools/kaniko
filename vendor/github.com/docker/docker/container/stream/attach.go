@@ -63,8 +63,8 @@ func (c *Config) CopyStreams(ctx context.Context, cfg *AttachConfig) <-chan erro
 	// Connect stdin of container to the attach stdin stream.
 	if cfg.Stdin != nil {
 		group.Go(func() error {
-			logrus.Debug("Attach: stdin: begin")
-			defer logrus.Debug("Attach: stdin: end")
+			logrus.Debug("attach: stdin: begin")
+			defer logrus.Debug("attach: stdin: end")
 
 			defer func() {
 				if cfg.CloseStdin && !cfg.TTY {
@@ -98,8 +98,8 @@ func (c *Config) CopyStreams(ctx context.Context, cfg *AttachConfig) <-chan erro
 	}
 
 	attachStream := func(name string, stream io.Writer, streamPipe io.ReadCloser) error {
-		logrus.Debugf("Attach: %s: begin", name)
-		defer logrus.Debugf("Attach: %s: end", name)
+		logrus.Debugf("attach: %s: begin", name)
+		defer logrus.Debugf("attach: %s: end", name)
 		defer func() {
 			// Make sure stdin gets closed
 			if cfg.Stdin != nil {
@@ -132,7 +132,7 @@ func (c *Config) CopyStreams(ctx context.Context, cfg *AttachConfig) <-chan erro
 
 	errs := make(chan error, 1)
 	go func() {
-		defer logrus.Debug("Attach done")
+		defer logrus.Debug("attach done")
 		groupErr := make(chan error, 1)
 		go func() {
 			groupErr <- group.Wait()
