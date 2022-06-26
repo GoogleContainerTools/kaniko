@@ -31,9 +31,9 @@ fi
 
 # Minikube needs cri-dockerd to run clusters 1.24+
 CRI_DOCKERD_VERSION="${CRI_DOCKERD_VERSION:-0.2.3}"
-CRI_DOCKERD_PACKAGE_URL="https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd_${CRI_DOCKERD_VERSION}.3-0.ubuntu-jammy_amd64.deb"
+CRI_DOCKERD_PACKAGE_URL="https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd_${CRI_DOCKERD_VERSION}.3-0.ubuntu-focal_amd64.deb"
 curl -Lo cri-dockerd.deb $CRI_DOCKERD_PACKAGE_URL
-sudo apt install --fix-broken -y ./cri-dockerd.deb
+sudo apt install -y ./cri-dockerd.deb
 
 if ! command -v crictl; then
   CRICTL_VERSION="v1.24.1"
