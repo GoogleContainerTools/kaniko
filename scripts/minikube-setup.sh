@@ -34,7 +34,7 @@ CRI_DOCKERD_VERSION="${CRI_DOCKERD_VERSION:-0.2.3}"
 CRI_DOCKERD_PACKAGE_URL="https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd_${CRI_DOCKERD_VERSION}.3-0.ubuntu-focal_amd64.deb"
 curl -Lo cri-dockerd.deb $CRI_DOCKERD_PACKAGE_URL
 sudo apt-get update
-sudo apt-get install -y containerd ./cri-dockerd.deb
+sudo apt-get install -y containerd runc ./cri-dockerd.deb
 
 if ! command -v crictl; then
   CRICTL_VERSION="v1.24.1"
