@@ -22,9 +22,25 @@ if ! conntrack --version &>/dev/null; then
   sudo apt-get -qq -y install conntrack
 fi
 
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-chmod +x minikube
-sudo mv minikube /usr/local/bin/
+if ! command -v minikube; then
+  curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+  chmod +x minikube
+  sudo mv minikube /usr/local/bin/
+fi
+
+
+# Minikube needs cri-dockerd to run clusters 1.24+
+CRI_DOCKERD_VERSION="${CRI_DOCKERD_VERSION:-0.2.3}"
+CRI_DOCKERD_PACKAGE_URL="https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd_${CRI_DOCKERD_VERSION}.3-0.ubuntu-jammy_amd64.deb"
+curl -Lo cri-dockerd.deb $CRI_DOCKERD_PACKAGE_URL
+sudo apt install -y ./cri-dockerd.deb
+
+if ! command -v crictl; then
+  CRICTL_VERSION="v1.24.1"
+  curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-${CRICTL_VERSION}-linux-amd64.tar.gz --output crictl-${CRICTL_VERSION}-linux-amd64.tar.gz
+  sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/local/bin
+  rm -f crictl-$CRICTL_VERSION-linux-amd64.tar.gz
+fi
 
 sudo apt-get update
 sudo apt-get install -y liblz4-tool
