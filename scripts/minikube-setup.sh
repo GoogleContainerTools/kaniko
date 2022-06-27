@@ -60,5 +60,3 @@ minikube start --vm-driver=none --force
 minikube status
 minikube addons enable registry
 kubectl cluster-info
-
-kubectl port-forward --namespace kube-system service/registry 5000:80 &
