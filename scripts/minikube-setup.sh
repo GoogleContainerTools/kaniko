@@ -31,7 +31,8 @@ fi
 
 # Minikube needs cri-dockerd to run clusters 1.24+
 CRI_DOCKERD_VERSION="${CRI_DOCKERD_VERSION:-0.2.3}"
-CRI_DOCKERD_PACKAGE_URL="https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd_${CRI_DOCKERD_VERSION}.3-0.ubuntu-focal_amd64.deb"
+OS_CODENAME=$(cat /etc/os-release | grep VERSION_CODENAME | cut -f2 -d"=")
+CRI_DOCKERD_PACKAGE_URL="https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD_VERSION}/cri-dockerd_${CRI_DOCKERD_VERSION}.3-0.ubuntu-${OS_CODENAME}_amd64.deb"
 curl -Lo cri-dockerd.deb $CRI_DOCKERD_PACKAGE_URL
 sudo apt-get update
 sudo apt-get install -y containerd runc ./cri-dockerd.deb
@@ -47,6 +48,7 @@ sudo apt-get update
 sudo apt-get install -y liblz4-tool
 cat /proc/cpuinfo
 
+sudo systemctl list-unit-files | grep docker
 minikube start --vm-driver=none --force
 minikube status
 minikube addons enable registry
