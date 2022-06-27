@@ -48,7 +48,7 @@ sudo apt-get update
 sudo apt-get install -y liblz4-tool
 cat /proc/cpuinfo
 
-sudo systemctl list-unit-files | grep docker
+sudo systemctl unmask docker
 minikube start --vm-driver=none --force
 minikube status
 minikube addons enable registry
