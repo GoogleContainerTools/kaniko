@@ -570,13 +570,13 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 
 	// if the file is already created with ownership other than root, reset the ownership
 	if FilepathExists(path) {
-		logrus.Debugf("file at %v already exists, resetting file ownership to root")
+		logrus.Debugf("file at %v already exists, resetting file ownership to root", path)
 		err := resetFileOwnershipIfNotMatching(path, 0, 0)
 		if err != nil {
 			return errors.Wrap(err, "reseting file ownership")
 		}
-
 	}
+
 	dest, err := os.Create(path)
 	if err != nil {
 		return errors.Wrap(err, "creating file")
