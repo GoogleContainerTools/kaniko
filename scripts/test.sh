@@ -46,5 +46,4 @@ do
         fail=1
     fi
 done
-    go tool cover -html=$DIR/../out/coverage.out
 exit $fail
