@@ -1,6 +1,6 @@
 module github.com/GoogleContainerTools/kaniko
 
-go 1.17
+go 1.18
 
 // These match the docker/docker's dependencies configured in:
 // https://github.com/moby/moby/blob/v20.10.12/vendor.conf
