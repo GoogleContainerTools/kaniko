@@ -45,6 +45,8 @@ FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
 FROM scratch
+# Create kaniko directory with world write permission to allow non root run
+ADD files/kaniko.tar /
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
