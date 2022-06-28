@@ -17,7 +17,6 @@ WORKDIR /src
 
 # This arg is passed by docker buildx & contains the target CPU architecture (e.g., amd64, arm64, etc.)
 ARG TARGETARCH
-ARG KANIKO_BRANCH="master"
 
 ENV GOARCH=$TARGETARCH
 ENV CGO_ENABLED=0
