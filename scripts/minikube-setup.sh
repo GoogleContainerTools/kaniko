@@ -54,9 +54,6 @@ sudo cp /tmp/cri-dockerd/packaging/systemd/* /etc/systemd/system
 sudo systemctl daemon-reload
 sudo systemctl enable cri-docker.service
 sudo systemctl enable --now cri-docker.socket
-sudo systemctl start cri-docker.socket
-sudo systemctl start cri-docker.service || systemctl status cri-docker.service
-sudo systemctl status cri-docker
 
 CRICTL_VERSION="v1.17.0"
 curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-${CRICTL_VERSION}-linux-amd64.tar.gz --output crictl-${CRICTL_VERSION}-linux-amd64.tar.gz
@@ -69,7 +66,7 @@ cat /proc/cpuinfo
 
 # need to run minikube start as root since user doesn't have permissions to communicate with docker in minikube 1.26
 # See https://minikube.sigs.k8s.io/docs/drivers/none/#other 
-sudo minikube start --vm-driver=none --force || sudo minikube logs && ;
+sudo minikube start --vm-driver=none --force || sudo minikube logs;
 minikube status
 minikube addons enable registry
 kubectl cluster-info
