@@ -46,8 +46,7 @@ CRI_DOCKERD_BINARY_URL="https://github.com/Mirantis/cri-dockerd/releases/downloa
 curl -Lo cri-dockerd.tgz $CRI_DOCKERD_BINARY_URL
 tar xfz cri-dockerd.tgz
 chmod +x cri-dockerd/cri-dockerd
-sudo mv cri-dockerd/cri-dockerd /usr/bin/cri-docker
-
+sudo mv cri-dockerd/cri-dockerd /usr/bin/cri-dockerd
 
 git clone https://github.com/Mirantis/cri-dockerd.git /tmp/cri-dockerd
 sudo cp /tmp/cri-dockerd/packaging/systemd/* /etc/systemd/system
