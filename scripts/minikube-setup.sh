@@ -22,6 +22,18 @@ if ! conntrack --version &>/dev/null; then
   sudo apt-get -qq -y install conntrack
 fi
 
+# taken from https://github.com/kubernetes/minikube/blob/b45b29c5df6f88c6ac0afd60079a6190dc1e32c9/hack/jenkins/linux_integration_tests_none.sh#L38
+if ! kubeadm &>/dev/null; then
+  echo "WARNING: kubeadm is not installed. will try to install."
+  curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubeadm"
+  sudo install kubeadm /usr/local/bin/kubeadm
+fi
+
+# "none" driver specific cleanup from previous runs.
+sudo kubeadm reset -f --cri-socket unix:///var/run/cri-dockerd.sock || true
+# kubeadm reset may not stop pods immediately
+docker rm -f $(docker ps -aq) >/dev/null 2>&1 || true
+
 # always install minikube, because versionupgrades could break usability of this script
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 chmod +x minikube
@@ -36,13 +48,14 @@ tar xfz cri-dockerd.tgz
 chmod +x cri-dockerd/cri-dockerd
 sudo mv cri-dockerd/cri-dockerd /usr/bin/cri-docker
 
+
 git clone https://github.com/Mirantis/cri-dockerd.git /tmp/cri-dockerd
 sudo cp /tmp/cri-dockerd/packaging/systemd/* /etc/systemd/system
 sudo systemctl daemon-reload
 sudo systemctl enable cri-docker.service
 sudo systemctl enable --now cri-docker.socket
 
-CRICTL_VERSION="v1.24.1"
+CRICTL_VERSION="v1.17.0"
 curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-${CRICTL_VERSION}-linux-amd64.tar.gz --output crictl-${CRICTL_VERSION}-linux-amd64.tar.gz
 sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/local/bin
 rm -f crictl-$CRICTL_VERSION-linux-amd64.tar.gz
