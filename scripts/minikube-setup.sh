@@ -65,16 +65,11 @@ cat /proc/cpuinfo
 
 # need to run minikube start as root since user doesn't have permissions to communicate with docker in minikube 1.26
 # See https://minikube.sigs.k8s.io/docs/drivers/none/#other 
-sudo minikube start --v=8 --vm-driver=none --force || sudo minikube logs;
+sudo minikube start --v=8 --vm-driver=none --force --addons="registry,default-storageclass,storage-provisioner" || sudo minikube logs;
 
 # move minikube stuff back to user directory
 sudo mv /root/.kube /root/.minikube $HOME
 sudo chown -R $USER $HOME/.kube $HOME/.minikube 
 
-# change root paths to $HOME directory in minikube config
-sed -i "s#/root#$HOME#g" $HOME/.minikube/machines/minikube/config.json
-cat $HOME/.minikube/machines/minikube/config.json
-
 minikube status
-minikube addons enable registry
 kubectl cluster-info
