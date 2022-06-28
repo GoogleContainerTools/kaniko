@@ -34,7 +34,7 @@ sudo kubeadm reset -f --cri-socket unix:///var/run/cri-dockerd.sock || true
 # kubeadm reset may not stop pods immediately
 docker rm -f $(docker ps -aq) >/dev/null 2>&1 || true
 
-# always install minikube, because versionupgrades could break usability of this script
+# always install minikube, because version inconsistency is possible and could lead to weird errors
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 chmod +x minikube
 sudo mv minikube /usr/local/bin/
