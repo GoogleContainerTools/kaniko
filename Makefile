@@ -93,11 +93,6 @@ k8s-executor-build-push:
 	docker push $(REGISTRY)/executor:latest
 
 
-deploy/files/kaniko.tar: 
-	mkdir -p deploy/files/kaniko
-	chmod 777 deploy/files/kaniko
-	cd deploy/files && tar cf kaniko.tar kaniko
-
 .PHONY: images
 images: DOCKER_BUILDKIT=1
 images: 

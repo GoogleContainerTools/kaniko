@@ -31,6 +31,11 @@ FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
 FROM scratch
+
+# Create kaniko directory with world write permission to allow non root run
+RUN --mount=from=busybox:latest,src=/bin/,dst=/bin/ \
+  mkdir -p /kaniko && \
+  chmod 777 /kaniko
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY files/nsswitch.conf /etc/nsswitch.conf
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/

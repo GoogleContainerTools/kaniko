@@ -46,6 +46,9 @@ FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
 FROM scratch
+RUN --mount=from=busybox:latest,src=/bin/,dst=/bin/ \
+	mkdir -p /kaniko && \
+	chmod 777 /kaniko
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY --from=0 /src/out/warmer /kaniko/warmer
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
