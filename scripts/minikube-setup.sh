@@ -51,7 +51,6 @@ sudo apt-get update
 sudo apt-get install -y liblz4-tool
 cat /proc/cpuinfo
 
-sudo systemctl unmask docker
 # need to run minikube start as root since user doesn't have permissions to communicate with docker in minikube 1.26
 # See https://minikube.sigs.k8s.io/docs/drivers/none/#other 
 sudo minikube start --vm-driver=none --force
