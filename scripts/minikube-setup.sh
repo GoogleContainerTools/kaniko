@@ -70,7 +70,10 @@ sudo minikube start --v=8 --vm-driver=none --force || sudo minikube logs;
 # move minikube stuff back to user directory
 sudo mv /root/.kube /root/.minikube $HOME
 sudo chown -R $USER $HOME/.kube $HOME/.minikube 
-sudo chmod -R u+wrx /root/.minikube
+
+# change root paths to $HOME directory in minikube config
+sed -i "s#/root#$HOME#g" $HOME/.minikube/machines/minikube/config.json
+cat $HOME/.minikube/machines/minikube/config.json
 
 minikube status
 minikube addons enable registry
