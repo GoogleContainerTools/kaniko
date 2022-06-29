@@ -45,7 +45,7 @@ RUN \
 FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
-# use musl busybox since it's staticly linked on all platforms
+# use musl busybox since it's staticly compiled on all platforms
 FROM busybox:musl as busybox
 FROM scratch
 # Create kaniko directory with world write permission to allow non root run
