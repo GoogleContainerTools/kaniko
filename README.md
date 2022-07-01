@@ -28,80 +28,85 @@ _If you are interested in contributing to kaniko, see [DEVELOPMENT.md](DEVELOPME
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Community](#community)
-- [How does kaniko work?](#how-does-kaniko-work)
-- [Known Issues](#known-issues)
-- [Demo](#demo)
-- [Tutorial](#tutorial)
-- [Using kaniko](#using-kaniko)
-  - [kaniko Build Contexts](#kaniko-build-contexts)
-  - [Using Azure Blob Storage](#using-azure-blob-storage)
-  - [Using Private Git Repository](#using-private-git-repository)
-  - [Using Standard Input](#using-standard-input)
-  - [Running kaniko](#running-kaniko)
-    - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
-      - [Kubernetes secret](#kubernetes-secret)
-    - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
-    - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
-    - [Running kaniko in Docker](#running-kaniko-in-docker)
-  - [Caching](#caching)
-    - [Caching Layers](#caching-layers)
-    - [Caching Base Images](#caching-base-images)
-  - [Pushing to Different Registries](#pushing-to-different-registries)
-    - [Pushing to Docker Hub](#pushing-to-docker-hub)
-    - [Pushing to Google GCR](#pushing-to-google-gcr)
-    - [Pushing to Google GCR - Workload Identity](#pushing-to-gcr-using-workload-identity)
-    - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
-    - [Pushing to Azure Container Registry](#pushing-to-azure-container-registry)
-    - [Pushing to JFrog Container Registry or to JFrog Artifactory](#pushing-to-jfrog-container-registry-or-to-jfrog-artifactory)
-  - [Additional Flags](#additional-flags)
-    - [--build-arg](#--build-arg)
-    - [--cache](#--cache)
-    - [--cache-dir](#--cache-dir)
-    - [--cache-repo](#--cache-repo)
-    - [--cache-ttl duration](#--cache-ttl-duration)
-    - [--cleanup](#--cleanup)
-    - [--context-sub-path](#--context-sub-path)
-    - [--compressed-caching](#--compressed-caching)
-    - [--customPlatform](#--customPlatform)
-    - [--digest-file](#--digest-file)
-    - [--dockerfile](#--dockerfile)
-    - [--force](#--force)
-    - [--git](#--git)
-    - [--image-name-with-digest-file](#--image-name-with-digest-file)
-    - [--image-name-tag-with-digest-file](#--image-name-tag-with-digest-file)
-    - [--insecure](#--insecure)
-    - [--insecure-pull](#--insecure-pull)
-    - [--insecure-registry](#--insecure-registry)
-    - [--label](#--label)
-    - [--log-format](#--log-format)
-    - [--log-timestamp](#--log-timestamp)
-    - [--no-push](#--no-push)
-    - [--oci-layout-path](#--oci-layout-path)
-    - [--push-retry](#--push-retry)
-    - [--registry-certificate](#--registry-certificate)
-    - [--registry-mirror](#--registry-mirror)
-    - [--reproducible](#--reproducible)
-    - [--single-snapshot](#--single-snapshot)
-    - [--skip-tls-verify](#--skip-tls-verify)
-    - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
-    - [--skip-tls-verify-registry](#--skip-tls-verify-registry)
-    - [--skip-unused-stages](#--skip-unused-stages)
-    - [--snapshotMode](#--snapshotmode)
-    - [--tarPath](#--tarpath)
-    - [--target](#--target)
-    - [--use-new-run](#--use-new-run)
-    - [--verbosity](#--verbosity)
-    - [--ignore-var-run](#--ignore-var-run)
-    - [--ignore-path](#--ignore-path)
-    - [--image-fs-extract-retry](#--image-fs-extract-retry)
-  - [Debug Image](#debug-image)
-- [Security](#security)
-  - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
-- [Comparison with Other Tools](#comparison-with-other-tools)
-- [Community](#community-1)
-- [Limitations](#limitations)
-  - [mtime and snapshotting](#mtime-and-snapshotting)
+- [kaniko - Build Images In Kubernetes](#kaniko---build-images-in-kubernetes)
+  - [🚨NOTE: kaniko is not an officially supported Google product🚨](#note-kaniko-is-not-an-officially-supported-google-product)
+  - [Community](#community)
+  - [How does kaniko work?](#how-does-kaniko-work)
+  - [Known Issues](#known-issues)
+  - [Demo](#demo)
+  - [Tutorial](#tutorial)
+  - [Using kaniko](#using-kaniko)
+    - [kaniko Build Contexts](#kaniko-build-contexts)
+    - [Using Azure Blob Storage](#using-azure-blob-storage)
+    - [Using Private Git Repository](#using-private-git-repository)
+    - [Using Standard Input](#using-standard-input)
+    - [Running kaniko](#running-kaniko)
+      - [Running kaniko in a Kubernetes cluster](#running-kaniko-in-a-kubernetes-cluster)
+        - [Kubernetes secret](#kubernetes-secret)
+      - [Running kaniko in gVisor](#running-kaniko-in-gvisor)
+      - [Running kaniko in Google Cloud Build](#running-kaniko-in-google-cloud-build)
+      - [Running kaniko in Docker](#running-kaniko-in-docker)
+    - [Caching](#caching)
+      - [Caching Layers](#caching-layers)
+      - [Caching Base Images](#caching-base-images)
+    - [Pushing to Different Registries](#pushing-to-different-registries)
+      - [Pushing to Docker Hub](#pushing-to-docker-hub)
+      - [Pushing to Google GCR](#pushing-to-google-gcr)
+      - [Pushing to GCR using Workload Identity](#pushing-to-gcr-using-workload-identity)
+      - [Pushing to Amazon ECR](#pushing-to-amazon-ecr)
+      - [Pushing to Azure Container Registry](#pushing-to-azure-container-registry)
+      - [Pushing to JFrog Container Registry or to JFrog Artifactory](#pushing-to-jfrog-container-registry-or-to-jfrog-artifactory)
+    - [Additional Flags](#additional-flags)
+      - [--build-arg](#--build-arg)
+      - [--cache](#--cache)
+      - [--cache-dir](#--cache-dir)
+      - [--cache-repo](#--cache-repo)
+      - [--cache-copy-layers](#--cache-copy-layers)
+      - [--cache-ttl duration](#--cache-ttl-duration)
+      - [--cleanup](#--cleanup)
+      - [--compressed-caching](#--compressed-caching)
+      - [--context-sub-path](#--context-sub-path)
+      - [--custom-platform](#--custom-platform)
+      - [--digest-file](#--digest-file)
+      - [--dockerfile](#--dockerfile)
+      - [--force](#--force)
+      - [--git](#--git)
+      - [--image-name-with-digest-file](#--image-name-with-digest-file)
+      - [--image-name-tag-with-digest-file](#--image-name-tag-with-digest-file)
+      - [--insecure](#--insecure)
+      - [--insecure-pull](#--insecure-pull)
+      - [--insecure-registry](#--insecure-registry)
+      - [--label](#--label)
+      - [--log-format](#--log-format)
+      - [--log-timestamp](#--log-timestamp)
+      - [--no-push](#--no-push)
+      - [--oci-layout-path](#--oci-layout-path)
+      - [--push-retry](#--push-retry)
+      - [--registry-certificate](#--registry-certificate)
+      - [--registry-mirror](#--registry-mirror)
+      - [--reproducible](#--reproducible)
+      - [--single-snapshot](#--single-snapshot)
+      - [--skip-tls-verify](#--skip-tls-verify)
+      - [--skip-tls-verify-pull](#--skip-tls-verify-pull)
+      - [--skip-tls-verify-registry](#--skip-tls-verify-registry)
+      - [--skip-unused-stages](#--skip-unused-stages)
+      - [--snapshot-mode](#--snapshot-mode)
+      - [--tarPath](#--tarpath)
+      - [--target](#--target)
+      - [--use-new-run](#--use-new-run)
+      - [--verbosity](#--verbosity)
+      - [--ignore-var-run](#--ignore-var-run)
+      - [--ignore-path](#--ignore-path)
+      - [--image-fs-extract-retry](#--image-fs-extract-retry)
+    - [Debug Image](#debug-image)
+  - [Security](#security)
+    - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
+  - [Kaniko Builds - Profiling](#kaniko-builds---profiling)
+  - [Comparison with Other Tools](#comparison-with-other-tools)
+  - [Community](#community-1)
+  - [Limitations](#limitations)
+    - [mtime and snapshotting](#mtime-and-snapshotting)
+  - [References](#references)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -535,7 +540,7 @@ spec:
 
 #### Pushing to Azure Container Registry
 
-An ACR [credential helper](https://github.com/chrismellard/docker-credential-acr-env) is built into the kaniko executor image, which can be 
+An ACR [credential helper](https://github.com/chrismellard/docker-credential-acr-env) is built into the kaniko executor image, which can be
 used to authenticate with well-known Azure environmental information.
 
 To configure credentials, you will need to do the following:
@@ -545,14 +550,14 @@ To configure credentials, you will need to do the following:
   ```json
   { "credsStore": "acr" }
   ```
-  
+
   A downside of this approach is that ACR authentication will be used for all registries, which will fail if you also pull from DockerHub, GCR, etc. Thus,
   it is better to configure the credential tool only for your ACR registries by using `credHelpers` instead of `credsStore`:
-  
+
   ```json
   { "credHelpers": {"mycr.azurecr.io": "acr-env"} }
   ```
-  
+
   You can mount in the new config as a configMap:
 
   ```shell
@@ -638,7 +643,7 @@ This flag allows you to pass in ARG values at build time, similarly to Docker.
 You can set it multiple times for multiple arguments.
 
 Note that passing values that contain spaces is not natively suppored - you need to ensure that the IFS is set to null before your executor command.
-You can set this by adding `export IFS=''` before your executor call. 
+You can set this by adding `export IFS=''` before your executor call.
 See the following example
 
 ```bash
@@ -693,12 +698,12 @@ Set a sub path within the given `--context`.
 Its particularly useful when your context is, for example, a git repository,
 and you want to build one of its subfolders instead of the root folder.
 
-#### --customPlatform
+#### --custom-platform
 
 Allows to build with another default platform than the host, similarly to docker build --platform xxx
-the value has to be on the form `--customPlatform=linux/arm`, with acceptable values listed here: [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63).
+the value has to be on the form `--custom-platform=linux/arm`, with acceptable values listed here: [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63).
 
-It's also possible specifying CPU variants adding it as a third parameter (like  `--customPlatform=linux/arm/v5`).
+It's also possible specifying CPU variants adding it as a third parameter (like  `--custom-platform=linux/arm/v5`).
 Currently CPU variants are only known to be used for the ARM architecture as listed here: [GOARM](https://github.com/golang/go/wiki/GoArm#supported-architectures)
 
 _The resulting images cannot provide any metadata about CPU variant due to a limitation of the OCI-image specification._
@@ -829,15 +834,15 @@ You can set `--skip-tls-verify-registry <registry-name>` to skip TLS certificate
 This flag builds only used stages if defined to `true`.
 Otherwise it builds by default all stages, even the unnecessaries ones until it reaches the target stage / end of Dockerfile
 
-#### --snapshotMode
+#### --snapshot-mode
 
-You can set the `--snapshotMode=<full (default), redo, time>` flag to set how kaniko will snapshot the filesystem.
+You can set the `--snapshot-mode=<full (default), redo, time>` flag to set how kaniko will snapshot the filesystem.
 
-* If `--snapshotMode=full` is set, the full file contents and metadata are considered when snapshotting. This is the least performant option, but also the most robust.
+* If `--snapshot-mode=full` is set, the full file contents and metadata are considered when snapshotting. This is the least performant option, but also the most robust.
 
-* If `--snapshotMode=redo` is set, the file mtime, size, mode, owner uid and gid will be considered when snapshotting. This may be up to 50% faster than "full", particularly if your project has a large number files.
+* If `--snapshot-mode=redo` is set, the file mtime, size, mode, owner uid and gid will be considered when snapshotting. This may be up to 50% faster than "full", particularly if your project has a large number files.
 
-* If `--snapshotMode=time` is set, only file mtime will be considered when snapshotting (see
+* If `--snapshot-mode=time` is set, only file mtime will be considered when snapshotting (see
 [limitations related to mtime](#mtime-and-snapshotting)).
 
 #### --tarPath
@@ -981,14 +986,14 @@ To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and [CONTRIBUTING.
 ### mtime and snapshotting
 
 When taking a snapshot, kaniko's hashing algorithms include (or in the case of
-[`--snapshotMode=time`](#--snapshotmode), only use) a file's
+[`--snapshot-mode=time`](#--snapshot-mode), only use) a file's
 [`mtime`](https://en.wikipedia.org/wiki/Inode#POSIX_inode_description) to determine
 if the file has changed. Unfortunately, there is a delay between when changes to a
 file are made and when the `mtime` is updated. This means:
 
-* With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss changes
+* With the time-only snapshot mode (`--snapshot-mode=time`), kaniko may miss changes
   introduced by `RUN` commands entirely.
-* With the default snapshot mode (`--snapshotMode=full`), whether or not kaniko will
+* With the default snapshot mode (`--snapshot-mode=full`), whether or not kaniko will
   add a layer in the case where a `RUN` command modifies a file **but the contents do
   not** change is theoretically non-deterministic. This _does not affect the contents_
   which will still be correct, but it does affect the number of layers.

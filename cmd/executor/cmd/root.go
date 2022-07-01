@@ -84,8 +84,12 @@ var RootCmd = &cobra.Command{
 				return err
 			}
 
+			if err := checkNoDeprecatedFlags(); err != nil {
+				return errors.Wrap(err, "deprecated flags used")
+			}
+
 			if !opts.NoPush && len(opts.Destinations) == 0 {
-				return errors.New("You must provide --destination, or use --no-push")
+				return errors.New("you must provide --destination, or use --no-push")
 			}
 			if err := cacheFlagsValid(); err != nil {
 				return errors.Wrap(err, "cache flags invalid")
@@ -97,10 +101,10 @@ var RootCmd = &cobra.Command{
 				return errors.Wrap(err, "error resolving dockerfile path")
 			}
 			if len(opts.Destinations) == 0 && opts.ImageNameDigestFile != "" {
-				return errors.New("You must provide --destination if setting ImageNameDigestFile")
+				return errors.New("you must provide --destination if setting ImageNameDigestFile")
 			}
 			if len(opts.Destinations) == 0 && opts.ImageNameTagDigestFile != "" {
-				return errors.New("You must provide --destination if setting ImageNameTagDigestFile")
+				return errors.New("you must provide --destination if setting ImageNameTagDigestFile")
 			}
 			// Update ignored paths
 			if opts.IgnoreVarRun {
@@ -184,8 +188,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&ctxSubPath, "context-sub-path", "", "", "Sub path within the given context.")
 	RootCmd.PersistentFlags().StringVarP(&opts.Bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
-	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
-	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "customPlatform", "", "", "Specify the build platform if different from the current host")
+	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshot-mode", "", "full", "Change the file attributes inspected during snapshotting")
+	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "custom-platform", "", "", "Specify the build platform if different from the current host")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Insecure, "insecure", "", false, "Push to insecure registry using plain HTTP")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
@@ -224,6 +228,11 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.CacheRunLayers, "cache-run-layers", "", true, "Caches run layers")
 	RootCmd.PersistentFlags().VarP(&opts.IgnorePaths, "ignore-path", "", "Ignore these paths when taking a snapshot. Set it repeatedly for multiple paths.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.ForceBuildMetadata, "force-build-metadata", "", false, "Force add metadata layers to build image")
+
+	// Deprecated flags.
+	// TODO: Remove after >= 1.9.0
+	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotModeDeprecated, "snapshotMode", "", "deprecated", "This flag is deprecated. Please use '--snapshot-mode'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatformDeprecated, "customPlatform", "", "deprecated", "This flag is deprecated. Please use '--custom-platform'.")
 
 	// Allow setting --registry-mirror using an environment variable.
 	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
@@ -270,6 +279,21 @@ func checkKanikoDir(dir string) error {
 
 func checkContained() bool {
 	return proc.GetContainerRuntime(0, 0) != proc.RuntimeNotFound
+}
+
+// checkNoDeprecatedFlags return an error if deprecated flags are used.
+func checkNoDeprecatedFlags() error {
+	if opts.CustomPlatformDeprecated != "" {
+		return errors.New("flag --customPlatform is deprecated. Use: --custom-platform")
+	}
+	if opts.SnapshotModeDeprecated != "" {
+		return errors.New("flag --snapshotMode is deprecated. Use: --snapshot-mode")
+	}
+	if opts.TarPathDeprecated != "" {
+		return errors.New("flag --tarPath is deprecated. Use: --tar-path")
+	}
+
+	return nil
 }
 
 // cacheFlagsValid makes sure the flags passed in related to caching are valid
