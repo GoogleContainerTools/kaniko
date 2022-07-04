@@ -39,12 +39,9 @@ import (
 
 	"cloud.google.com/go/internal/optional"
 	"cloud.google.com/go/internal/trace"
-	"cloud.google.com/go/internal/version"
 	"cloud.google.com/go/storage/internal"
-	gapic "cloud.google.com/go/storage/internal/apiv2"
 	"github.com/googleapis/gax-go/v2"
 	"golang.org/x/oauth2/google"
-	"golang.org/x/xerrors"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/option/internaloption"
@@ -86,12 +83,19 @@ const (
 	// ScopeReadWrite grants permissions to manage your
 	// data in Google Cloud Storage.
 	ScopeReadWrite = raw.DevstorageReadWriteScope
+
+	// aes256Algorithm is the AES256 encryption algorithm used with the
+	// Customer-Supplied Encryption Keys feature.
+	aes256Algorithm = "AES256"
+
+	// defaultGen indicates the latest object generation by default,
+	// using a negative value.
+	defaultGen = int64(-1)
 )
 
-var xGoogHeader = fmt.Sprintf("gl-go/%s gccl/%s", version.Go(), internal.Version)
-
+// TODO: remove this once header with invocation ID is applied to all methods.
 func setClientHeader(headers http.Header) {
-	headers.Set("x-goog-api-client", xGoogHeader)
+	headers.Set("x-goog-api-client", xGoogDefaultHeader)
 }
 
 // Client is a client for interacting with Google Cloud Storage.
@@ -109,10 +113,8 @@ type Client struct {
 	creds *google.Credentials
 	retry *retryConfig
 
-	// gc is an optional gRPC-based, GAPIC client.
-	//
-	// This is an experimental field and not intended for public use.
-	gc *gapic.Client
+	// tc is the transport-agnostic client implemented with either gRPC or HTTP.
+	tc storageClient
 }
 
 // NewClient creates a new Google Cloud Storage client.
@@ -122,6 +124,13 @@ type Client struct {
 // Clients should be reused instead of created as needed. The methods of Client
 // are safe for concurrent use by multiple goroutines.
 func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
+
+	// Use the experimental gRPC client if the env var is set.
+	// This is an experimental API and not intended for public use.
+	if withGRPC := os.Getenv("STORAGE_USE_GRPC"); withGRPC != "" {
+		return newGRPCClient(ctx, opts...)
+	}
+
 	var creds *google.Credentials
 
 	// In general, it is recommended to use raw.NewService instead of htransport.NewClient
@@ -195,34 +204,18 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error
 	}, nil
 }
 
-// hybridClientOptions carries the set of client options for HTTP and gRPC clients.
-type hybridClientOptions struct {
-	HTTPOpts []option.ClientOption
-	GRPCOpts []option.ClientOption
-}
-
-// newHybridClient creates a new Storage client that initializes a gRPC-based client
-// for media upload and download operations.
+// newGRPCClient creates a new Storage client that initializes a gRPC-based
+// client. Calls that have not been implemented in gRPC will panic.
 //
 // This is an experimental API and not intended for public use.
-func newHybridClient(ctx context.Context, opts *hybridClientOptions) (*Client, error) {
-	if opts == nil {
-		opts = &hybridClientOptions{}
-	}
-	opts.GRPCOpts = append(defaultGRPCOptions(), opts.GRPCOpts...)
-
-	c, err := NewClient(ctx, opts.HTTPOpts...)
+func newGRPCClient(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
+	opts = append(defaultGRPCOptions(), opts...)
+	tc, err := newGRPCStorageClient(ctx, withClientOptions(opts...))
 	if err != nil {
 		return nil, err
 	}
 
-	g, err := gapic.NewClient(ctx, opts.GRPCOpts...)
-	if err != nil {
-		return nil, err
-	}
-	c.gc = g
-
-	return c, nil
+	return &Client{tc: tc}, nil
 }
 
 // Close closes the Client.
@@ -233,8 +226,8 @@ func (c *Client) Close() error {
 	c.hc = nil
 	c.raw = nil
 	c.creds = nil
-	if c.gc != nil {
-		return c.gc.Close()
+	if c.tc != nil {
+		return c.tc.Close()
 	}
 	return nil
 }
@@ -926,9 +919,9 @@ func (o *ObjectHandle) Attrs(ctx context.Context) (attrs *ObjectAttrs, err error
 	}
 	var obj *raw.Object
 	setClientHeader(call.Header())
-	err = run(ctx, func() error { obj, err = call.Do(); return err }, o.retry, true)
+	err = run(ctx, func() error { obj, err = call.Do(); return err }, o.retry, true, setRetryHeaderHTTP(call))
 	var e *googleapi.Error
-	if ok := xerrors.As(err, &e); ok && e.Code == http.StatusNotFound {
+	if errors.As(err, &e) && e.Code == http.StatusNotFound {
 		return nil, ErrObjectNotExist
 	}
 	if err != nil {
@@ -1031,9 +1024,9 @@ func (o *ObjectHandle) Update(ctx context.Context, uattrs ObjectAttrsToUpdate) (
 	if o.conds != nil && o.conds.MetagenerationMatch != 0 {
 		isIdempotent = true
 	}
-	err = run(ctx, func() error { obj, err = call.Do(); return err }, o.retry, isIdempotent)
+	err = run(ctx, func() error { obj, err = call.Do(); return err }, o.retry, isIdempotent, setRetryHeaderHTTP(call))
 	var e *googleapi.Error
-	if ok := xerrors.As(err, &e); ok && e.Code == http.StatusNotFound {
+	if errors.As(err, &e) && e.Code == http.StatusNotFound {
 		return nil, ErrObjectNotExist
 	}
 	if err != nil {
@@ -1101,9 +1094,9 @@ func (o *ObjectHandle) Delete(ctx context.Context) error {
 	if (o.conds != nil && o.conds.GenerationMatch != 0) || o.gen >= 0 {
 		isIdempotent = true
 	}
-	err := run(ctx, func() error { return call.Do() }, o.retry, isIdempotent)
+	err := run(ctx, func() error { return call.Do() }, o.retry, isIdempotent, setRetryHeaderHTTP(call))
 	var e *googleapi.Error
-	if ok := xerrors.As(err, &e); ok && e.Code == http.StatusNotFound {
+	if errors.As(err, &e) && e.Code == http.StatusNotFound {
 		return ErrObjectNotExist
 	}
 	return err
@@ -1128,6 +1121,9 @@ func (o *ObjectHandle) ReadCompressed(compressed bool) *ObjectHandle {
 // ObjectAttrs field before the first call to Write. If no ContentType
 // attribute is specified, the content type will be automatically sniffed
 // using net/http.DetectContentType.
+//
+// Note that each Writer allocates an internal buffer of size Writer.ChunkSize.
+// See the ChunkSize docs for more information.
 //
 // It is the caller's responsibility to call Close when writing is done. To
 // stop writing without saving the data, cancel the context.
@@ -1240,6 +1236,49 @@ func (o *ObjectAttrs) toProtoObject(b string) *storagepb.Object {
 	}
 }
 
+// toProtoObject copies the attributes to update from uattrs to the proto library's Object type.
+func (uattrs *ObjectAttrsToUpdate) toProtoObject(bucket, object string) *storagepb.Object {
+	o := &storagepb.Object{
+		Name:   object,
+		Bucket: bucket,
+	}
+	if uattrs == nil {
+		return o
+	}
+
+	if uattrs.EventBasedHold != nil {
+		o.EventBasedHold = proto.Bool(optional.ToBool(uattrs.EventBasedHold))
+	}
+	if uattrs.TemporaryHold != nil {
+		o.TemporaryHold = optional.ToBool(uattrs.TemporaryHold)
+	}
+	if uattrs.ContentType != nil {
+		o.ContentType = optional.ToString(uattrs.ContentType)
+	}
+	if uattrs.ContentLanguage != nil {
+		o.ContentLanguage = optional.ToString(uattrs.ContentLanguage)
+	}
+	if uattrs.ContentEncoding != nil {
+		o.ContentEncoding = optional.ToString(uattrs.ContentEncoding)
+	}
+	if uattrs.ContentDisposition != nil {
+		o.ContentDisposition = optional.ToString(uattrs.ContentDisposition)
+	}
+	if uattrs.CacheControl != nil {
+		o.CacheControl = optional.ToString(uattrs.CacheControl)
+	}
+	if !uattrs.CustomTime.IsZero() {
+		o.CustomTime = toProtoTimestamp(uattrs.CustomTime)
+	}
+	if uattrs.ACL != nil {
+		o.Acl = toProtoObjectACL(uattrs.ACL)
+	}
+
+	// TODO(cathyo): Handle metadata. Pending b/230510191.
+
+	return o
+}
+
 // ObjectAttrs represents the metadata for a Google Cloud Storage (GCS) object.
 type ObjectAttrs struct {
 	// Bucket is the name of the bucket containing this GCS object.
@@ -1321,6 +1360,10 @@ type ObjectAttrs struct {
 
 	// Metadata represents user-provided metadata, in key/value pairs.
 	// It can be nil if no metadata is provided.
+	//
+	// For object downloads using Reader, metadata keys are sent as headers.
+	// Therefore, avoid setting metadata keys using characters that are not valid
+	// for headers. See https://www.rfc-editor.org/rfc/rfc7230#section-3.2.6.
 	Metadata map[string]string
 
 	// Generation is the generation number of the object's content.
@@ -2001,11 +2044,24 @@ func setEncryptionHeaders(headers http.Header, key []byte, copySource bool) erro
 	if copySource {
 		cs = "copy-source-"
 	}
-	headers.Set("x-goog-"+cs+"encryption-algorithm", "AES256")
+	headers.Set("x-goog-"+cs+"encryption-algorithm", aes256Algorithm)
 	headers.Set("x-goog-"+cs+"encryption-key", base64.StdEncoding.EncodeToString(key))
 	keyHash := sha256.Sum256(key)
 	headers.Set("x-goog-"+cs+"encryption-key-sha256", base64.StdEncoding.EncodeToString(keyHash[:]))
 	return nil
+}
+
+// toProtoCommonObjectRequestParams sets customer-supplied encryption to the proto library's CommonObjectRequestParams.
+func toProtoCommonObjectRequestParams(key []byte) *storagepb.CommonObjectRequestParams {
+	if key == nil {
+		return nil
+	}
+	keyHash := sha256.Sum256(key)
+	return &storagepb.CommonObjectRequestParams{
+		EncryptionAlgorithm:      aes256Algorithm,
+		EncryptionKeyBytes:       key,
+		EncryptionKeySha256Bytes: keyHash[:],
+	}
 }
 
 // ServiceAccount fetches the email address of the given project's Google Cloud Storage service account.
@@ -2016,7 +2072,7 @@ func (c *Client) ServiceAccount(ctx context.Context, projectID string) (string, 
 	err = run(ctx, func() error {
 		res, err = r.Context(ctx).Do()
 		return err
-	}, c.retry, true)
+	}, c.retry, true, setRetryHeaderHTTP(r))
 	if err != nil {
 		return "", err
 	}
