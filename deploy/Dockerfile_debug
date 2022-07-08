@@ -36,27 +36,27 @@ RUN mkdir -p /kaniko/.docker
 
 COPY . .
 RUN \
-    --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg \
-    make GOARCH=$TARGETARCH && \
-    make GOARCH=$TARGETARCH out/warmer
+  --mount=type=cache,target=/root/.cache/go-build \
+  --mount=type=cache,target=/go/pkg \
+  make GOARCH=$TARGETARCH && \
+  make GOARCH=$TARGETARCH out/warmer
 
 # Generate latest ca-certificates
 FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
+# use musl busybox since it's staticly compiled on all platforms
+FROM busybox:musl as busybox
 FROM scratch
+# Create kaniko directory with world write permission to allow non root run
+RUN --mount=from=busybox,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko && chmod 777 /kaniko"] 
+
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY --from=0 /src/out/warmer /kaniko/warmer
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
-COPY --from=busybox:1.32.0 /bin /busybox
-# Since busybox needs some lib files which lie in /lib directory to run the executables on s390x, 
-# the below COPY command is added to address "ld64.so.1 not found" issue. This extra copy action will not 
-# happen on amd64 or arm64 platforms since /lib does not exist in amd64 or arm64 version of busybox container.
-# Similar issues could be found in https://github.com/multiarch/qemu-user-static/issues/110#issuecomment-652951564.
-COPY --from=busybox:1.32.0 /*lib /lib
+COPY --from=busybox /bin /busybox
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
 

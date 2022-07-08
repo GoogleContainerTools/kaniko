@@ -36,9 +36,9 @@ RUN mkdir -p /kaniko/.docker
 
 COPY . .
 RUN \
-    --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg \
-    make GOARCH=$TARGETARCH
+  --mount=type=cache,target=/root/.cache/go-build \
+  --mount=type=cache,target=/go/pkg \
+  make GOARCH=$TARGETARCH
 
 # Generate latest ca-certificates
 FROM debian:bullseye-slim AS certs
@@ -46,7 +46,9 @@ RUN apt update && apt install -y ca-certificates
 
 FROM scratch
 # Create kaniko directory with world write permission to allow non root run
-ADD files/kaniko.tar /
+# use musl busybox since it's staticly compiled
+RUN --mount=from=busybox:musl,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko && chmod 777 /kaniko"] 
+
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
