@@ -909,7 +909,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9aAfAcgAxIFMTstJUv8l/AMqnSKw
 P+vLu3NnnBDHCfREQpV/AJuiZ1UtgGpFpHlJLCNPmFkzQTnfyN5idzNl6Q==
 -----END PUBLIC KEY-----
 
-$ cosign verify -key ./cosign.pub gcr.io/kaniko-project/executor:latest
+$ cosign verify --key ./cosign.pub gcr.io/kaniko-project/executor:latest
 ```
 
 
