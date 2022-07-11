@@ -26,24 +26,24 @@ func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
 	}
 
 	revertFunc = func() error {
-    logrus.Debug("exit chroot")
+		logrus.Debug("exit chroot")
 		defer root.Close()
 		defer func() {
-      err := unmountFunc()
-      if err != nil {
-        logrus.Fatalf("unmounting: %v", err)
-      }
-    }()
+			err := unmountFunc()
+			if err != nil {
+				logrus.Fatalf("unmounting: %v", err)
+			}
+		}()
 		if err := root.Chdir(); err != nil {
 			return err
 		}
-    // check for errors first instead of returning, because unmount needs to be called after chroot
-    err := unix.Chroot(".")	
-    if err != nil {
-      return fmt.Errorf("chroot back to old root: %w", err)
-    }
-    return nil
-  }
+		// check for errors first instead of returning, because unmount needs to be called after chroot
+		err := unix.Chroot(".")
+		if err != nil {
+			return fmt.Errorf("chroot back to old root: %w", err)
+		}
+		return nil
+	}
 	logrus.Debugf("chroot into %v", newRoot)
 	return revertFunc, unix.Chroot(newRoot)
 }
@@ -75,12 +75,12 @@ func prepareMounts(base, kanikoDir, contextDir string) (func() error, error) {
 	}
 	unmountFunc = func() error {
 		for _, m := range mounts {
-      dest := filepath.Join(base, m.src)
-      logrus.Debugf("unmounting %v", dest)
-      // perform lazy detaching
+			dest := filepath.Join(base, m.src)
+			logrus.Debugf("unmounting %v", dest)
+			// perform lazy detaching
 			err := unix.Unmount(dest, unix.MNT_DETACH)
 			if err != nil {
-        return fmt.Errorf("unmounting %v: %w", dest, err)
+				return fmt.Errorf("unmounting %v: %w", dest, err)
 			}
 		}
 		return nil
@@ -97,7 +97,7 @@ func mount(src, dest string, flags uint) error {
 	if err := os.MkdirAll(dest, 0755); err != nil {
 		return fmt.Errorf("creating %v for mount: %w", dest, err)
 	}
-  logrus.Debugf("mounting %v to %v", src, dest)
+	logrus.Debugf("mounting %v to %v", src, dest)
 	if err := unix.Mount(src, dest, "", uintptr(flags), ""); err != nil {
 		return fmt.Errorf("mounting %v to %v: %w", src, dest, err)
 	}

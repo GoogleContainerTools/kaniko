@@ -14,5 +14,5 @@ func TmpDirInHome() (string, error) {
 	if err != nil {
 		return "", err
 	}
-  return tmpDir, nil
+	return tmpDir, nil
 }

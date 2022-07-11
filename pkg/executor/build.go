@@ -389,21 +389,22 @@ func (s *stageBuilder) build() error {
 	return nil
 }
 
-func (s *stageBuilder) isolate() (exitFunc func() error, err error){
-  switch s.opts.Isolation {
-  case "chroot": {
-    newRoot, err := chroot.TmpDirInHome()
-    if err != nil {
-      return nil, err
-    }
-    exitFunc, err := chroot.Chroot(newRoot, s.opts.KanikoDir, s.fileContext.Root)
-    if err != nil {
-      return nil, fmt.Errorf("executing chroot: %w", err)
-    }
-    return exitFunc, nil
-  }
-  }
-  return func() error{return nil}, nil
+func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
+	switch s.opts.Isolation {
+	case "chroot":
+		{
+			newRoot, err := chroot.TmpDirInHome()
+			if err != nil {
+				return nil, err
+			}
+			exitFunc, err := chroot.Chroot(newRoot, s.opts.KanikoDir, s.fileContext.Root)
+			if err != nil {
+				return nil, fmt.Errorf("executing chroot: %w", err)
+			}
+			return exitFunc, nil
+		}
+	}
+	return func() error { return nil }, nil
 }
 
 func (s *stageBuilder) runCommand(
@@ -445,17 +446,17 @@ func (s *stageBuilder) runCommand(
 		}
 		*initSnapshotTaken = true
 	}
-  
-  exitFunc, err := s.isolate()
-  if err != nil {
-    return errors.Wrap(err, "isolating")
-  }
-  defer func() {
-    err := exitFunc()
-    if err != nil {
-      logrus.Fatal(err)
-    }
-  }()
+
+	exitFunc, err := s.isolate()
+	if err != nil {
+		return errors.Wrap(err, "isolating")
+	}
+	defer func() {
+		err := exitFunc()
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}()
 	if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 		return errors.Wrap(err, "failed to execute command")
 	}

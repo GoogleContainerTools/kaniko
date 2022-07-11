@@ -482,8 +482,8 @@ func buildKanikoImage(
 		// chroot needs CAP_SYS_ADMIN
 		"--cap-add", "SYS_ADMIN",
 		// disable apparmor because it permits mounts
-"--security-opt", "apparmor=unconfined",
-"--security-opt", "seccomp=unconfined",
+		"--security-opt", "apparmor=unconfined",
+		"--security-opt", "seccomp=unconfined",
 	}
 
 	if env, ok := envsMap[dockerfile]; ok {
