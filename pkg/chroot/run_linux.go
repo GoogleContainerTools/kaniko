@@ -26,7 +26,7 @@ func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
 	}
 
 	revertFunc = func() error {
-    logrus.Info("exit chroot")
+    logrus.Debug("exit chroot")
 		defer root.Close()
 		defer func() {
       err := unmountFunc()
@@ -44,7 +44,7 @@ func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
     }
     return nil
   }
-	logrus.Infof("chroot into %v", newRoot)
+	logrus.Debugf("chroot into %v", newRoot)
 	return revertFunc, unix.Chroot(newRoot)
 }
 
@@ -76,7 +76,7 @@ func prepareMounts(base, kanikoDir, contextDir string) (func() error, error) {
 	unmountFunc = func() error {
 		for _, m := range mounts {
       dest := filepath.Join(base, m.src)
-      logrus.Infof("unmounting %v", dest)
+      logrus.Debugf("unmounting %v", dest)
       // perform lazy detaching
 			err := unix.Unmount(dest, unix.MNT_DETACH)
 			if err != nil {
@@ -97,11 +97,7 @@ func mount(src, dest string, flags uint) error {
 	if err := os.MkdirAll(dest, 0755); err != nil {
 		return fmt.Errorf("creating %v for mount: %w", dest, err)
 	}
-	// var flags uintptr = syscall.MS_MOVE
-	// if dir != "/dev" {
-	// 	flags |= syscall.MS_RDONLY
-	// }
-  logrus.Infof("mounting %v to %v", src, dest)
+  logrus.Debugf("mounting %v to %v", src, dest)
 	if err := unix.Mount(src, dest, "", uintptr(flags), ""); err != nil {
 		return fmt.Errorf("mounting %v to %v: %w", src, dest, err)
 	}
