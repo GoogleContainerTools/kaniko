@@ -333,32 +333,14 @@ func (s *stageBuilder) build() error {
 
 	// Unpack file system to root if we need to.
 	shouldUnpack := false
-	for _, cmd := range s.cmds {
-		if cmd.RequiresUnpackedFS() {
-			logrus.Infof("Unpacking rootfs as cmd %s requires it.", cmd.String())
-			shouldUnpack = true
-			break
-		}
-	}
+	// for _, cmd := range s.cmds {
+	// 	if cmd.RequiresUnpackedFS() {
+	// 		shouldUnpack = true
+	// 		break
+	// 	}
+	// }
 	if len(s.crossStageDeps[s.stage.Index]) > 0 {
 		shouldUnpack = true
-	}
-
-	if shouldUnpack {
-		t := timing.Start("FS Unpacking")
-
-		retryFunc := func() error {
-			_, err := util.GetFSFromImage(config.RootDir, s.image, util.ExtractFile)
-			return err
-		}
-
-		if err := util.Retry(retryFunc, s.opts.ImageFSExtractRetry, 1000); err != nil {
-			return errors.Wrap(err, "failed to get filesystem from image")
-		}
-
-		timing.DefaultRun.Stop(t)
-	} else {
-		logrus.Info("Skipping unpacking as no commands require it.")
 	}
 
 	initSnapshotTaken := false
@@ -374,9 +356,12 @@ func (s *stageBuilder) build() error {
 		if command == nil {
 			continue
 		}
+		if command.RequiresUnpackedFS() {
+			shouldUnpack = true
+		}
 
 		t := timing.Start("Command: " + command.String())
-		err := s.runCommand(index, command, compositeKey, t, &initSnapshotTaken, cacheGroup)
+		err := s.runCommand(index, command, compositeKey, t, &initSnapshotTaken, cacheGroup, shouldUnpack)
 		if err != nil {
 			return fmt.Errorf("running command %s: %w", command, err)
 		}
@@ -422,36 +407,37 @@ func (s *stageBuilder) isolate() (newRoot string, exitFunc func() error, err err
 
 func (s *stageBuilder) runCommand(
 	index int,
-	command commands.DockerCommand,
+	cmd commands.DockerCommand,
 	compositeKey *CompositeCache,
 	t *timing.Timer,
 	initSnapshotTaken *bool,
 	cacheGroup *errgroup.Group,
+	shouldUnpack bool,
 ) error {
 	// If the command uses files from the context, add them.
-	files, err := command.FilesUsedFromContext(&s.cf.Config, s.args)
+	files, err := cmd.FilesUsedFromContext(&s.cf.Config, s.args)
 	if err != nil {
 		return errors.Wrap(err, "failed to get files used from context")
 	}
 
 	if s.opts.Cache {
-		*compositeKey, err = s.populateCompositeKey(command, files, *compositeKey, s.args, s.cf.Config.Env)
+		*compositeKey, err = s.populateCompositeKey(cmd, files, *compositeKey, s.args, s.cf.Config.Env)
 		if err != nil && s.opts.Cache {
 			return err
 		}
 	}
 
-	logrus.Info(command.String())
+	logrus.Info(cmd.String())
 
 	isCacheCommand := func() bool {
-		switch command.(type) {
+		switch cmd.(type) {
 		case commands.Cached:
 			return true
 		default:
 			return false
 		}
 	}()
-	if !*initSnapshotTaken && !isCacheCommand && !command.ProvidesFilesToSnapshot() {
+	if !*initSnapshotTaken && !isCacheCommand && !cmd.ProvidesFilesToSnapshot() {
 		// Take initial snapshot if command does not expect to return
 		// a list of files.
 		if err := s.initSnapshotWithTimings(); err != nil {
@@ -464,12 +450,21 @@ func (s *stageBuilder) runCommand(
 	if err != nil {
 		return errors.Wrap(err, "isolating")
 	}
-	defer func() {
-	}()
-	if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
+
+	if shouldUnpack {
+    logrus.Infof("Unpacking rootfs as cmd %s requires it", cmd)
+		err := unpackFS(s.image, s.opts.ImageFSExtractRetry)
+		if err != nil {
+			return fmt.Errorf("unpacking fs: %w", err)
+		}
+	} else {
+		logrus.Info("Skipping unpacking as no commands require it.")
+	}
+
+	if err := cmd.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 		return errors.Wrap(err, "failed to execute command")
 	}
-	files = command.FilesToSnapshot()
+	files = cmd.FilesToSnapshot()
 	timing.DefaultRun.Stop(t)
 
 	err = exitIsolation()
@@ -481,42 +476,58 @@ func (s *stageBuilder) runCommand(
 		filesWithNewRoot = append(filesWithNewRoot, filepath.Join(newRoot, f))
 	}
 
-	if !s.shouldTakeSnapshot(index, command.MetadataOnly()) && !s.opts.ForceBuildMetadata {
-		logrus.Debugf("Build: skipping snapshot for [%v]", command.String())
+	if !s.shouldTakeSnapshot(index, cmd.MetadataOnly()) && !s.opts.ForceBuildMetadata {
+		logrus.Debugf("Build: skipping snapshot for [%v]", cmd.String())
 		return nil
 	}
 	if isCacheCommand {
-		v := command.(commands.Cached)
+		v := cmd.(commands.Cached)
 		layer := v.Layer()
-		if err := s.saveLayerToImage(layer, command.String()); err != nil {
+		if err := s.saveLayerToImage(layer, cmd.String()); err != nil {
 			return errors.Wrap(err, "failed to save layer")
 		}
 		return nil
 	}
-	tarPath, err := s.takeSnapshot(filesWithNewRoot, command.ShouldDetectDeletedFiles())
+	tarPath, err := s.takeSnapshot(filesWithNewRoot, cmd.ShouldDetectDeletedFiles())
 	if err != nil {
 		return errors.Wrap(err, "failed to take snapshot")
 	}
 
 	if s.opts.Cache {
-		logrus.Debugf("Build: composite key for command %v %v", command.String(), compositeKey)
+		logrus.Debugf("Build: composite key for command %v %v", cmd.String(), compositeKey)
 		ck, err := compositeKey.Hash()
 		if err != nil {
 			return errors.Wrap(err, "failed to hash composite key")
 		}
 
-		logrus.Debugf("Build: cache key for command %v %v", command.String(), ck)
+		logrus.Debugf("Build: cache key for command %v %v", cmd.String(), ck)
 
 		// Push layer to cache (in parallel) now along with new config file
-		if command.ShouldCacheOutput() && !s.opts.NoPushCache {
+		if cmd.ShouldCacheOutput() && !s.opts.NoPushCache {
 			cacheGroup.Go(func() error {
-				return s.pushLayerToCache(s.opts, ck, tarPath, command.String())
+				return s.pushLayerToCache(s.opts, ck, tarPath, cmd.String())
 			})
 		}
 	}
-	if err := s.saveSnapshotToImage(command.String(), tarPath); err != nil {
+	if err := s.saveSnapshotToImage(cmd.String(), tarPath); err != nil {
 		return errors.Wrap(err, "failed to save snapshot to image")
 	}
+	return nil
+}
+
+func unpackFS(image v1.Image, retryCount int) error {
+	t := timing.Start("FS Unpacking")
+
+	retryFunc := func() error {
+		_, err := util.GetFSFromImage("/", image, util.ExtractFile)
+		return err
+	}
+
+	if err := util.Retry(retryFunc, retryCount, 1000); err != nil {
+		return errors.Wrap(err, "failed to get filesystem from image")
+	}
+
+	timing.DefaultRun.Stop(t)
 	return nil
 }
 
