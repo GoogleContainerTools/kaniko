@@ -1,14 +1,14 @@
 package chroot
 
 import (
-	"errors"
+	"fmt"
 	"os"
 )
 
 func TmpDirInHome() (string, error) {
-	home := os.Getenv("HOME")
-	if home == "" {
-		return "", errors.New("HOME environment variable is not set, needed for chroot")
+  home, err := os.UserHomeDir()
+  if err != nil {
+    return "", fmt.Errorf("getting homeDir: %w", err)
 	}
 	tmpDir, err := os.MkdirTemp(home, "*")
 	if err != nil {
