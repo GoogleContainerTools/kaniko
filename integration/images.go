@@ -283,7 +283,6 @@ func (d *DockerFileBuilder) BuildDockerImage(t *testing.T, imageRepo, dockerfile
 func (d *DockerFileBuilder) BuildImage(t *testing.T, config *integrationTestConfig, dockerfilesPath, dockerfile string) error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
-
 	return d.BuildImageWithContext(t, config, dockerfilesPath, dockerfile, cwd)
 }
 
@@ -480,6 +479,11 @@ func buildKanikoImage(
 		"-e", benchmarkEnv,
 		"-v", contextDir + ":/workspace",
 		"-v", benchmarkDir + ":/kaniko/benchmarks",
+		// chroot needs CAP_SYS_ADMIN
+		"--cap-add", "SYS_ADMIN",
+		// disable apparmor because it permits mounts
+"--security-opt", "apparmor=unconfined",
+"--security-opt", "seccomp=unconfined",
 	}
 
 	if env, ok := envsMap[dockerfile]; ok {

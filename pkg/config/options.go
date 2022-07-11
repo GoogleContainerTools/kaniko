@@ -65,6 +65,7 @@ type KanikoOptions struct {
 	ImageNameDigestFile    string
 	ImageNameTagDigestFile string
 	OCILayoutPath          string
+	Isolation string
 	ImageFSExtractRetry    int
 	SingleSnapshot         bool
 	Reproducible           bool

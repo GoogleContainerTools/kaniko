@@ -47,7 +47,7 @@ RUN apt update && apt install -y ca-certificates
 FROM scratch
 # Create kaniko directory with world write permission to allow non root run
 # use musl busybox since it's staticly compiled
-RUN --mount=from=busybox:musl,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko && chmod 777 /kaniko"] 
+RUN --mount=from=busybox:musl,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko /root && chmod 777 /kaniko"] 
 
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
