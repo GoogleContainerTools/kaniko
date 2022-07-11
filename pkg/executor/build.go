@@ -84,6 +84,7 @@ type stageBuilder struct {
 	snapshotter      snapShotter
 	layerCache       cache.LayerCache
 	pushLayerToCache cachePusher
+	savedStagesDir   string
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -374,35 +375,35 @@ func (s *stageBuilder) build() error {
 	return nil
 }
 
-func (s *stageBuilder) isolate() (newRoot string, exitFunc func() error, err error) {
+func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 	switch s.opts.Isolation {
 	case "chroot":
-		originalRoot := config.RootDir
-		originalKanikoDir := config.KanikoDir
+		// originalRoot := config.RootDir
+		// originalKanikoDir := config.KanikoDir
 		newRoot, err := chroot.TmpDirInHome()
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
-		config.RootDir = newRoot
-		config.KanikoDir = filepath.Join(newRoot, originalKanikoDir)
-		exitFunc, err := chroot.Chroot(newRoot, s.opts.KanikoDir, s.fileContext.Root)
+		// config.RootDir = newRoot
+		// config.KanikoDir = filepath.Join(newRoot, originalKanikoDir)
+		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.SavedStagesDir)
 		if err != nil {
-			return "", nil, fmt.Errorf("executing chroot: %w", err)
+			return nil, fmt.Errorf("executing chroot: %w", err)
 		}
 		revertFunc := func() error {
 			err := exitFunc()
 			if err != nil {
 				return err
 			}
-			config.RootDir = originalRoot
-			config.KanikoDir = originalKanikoDir
+			// config.RootDir = originalRoot
+			// config.KanikoDir = originalKanikoDir
 			return nil
 		}
-		return newRoot, revertFunc, nil
+		return revertFunc, nil
 	case "none":
-		return config.RootDir, func() error { return nil }, nil
+		return func() error { return nil }, nil
 	}
-	return "", nil, fmt.Errorf("unknown isolation method: %s", s.opts.Isolation)
+	return nil, fmt.Errorf("unknown isolation method: %s", s.opts.Isolation)
 }
 
 func (s *stageBuilder) runCommand(
@@ -446,13 +447,8 @@ func (s *stageBuilder) runCommand(
 		*initSnapshotTaken = true
 	}
 
-	newRoot, exitIsolation, err := s.isolate()
-	if err != nil {
-		return errors.Wrap(err, "isolating")
-	}
-
 	if shouldUnpack {
-    logrus.Infof("Unpacking rootfs as cmd %s requires it", cmd)
+		logrus.Infof("Unpacking rootfs as cmd %s requires it", cmd)
 		err := unpackFS(s.image, s.opts.ImageFSExtractRetry)
 		if err != nil {
 			return fmt.Errorf("unpacking fs: %w", err)
@@ -467,15 +463,6 @@ func (s *stageBuilder) runCommand(
 	files = cmd.FilesToSnapshot()
 	timing.DefaultRun.Stop(t)
 
-	err = exitIsolation()
-	if err != nil {
-		return fmt.Errorf("exiting isolation: %w", err)
-	}
-	filesWithNewRoot := make([]string, len(files))
-	for _, f := range files {
-		filesWithNewRoot = append(filesWithNewRoot, filepath.Join(newRoot, f))
-	}
-
 	if !s.shouldTakeSnapshot(index, cmd.MetadataOnly()) && !s.opts.ForceBuildMetadata {
 		logrus.Debugf("Build: skipping snapshot for [%v]", cmd.String())
 		return nil
@@ -488,7 +475,7 @@ func (s *stageBuilder) runCommand(
 		}
 		return nil
 	}
-	tarPath, err := s.takeSnapshot(filesWithNewRoot, cmd.ShouldDetectDeletedFiles())
+	tarPath, err := s.takeSnapshot(files, cmd.ShouldDetectDeletedFiles())
 	if err != nil {
 		return errors.Wrap(err, "failed to take snapshot")
 	}
@@ -718,15 +705,20 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 
 	var args *dockerfile.BuildArgs
 
-	for index, stage := range kanikoStages {
+	// create savedStagesDir if not exists
+	if err := os.MkdirAll(config.SavedStagesDir, 0644); err != nil {
+		return nil, fmt.Errorf("create dir for saved stages: %w", err)
+	}
 
+	for _, stage := range kanikoStages {
 		sb, err := newStageBuilder(
 			args, opts, stage,
 			crossStageDependencies,
 			digestToCacheKey,
 			stageIdxToDigest,
 			stageNameToIdx,
-			fileContext)
+			fileContext,
+		)
 
 		logrus.Infof("Building stage '%v' [idx: '%v', base-idx: '%v']",
 			stage.BaseName, stage.Index, stage.BaseImageIndex)
@@ -735,94 +727,119 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			return nil, err
 		}
 		args = sb.args
-		if err := sb.build(); err != nil {
-			return nil, errors.Wrap(err, "error building stage")
-		}
-
-		reviewConfig(stage, &sb.cf.Config)
-
-		sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
+		img, err := runStage(stage, sb)
 		if err != nil {
 			return nil, err
 		}
-
-		configFile, err := sourceImage.ConfigFile()
-		if err != nil {
-			return nil, err
-		}
-		if opts.CustomPlatform == "" {
-			configFile.OS = runtime.GOOS
-			configFile.Architecture = runtime.GOARCH
-		} else {
-			configFile.OS = strings.Split(opts.CustomPlatform, "/")[0]
-			configFile.Architecture = strings.Split(opts.CustomPlatform, "/")[1]
-		}
-		sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
-		if err != nil {
-			return nil, err
-		}
-
-		d, err := sourceImage.Digest()
-		if err != nil {
-			return nil, err
-		}
-
-		stageIdxToDigest[fmt.Sprintf("%d", sb.stage.Index)] = d.String()
-		logrus.Debugf("Mapping stage idx %v to digest %v", sb.stage.Index, d.String())
-
-		digestToCacheKey[d.String()] = sb.finalCacheKey
-		logrus.Debugf("Mapping digest %v to cachekey %v", d.String(), sb.finalCacheKey)
-
-		if stage.Final {
-			sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
-			if err != nil {
-				return nil, err
-			}
-			if opts.Reproducible {
-				sourceImage, err = mutate.Canonical(sourceImage)
-				if err != nil {
-					return nil, err
-				}
-			}
-			if opts.Cleanup {
-				if err = util.DeleteFilesystem(); err != nil {
-					return nil, err
-				}
-			}
+		if img != nil {
+			// last stage
 			timing.DefaultRun.Stop(t)
-			return sourceImage, nil
-		}
-		if stage.SaveStage {
-			if err := saveStageAsTarball(strconv.Itoa(index), sourceImage); err != nil {
-				return nil, err
-			}
+			return img, nil
 		}
 
-		filesToSave, err := filesToSave(crossStageDependencies[index])
-		if err != nil {
-			return nil, err
-		}
-		dstDir := filepath.Join(config.KanikoDir, strconv.Itoa(index))
-		if err := os.MkdirAll(dstDir, 0644); err != nil {
-			return nil, errors.Wrap(err,
-				fmt.Sprintf("to create workspace for stage %s",
-					stageIdxToDigest[strconv.Itoa(index)],
-				))
-		}
-		for _, p := range filesToSave {
-			logrus.Infof("Saving file %s for later use", p)
-			if err := util.CopyFileOrSymlink(p, dstDir, config.RootDir); err != nil {
-				return nil, errors.Wrap(err, "could not save file")
-			}
-		}
-
-		// Delete the filesystem
-		if err := util.DeleteFilesystem(); err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after stage %d", index))
-		}
 	}
 
 	return nil, err
+}
+
+func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
+	exitIsolation, err := sb.isolate()
+	if err != nil {
+		return nil, errors.Wrap(err, "isolating")
+	}
+	defer func() {
+		err = exitIsolation()
+	}()
+
+	if err := sb.build(); err != nil {
+		return nil, errors.Wrap(err, "error building stage")
+	}
+
+	reviewConfig(stage, &sb.cf.Config)
+
+	sourceImage, err := mutate.Config(sb.image, sb.cf.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	configFile, err := sourceImage.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	if sb.opts.CustomPlatform == "" {
+		configFile.OS = runtime.GOOS
+		configFile.Architecture = runtime.GOARCH
+	} else {
+		configFile.OS = strings.Split(sb.opts.CustomPlatform, "/")[0]
+		configFile.Architecture = strings.Split(sb.opts.CustomPlatform, "/")[1]
+	}
+	sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := sourceImage.Digest()
+	if err != nil {
+		return nil, err
+	}
+
+	sb.stageIdxToDigest[fmt.Sprintf("%d", sb.stage.Index)] = d.String()
+	logrus.Debugf("Mapping stage idx %v to digest %v", sb.stage.Index, d.String())
+
+	sb.digestToCacheKey[d.String()] = sb.finalCacheKey
+	logrus.Debugf("Mapping digest %v to cachekey %v", d.String(), sb.finalCacheKey)
+
+	if stage.Final {
+		sourceImage, err = mutate.CreatedAt(sourceImage, v1.Time{Time: time.Now()})
+		if err != nil {
+			return nil, err
+		}
+		if sb.opts.Reproducible {
+			sourceImage, err = mutate.Canonical(sourceImage)
+			if err != nil {
+				return nil, err
+			}
+		}
+		// TODO: find cleaner approach for filesystem deletion.
+		if sb.opts.Cleanup && sb.opts.Isolation == "none" {
+			if err = util.DeleteFilesystem(); err != nil {
+				return nil, err
+			}
+		}
+		return sourceImage, nil
+	}
+	if stage.SaveStage {
+		if err := saveStageAsTarball(strconv.Itoa(stage.Index), sourceImage); err != nil {
+			return nil, err
+		}
+	}
+
+	filesToSave, err := filesToSave(sb.crossStageDeps[stage.Index])
+	if err != nil {
+		return nil, err
+	}
+	dstDir := filepath.Join(config.SavedStagesDir, strconv.Itoa(stage.Index))
+	if err := os.MkdirAll(dstDir, 0644); err != nil {
+		return nil, errors.Wrap(err,
+			fmt.Sprintf("to create workspace for stage %s",
+				sb.stageIdxToDigest[strconv.Itoa(stage.Index)],
+			))
+	}
+	for _, p := range filesToSave {
+		logrus.Infof("Saving file %s for later use", p)
+		if err := util.CopyFileOrSymlink(p, dstDir, config.RootDir); err != nil {
+			return nil, errors.Wrap(err, "could not save file")
+		}
+	}
+
+	// TODO: find cleaner approach for filesystem deletion.
+	if sb.opts.Isolation == "none" {
+		// Delete the filesystem
+		if err := util.DeleteFilesystem(); err != nil {
+			return nil, fmt.Errorf("deleting file system after stage %d: %w", stage.Index, err)
+		}
+	}
+	return nil, nil
 }
 
 // fileToSave returns all the files matching the given pattern in deps.

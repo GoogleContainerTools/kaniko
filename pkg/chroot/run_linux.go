@@ -4,6 +4,7 @@
 package chroot
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
+func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 	// root fd for reverting
 	root, err := os.Open("/")
 	if err != nil {
@@ -20,7 +21,7 @@ func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
 	}
 	// run chroot to a tempDir to isolate the rootDir
 	var revertFunc func() error
-	unmountFunc, err := prepareMounts(newRoot, kanikoDir, contextDir)
+	unmountFunc, err := prepareMounts(newRoot, additionalMounts...)
 	if err != nil {
 		return revertFunc, err
 	}
@@ -48,7 +49,7 @@ func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
 	return revertFunc, unix.Chroot(newRoot)
 }
 
-func prepareMounts(base, kanikoDir, contextDir string) (func() error, error) {
+func prepareMounts(base string, additionalMounts ...string) (func() error, error) {
 	var unmountFunc func() error
 	mounts := []struct {
 		src   string
@@ -62,11 +63,13 @@ func prepareMounts(base, kanikoDir, contextDir string) (func() error, error) {
 			src:   "/proc",
 			flags: unix.MS_BIND | unix.MS_RDONLY,
 		},
-		{
-			src:   contextDir,
-			flags: unix.MS_BIND,
-		},
 	}
+  for _, add := range additionalMounts {
+    mounts = append(mounts, struct{src string; flags uint}{
+      src: add,
+      flags: unix.MS_BIND,
+    })
+  }
 	for _, m := range mounts {
 		err := mount(m.src, filepath.Join(base, m.src), m.flags)
 		if err != nil {
@@ -85,16 +88,15 @@ func prepareMounts(base, kanikoDir, contextDir string) (func() error, error) {
 		}
 		return nil
 	}
-	// create kanikoDir in new root for snapshots
-	err := os.Mkdir(filepath.Join(base, kanikoDir), 0755)
-	if err != nil {
-		return unmountFunc, err
-	}
 	return unmountFunc, nil
 }
 
 func mount(src, dest string, flags uint) error {
 	if err := os.MkdirAll(dest, 0755); err != nil {
+    // ignore ErrExist errors
+    if errors.Is(err, os.ErrExist) {
+      return nil
+    }
 		return fmt.Errorf("creating %v for mount: %w", dest, err)
 	}
 	logrus.Debugf("mounting %v to %v", src, dest)

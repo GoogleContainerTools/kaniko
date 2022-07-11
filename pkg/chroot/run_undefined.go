@@ -5,6 +5,6 @@ package chroot
 
 import "errors"
 
-func Chroot(newRoot, kanikoDir, contextDir string) (func() error, error) {
+func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 	return func() error { return nil }, errors.New("chroot is only defined when building linux")
 }
