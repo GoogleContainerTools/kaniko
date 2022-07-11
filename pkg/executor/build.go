@@ -389,23 +389,35 @@ func (s *stageBuilder) build() error {
 	return nil
 }
 
-func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
+func (s *stageBuilder) isolate() (newRoot string, exitFunc func() error, err error) {
 	switch s.opts.Isolation {
 	case "chroot":
-		{
-			newRoot, err := chroot.TmpDirInHome()
-			if err != nil {
-				return nil, err
-			}
-			exitFunc, err := chroot.Chroot(newRoot, s.opts.KanikoDir, s.fileContext.Root)
-			if err != nil {
-				return nil, fmt.Errorf("executing chroot: %w", err)
-			}
-			return exitFunc, nil
+		originalRoot := config.RootDir
+		originalKanikoDir := config.KanikoDir
+		newRoot, err := chroot.TmpDirInHome()
+		if err != nil {
+			return "", nil, err
 		}
-  case "none": return func() error { return nil }, nil 
+		config.RootDir = newRoot
+		config.KanikoDir = filepath.Join(newRoot, originalKanikoDir)
+		exitFunc, err := chroot.Chroot(newRoot, s.opts.KanikoDir, s.fileContext.Root)
+		if err != nil {
+			return "", nil, fmt.Errorf("executing chroot: %w", err)
+		}
+		revertFunc := func() error {
+			err := exitFunc()
+			if err != nil {
+				return err
+			}
+			config.RootDir = originalRoot
+			config.KanikoDir = originalKanikoDir
+			return nil
+		}
+		return newRoot, revertFunc, nil
+	case "none":
+		return config.RootDir, func() error { return nil }, nil
 	}
-  return nil, fmt.Errorf("unknown isolation method: %s", s.opts.Isolation)
+	return "", nil, fmt.Errorf("unknown isolation method: %s", s.opts.Isolation)
 }
 
 func (s *stageBuilder) runCommand(
@@ -448,21 +460,26 @@ func (s *stageBuilder) runCommand(
 		*initSnapshotTaken = true
 	}
 
-	exitFunc, err := s.isolate()
+	newRoot, exitIsolation, err := s.isolate()
 	if err != nil {
 		return errors.Wrap(err, "isolating")
 	}
 	defer func() {
-		err := exitFunc()
-		if err != nil {
-			logrus.Fatal(err)
-		}
 	}()
 	if err := command.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 		return errors.Wrap(err, "failed to execute command")
 	}
 	files = command.FilesToSnapshot()
 	timing.DefaultRun.Stop(t)
+
+	err = exitIsolation()
+	if err != nil {
+		return fmt.Errorf("exiting isolation: %w", err)
+	}
+	filesWithNewRoot := make([]string, len(files))
+	for _, f := range files {
+		filesWithNewRoot = append(filesWithNewRoot, filepath.Join(newRoot, f))
+	}
 
 	if !s.shouldTakeSnapshot(index, command.MetadataOnly()) && !s.opts.ForceBuildMetadata {
 		logrus.Debugf("Build: skipping snapshot for [%v]", command.String())
@@ -476,7 +493,7 @@ func (s *stageBuilder) runCommand(
 		}
 		return nil
 	}
-	tarPath, err := s.takeSnapshot(files, command.ShouldDetectDeletedFiles())
+	tarPath, err := s.takeSnapshot(filesWithNewRoot, command.ShouldDetectDeletedFiles())
 	if err != nil {
 		return errors.Wrap(err, "failed to take snapshot")
 	}
