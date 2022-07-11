@@ -403,8 +403,9 @@ func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 			}
 			return exitFunc, nil
 		}
+  case "none": return func() error { return nil }, nil 
 	}
-	return func() error { return nil }, nil
+  return nil, fmt.Errorf("unknown isolation method: %s", s.opts.Isolation)
 }
 
 func (s *stageBuilder) runCommand(
