@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"time"
 
+	mobymount "github.com/moby/sys/mount"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+	"runtime"
 )
 
 func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
@@ -31,18 +33,18 @@ func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 		logrus.Debug("exit chroot")
 		defer root.Close()
 		defer func() {
-			err := unmountFunc()
-			if err != nil {
-				logrus.Fatalf("unmounting: %v", err)
+			err2 := unmountFunc()
+			if err2 != nil {
+				err = err2
 			}
 		}()
-		if err := root.Chdir(); err != nil {
-			return err
+		if err2 := root.Chdir(); err2 != nil {
+			err = err2
 		}
 		// check for errors first instead of returning, because unmount needs to be called after chroot
-		err := unix.Chroot(".")
-		if err != nil {
-			return fmt.Errorf("chroot back to old root: %w", err)
+		err2 := unix.Chroot(".")
+		if err2 != nil {
+			err = fmt.Errorf("chroot back to old root: %w", err2)
 		}
 		return nil
 	}
@@ -66,15 +68,14 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 		mountType string
 	}
 	// use a seperate map for move mounts because handling unmount is different
-	moveMounts := map[string]mountOpts{
-		"/etc/resolv.conf": {flags: unix.MS_RDONLY | unix.MS_MOVE},
-		"/etc/hostname":    {flags: unix.MS_RDONLY | unix.MS_MOVE},
-		"/etc/hosts":       {flags: unix.MS_RDONLY | unix.MS_MOVE},
-	}
+	moveMounts := map[string]mountOpts{}
 	mounts := map[string]mountOpts{
-		"/dev":  {flags: devFlags},
-		"/sys":  {flags: sysFlags},
-		"/proc": {flags: procFlags},
+		"/etc/resolv.conf": {flags: unix.MS_RDONLY | bindFlags},
+		"/etc/hostname":    {flags: unix.MS_RDONLY | bindFlags},
+		"/etc/hosts":       {flags: unix.MS_RDONLY | bindFlags},
+		"/dev":             {flags: devFlags},
+		"/sys":             {flags: sysFlags},
+		"/proc":            {flags: procFlags},
 	}
 	for _, add := range additionalMounts {
 		mounts[add] = mountOpts{flags: bindFlags}
@@ -97,31 +98,49 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 		if err != nil {
 			return unmountFunc, err
 		}
+
+		// Make mount directory private
+		err = makeMountPrivate(src)
+		if err != nil {
+			return unmountFunc, fmt.Errorf("making %v mount private: %w", src, err)
+		}
 	}
 
 	unmountFunc = func() error {
-		for src, opts := range mounts {
-			// check for MS_MOVE flag
-			if unix.MS_MOVE&opts.flags == unix.MS_MOVE {
-				logrus.Debugf("found move mount, moving mount at %s back to old src", src)
-				mountedOn := filepath.Join(base, src)
-				err = mount(mountedOn, src, opts.mountType, opts.flags)
-				if err != nil {
-					return fmt.Errorf("moving mount %v back to %v: %w", mountedOn, src, err)
-				}
-
-			} else {
-				dest := filepath.Join(base, src)
-				logrus.Debugf("unmounting %v", dest)
-				err := unmount(dest)
-				if err != nil {
-					return err
-				}
+		for src := range mounts {
+			dest := filepath.Join(base, src)
+			logrus.Debugf("unmounting %v", dest)
+			err := unmount(dest)
+			if err != nil {
+				return err
 			}
 		}
 		return nil
 	}
 	return unmountFunc, nil
+}
+
+// createNewMountNamespace unshares into a new mount namespace for this process.
+// This is not working with the current implementation because we need to exit this mount namespace
+// before unmount the bind mounts (/proc, /dev etc.).
+// For more information, see: https://man7.org/linux/man-pages/man7/mount_namespaces.7.html#NOTES - Chapter: Resitrctions on mount namespaces
+func createNewMountNamespace() error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	// Create a new mount namespace in which to do the things we're doing.
+	if err := unix.Unshare(unix.CLONE_NEWNS); err != nil {
+		return fmt.Errorf("error creating new mount namespace: %w", err)
+	}
+	return nil
+}
+
+func makeMountPrivate(target string) error {
+	// Make all of our mounts private to our namespace.
+	err := mobymount.MakeRPrivate(target)
+	if err != nil {
+		return fmt.Errorf("making %v private for new mnt namespace: %w", target, err)
+	}
+	return nil
 }
 
 func unmount(dest string) error {
@@ -135,8 +154,7 @@ func unmount(dest string) error {
 			retries++
 		}
 		if err != nil {
-			logrus.Warnf("pkg/chroot: error unmounting %q (retried %d times): %v", dest, retries, err)
-			return fmt.Errorf("unmounting %v: %w", dest, err)
+			return fmt.Errorf("unmounting %q (retried %d times): %v", dest, retries, err)
 		}
 	}
 	return nil

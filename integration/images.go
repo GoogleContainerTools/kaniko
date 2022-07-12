@@ -379,7 +379,7 @@ func populateVolumeCache() error {
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
 func (d *DockerFileBuilder) buildCachedImages(
-  logf logger,
+	logf logger,
 	config *integrationTestConfig,
 	cacheRepo, dockerfilesPath string,
 	version int,
@@ -417,10 +417,10 @@ func (d *DockerFileBuilder) buildCachedImages(
 		}
 		additionalArgs = append(additionalArgs, args...)
 
-    kanikoCmd, err := createKanikoBuildCmd(logf, opts, args...)
-    if err != nil {
-      return fmt.Errorf("creating kaniko cmd: %w", err)
-    }
+		kanikoCmd, err := createKanikoBuildCmd(logf, opts, args...)
+		if err != nil {
+			return fmt.Errorf("creating kaniko cmd: %w", err)
+		}
 
 		_, err = RunCommandWithoutTest(kanikoCmd)
 		if err != nil {

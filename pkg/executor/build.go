@@ -112,6 +112,7 @@ func newStageBuilder(
 		return nil, err
 	}
 
+	logrus.Debug("intializing ignore list")
 	err = util.InitIgnoreList(true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize ignore list")
@@ -737,8 +738,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	// lock thread during execution because thread hopping would break out of the namespace during isolation
+	// runtime.LockOSThread()
+	// defer runtime.UnlockOSThread()
 	exitIsolation, err := sb.isolate()
 	if err != nil {
 		return nil, errors.Wrap(err, "isolating")
