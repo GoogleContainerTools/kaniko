@@ -238,6 +238,17 @@ func addServiceAccountFlags(flags []string, serviceAccount string) []string {
 	return flags
 }
 
+// addSecurityFlags adds seccomp and apparmor profile disable and adds cap SYS_ADMIN
+func addSecurityFlags(flags []string) []string {
+	return append(flags, []string{
+		// chroot needs CAP_SYS_ADMIN
+		"--cap-add", "SYS_ADMIN",
+		// disable apparmor and seccomp because it permits mounts
+		"--security-opt", "apparmor=unconfined",
+		"--security-opt", "seccomp=unconfined",
+	}...)
+}
+
 func (d *DockerFileBuilder) BuildDockerImage(t *testing.T, imageRepo, dockerfilesPath, dockerfile, contextDir string) error {
 	t.Logf("Building image for Dockerfile %s\n", dockerfile)
 
@@ -374,6 +385,8 @@ func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cac
 			"-v", cwd + ":/workspace",
 			"-e", benchmarkEnv}
 		dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+		dockerRunFlags = addSecurityFlags(dockerRunFlags)
+
 		dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
 			"-d", kanikoImage,
@@ -381,26 +394,10 @@ func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cac
 			cacheFlag,
 			"--cache-repo", cacheRepo,
 			"--cache-dir", cacheDir,
-		}
-		opts := buildCmdOpts{
-			dockerfilesPath: dockerfilesPath,
-			dockerfile:      dockerfile,
-			kanikoArgs:      cacheArgs,
-			kanikoImage:     kanikoImage,
-			contextDir:      cwd,
-			serviceAccount:  serviceAccount,
-		}
-		additionalArgs := []string{
-			"-e", benchmarkEnv,
-		}
-		additionalArgs = append(additionalArgs, args...)
+		)
+		kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
-		kanikoCmd, err := createKanikoBuildCmd(logf, opts, args...)
-		if err != nil {
-			return fmt.Errorf("creating kaniko cmd: %w", err)
-		}
-
-		_, err = RunCommandWithoutTest(kanikoCmd)
+		_, err := RunCommandWithoutTest(kanikoCmd)
 		if err != nil {
 			return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %w", kanikoImage, kanikoCmd.Args, err)
 		}
@@ -433,6 +430,7 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 
 	dockerRunFlags := []string{"run", "--net=host", "-v", cwd + ":/workspace"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
@@ -493,20 +491,15 @@ func buildKanikoImage(
 		"-e", benchmarkEnv,
 		"-v", contextDir + ":/workspace",
 		"-v", benchmarkDir + ":/kaniko/benchmarks",
-		// chroot needs CAP_SYS_ADMIN
-		"--cap-add", "SYS_ADMIN",
-		// disable apparmor because it permits mounts
-		"--security-opt", "apparmor=unconfined",
-		"--security-opt", "seccomp=unconfined",
 	}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 
 	if env, ok := envsMap[dockerfile]; ok {
 		for _, envVariable := range env {
 			dockerRunFlags = append(dockerRunFlags, "-e", envVariable)
 		}
 	}
-
-	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
 
 	kanikoDockerfilePath := path.Join(buildContextPath, dockerfilesPath, dockerfile)
 	if dockerfilesPath == "" {

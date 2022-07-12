@@ -262,6 +262,7 @@ func testGitBuildcontextHelper(t *testing.T, repo string) {
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
@@ -327,6 +328,7 @@ func TestGitBuildcontextSubPath(t *testing.T) {
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_git")
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(
 		dockerRunFlags,
 		ExecutorImage,
@@ -369,6 +371,7 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
@@ -410,6 +413,7 @@ func TestKanikoDir(t *testing.T) {
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
@@ -452,6 +456,7 @@ func TestBuildWithLabels(t *testing.T) {
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_label:mylabel")
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
@@ -492,6 +497,7 @@ func TestBuildWithHTTPError(t *testing.T) {
 	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_test_add_404")
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = addSecurityFlags(dockerRunFlags)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", dockerfile,
 		"-d", kanikoImage,
