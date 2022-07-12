@@ -43,8 +43,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const DoNotChangeUID = -1
-const DoNotChangeGID = -1
+const (
+	DoNotChangeUID = -1
+	DoNotChangeGID = -1
+)
 
 const (
 	snapshotTimeout = "SNAPSHOT_TIMEOUT_DURATION"
@@ -539,11 +541,40 @@ func FilepathExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
+// resetFileOwnershipIfNotMatching function changes ownership of the file at path to newUID and newGID.
+// If the ownership already matches, chown is not executed.
+func resetFileOwnershipIfNotMatching(path string, newUID, newGID uint32) error {
+	fsInfo, err := os.Lstat(path)
+	if err != nil {
+		return errors.Wrap(err, "getting stat of present file")
+	}
+	stat, ok := fsInfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("can't convert fs.FileInfo of %v to linux syscall.Stat_t", path)
+	}
+	if stat.Uid != newUID && stat.Gid != newGID {
+		err = os.Chown(path, int(newUID), int(newGID))
+		if err != nil {
+			return errors.Wrap(err, "reseting file ownership to root")
+		}
+	}
+	return nil
+}
+
 // CreateFile creates a file at path and copies over contents from the reader
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
 	if err := createParentDirectory(path); err != nil {
 		return errors.Wrap(err, "creating parent dir")
+	}
+
+	// if the file is already created with ownership other than root, reset the ownership
+	if FilepathExists(path) {
+		logrus.Debugf("file at %v already exists, resetting file ownership to root", path)
+		err := resetFileOwnershipIfNotMatching(path, 0, 0)
+		if err != nil {
+			return errors.Wrap(err, "reseting file ownership")
+		}
 	}
 
 	dest, err := os.Create(path)
@@ -793,7 +824,12 @@ func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) erro
 	}
 	if uid > math.MaxUint32 || gid > math.MaxUint32 {
 		// due to https://github.com/golang/go/issues/8537
-		return errors.New(fmt.Sprintf("Numeric User-ID or Group-ID greater than %v are not properly supported.", uint64(math.MaxUint32)))
+		return errors.New(
+			fmt.Sprintf(
+				"Numeric User-ID or Group-ID greater than %v are not properly supported.",
+				uint64(math.MaxUint32),
+			),
+		)
 	}
 	if err := os.Chown(path, int(uid), int(gid)); err != nil {
 		return err
@@ -851,7 +887,6 @@ func CreateTargetTarfile(tarpath string) (*os.File, error) {
 		}
 	}
 	return os.Create(tarpath)
-
 }
 
 // Returns true if a file is a symlink
@@ -1009,8 +1044,8 @@ type walkFSResult struct {
 func WalkFS(
 	dir string,
 	existingPaths map[string]struct{},
-	changeFunc func(string) (bool, error)) ([]string, map[string]struct{}) {
-
+	changeFunc func(string) (bool, error),
+) ([]string, map[string]struct{}) {
 	timeOutStr := os.Getenv(snapshotTimeout)
 	if timeOutStr == "" {
 		logrus.Tracef("Environment '%s' not set. Using default snapshot timeout '%s'", snapshotTimeout, defaultTimeout)
@@ -1102,7 +1137,6 @@ func GetFSInfoMap(dir string, existing map[string]os.FileInfo) (map[string]os.Fi
 					fileMap[path] = fi
 					foundPaths = append(foundPaths, path)
 				}
-
 			}
 			return nil
 		},

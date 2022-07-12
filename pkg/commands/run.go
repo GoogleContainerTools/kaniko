@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"strings"
 	"syscall"
 
@@ -41,8 +40,7 @@ type RunCommand struct {
 
 // for testing
 var (
-	userLookup   = user.Lookup
-	userLookupID = user.LookupId
+	userLookup = util.LookupUser
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -151,11 +149,7 @@ func addDefaultHOME(u string, envs []string) ([]string, error) {
 	// Otherwise the user is set to uid and HOME is /
 	userObj, err := userLookup(u)
 	if err != nil {
-		if uo, e := userLookupID(u); e == nil {
-			userObj = uo
-		} else {
-			return nil, err
-		}
+		return nil, fmt.Errorf("lookup user %v: %w", u, err)
 	}
 
 	return append(envs, fmt.Sprintf("%s=%s", constants.HOME, userObj.HomeDir)), nil
@@ -256,6 +250,7 @@ func (cr *CachingRunCommand) MetadataOnly() bool {
 	return false
 }
 
+// todo: this should create the workdir if it doesn't exist, atleast this is what docker does
 func setWorkDirIfExists(workdir string) string {
 	if _, err := os.Lstat(workdir); err == nil {
 		return workdir
