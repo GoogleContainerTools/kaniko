@@ -101,19 +101,15 @@ func TestBuildWithStdin(t *testing.T) {
 	tarCmd := exec.Command("tar", "-cf", "-", dockerfile)
 	gzCmd := exec.Command("gzip", "-9")
 
-	buildOpts := buildCmdOpts{
-		dockerfilesPath: dockerfile,
-		dockerfile:      dockerfile,
-		kanikoImage:     kanikoImageStdin,
-		contextDir:      "tar://stdin",
-		serviceAccount:  config.serviceAccount,
-	}
+	dockerRunFlags := []string{"run", "--interactive", "--net=host", "-v", cwd + ":/workspace"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags,
+		ExecutorImage,
+		"-f", dockerfile,
+		"-c", "tar://stdin",
+		"-d", kanikoImageStdin)
 
-	additionalRunFlags := []string{"--interactive", "-v", cwd + ":/workspace"}
-	kanikoCmdStdin, err := createKanikoBuildCmd(t.Logf, buildOpts, additionalRunFlags...)
-	if err != nil {
-		t.Fatalf("can't create kaniko build cmd: %v", err)
-	}
+	kanikoCmdStdin := exec.Command("docker", dockerRunFlags...)
 
 	gzCmd.Stdin, err = tarCmd.StdoutPipe()
 	if err != nil {

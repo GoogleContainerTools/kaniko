@@ -661,16 +661,23 @@ func TestExitCodePropagation(t *testing.T) {
 		}
 
 		//try to build the same image with kaniko the error code should match with the one from the plain docker build
-		buildOpts := buildCmdOpts{
-			dockerfile: dockerfile,
-			contextDir: context,
-		}
-		kanikoCmd, err := createKanikoBuildCmd(t.Logf, buildOpts)
-		if err != nil {
-			t.Fatalf("could not create kaniko build cmd: %v", err)
-		}
+		contextVolume := fmt.Sprintf("%s:/workspace", context)
 
-		out, kanikoErr = RunCommandWithoutTest(kanikoCmd)
+		dockerFlags = []string{
+			"run",
+			"-v", contextVolume,
+		}
+		dockerFlags = addServiceAccountFlags(dockerFlags, "")
+		dockerFlags = append(dockerFlags, ExecutorImage,
+			"-c", "dir:///workspace/",
+			"-f", "./Dockerfile_exit_code_propagation",
+			"--no-push",
+			"--force", // TODO: detection of whether kaniko is being run inside a container might be broken?
+		)
+
+		dockerCmdWithKaniko := exec.Command("docker", dockerFlags...)
+
+		out, kanikoErr = RunCommandWithoutTest(dockerCmdWithKaniko)
 		if kanikoErr == nil {
 			t.Fatalf("the kaniko build did not produce the expected error:\n%s", out)
 		}

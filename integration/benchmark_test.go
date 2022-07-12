@@ -59,15 +59,9 @@ func TestSnapshotBenchmark(t *testing.T) {
 				kanikoImage := fmt.Sprintf("%s_%d", GetKanikoImage(config.imageRepo, dockerfile), num)
 				buildArgs := []string{"--build-arg", fmt.Sprintf("NUM=%d", num)}
 				var benchmarkDir string
-				buildOpts := buildCmdOpts{
-					dockerfile:     dockerfile,
-					buildArgs:      buildArgs,
-					kanikoArgs:     []string{},
-					kanikoImage:    kanikoImage,
-					contextDir:     contextDir,
-					serviceAccount: config.serviceAccount,
-				}
-				benchmarkDir, *err = buildKanikoImage(t.Logf, buildOpts, config.gcsBucket, config.gcsClient, false)
+				benchmarkDir, *err = buildKanikoImage(t.Logf, "", dockerfile,
+					buildArgs, []string{}, kanikoImage, contextDir, config.gcsBucket, config.gcsClient,
+					config.serviceAccount, false)
 				if *err != nil {
 					return
 				}
@@ -90,6 +84,7 @@ func TestSnapshotBenchmark(t *testing.T) {
 		t.Logf("%d,%f,%f,%f", d, v.totalBuildTime, v.walkingFiles, v.resolvingFiles)
 		return true
 	})
+
 }
 
 func newResult(t *testing.T, f string) result {
