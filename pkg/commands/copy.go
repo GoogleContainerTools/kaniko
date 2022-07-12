@@ -48,7 +48,7 @@ type CopyCommand struct {
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// Resolve from
 	if c.cmd.From != "" {
-		c.fileContext = util.FileContext{Root: filepath.Join(kConfig.KanikoIntermediateStagesDir, c.cmd.From)}
+		c.fileContext = util.FileContext{Root: filepath.Join(kConfig.KanikoSavedFilesDir, c.cmd.From)}
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)

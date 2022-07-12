@@ -383,7 +383,7 @@ func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting newRoot: %w", err)
 		}
-		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.KanikoIntermediateStagesDir)
+		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.KanikoIntermediateStagesDir, config.KanikoSavedFilesDir)
 		if err != nil {
 			return nil, fmt.Errorf("executing chroot: %w", err)
 		}
@@ -666,6 +666,14 @@ func CalculateDependencies(
 	return depGraph, nil
 }
 
+func createNeededBuildDirs() error {
+  err := os.MkdirAll(config.KanikoSavedFilesDir, os.ModeDir) 
+  if err != nil {
+    return err
+  }
+  return os.MkdirAll(config.KanikoIntermediateStagesDir, os.ModeDir)
+}
+
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
@@ -688,6 +696,11 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
+  err = createNeededBuildDirs()
+  if err != nil {
+    return nil, fmt.Errorf("creating needed directories: %w", err)
+  }
+
 	// Some stages may refer to other random images, not previous stages
 	if err := fetchExtraStages(kanikoStages, opts); err != nil {
 		return nil, err
@@ -699,11 +712,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
 	var args *dockerfile.BuildArgs
-
-	// create savedStagesDir if not exists
-	if err := os.MkdirAll(config.KanikoIntermediateStagesDir, 0644); err != nil {
-		return nil, fmt.Errorf("create dir for saved stages: %w", err)
-	}
 
 	for _, stage := range kanikoStages {
 		sb, err := newStageBuilder(
@@ -818,7 +826,7 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	dstDir := filepath.Join(config.KanikoIntermediateStagesDir, strconv.Itoa(stage.Index))
+	dstDir := filepath.Join(config.KanikoSavedFilesDir, strconv.Itoa(stage.Index))
 	if err := os.Mkdir(dstDir, 0644); err != nil {
 		if !errors.Is(err, os.ErrExist) {
 			return nil, errors.Wrap(err,

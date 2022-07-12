@@ -967,7 +967,7 @@ func CopyOwnership(src string, destDir string, root string) error {
 
 func createParentDirectory(path string) error {
 	baseDir := filepath.Dir(path)
-	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
+	if info, err := os.Lstat(baseDir); errors.Is(err, os.ErrNotExist) {
 		logrus.Tracef("BaseDir %s for file %s does not exist. Creating.", baseDir, path)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return err

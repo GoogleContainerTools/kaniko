@@ -22,14 +22,13 @@ func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 	if err != nil {
 		return nil, err
 	}
-	// run chroot to a tempDir to isolate the rootDir
-	var revertFunc func() error
+
 	unmountFunc, err := prepareMounts(newRoot, additionalMounts...)
 	if err != nil {
-		return revertFunc, err
+		return nil, err
 	}
 
-	revertFunc = func() error {
+  revertFunc := func() error {
 		logrus.Debug("exit chroot")
 		defer root.Close()
 		defer func() {
@@ -51,15 +50,14 @@ func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 	logrus.Debugf("chdir into %v", newRoot)
 	err = unix.Chdir(newRoot)
 	if err != nil {
-		return revertFunc, fmt.Errorf("chroot to %v: %w", newRoot, err)
+		return nil, fmt.Errorf("chroot to %v: %w", newRoot, err)
 	}
 	// chroot doesn't change the current directory
 	return revertFunc, unix.Chroot(newRoot)
 }
 
 func prepareMounts(base string, additionalMounts ...string) (undoMount func() error, err error) {
-	var unmountFunc func() error
-	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE)
+	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE )
 	devFlags := bindFlags | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_RDONLY
 	procFlags := devFlags | unix.MS_NODEV
 	sysFlags := devFlags | unix.MS_NODEV
@@ -67,8 +65,6 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 		flags     uintptr
 		mountType string
 	}
-	// use a seperate map for move mounts because handling unmount is different
-	moveMounts := map[string]mountOpts{}
 	mounts := map[string]mountOpts{
 		"/etc/resolv.conf": {flags: unix.MS_RDONLY | bindFlags},
 		"/etc/hostname":    {flags: unix.MS_RDONLY | bindFlags},
@@ -78,35 +74,30 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 		"/proc":            {flags: procFlags},
 	}
 	for _, add := range additionalMounts {
-		mounts[add] = mountOpts{flags: bindFlags}
-	}
-	for src, opt := range moveMounts {
-		mounts[src] = opt
+		mounts[add] = mountOpts{flags: bindFlags }
 	}
 
 	for src, opts := range mounts {
 		srcinfo, err := os.Lstat(src)
 		if err != nil {
-			return unmountFunc, fmt.Errorf("src %v for mount doesn't exist: %w", src, err)
+			return nil, fmt.Errorf("src %v for mount doesn't exist: %w", src, err)
 		}
 		dest := filepath.Join(base, src)
 		err = createDest(srcinfo, dest)
 		if err != nil {
-			return unmountFunc, fmt.Errorf("creating dest %v: %w", dest, err)
+			return nil, fmt.Errorf("creating dest %v: %w", dest, err)
 		}
 		err = mount(src, dest, opts.mountType, opts.flags)
 		if err != nil {
-			return unmountFunc, err
+			return nil, err
 		}
-
-		// Make mount directory private
-		err = makeMountPrivate(src)
+		err = makeMountPrivate(dest)
 		if err != nil {
-			return unmountFunc, fmt.Errorf("making %v mount private: %w", src, err)
+			return nil, err
 		}
 	}
 
-	unmountFunc = func() error {
+	undoMount = func() error {
 		for src := range mounts {
 			dest := filepath.Join(base, src)
 			logrus.Debugf("unmounting %v", dest)
@@ -117,7 +108,7 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 		}
 		return nil
 	}
-	return unmountFunc, nil
+	return undoMount, nil
 }
 
 // createNewMountNamespace unshares into a new mount namespace for this process.
@@ -134,6 +125,7 @@ func createNewMountNamespace() error {
 	return nil
 }
 
+// makeMountPrivate sets target to a rprivate mount.
 func makeMountPrivate(target string) error {
 	// Make all of our mounts private to our namespace.
 	err := mobymount.MakeRPrivate(target)
@@ -189,16 +181,9 @@ func createDest(srcinfo fs.FileInfo, dest string) error {
 
 func mount(src, dest, mountType string, flags uintptr) error {
 	logrus.Debugf("mounting %v to %v", src, dest)
-	if err := unix.Mount(src, dest, mountType, uintptr(flags), ""); err != nil {
-		if os.IsNotExist(err) {
-			err = os.Mkdir(dest, 0755)
-			if err == nil {
-				err = unix.Mount(src, dest, mountType, uintptr(flags), "")
-			}
-		}
+	err := unix.Mount(src, dest, mountType, uintptr(flags), "")
 		if err != nil {
 			return fmt.Errorf("mounting %v to %v: %w", src, dest, err)
 		}
-	}
 	return nil
 }
