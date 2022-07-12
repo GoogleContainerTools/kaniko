@@ -383,7 +383,7 @@ func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting newRoot: %w", err)
 		}
-		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.KanikoIntermediateStagesDir, config.KanikoSavedFilesDir)
+		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.KanikoIntermediateStagesDir, config.KanikoDependencyDir)
 		if err != nil {
 			return nil, fmt.Errorf("executing chroot: %w", err)
 		}
@@ -667,7 +667,7 @@ func CalculateDependencies(
 }
 
 func createNeededBuildDirs() error {
-  err := os.MkdirAll(config.KanikoSavedFilesDir, os.ModeDir) 
+  err := os.MkdirAll(config.KanikoDependencyDir, os.ModeDir) 
   if err != nil {
     return err
   }
@@ -826,7 +826,7 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	dstDir := filepath.Join(config.KanikoSavedFilesDir, strconv.Itoa(stage.Index))
+	dstDir := filepath.Join(config.KanikoDependencyDir, strconv.Itoa(stage.Index))
 	if err := os.Mkdir(dstDir, 0644); err != nil {
 		if !errors.Is(err, os.ErrExist) {
 			return nil, errors.Wrap(err,
@@ -943,7 +943,7 @@ func fromPreviousStage(copyCommand *instructions.CopyCommand, previousStageNames
 func extractImageToDependencyDir(name string, image v1.Image) error {
 	t := timing.Start("Extracting Image to Dependency Dir")
 	defer timing.DefaultRun.Stop(t)
-	dependencyDir := filepath.Join(config.KanikoDir, name)
+	dependencyDir := filepath.Join(config.KanikoDependencyDir, name)
 	if err := os.MkdirAll(dependencyDir, 0755); err != nil {
 		return err
 	}
