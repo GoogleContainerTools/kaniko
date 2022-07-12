@@ -379,6 +379,7 @@ func populateVolumeCache() error {
 
 // buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
 func (d *DockerFileBuilder) buildCachedImages(
+  logf logger,
 	config *integrationTestConfig,
 	cacheRepo, dockerfilesPath string,
 	version int,
@@ -398,25 +399,30 @@ func (d *DockerFileBuilder) buildCachedImages(
 		}
 		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
 
-		dockerRunFlags := []string{
-			"run", "--net=host",
-			"-v", cwd + ":/workspace",
-			"-e", benchmarkEnv,
-		}
-		dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
-		dockerRunFlags = append(dockerRunFlags, ExecutorImage,
-			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-			"-d", kanikoImage,
-			"-c", buildContextPath,
+		cacheArgs := []string{
 			cacheFlag,
 			"--cache-repo", cacheRepo,
-			"--cache-dir", cacheDir)
-		for _, v := range args {
-			dockerRunFlags = append(dockerRunFlags, v)
+			"--cache-dir", cacheDir,
 		}
-		kanikoCmd := exec.Command("docker", dockerRunFlags...)
+		opts := buildCmdOpts{
+			dockerfilesPath: dockerfilesPath,
+			dockerfile:      dockerfile,
+			kanikoArgs:      cacheArgs,
+			kanikoImage:     kanikoImage,
+			contextDir:      cwd,
+			serviceAccount:  serviceAccount,
+		}
+		additionalArgs := []string{
+			"-e", benchmarkEnv,
+		}
+		additionalArgs = append(additionalArgs, args...)
 
-		_, err := RunCommandWithoutTest(kanikoCmd)
+    kanikoCmd, err := createKanikoBuildCmd(logf, opts, args...)
+    if err != nil {
+      return fmt.Errorf("creating kaniko cmd: %w", err)
+    }
+
+		_, err = RunCommandWithoutTest(kanikoCmd)
 		if err != nil {
 			return fmt.Errorf(
 				"Failed to build cached image %s with kaniko command \"%s\": %w",
