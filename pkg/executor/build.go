@@ -378,15 +378,11 @@ func (s *stageBuilder) build() error {
 func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 	switch s.opts.Isolation {
 	case "chroot":
-		// originalRoot := config.RootDir
-		// originalKanikoDir := config.KanikoDir
 		newRoot, err := chroot.TmpDirInHome()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting newRoot: %w", err)
 		}
-		// config.RootDir = newRoot
-		// config.KanikoDir = filepath.Join(newRoot, originalKanikoDir)
-		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.SavedStagesDir)
+		exitFunc, err := chroot.Chroot(newRoot, s.fileContext.Root, config.KanikoIntermediateStagesDir)
 		if err != nil {
 			return nil, fmt.Errorf("executing chroot: %w", err)
 		}
@@ -395,8 +391,6 @@ func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 			if err != nil {
 				return err
 			}
-			// config.RootDir = originalRoot
-			// config.KanikoDir = originalKanikoDir
 			return nil
 		}
 		return revertFunc, nil
@@ -706,7 +700,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	var args *dockerfile.BuildArgs
 
 	// create savedStagesDir if not exists
-	if err := os.MkdirAll(config.SavedStagesDir, 0644); err != nil {
+	if err := os.MkdirAll(config.KanikoIntermediateStagesDir, 0644); err != nil {
 		return nil, fmt.Errorf("create dir for saved stages: %w", err)
 	}
 
@@ -743,12 +737,17 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	exitIsolation, err := sb.isolate()
 	if err != nil {
 		return nil, errors.Wrap(err, "isolating")
 	}
 	defer func() {
-		err = exitIsolation()
+		err := exitIsolation()
+		if err != nil {
+			logrus.Fatalf("exiting isolation: %v", err)
+		}
 	}()
 
 	if err := sb.build(); err != nil {
@@ -800,8 +799,7 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 				return nil, err
 			}
 		}
-		// TODO: find cleaner approach for filesystem deletion.
-		if sb.opts.Cleanup && sb.opts.Isolation == "none" {
+		if sb.opts.Cleanup {
 			if err = util.DeleteFilesystem(); err != nil {
 				return nil, err
 			}
@@ -818,12 +816,14 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	dstDir := filepath.Join(config.SavedStagesDir, strconv.Itoa(stage.Index))
-	if err := os.MkdirAll(dstDir, 0644); err != nil {
-		return nil, errors.Wrap(err,
-			fmt.Sprintf("to create workspace for stage %s",
-				sb.stageIdxToDigest[strconv.Itoa(stage.Index)],
-			))
+	dstDir := filepath.Join(config.KanikoIntermediateStagesDir, strconv.Itoa(stage.Index))
+	if err := os.Mkdir(dstDir, 0644); err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return nil, errors.Wrap(err,
+				fmt.Sprintf("to create workspace for stage %s",
+					sb.stageIdxToDigest[strconv.Itoa(stage.Index)],
+				))
+		}
 	}
 	for _, p := range filesToSave {
 		logrus.Infof("Saving file %s for later use", p)
@@ -832,12 +832,9 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 		}
 	}
 
-	// TODO: find cleaner approach for filesystem deletion.
-	if sb.opts.Isolation == "none" {
-		// Delete the filesystem
-		if err := util.DeleteFilesystem(); err != nil {
-			return nil, fmt.Errorf("deleting file system after stage %d: %w", stage.Index, err)
-		}
+	// Delete the filesystem
+	if err := util.DeleteFilesystem(); err != nil {
+		return nil, fmt.Errorf("deleting file system after stage %d: %w", stage.Index, err)
 	}
 	return nil, nil
 }

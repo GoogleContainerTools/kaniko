@@ -661,15 +661,14 @@ func TestExitCodePropagation(t *testing.T) {
 		}
 
 		//try to build the same image with kaniko the error code should match with the one from the plain docker build
-    buildOpts := buildCmdOpts{
-    	dockerfile: dockerfile,
-    	contextDir:      context,
-    }
-    kanikoCmd, err := createKanikoBuildCmd(t.Logf, buildOpts)
-    if err != nil {
-      t.Fatalf("could not create kaniko build cmd: %v", err)
-    }
-
+		buildOpts := buildCmdOpts{
+			dockerfile: dockerfile,
+			contextDir: context,
+		}
+		kanikoCmd, err := createKanikoBuildCmd(t.Logf, buildOpts)
+		if err != nil {
+			t.Fatalf("could not create kaniko build cmd: %v", err)
+		}
 
 		out, kanikoErr = RunCommandWithoutTest(kanikoCmd)
 		if kanikoErr == nil {

@@ -19,7 +19,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
@@ -33,8 +32,6 @@ var KanikoDir = func() string {
 	}
 	return constants.DefaultKanikoPath
 }()
-
-var SavedStagesDir = filepath.Join(KanikoDir, "stages")
 
 // DockerfilePath is the path the Dockerfile is copied to
 var DockerfilePath = fmt.Sprintf("%s/Dockerfile", KanikoDir)

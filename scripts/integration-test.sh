@@ -55,4 +55,4 @@ FLAGS+=(
   "--repo=${IMAGE_REPO}"
 )
 
-go test ./integration/... "${FLAGS[@]}" "$@" 
+go test -v ./integration/... "${FLAGS[@]}" "$@" 
