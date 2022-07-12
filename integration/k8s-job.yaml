@@ -7,8 +7,8 @@ spec:
     metadata:
       annotations:
         # disable seccomp and apparmor for chroot mounts
-      container.apparmor.security.beta.kubernetes.io/kaniko: unconfined 
-      container.seccomp.security.alpha.kubernetes.io/kaniko: unconfined
+        container.apparmor.security.beta.kubernetes.io/kaniko: unconfined 
+        container.seccomp.security.alpha.kubernetes.io/kaniko: unconfined
     spec:
       hostNetwork: true
       containers:
@@ -20,6 +20,10 @@ spec:
         volumeMounts:
         - name: context
           mountPath: /workspace
+        securityContext:
+          capabilities:
+            add:
+              - SYS_ADMIN
       restartPolicy: Never
       volumes:
       - name: context
