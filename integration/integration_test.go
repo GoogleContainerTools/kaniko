@@ -674,6 +674,7 @@ func TestExitCodePropagation(t *testing.T) {
 			"-v", contextVolume,
 		}
 		dockerFlags = addServiceAccountFlags(dockerFlags, "")
+		dockerFlags = addSecurityFlags(dockerFlags)
 		dockerFlags = append(dockerFlags, ExecutorImage,
 			"-c", "dir:///workspace/",
 			"-f", "./Dockerfile_exit_code_propagation",
