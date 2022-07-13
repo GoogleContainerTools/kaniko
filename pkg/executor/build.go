@@ -84,7 +84,6 @@ type stageBuilder struct {
 	snapshotter      snapShotter
 	layerCache       cache.LayerCache
 	pushLayerToCache cachePusher
-	savedStagesDir   string
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -112,7 +111,6 @@ func newStageBuilder(
 		return nil, err
 	}
 
-	logrus.Debug("intializing ignore list")
 	err = util.InitIgnoreList(true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize ignore list")
@@ -335,12 +333,13 @@ func (s *stageBuilder) build() error {
 
 	// Unpack file system to root if we need to.
 	shouldUnpack := false
-	// for _, cmd := range s.cmds {
-	// 	if cmd.RequiresUnpackedFS() {
-	// 		shouldUnpack = true
-	// 		break
-	// 	}
-	// }
+	for _, cmd := range s.cmds {
+		if cmd.RequiresUnpackedFS() {
+			logrus.Infof("Unpacking rootfs as cmd %s requires it", s.stage)
+			shouldUnpack = true
+			break
+		}
+	}
 	if len(s.crossStageDeps[s.stage.Index]) > 0 {
 		shouldUnpack = true
 	}
@@ -351,6 +350,15 @@ func (s *stageBuilder) build() error {
 			return err
 		}
 		initSnapshotTaken = true
+	}
+
+	if shouldUnpack {
+		err := unpackFS(s.image, s.opts.ImageFSExtractRetry)
+		if err != nil {
+			return fmt.Errorf("unpacking fs: %w", err)
+		}
+	} else {
+		logrus.Info("Skipping unpacking as no commands require it.")
 	}
 
 	cacheGroup := new(errgroup.Group)
@@ -442,16 +450,6 @@ func (s *stageBuilder) runCommand(
 		*initSnapshotTaken = true
 	}
 
-	if shouldUnpack {
-		logrus.Infof("Unpacking rootfs as cmd %s requires it", cmd)
-		err := unpackFS(s.image, s.opts.ImageFSExtractRetry)
-		if err != nil {
-			return fmt.Errorf("unpacking fs: %w", err)
-		}
-	} else {
-		logrus.Info("Skipping unpacking as no commands require it.")
-	}
-
 	if err := cmd.ExecuteCommand(&s.cf.Config, s.args); err != nil {
 		return errors.Wrap(err, "failed to execute command")
 	}
@@ -501,7 +499,7 @@ func unpackFS(image v1.Image, retryCount int) error {
 	t := timing.Start("FS Unpacking")
 
 	retryFunc := func() error {
-		_, err := util.GetFSFromImage("/", image, util.ExtractFile)
+		_, err := util.GetFSFromImage(config.RootDir, image, util.ExtractFile)
 		return err
 	}
 
@@ -667,11 +665,11 @@ func CalculateDependencies(
 }
 
 func createNeededBuildDirs() error {
-  err := os.MkdirAll(config.KanikoDependencyDir, os.ModeDir) 
-  if err != nil {
-    return err
-  }
-  return os.MkdirAll(config.KanikoIntermediateStagesDir, os.ModeDir)
+	err := os.MkdirAll(config.KanikoDependencyDir, os.ModeDir)
+	if err != nil {
+		return err
+	}
+	return os.MkdirAll(config.KanikoIntermediateStagesDir, os.ModeDir)
 }
 
 // DoBuild executes building the Dockerfile
@@ -696,10 +694,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		return nil, err
 	}
 
-  err = createNeededBuildDirs()
-  if err != nil {
-    return nil, fmt.Errorf("creating needed directories: %w", err)
-  }
+	err = createNeededBuildDirs()
+	if err != nil {
+		return nil, fmt.Errorf("creating needed directories: %w", err)
+	}
 
 	// Some stages may refer to other random images, not previous stages
 	if err := fetchExtraStages(kanikoStages, opts); err != nil {
