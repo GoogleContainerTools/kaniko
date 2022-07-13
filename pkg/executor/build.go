@@ -335,7 +335,7 @@ func (s *stageBuilder) build() error {
 	shouldUnpack := false
 	for _, cmd := range s.cmds {
 		if cmd.RequiresUnpackedFS() {
-			logrus.Infof("Unpacking rootfs as cmd %s requires it", s.stage)
+			logrus.Infof("Unpacking rootfs as cmd %s requires it", cmd)
 			shouldUnpack = true
 			break
 		}

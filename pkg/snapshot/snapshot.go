@@ -82,7 +82,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 	logrus.Info("Taking snapshot of files...")
 
 	sort.Strings(filesToAdd)
-	logrus.Debugf("Adding to layer: %v", filesToAdd)
+	logrus.Tracef("Adding to layer: %v", filesToAdd)
 
 	// Add files to current layer.
 	for _, file := range filesToAdd {
@@ -158,7 +158,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 
 	s.l.Snapshot()
 
-	logrus.Debugf("Current image filesystem: %v", s.l.currentImage)
+	logrus.Tracef("Current image filesystem: %v", s.l.currentImage)
 
 	changedPaths, deletedPaths := util.WalkFS(s.directory, s.l.GetCurrentPaths(), s.l.CheckFileChange)
 	timer := timing.Start("Resolving Paths")
@@ -176,8 +176,9 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		filesToAdd = append(filesToAdd, path)
 	}
 
-	logrus.Debugf("Adding to layer: %v", filesToAdd)
-	logrus.Debugf("Deleting in layer: %v", deletedPaths)
+  // can spam the whole log
+	logrus.Tracef("Adding to layer: %v", filesToAdd)
+	logrus.Tracef("Deleting in layer: %v", deletedPaths)
 
 	// Add files to the layered map
 	for _, file := range filesToAdd {
