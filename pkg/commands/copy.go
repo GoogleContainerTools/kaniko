@@ -53,6 +53,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 	uid, gid, err := getUserGroup(c.cmd.Chown, replacementEnvs)
+	logrus.Debugf("found uid %v and gid %v for chown string %v", uid, gid, c.cmd.Chown)
 	if err != nil {
 		return errors.Wrap(err, "getting user group from chown")
 	}

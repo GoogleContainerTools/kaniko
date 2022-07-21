@@ -45,6 +45,11 @@ type group struct {
 func groupIDs(u *user.User) ([]string, error) {
 	logrus.Infof("Performing slow lookup of group ids for %s", u.Username)
 
+	// user can have no gid if it's a non existing user
+	if u.Gid == "" {
+		return []string{}, nil
+	}
+
 	f, err := os.Open(groupFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "open")

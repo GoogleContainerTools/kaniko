@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -39,6 +40,33 @@ func SetupFiles(path string, files map[string]string) error {
 		}
 	}
 	return nil
+}
+
+type CurrentUser struct {
+	*user.User
+
+	PrimaryGroup string
+}
+
+func GetCurrentUser(t *testing.T) CurrentUser {
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Cannot get current user: %s", err)
+	}
+	groups, err := currentUser.GroupIds()
+	if err != nil || len(groups) == 0 {
+		t.Fatalf("Cannot get groups for current user: %s", err)
+	}
+	primaryGroupObj, err := user.LookupGroupId(groups[0])
+	if err != nil {
+		t.Fatalf("Could not lookup name of group %s: %s", groups[0], err)
+	}
+	primaryGroup := primaryGroupObj.Name
+
+	return CurrentUser{
+		User:         currentUser,
+		PrimaryGroup: primaryGroup,
+	}
 }
 
 func CheckDeepEqual(t *testing.T, expected, actual interface{}) {

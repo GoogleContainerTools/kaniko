@@ -28,11 +28,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// for testing
-var (
-	Lookup = util.Lookup
-)
-
 type UserCommand struct {
 	BaseCommand
 	cmd *instructions.UserCommand

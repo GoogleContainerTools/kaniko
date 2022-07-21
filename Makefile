@@ -66,6 +66,10 @@ minikube-setup:
 test: out/executor
 	@ ./scripts/test.sh
 
+test-with-coverage: test
+	go tool cover -html=out/coverage.out
+
+
 .PHONY: integration-test
 integration-test:
 	@ ./scripts/integration-test.sh

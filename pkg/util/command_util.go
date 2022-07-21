@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	reflect "reflect"
 	"strconv"
 	"strings"
 
@@ -39,7 +38,7 @@ import (
 
 // for testing
 var (
-	getUIDAndGID = GetUIDAndGIDFromString
+	getUIDAndGIDFunc = getUIDAndGID
 )
 
 const (
@@ -353,7 +352,7 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 		return -1, -1, err
 	}
 
-	uid32, gid32, err := getUIDAndGID(chown, true)
+	uid32, gid32, err := getUIDAndGIDFromString(chown, true)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -364,86 +363,112 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 // Extract user and group id from a string formatted 'user:group'.
 // If fallbackToUID is set, the gid is equal to uid if the group is not specified
 // otherwise gid is set to zero.
-func GetUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+// UserID and GroupID don't need to be present on the system.
+func getUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
 	userAndGroup := strings.Split(userGroupString, ":")
 	userStr := userAndGroup[0]
 	var groupStr string
 	if len(userAndGroup) > 1 {
 		groupStr = userAndGroup[1]
 	}
-
-	if reflect.TypeOf(userStr).String() == "int" {
-		return 0, 0, nil
-	}
-
-	uidStr, gidStr, err := GetUserFromUsername(userStr, groupStr, fallbackToUID)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// uid and gid need to be fit into uint32
-	uid64, err := strconv.ParseUint(uidStr, 10, 32)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	gid64, err := strconv.ParseUint(gidStr, 10, 32)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return uint32(uid64), uint32(gid64), nil
+	return getUIDAndGIDFunc(userStr, groupStr, fallbackToUID)
 }
 
-func GetUserFromUsername(userStr string, groupStr string, fallbackToUID bool) (string, string, error) {
-	// Lookup by username
-	userObj, err := Lookup(userStr)
+func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
+	user, err := LookupUser(userStr)
 	if err != nil {
-		return "", "", err
+		return 0, 0, err
+	}
+	uid32, err := getUID(user.Uid)
+	if err != nil {
+		return 0, 0, err
 	}
 
-	// Same dance with groups
-	var group *user.Group
-	if groupStr != "" {
-		group, err = user.LookupGroup(groupStr)
+	gid, err := getGIDFromName(groupStr, fallbackToUID)
+	if err != nil {
+		if errors.Is(err, fallbackToUIDError) {
+			return uid32, uid32, nil
+		}
+		return 0, 0, err
+	}
+	return uid32, gid, nil
+}
+
+// getGID tries to parse the gid or falls back to getGroupFromName if it's not an id
+func getGID(groupStr string, fallbackToUID bool) (uint32, error) {
+	gid, err := strconv.ParseUint(groupStr, 10, 32)
+	if err != nil {
+		return 0, fallbackToUIDOrError(err, fallbackToUID)
+	}
+	return uint32(gid), nil
+}
+
+// getGIDFromName tries to parse the groupStr into an existing group.
+// if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
+func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
+	group, err := user.LookupGroup(groupStr)
+	if err != nil {
+		// unknown group error could relate to a non existing group
+		var groupErr *user.UnknownGroupError
+		if errors.Is(err, groupErr) {
+			return getGID(groupStr, fallbackToUID)
+		}
+		group, err = user.LookupGroupId(groupStr)
 		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); !ok {
-				return "", "", err
-			}
-			group, err = user.LookupGroupId(groupStr)
-			if err != nil {
-				return "", "", err
-			}
+			return getGID(groupStr, fallbackToUID)
 		}
 	}
-
-	uid := userObj.Uid
-	gid := "0"
-	if fallbackToUID {
-		gid = userObj.Gid
-	}
-	if group != nil {
-		gid = group.Gid
-	}
-
-	return uid, gid, nil
+	return getGID(group.Gid, fallbackToUID)
 }
 
-func Lookup(userStr string) (*user.User, error) {
+var fallbackToUIDError = new(fallbackToUIDErrorType)
+
+type fallbackToUIDErrorType struct{}
+
+func (e fallbackToUIDErrorType) Error() string {
+	return "fallback to uid"
+}
+
+func fallbackToUIDOrError(err error, fallbackToUID bool) error {
+	if fallbackToUID {
+		return fallbackToUIDError
+	}
+	return err
+}
+
+// LookupUser will try to lookup the userStr inside the passwd file.
+// If the user does not exists, the function will fallback to parsing the userStr as an uid.
+func LookupUser(userStr string) (*user.User, error) {
 	userObj, err := user.Lookup(userStr)
 	if err != nil {
-		if _, ok := err.(user.UnknownUserError); !ok {
+		unknownUserErr := new(user.UnknownUserError)
+		// only return if it's not an unknown user error
+		if !errors.As(err, unknownUserErr) {
 			return nil, err
 		}
 
 		// Lookup by id
-		u, e := user.LookupId(userStr)
-		if e != nil {
-			return nil, err
+		userObj, err = user.LookupId(userStr)
+		if err != nil {
+			uid, err := getUID(userStr)
+			if err != nil {
+				// at this point, the user does not exist and the userStr is not a valid number.
+				return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
+			}
+			userObj = &user.User{
+				Uid:     fmt.Sprint(uid),
+				HomeDir: "/",
+			}
 		}
-
-		userObj = u
 	}
-
 	return userObj, nil
+}
+
+func getUID(userStr string) (uint32, error) {
+	// checkif userStr is a valid id
+	uid, err := strconv.ParseUint(userStr, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(uid), nil
 }
