@@ -91,6 +91,11 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			return errors.Wrap(err, "resolving dest symlink")
 		}
 
+		// prepend rootDir in case we are chrooting
+		if !strings.HasPrefix(destPath, kConfig.RootDir) {
+			destPath = filepath.Join(kConfig.RootDir, destPath)
+		}
+
 		if fi.IsDir() {
 			copiedFiles, err := util.CopyDir(fullPath, destPath, c.fileContext, uid, gid)
 			if err != nil {

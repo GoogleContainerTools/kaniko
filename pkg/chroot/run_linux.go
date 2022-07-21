@@ -23,7 +23,7 @@ func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 		return nil, err
 	}
 
-	unmountFunc, err := prepareMounts(newRoot, additionalMounts...)
+	unmountFunc, err := PrepareMounts(newRoot, additionalMounts...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
 	return revertFunc, nil
 }
 
-func prepareMounts(base string, additionalMounts ...string) (undoMount func() error, err error) {
+func PrepareMounts(newRoot string, additionalMounts ...string) (undoMount func() error, err error) {
 	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE)
 	devFlags := bindFlags | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_RDONLY
 	procFlags := devFlags | unix.MS_NODEV
@@ -85,7 +85,7 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 		if err != nil {
 			return nil, fmt.Errorf("src %v for mount doesn't exist: %w", src, err)
 		}
-		dest := filepath.Join(base, src)
+		dest := filepath.Join(newRoot, src)
 		err = createDest(srcinfo, dest)
 		if err != nil {
 			return nil, fmt.Errorf("creating dest %v: %w", dest, err)
@@ -102,7 +102,7 @@ func prepareMounts(base string, additionalMounts ...string) (undoMount func() er
 
 	undoMount = func() error {
 		for src := range mounts {
-			dest := filepath.Join(base, src)
+			dest := filepath.Join(newRoot, src)
 			logrus.Debugf("unmounting %v", dest)
 			err := unmount(dest)
 			if err != nil {

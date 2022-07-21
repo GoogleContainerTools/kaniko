@@ -33,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/chroot/user"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 )
 
@@ -234,7 +235,9 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 			totalSrcs++
 		}
 		if totalSrcs > 1 && !IsDestDir(dest) {
-			return errors.New("when specifying multiple sources in a COPY command, destination must be a directory and end in '/'")
+			return errors.New(
+				"when specifying multiple sources in a COPY command, destination must be a directory and end in '/'",
+			)
 		}
 	}
 
@@ -406,19 +409,29 @@ func getGID(groupStr string, fallbackToUID bool) (uint32, error) {
 // getGIDFromName tries to parse the groupStr into an existing group.
 // if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
 func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
-	group, err := user.LookupGroup(groupStr)
+	group, err := lookupGroup(groupStr)
 	if err != nil {
 		// unknown group error could relate to a non existing group
 		var groupErr *user.UnknownGroupError
 		if errors.Is(err, groupErr) {
 			return getGID(groupStr, fallbackToUID)
 		}
-		group, err = user.LookupGroupId(groupStr)
-		if err != nil {
-			return getGID(groupStr, fallbackToUID)
-		}
 	}
 	return getGID(group.Gid, fallbackToUID)
+}
+
+// lookupGroup will use chrootuser.GetGroup function to get the group
+// This is done to get the group struct in environments, where the group file is not at /etc/group
+func lookupGroup(group string) (*user.Group, error) {
+	if config.RootDir != "/" {
+		logrus.Debugf("detected chroot environment, getting group %v via chrootuser pkg", group)
+		group, err := chrootuser.GetGroup(config.RootDir, group)
+		if err != nil {
+			return nil, fmt.Errorf("getting group %v: %w", group, err)
+		}
+		return group, nil
+	}
+	return user.LookupGroup(group)
 }
 
 var fallbackToUIDError = new(fallbackToUIDErrorType)
@@ -439,29 +452,39 @@ func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 // LookupUser will try to lookup the userStr inside the passwd file.
 // If the user does not exists, the function will fallback to parsing the userStr as an uid.
 func LookupUser(userStr string) (*user.User, error) {
-	userObj, err := user.Lookup(userStr)
+	userObj, err := lookupUser(userStr)
 	if err != nil {
 		unknownUserErr := new(user.UnknownUserError)
 		// only return if it's not an unknown user error
-		if !errors.As(err, unknownUserErr) {
+		if !errors.Is(err, unknownUserErr) {
 			return nil, err
 		}
-
 		// Lookup by id
-		userObj, err = user.LookupId(userStr)
+		uid, err := getUID(userStr)
 		if err != nil {
-			uid, err := getUID(userStr)
-			if err != nil {
-				// at this point, the user does not exist and the userStr is not a valid number.
-				return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
-			}
-			userObj = &user.User{
-				Uid:     fmt.Sprint(uid),
-				HomeDir: "/",
-			}
+			// at this point, the user does not exist and the userStr is not a valid number.
+			return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
+		}
+		userObj = &user.User{
+			Uid:     fmt.Sprint(uid),
+			HomeDir: "/",
 		}
 	}
 	return userObj, nil
+}
+
+// lookupUser will use chrootuser.GetUser function to get the current user.
+// This is done to get the user struct in environments, where the passwd file is not at /etc/passwd.
+func lookupUser(userStr string) (*user.User, error) {
+	if config.RootDir != "/" {
+		logrus.Debugf("detected chroot environment, getting user %v via chrootuser pkg", userStr)
+		user, err := chrootuser.GetUser(config.RootDir, userStr)
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+	return user.Lookup(userStr)
 }
 
 func getUID(userStr string) (uint32, error) {

@@ -27,6 +27,9 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
+
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
+	"strings"
 )
 
 type AddCommand struct {
@@ -56,6 +59,11 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	if err != nil {
 		return err
 	}
+
+	// prepend rootDir in case we are chrooting
+		if !strings.HasPrefix(dest, kConfig.RootDir) {
+			dest = filepath.Join(kConfig.RootDir, dest)
+		}
 
 	var unresolvedSrcs []string
 	// If any of the sources are local tar archives:

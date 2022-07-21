@@ -60,3 +60,4 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 		Groups: groups,
 	}, nil
 }
+
