@@ -100,10 +100,12 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 
 	// If specified, run the command as a specific user
 	if userStr != "" {
-		cmd.SysProcAttr.Credential, err = util.SyscallCredentials(userStr)
+		creds, err := util.SyscallCredentials(userStr)
 		if err != nil {
-			return errors.Wrap(err, "credentials")
+			return fmt.Errorf("get syscallCredentials from userStr: %v: %w", creds, err)
 		}
+		logrus.Debugf("syscallCredentials for %v: %#v", userStr, creds)
+		cmd.SysProcAttr.Credential = creds
 	}
 
 	env, err := addDefaultHOME(userStr, replacementEnvs)

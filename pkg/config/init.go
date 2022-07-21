@@ -44,8 +44,8 @@ var BuildContextDir = fmt.Sprintf("%s/buildcontext/", KanikoDir)
 // as tarballs in case they are needed later on
 var KanikoIntermediateStagesDir = fmt.Sprintf("%s/stages/", KanikoDir)
 
-// KanikoDependencyDir will store files that need to be 
-// used later on during built process 
+// KanikoDependencyDir will store files that need to be
+// used later on during built process
 var KanikoDependencyDir = fmt.Sprintf("%s/saved/", KanikoDir)
 
 var IgnoreListPath string

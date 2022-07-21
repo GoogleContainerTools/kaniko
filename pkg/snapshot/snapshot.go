@@ -176,7 +176,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 		filesToAdd = append(filesToAdd, path)
 	}
 
-  // can spam the whole log
+	// can spam the whole log
 	logrus.Tracef("Adding to layer: %v", filesToAdd)
 	logrus.Tracef("Deleting in layer: %v", deletedPaths)
 
