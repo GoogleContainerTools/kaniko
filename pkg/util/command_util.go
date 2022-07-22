@@ -412,10 +412,11 @@ func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
 	group, err := lookupGroup(groupStr)
 	if err != nil {
 		// unknown group error could relate to a non existing group
-		var groupErr *user.UnknownGroupError
+		var groupErr user.UnknownGroupError
 		if errors.Is(err, groupErr) {
 			return getGID(groupStr, fallbackToUID)
 		}
+		return 0, err
 	}
 	return getGID(group.Gid, fallbackToUID)
 }

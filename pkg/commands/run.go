@@ -100,7 +100,7 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 	if userStr != "" {
 		creds, err := util.SyscallCredentials(userStr)
 		if err != nil {
-			return fmt.Errorf("get syscallCredentials from userStr: %v: %w", userStr, err)
+			return fmt.Errorf("get syscallCredentials from userStr %v: %w", userStr, err)
 		}
 		logrus.Debugf("syscallCredentials for %v: %#v", userStr, creds)
 		cmd.SysProcAttr.Credential = creds
@@ -112,9 +112,9 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 	}
 
 	cmd.Env = env
-  if kConfig.RootDir != "/" {
-    cmd.SysProcAttr.Chroot = kConfig.RootDir
-  }
+	if kConfig.RootDir != "/" {
+		cmd.SysProcAttr.Chroot = kConfig.RootDir
+	}
 
 	logrus.Infof("Running: %s", cmd.Args)
 	if err := cmd.Start(); err != nil {

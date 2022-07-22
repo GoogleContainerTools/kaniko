@@ -61,9 +61,9 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	// prepend rootDir in case we are chrooting
-		if !strings.HasPrefix(dest, kConfig.RootDir) {
-			dest = filepath.Join(kConfig.RootDir, dest)
-		}
+	if !strings.HasPrefix(dest, kConfig.RootDir) {
+		dest = filepath.Join(kConfig.RootDir, dest)
+	}
 
 	var unresolvedSrcs []string
 	// If any of the sources are local tar archives:

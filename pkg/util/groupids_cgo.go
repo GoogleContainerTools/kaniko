@@ -22,6 +22,9 @@ package util
 
 import (
 	"os/user"
+
+	chrootuser "github.com/GoogleContainerTools/kaniko/pkg/chroot/user"
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 )
 
 // groupIDs returns all of the group ID's a user is a member of
@@ -29,6 +32,9 @@ func groupIDs(u *user.User) ([]string, error) {
 	// user can have no gid if it's a non existing user
 	if u.Gid == "" {
 		return []string{}, nil
+	}
+	if config.RootDir != "/" {
+		return chrootuser.GetAdditionalGroupIDs(config.RootDir, u)
 	}
 	return u.GroupIds()
 }

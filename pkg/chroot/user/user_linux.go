@@ -9,9 +9,12 @@ import (
 	"io"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -19,18 +22,6 @@ var (
 	// override for testing
 	openChrootedFileFunc = openChrootedFile
 )
-
-type lookupPasswdEntry struct {
-	name string
-	uid  uint64
-	gid  uint64
-	home string
-}
-type lookupGroupEntry struct {
-	name string
-	gid  uint64
-	user string
-}
 
 func parseNextPasswd(rc *bufio.Scanner) *lookupPasswdEntry {
 	if !rc.Scan() {
@@ -77,10 +68,10 @@ func parseNextGroup(rc *bufio.Scanner) *lookupGroupEntry {
 	}
 }
 
-func lookupUserInContainer(rootdir, userStr string) (uid uint64, gid uint64, err error) {
+func lookupUserInContainer(rootdir, userStr string) (*lookupPasswdEntry, error) {
 	r, err := openChrootedFileFunc(rootdir, "/etc/passwd")
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	rc := bufio.NewScanner(r)
 	defer r.Close()
@@ -99,16 +90,16 @@ func lookupUserInContainer(rootdir, userStr string) (uid uint64, gid uint64, err
 				}
 			}
 		}
-		return pwd.uid, pwd.gid, nil
+		return pwd, nil
 	}
 
-	return 0, 0, user.UnknownUserError(fmt.Sprintf("error looking up user %q", userStr))
+	return nil, user.UnknownUserError(userStr)
 }
 
-func lookupGroupInContainer(rootdir, groupname string) (gid uint64, err error) {
+func lookupGroupInContainer(rootdir, groupname string) (*lookupGroupEntry, error) {
 	r, err := openChrootedFileFunc(rootdir, "/etc/group")
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	rc := bufio.NewScanner(r)
 	defer r.Close()
@@ -122,10 +113,31 @@ func lookupGroupInContainer(rootdir, groupname string) (gid uint64, err error) {
 			grp = parseNextGroup(rc)
 			continue
 		}
-		return grp.gid, nil
+		return grp, nil
 	}
 
-	return 0, user.UnknownGroupError(fmt.Sprintf("error looking up group %q", groupname))
+	return nil, user.UnknownGroupError(groupname)
+}
+
+func lookupAdditionalGroupsForUser(rootdir string, user *user.User) (gids []uint32, err error) {
+	r, err := openChrootedFileFunc(rootdir, "/etc/passwd")
+	if err != nil {
+		return nil, err
+	}
+	rc := bufio.NewScanner(r)
+	defer r.Close()
+
+	lookupGroup.Lock()
+	defer lookupGroup.Unlock()
+
+	grp := parseNextGroup(rc)
+	for grp != nil {
+		if strings.Contains(grp.user, user.Username) {
+			gids = append(gids, uint32(grp.gid))
+		}
+		grp = parseNextGroup(rc)
+	}
+	return gids, nil
 }
 
 func lookupHomedirInContainer(rootdir string, uid uint64) (string, error) {
@@ -148,9 +160,10 @@ func lookupHomedirInContainer(rootdir string, uid uint64) (string, error) {
 		return pwd.home, nil
 	}
 
-	return "", user.UnknownUserError(fmt.Sprintf("error looking up uid %q for homedir", uid))
+	return "", user.UnknownUserError(fmt.Sprint(uid))
 }
 
 func openChrootedFile(rootDir string, file string) (io.ReadCloser, error) {
-	return os.OpenFile(rootDir, os.O_RDONLY, 0)
+	absFile := filepath.Join(rootDir, file)
+	return os.OpenFile(absFile, os.O_RDONLY, 0)
 }

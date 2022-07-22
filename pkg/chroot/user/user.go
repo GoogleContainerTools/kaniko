@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+type lookupPasswdEntry struct {
+	name string
+	uid  uint64
+	gid  uint64
+	home string
+}
+type lookupGroupEntry struct {
+	name string
+	gid  uint64
+	user string
+}
+
 // GetUser will return the uid, gid of the user specified in the userStr
 // it will use the /etc/passwd and /etc/group files inside of the rootdir
 // to return this information.
@@ -23,39 +35,56 @@ func GetUser(rootdir string, userStr string) (*user.User, error) {
 		groupspec = spec[1]
 	}
 
-	uid64, gid64, err := lookupUserInContainer(rootdir, userStr)
+	userEntry, err := lookupUserInContainer(rootdir, userStr)
 	if err != nil {
 		return nil, err
 	}
 
+	var groupEntry *lookupGroupEntry
 	if groupspec != "" {
-		gid64, err = lookupGroupInContainer(rootdir, groupspec)
+		groupEntry, err = lookupGroupInContainer(rootdir, groupspec)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	homedir, err := lookupHomedirInContainer(rootdir, uid64)
+	homedir, err := lookupHomedirInContainer(rootdir, userEntry.uid)
 	if err != nil {
 		homedir = "/"
 	}
-	return &user.User{
-		Uid:      fmt.Sprint(uid64),
-		Gid:      fmt.Sprint(gid64),
+	user := &user.User{
+		Uid:      fmt.Sprint(userEntry.uid),
+		Gid:      fmt.Sprint(userEntry.gid),
 		HomeDir:  homedir,
 		Username: userStr,
-	}, nil
+	}
+	if groupEntry != nil {
+		user.Gid = fmt.Sprint(groupEntry.gid)
+	}
+	return user, nil
+}
+
+func GetAdditionalGroupIDs(rootdir string, user *user.User) ([]string, error) {
+  gids, err := lookupAdditionalGroupsForUser(rootdir, user)
+	if err != nil {
+		return nil, err
+	}
+	gidsStr := make([]string, len(gids))
+	for _, gid := range gids {
+		gidsStr = append(gidsStr, fmt.Sprint(gid))
+	}
+  return gidsStr, nil
 }
 
 // GetGroup returns the gid by looking it up in the /etc/group file
 // groupspec format [ group | gid ]
 func GetGroup(rootdir, groupspec string) (*user.Group, error) {
-	gid, err := lookupGroupInContainer(rootdir, groupspec)
+	group, err := lookupGroupInContainer(rootdir, groupspec)
 	if err != nil {
 		return nil, err
 	}
 	return &user.Group{
-		Gid:  fmt.Sprint(gid),
-		Name: groupspec,
+		Gid:  fmt.Sprint(group.gid),
+		Name: group.name,
 	}, nil
 }

@@ -393,14 +393,14 @@ func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
 		}
 		exitFunc, err := chroot.PrepareMounts(newRoot, s.fileContext.Root, config.KanikoIntermediateStagesDir, config.KanikoDependencyDir)
 		if err != nil {
-      return nil, fmt.Errorf("creating mounts: %w", err)
+			return nil, fmt.Errorf("creating mounts: %w", err)
 		}
-    originalRoot := config.RootDir
-    config.RootDir = newRoot
+		originalRoot := config.RootDir
+		config.RootDir = newRoot
 		revertFunc := func() error {
-      config.RootDir = originalRoot
+			config.RootDir = originalRoot
 			err = exitFunc()
-      return err
+			return err
 		}
 		return revertFunc, nil
 	case "none":
