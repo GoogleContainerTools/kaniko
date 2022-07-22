@@ -113,7 +113,12 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 
 	cmd.Env = env
 	if kConfig.RootDir != "/" {
+    logrus.Debugf("running command in chroot dir %v", kConfig.RootDir)
 		cmd.SysProcAttr.Chroot = kConfig.RootDir
+    if cmd.Dir == "" {
+      // chdir after chroot to run process inside new root
+      cmd.Dir = "/"
+    }
 	}
 
 	logrus.Infof("Running: %s", cmd.Args)

@@ -16,48 +16,48 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
-	// root fd for reverting
-	root, err := os.Open("/")
-	if err != nil {
-		return nil, err
-	}
-
-	unmountFunc, err := PrepareMounts(newRoot, additionalMounts...)
-	if err != nil {
-		return nil, err
-	}
-
-	revertFunc := func() error {
-		logrus.Debug("exit chroot")
-		defer root.Close()
-		defer func() {
-			err2 := unmountFunc()
-			if err2 != nil {
-				err = err2
-			}
-		}()
-		if err2 := root.Chdir(); err2 != nil {
-			err = err2
-		}
-		// check for errors first instead of returning, because unmount needs to be called after chroot
-		err2 := unix.Chroot(".")
-		if err2 != nil {
-			err = fmt.Errorf("chroot back to old root: %w", err2)
-		}
-		return nil
-	}
-	logrus.Debugf("chdir into %v", newRoot)
-	err = unix.Chdir(newRoot)
-	if err != nil {
-		return nil, fmt.Errorf("chdir to %v before chroot: %w", newRoot, err)
-	}
-	err = unix.Chroot(newRoot)
-	if err != nil {
-		return nil, fmt.Errorf("chroot to %v: %w", newRoot, err)
-	}
-	return revertFunc, nil
-}
+// func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
+// 	// root fd for reverting
+// 	root, err := os.Open("/")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	unmountFunc, err := PrepareMounts(newRoot, additionalMounts...)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	revertFunc := func() error {
+// 		logrus.Debug("exit chroot")
+// 		defer root.Close()
+// 		defer func() {
+// 			err2 := unmountFunc()
+// 			if err2 != nil {
+// 				err = err2
+// 			}
+// 		}()
+// 		if err2 := root.Chdir(); err2 != nil {
+// 			err = err2
+// 		}
+// 		// check for errors first instead of returning, because unmount needs to be called after chroot
+// 		err2 := unix.Chroot(".")
+// 		if err2 != nil {
+// 			err = fmt.Errorf("chroot back to old root: %w", err2)
+// 		}
+// 		return nil
+// 	}
+// 	logrus.Debugf("chdir into %v", newRoot)
+// 	err = unix.Chdir(newRoot)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("chdir to %v before chroot: %w", newRoot, err)
+// 	}
+// 	err = unix.Chroot(newRoot)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("chroot to %v: %w", newRoot, err)
+// 	}
+// 	return revertFunc, nil
+// }
 
 func PrepareMounts(newRoot string, additionalMounts ...string) (undoMount func() error, err error) {
 	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE)

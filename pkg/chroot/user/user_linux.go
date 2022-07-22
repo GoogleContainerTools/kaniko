@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 )
 
 var (
