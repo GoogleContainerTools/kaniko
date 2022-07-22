@@ -389,9 +389,10 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 
 	gid, err := getGIDFromName(groupStr, fallbackToUID)
 	if err != nil {
-		if errors.Is(err, fallbackToUIDError) {
+		if errors.Is(err, fallbackErr) {
 			return uid32, uid32, nil
 		}
+
 		return 0, 0, err
 	}
 	return uid32, gid, nil
@@ -410,17 +411,12 @@ func parseGID(groupStr string, fallbackToUID bool) (uint32, error) {
 // if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
 func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
 	group, err := lookupGroup(groupStr)
-	if err == nil {
-		return parseGID(group.Gid, fallbackToUID)
-	}
-	var groupErr user.UnknownGroupError
-	var groupIdErr user.UnknownGroupIdError
-	if errors.As(err, &groupErr) || errors.As(err, &groupIdErr) {
+	if err != nil {
 		// at this point user.LookupGroup and user.LookupGroudId failed, so the group doesnt exist
 		// try to raw parse the groupStr as a gid
 		return parseGID(groupStr, fallbackToUID)
 	}
-	return 0, err
+	return parseGID(group.Gid, fallbackToUID)
 }
 
 // lookupGroup will use chrootuser.GetGroup function to get the group
@@ -445,17 +441,17 @@ func lookupGroup(group string) (*user.Group, error) {
 	return grp, err
 }
 
-var fallbackToUIDError = new(fallbackToUIDErrorType)
+var fallbackErr = fallbackToUIDError{}
 
-type fallbackToUIDErrorType struct{}
+type fallbackToUIDError struct{}
 
-func (e fallbackToUIDErrorType) Error() string {
+func (e fallbackToUIDError) Error() string {
 	return "fallback to uid"
 }
 
 func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 	if fallbackToUID {
-		return fallbackToUIDError
+		return fallbackErr
 	}
 	return err
 }
@@ -465,22 +461,16 @@ func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 func LookupUser(userStr string) (*user.User, error) {
 	userObj, err := lookupUser(userStr)
 	if err != nil {
-		var unknownUserErr user.UnknownUserError
-		var unknownUserIdErr user.UnknownUserIdError
-		// only return if it's not an unknown user(id) error
-		if errors.As(err, &unknownUserErr) || errors.As(err, &unknownUserIdErr) {
-			// at this point, user.LookupUser and user.LookupId failed, so try to parse userStr as a raw uid
-			uid, err := parseUID(userStr)
-			if err != nil {
-				// at this point, the user does not exist and the userStr is not a valid number.
-				return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
-			}
-			return &user.User{
-				Uid:     fmt.Sprint(uid),
-				HomeDir: "/",
-			}, nil
+		// at this point, user.LookupUser and user.LookupId failed, so try to parse userStr as a raw uid
+		uid, err := parseUID(userStr)
+		if err != nil {
+			// at this point, the user does not exist and the userStr is not a valid number.
+			return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
 		}
-		return nil, err
+		return &user.User{
+			Uid:     fmt.Sprint(uid),
+			HomeDir: "/",
+		}, nil
 	}
 	return userObj, nil
 }
@@ -505,7 +495,6 @@ func lookupUser(userStr string) (*user.User, error) {
 			logrus.Debugf("user lookup with unknownUserError, try lookup %v as uid", userStr)
 			u, err = user.LookupId(userStr)
 		}
-		logrus.Debugf("error is not unknownUserError, is %T", err)
 	}
 	return u, err
 }

@@ -131,7 +131,7 @@ func lookupAdditionalGroupsForUser(rootdir string, user *user.User) (gids []uint
 
 	grp := parseNextGroup(rc)
 	for grp != nil {
-		if strings.Contains(grp.user, user.Username) {
+		if strings.Contains(grp.user, user.Username) || strings.Contains(grp.user, user.Uid) {
 			gids = append(gids, uint32(grp.gid))
 		}
 		grp = parseNextGroup(rc)

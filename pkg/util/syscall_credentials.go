@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"strconv"
 	"syscall"
 
@@ -24,8 +25,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func SyscallCredentials(userStr string) (*syscall.Credential, error) {
-	u, err := LookupUser(userStr)
+func SyscallCredentials(userGroupStr string) (*syscall.Credential, error) {
+	uid, gid, err := getUIDAndGIDFromString(userGroupStr, true)
+	if err != nil {
+		return nil, err
+	}
+	u, err := LookupUser(fmt.Sprint(uid))
 	if err != nil {
 		return nil, errors.Wrap(err, "lookup")
 	}
@@ -34,12 +39,12 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 	// initiliaze empty
 	groups := []uint32{}
 
-	gidStr, err := groupIDs(u)
+	additionalGids, err := groupIDs(u)
 	if err != nil {
 		return nil, errors.Wrap(err, "group ids for user")
 	}
 
-	for _, g := range gidStr {
+	for _, g := range additionalGids {
 		i, err := strconv.ParseUint(g, 10, 32)
 		if err != nil {
 			return nil, errors.Wrap(err, "parseuint")
@@ -48,20 +53,9 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 		groups = append(groups, uint32(i))
 	}
 
-	uid32, err := parseUID(u.Uid)
-	if err != nil {
-		return nil, err
-	}
-	gid32, err := parseGID(u.Gid, true)
-	if err != nil {
-		if !errors.Is(err, fallbackToUIDError) {
-			return nil, err
-		}
-		gid32 = uid32
-	}
 	return &syscall.Credential{
-		Uid:    uid32,
-		Gid:    gid32,
+		Uid:    uid,
+		Gid:    gid,
 		Groups: groups,
 	}, nil
 }
