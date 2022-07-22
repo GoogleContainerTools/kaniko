@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
 )
 
 var (
@@ -118,8 +117,8 @@ func lookupGroupInContainer(rootdir, groupname string) (*lookupGroupEntry, error
 	return nil, user.UnknownGroupError(groupname)
 }
 
-func lookupAdditionalGroupsForUser(rootdir string, user *user.User) (gids []uint32, err error) {
-	r, err := openChrootedFileFunc(rootdir, "/etc/passwd")
+func lookupAdditionalGroupsForUser(rootdir string, user *user.User) ([]uint32, error) {
+	r, err := openChrootedFileFunc(rootdir, "/etc/group")
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +128,7 @@ func lookupAdditionalGroupsForUser(rootdir string, user *user.User) (gids []uint
 	lookupGroup.Lock()
 	defer lookupGroup.Unlock()
 
+	gids := []uint32{}
 	grp := parseNextGroup(rc)
 	for grp != nil {
 		if strings.Contains(grp.user, user.Username) || strings.Contains(grp.user, user.Uid) {
