@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
 	"strconv"
 	"syscall"
 
@@ -26,12 +25,7 @@ import (
 )
 
 func SyscallCredentials(userStr string) (*syscall.Credential, error) {
-	uid, gid, err := getUIDAndGIDFromString(userStr, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "get uid/gid")
-	}
-
-	u, err := LookupUser(fmt.Sprint(uid))
+	u, err := LookupUser(userStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "lookup")
 	}
@@ -54,9 +48,20 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 		groups = append(groups, uint32(i))
 	}
 
+	uid32, err := parseUID(u.Uid)
+	if err != nil {
+		return nil, err
+	}
+	gid32, err := parseGID(u.Gid, true)
+	if err != nil {
+		if !errors.Is(err, fallbackToUIDError) {
+			return nil, err
+		}
+		gid32 = uid32
+	}
 	return &syscall.Credential{
-		Uid:    uid,
-		Gid:    gid,
+		Uid:    uid32,
+		Gid:    gid32,
 		Groups: groups,
 	}, nil
 }

@@ -33,7 +33,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/chroot/user"
+	chrootuser "github.com/GoogleContainerTools/kaniko/pkg/chroot/user"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 )
 
@@ -382,7 +382,7 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 	if err != nil {
 		return 0, 0, err
 	}
-	uid32, err := getUID(user.Uid)
+	uid32, err := parseUID(user.Uid)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -397,8 +397,8 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 	return uid32, gid, nil
 }
 
-// getGID tries to parse the gid or falls back to getGroupFromName if it's not an id
-func getGID(groupStr string, fallbackToUID bool) (uint32, error) {
+// parseGID tries to parse the gid or falls back to getGroupFromName if it's not an id
+func parseGID(groupStr string, fallbackToUID bool) (uint32, error) {
 	gid, err := strconv.ParseUint(groupStr, 10, 32)
 	if err != nil {
 		return 0, fallbackToUIDOrError(err, fallbackToUID)
@@ -410,15 +410,17 @@ func getGID(groupStr string, fallbackToUID bool) (uint32, error) {
 // if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
 func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
 	group, err := lookupGroup(groupStr)
-	if err != nil {
-		// unknown group error could relate to a non existing group
-		var groupErr user.UnknownGroupError
-		if errors.Is(err, groupErr) {
-			return getGID(groupStr, fallbackToUID)
-		}
-		return 0, err
+	if err == nil {
+		return parseGID(group.Gid, fallbackToUID)
 	}
-	return getGID(group.Gid, fallbackToUID)
+	var groupErr user.UnknownGroupError
+	var groupIdErr user.UnknownGroupIdError
+	if errors.As(err, &groupErr) || errors.As(err, &groupIdErr) {
+		// at this point user.LookupGroup and user.LookupGroudId failed, so the group doesnt exist
+		// try to raw parse the groupStr as a gid
+		return parseGID(groupStr, fallbackToUID)
+	}
+	return 0, err
 }
 
 // lookupGroup will use chrootuser.GetGroup function to get the group
@@ -432,7 +434,15 @@ func lookupGroup(group string) (*user.Group, error) {
 		}
 		return group, nil
 	}
-	return user.LookupGroup(group)
+	grp, err := user.LookupGroup(group)
+	if err != nil {
+		var unknownGroupErr user.UnknownGroupError
+		// if error is of type unknownUserError, try to look up the user with Id
+		if errors.As(err, &unknownGroupErr) {
+			grp, err = user.LookupGroupId(group)
+		}
+	}
+	return grp, err
 }
 
 var fallbackToUIDError = new(fallbackToUIDErrorType)
@@ -455,26 +465,28 @@ func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 func LookupUser(userStr string) (*user.User, error) {
 	userObj, err := lookupUser(userStr)
 	if err != nil {
-		unknownUserErr := new(user.UnknownUserError)
-		// only return if it's not an unknown user error
-		if !errors.Is(err, unknownUserErr) {
-			return nil, err
+		var unknownUserErr user.UnknownUserError
+		var unknownUserIdErr user.UnknownUserIdError
+		// only return if it's not an unknown user(id) error
+		if errors.As(err, &unknownUserErr) || errors.As(err, &unknownUserIdErr) {
+			// at this point, user.LookupUser and user.LookupId failed, so try to parse userStr as a raw uid
+			uid, err := parseUID(userStr)
+			if err != nil {
+				// at this point, the user does not exist and the userStr is not a valid number.
+				return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
+			}
+			return &user.User{
+				Uid:     fmt.Sprint(uid),
+				HomeDir: "/",
+			}, nil
 		}
-		// Lookup by id
-		uid, err := getUID(userStr)
-		if err != nil {
-			// at this point, the user does not exist and the userStr is not a valid number.
-			return nil, fmt.Errorf("user %v is not a uid and does not exist on the system", userStr)
-		}
-		userObj = &user.User{
-			Uid:     fmt.Sprint(uid),
-			HomeDir: "/",
-		}
+		return nil, err
 	}
 	return userObj, nil
 }
 
-// lookupUser will use chrootuser.GetUser function to get the current user.
+// lookupUser will lookup userStr as username or as uid if username lookup fails.
+// In situations where rootdir != / use chrootuser.GetUser function to get the current user.
 // This is done to get the user struct in environments, where the passwd file is not at /etc/passwd.
 func lookupUser(userStr string) (*user.User, error) {
 	if config.RootDir != "/" {
@@ -485,10 +497,20 @@ func lookupUser(userStr string) (*user.User, error) {
 		}
 		return user, nil
 	}
-	return user.Lookup(userStr)
+	u, err := user.Lookup(userStr)
+	if err != nil {
+		var unknownUserErr user.UnknownUserError
+		// if error is of type unknownUserError, try to look up the user with Id
+		if errors.As(err, &unknownUserErr) {
+			logrus.Debugf("user lookup with unknownUserError, try lookup %v as uid", userStr)
+			u, err = user.LookupId(userStr)
+		}
+		logrus.Debugf("error is not unknownUserError, is %T", err)
+	}
+	return u, err
 }
 
-func getUID(userStr string) (uint32, error) {
+func parseUID(userStr string) (uint32, error) {
 	// checkif userStr is a valid id
 	uid, err := strconv.ParseUint(userStr, 10, 32)
 	if err != nil {
