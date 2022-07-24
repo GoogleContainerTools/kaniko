@@ -118,6 +118,24 @@ func Test_makeTransport(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "RegistriesClientCertificates incorrect cert format",
+			opts: config.RegistryOptions{RegistriesClientCertificates: map[string]string{registryName: "/path/to/client/certificate.cert"}},
+			check: func(config *tls.Config, pool *mockedCertPool) {
+				if len(config.Certificates) != 0 {
+					t.Errorf("makeTransport().RegistriesClientCertificates was incorrectly loaded without both client/key")
+				}
+			},
+		},
+		{
+			name: "RegistriesClientCertificates incorrect cert format extra",
+			opts: config.RegistryOptions{RegistriesClientCertificates: map[string]string{registryName: "/path/to/client/certificate.cert,/path/to/key.key,/path/to/extra.crt"}},
+			check: func(config *tls.Config, pool *mockedCertPool) {
+				if len(config.Certificates) != 0 {
+					t.Errorf("makeTransport().RegistriesClientCertificates was incorrectly loaded with extra paths in comma split list")
+				}
+			},
+		},
 	}
 	savedSystemCertLoader := systemCertLoader
 	savedSystemKeyPairLoader := systemKeyPairLoader
