@@ -657,7 +657,8 @@ func Test_UnTar(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fileList, err := UnTar(file, tc.destination)
+			dest := filepath.Join(testDir, tc.destination)
+			fileList, err := UnTar(file, dest)
 			if err != nil {
 				t.Fatal(err)
 			}
