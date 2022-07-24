@@ -33,7 +33,6 @@ import (
 
 func TestSnapshotFSFileChange(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTest(t)
-	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -58,18 +57,16 @@ func TestSnapshotFSFileChange(t *testing.T) {
 	}
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
 	tr := tar.NewReader(f)
-	fooPath := filepath.Join(testDirWithoutLeadingSlash, "foo")
-	batPath := filepath.Join(testDirWithoutLeadingSlash, "bar/bat")
 	snapshotFiles := map[string]string{
-		fooPath: "newbaz1",
-		batPath: "baz",
+		"foo":     "newbaz1",
+		"bar/bat": "baz",
 	}
-	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		// only append paths that have the testDir as prefix.
-		// This is done, because the snapshotters root is set to testDir
-		if strings.HasPrefix(path, testDirWithoutLeadingSlash) {
-			snapshotFiles[path+"/"] = ""
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash("bar/bat") {
+		if path == "/" {
+			snapshotFiles["/"] = ""
+			continue
 		}
+		snapshotFiles[path+"/"] = ""
 	}
 
 	actualFiles := []string{}
@@ -129,14 +126,13 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 
 func TestSnapshotFSChangePermissions(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTest(t)
-	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Change permissions on a file
-	batPath := filepath.Join(testDir, "bar/bat")
-	batPathWithoutLeadingSlash := filepath.Join(testDirWithoutLeadingSlash, "bar/bat")
+	batBaseName := "bar/bat"
+	batPath := filepath.Join(testDir, batBaseName)
 	if err := os.Chmod(batPath, 0600); err != nil {
 		t.Fatalf("Error changing permissions on %s: %v", batPath, err)
 	}
@@ -152,14 +148,14 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
 	tr := tar.NewReader(f)
 	snapshotFiles := map[string]string{
-		batPathWithoutLeadingSlash: "baz2",
+		batBaseName: "baz2",
 	}
-	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPathWithoutLeadingSlash) {
-		// only append paths that have the testDir as prefix.
-		// This is done, because the snapshotters root is set to testDir
-		if strings.HasPrefix(path, testDirWithoutLeadingSlash) {
-			snapshotFiles[path+"/"] = ""
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batBaseName) {
+		if path == "/" {
+			snapshotFiles["/"] = ""
+			continue
 		}
+		snapshotFiles[path+"/"] = ""
 	}
 
 	foundFiles := []string{}
@@ -190,7 +186,6 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 
 func TestSnapshotFiles(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTest(t)
-	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -212,14 +207,10 @@ func TestSnapshotFiles(t *testing.T) {
 	defer os.Remove(tarPath)
 
 	expectedFiles := []string{
-		filepath.Join(testDirWithoutLeadingSlash, "foo"),
+		"foo",
 	}
-	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(filepath.Join(testDir, "foo")) {
-		// only append paths that have the testDir as prefix.
-		// This is done, because the snapshotters root is set to testDir
-		if strings.HasPrefix(path, testDirWithoutLeadingSlash) {
-			expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
-		}
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash("foo") {
+		expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
 	}
 
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
@@ -450,23 +441,14 @@ func TestSnapshotIncludesParentDirBeforeWhiteoutFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
 	expectedFiles := []string{
-		filepath.Join(testDirWithoutLeadingSlash, "kaniko/.wh.file"),
-		filepath.Join(testDirWithoutLeadingSlash, "kaniko/new-file"),
-		filepath.Join(testDirWithoutLeadingSlash, ".wh.bar"),
-	}
-	for parentDir := filepath.Dir(expectedFiles[0]); parentDir != "."; parentDir = filepath.Dir(parentDir) {
-		// only append paths that have the testDir as prefix.
-		// This is done, because the snapshotters root is set to testDir
-		if strings.HasPrefix(parentDir, testDirWithoutLeadingSlash) {
-			expectedFiles = append(expectedFiles, strings.TrimRight(parentDir, "/")+"/")
-		}
+		"/",
+		".wh.bar",
+		"kaniko/",
+		"kaniko/.wh.file",
+		"kaniko/new-file",
 	}
 
-	// Sorting does the right thing in this case. The expected order for a directory is:
-	// Parent dirs first, then whiteout files in the directory, then other files in that directory
-	sort.Strings(expectedFiles)
 
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
 }
