@@ -29,7 +29,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/system"
 	"github.com/pkg/errors"
@@ -80,7 +79,7 @@ func (t *Tar) Close() {
 func (t *Tar) AddFileToTar(p string) error {
 	i, err := os.Lstat(p)
 	if err != nil {
-		return fmt.Errorf("Failed to get file info for %s: %s", p, err)
+		return fmt.Errorf("Failed to get file info for %s: %w", p, err)
 	}
 	linkDst := ""
 	if i.Mode()&os.ModeSymlink != 0 {
@@ -103,12 +102,12 @@ func (t *Tar) AddFileToTar(p string) error {
 		return err
 	}
 
-	if p == config.RootDir {
+	if p == "/" {
 		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
 		hdr.Name = "/"
 	} else {
 		// Docker uses no leading / in the tarball
-		hdr.Name = strings.TrimPrefix(p, config.RootDir)
+		hdr.Name = strings.TrimPrefix(p, "/")
 		hdr.Name = strings.TrimLeft(hdr.Name, "/")
 	}
 	if hdr.Typeflag == tar.TypeDir && !strings.HasSuffix(hdr.Name, "/") {

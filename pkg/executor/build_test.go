@@ -433,12 +433,6 @@ func Test_filesToSave(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			original := config.RootDir
-			config.RootDir = tmpDir
-			defer func() {
-				config.RootDir = original
-			}()
-
 			for _, f := range tt.files {
 				p := filepath.Join(tmpDir, f)
 				dir := filepath.Dir(p)
@@ -454,7 +448,7 @@ func Test_filesToSave(t *testing.T) {
 				fp.Close()
 			}
 
-			got, err := filesToSave(tt.args)
+			got, err := filesToSave(tmpDir, tt.args)
 			if err != nil {
 				t.Errorf("got err: %s", err)
 			}
@@ -913,7 +907,7 @@ COPY %s foo.txt
 				expectedCacheKeys: []string{copyCommandCacheKey},
 				// CachingCopyCommand is not pushed to the cache
 				pushedCacheKeys: []string{},
-				commands:        getCommands(util.FileContext{Root: dir}, cmds, true),
+				commands:        getCommands(util.FileContext{Root: dir}, cmds, true, dir),
 				fileName:        filename,
 			}
 		}(),
@@ -970,7 +964,7 @@ COPY %s foo.txt
 				rootDir:           dir,
 				expectedCacheKeys: []string{hash},
 				pushedCacheKeys:   []string{hash},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds, true),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, true, dir),
 				fileName:          filename,
 			}
 		}(),
@@ -1045,7 +1039,7 @@ COPY %s bar.txt
 				// hash1 is the read cachekey for the first layer
 				expectedCacheKeys: []string{hash1, hash2},
 				pushedCacheKeys:   []string{hash2},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds, true),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, true, dir),
 			}
 		}(),
 		func() testcase {
@@ -1118,7 +1112,7 @@ RUN foobar
 				image:             image,
 				expectedCacheKeys: []string{runHash},
 				pushedCacheKeys:   []string{},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds, false),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, false, dir),
 			}
 		}(),
 		func() testcase {
@@ -1290,19 +1284,13 @@ RUN foobar
 			for key, value := range tc.args {
 				sb.args.AddArg(key, &value)
 			}
-			tmp := config.RootDir
-			if tc.rootDir != "" {
-				config.RootDir = tc.rootDir
-			}
-			err := sb.build()
+			err := sb.build(tc.rootDir)
 			if err != nil {
 				t.Errorf("Expected error to be nil but was %v", err)
 			}
 			fmt.Println(lc.receivedKeys)
 			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
 			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
-
-			config.RootDir = tmp
 
 		})
 	}
@@ -1331,7 +1319,7 @@ func assertCacheKeys(t *testing.T, expectedCacheKeys, actualCacheKeys []string, 
 	}
 }
 
-func getCommands(fileContext util.FileContext, cmds []instructions.Command, cacheCopy bool) []commands.DockerCommand {
+func getCommands(fileContext util.FileContext, cmds []instructions.Command, cacheCopy bool, rootDir string) []commands.DockerCommand {
 	outCommands := make([]commands.DockerCommand, 0)
 	for _, c := range cmds {
 		cmd, err := commands.GetCommand(
@@ -1339,6 +1327,7 @@ func getCommands(fileContext util.FileContext, cmds []instructions.Command, cach
 			fileContext,
 			false,
 			cacheCopy,
+			rootDir,
 		)
 		if err != nil {
 			panic(err)
@@ -1434,7 +1423,7 @@ func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
 			}
 
 			fc := util.FileContext{Root: "workspace"}
-			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true)
+			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true, "")
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -95,6 +95,9 @@ type FSConfig struct {
 
 type FSOpt func(*FSConfig)
 
+// for testing
+var InitIgnoreList = InitIgnoreListFunc
+
 func IgnoreList() []IgnoreListEntry {
 	return ignorelist
 }
@@ -216,9 +219,9 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 }
 
 // DeleteFilesystem deletes the extracted image file system
-func DeleteFilesystem() error {
+func DeleteFilesystem(rootDir string) error {
 	logrus.Info("Deleting filesystem...")
-	return filepath.Walk(config.RootDir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// ignore errors when deleting.
 			return nil
@@ -239,7 +242,7 @@ func DeleteFilesystem() error {
 			logrus.Debugf("Not deleting %s, as it contains a ignored path", path)
 			return nil
 		}
-		if path == config.RootDir {
+		if path == rootDir {
 			return nil
 		}
 		return os.RemoveAll(path)
@@ -297,7 +300,8 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		return err
 	}
 
-	if CheckIgnoreList(abs) && !checkIgnoreListRoot(dest) {
+	// TODO: check if removing the rootDir check is working
+	if CheckIgnoreList(abs) && !CheckIgnoreList(dest) {
 		logrus.Debugf("Not adding %s because it is ignored", path)
 		return nil
 	}
@@ -426,11 +430,11 @@ func CheckIgnoreList(path string) bool {
 	return CheckProvidedIgnoreList(path, ignorelist)
 }
 
-func checkIgnoreListRoot(root string) bool {
-	if root == config.RootDir {
+func checkIgnoreListRoot(dir string, root string) bool {
+	if dir == root {
 		return false
 	}
-	return CheckIgnoreList(root)
+	return CheckIgnoreList(dir)
 }
 
 // Get ignorelist from roots of mounted files
@@ -461,7 +465,7 @@ func DetectFilesystemIgnoreList(path string) error {
 			}
 			continue
 		}
-		if lineArr[4] != config.RootDir {
+		if lineArr[4] != "/" {
 			logrus.Tracef("Adding ignore list entry %s from line: %s", lineArr[4], line)
 			ignorelist = append(ignorelist, IgnoreListEntry{
 				Path:            lineArr[4],
@@ -500,11 +504,11 @@ func RelativeFiles(fp string, root string) ([]string, error) {
 
 // ParentDirectories returns a list of paths to all parent directories
 // Ex. /some/temp/dir -> [/, /some, /some/temp, /some/temp/dir]
-func ParentDirectories(path string) []string {
+func ParentDirectories(rootDir string, path string) []string {
 	dir := filepath.Clean(path)
 	var paths []string
 	for {
-		if dir == filepath.Clean(config.RootDir) || dir == "" || dir == "." {
+		if dir == filepath.Clean(rootDir) || dir == "" || dir == "." {
 			break
 		}
 		dir, _ = filepath.Split(dir)
@@ -512,7 +516,7 @@ func ParentDirectories(path string) []string {
 		paths = append([]string{dir}, paths...)
 	}
 	if len(paths) == 0 {
-		paths = []string{config.RootDir}
+		paths = []string{rootDir}
 	}
 	return paths
 }
@@ -524,7 +528,7 @@ func ParentDirectoriesWithoutLeadingSlash(path string) []string {
 	path = filepath.Clean(path)
 	dirs := strings.Split(path, "/")
 	dirPath := ""
-	paths := []string{config.RootDir}
+	paths := []string{"/"}
 	for index, dir := range dirs {
 		if dir == "" || index == (len(dirs)-1) {
 			continue
@@ -1017,7 +1021,7 @@ func createParentDirectory(path string) error {
 // InitIgnoreList will initialize the ignore list using:
 // - defaultIgnoreList
 // - mounted paths via DetectFilesystemIgnoreList()
-func InitIgnoreList(detectFilesystem bool) error {
+func InitIgnoreListFunc(detectFilesystem bool) error {
 	logrus.Trace("Initializing ignore list")
 	ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 

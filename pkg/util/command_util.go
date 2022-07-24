@@ -34,7 +34,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	chrootuser "github.com/GoogleContainerTools/kaniko/pkg/chroot/user"
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 )
 
 // for testing
@@ -128,7 +127,7 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "resolving sources")
 	}
-	resolved, err := matchSources(srcs, files)
+	resolved, err := matchSources(root, srcs, files)
 	if err != nil {
 		return nil, errors.Wrap(err, "matching sources")
 	}
@@ -137,7 +136,7 @@ func ResolveSources(srcs []string, root string) ([]string, error) {
 }
 
 // matchSources returns a list of sources that match wildcards
-func matchSources(srcs, files []string) ([]string, error) {
+func matchSources(rootDir string, srcs, files []string) ([]string, error) {
 	var matchedSources []string
 	for _, src := range srcs {
 		if IsSrcRemoteFileURL(src) {
@@ -147,7 +146,7 @@ func matchSources(srcs, files []string) ([]string, error) {
 		src = filepath.Clean(src)
 		for _, file := range files {
 			if filepath.IsAbs(src) {
-				file = filepath.Join(config.RootDir, file)
+				file = filepath.Join(rootDir, file)
 			}
 			matched, err := filepath.Match(src, file)
 			if err != nil {
@@ -345,7 +344,7 @@ Loop:
 	return nil
 }
 
-func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
+func GetUserGroup(rootDir string, chownStr string, env []string) (int64, int64, error) {
 	if chownStr == "" {
 		return DoNotChangeUID, DoNotChangeGID, nil
 	}
@@ -355,7 +354,7 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 		return -1, -1, err
 	}
 
-	uid32, gid32, err := getUIDAndGIDFromString(chown, true)
+	uid32, gid32, err := getUIDAndGIDFromString(rootDir, chown, true)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -367,18 +366,18 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 // If fallbackToUID is set, the gid is equal to uid if the group is not specified
 // otherwise gid is set to zero.
 // UserID and GroupID don't need to be present on the system.
-func getUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+func getUIDAndGIDFromString(rootDir string, userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
 	userAndGroup := strings.Split(userGroupString, ":")
 	userStr := userAndGroup[0]
 	var groupStr string
 	if len(userAndGroup) > 1 {
 		groupStr = userAndGroup[1]
 	}
-	return getUIDAndGIDFunc(userStr, groupStr, fallbackToUID)
+	return getUIDAndGIDFunc(rootDir, userStr, groupStr, fallbackToUID)
 }
 
-func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
-	user, err := LookupUser(userStr)
+func getUIDAndGID(rootDir string, userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
+	user, err := LookupUser(rootDir, userStr)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -387,7 +386,7 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 		return 0, 0, err
 	}
 
-	gid, err := getGIDFromName(groupStr, fallbackToUID)
+	gid, err := getGIDFromName(rootDir, groupStr, fallbackToUID)
 	if err != nil {
 		if errors.Is(err, fallbackErr) {
 			return uid32, uid32, nil
@@ -409,8 +408,8 @@ func parseGID(groupStr string, fallbackToUID bool) (uint32, error) {
 
 // getGIDFromName tries to parse the groupStr into an existing group.
 // if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
-func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
-	group, err := lookupGroup(groupStr)
+func getGIDFromName(rootDir string, groupStr string, fallbackToUID bool) (uint32, error) {
+	group, err := lookupGroup(rootDir, groupStr)
 	if err != nil {
 		// at this point user.LookupGroup and user.LookupGroudId failed, so the group doesnt exist
 		// try to raw parse the groupStr as a gid
@@ -421,10 +420,10 @@ func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
 
 // lookupGroup will use chrootuser.GetGroup function to get the group
 // This is done to get the group struct in environments, where the group file is not at /etc/group
-func lookupGroup(group string) (*user.Group, error) {
-	if config.RootDir != "/" {
+func lookupGroup(rootDir string, group string) (*user.Group, error) {
+	if rootDir != "/" {
 		logrus.Debugf("detected chroot environment, getting group %v via chrootuser pkg", group)
-		group, err := chrootuser.GetGroup(config.RootDir, group)
+		group, err := chrootuser.GetGroup(rootDir, group)
 		if err != nil {
 			return nil, fmt.Errorf("getting group %v: %w", group, err)
 		}
@@ -458,8 +457,8 @@ func fallbackToUIDOrError(err error, fallbackToUID bool) error {
 
 // LookupUser will try to lookup the userStr inside the passwd file.
 // If the user does not exists, the function will fallback to parsing the userStr as an uid.
-func LookupUser(userStr string) (*user.User, error) {
-	userObj, err := lookupUser(userStr)
+func LookupUser(rootDir, userStr string) (*user.User, error) {
+	userObj, err := lookupUser(rootDir, userStr)
 	if err != nil {
 		// at this point, user.LookupUser and user.LookupId failed, so try to parse userStr as a raw uid
 		uid, err := parseUID(userStr)
@@ -478,10 +477,10 @@ func LookupUser(userStr string) (*user.User, error) {
 // lookupUser will lookup userStr as username or as uid if username lookup fails.
 // In situations where rootdir != / use chrootuser.GetUser function to get the current user.
 // This is done to get the user struct in environments, where the passwd file is not at /etc/passwd.
-func lookupUser(userStr string) (*user.User, error) {
-	if config.RootDir != "/" {
+func lookupUser(rootDir string, userStr string) (*user.User, error) {
+	if rootDir != "/" {
 		logrus.Debugf("detected chroot environment, getting user %v via chrootuser pkg", userStr)
-		user, err := chrootuser.GetUser(config.RootDir, userStr)
+		user, err := chrootuser.GetUser(rootDir, userStr)
 		if err != nil {
 			return nil, err
 		}

@@ -25,12 +25,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func SyscallCredentials(userGroupStr string) (*syscall.Credential, error) {
-	uid, gid, err := getUIDAndGIDFromString(userGroupStr, true)
+func SyscallCredentials(rootDir string, userGroupStr string) (*syscall.Credential, error) {
+	uid, gid, err := getUIDAndGIDFromString(rootDir, userGroupStr, true)
 	if err != nil {
 		return nil, err
 	}
-	u, err := LookupUser(fmt.Sprint(uid))
+	u, err := LookupUser(rootDir, fmt.Sprint(uid))
 	if err != nil {
 		return nil, errors.Wrap(err, "lookup")
 	}
@@ -39,7 +39,7 @@ func SyscallCredentials(userGroupStr string) (*syscall.Credential, error) {
 	// initiliaze empty
 	groups := []uint32{}
 
-	additionalGids, err := groupIDs(u)
+	additionalGids, err := groupIDs(rootDir, u)
 	if err != nil {
 		return nil, errors.Wrap(err, "group ids for user")
 	}

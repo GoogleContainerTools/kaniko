@@ -28,7 +28,6 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/sirupsen/logrus"
 
-	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"strings"
 )
 
@@ -37,6 +36,7 @@ type AddCommand struct {
 	cmd           *instructions.AddCommand
 	fileContext   util.FileContext
 	snapshotFiles []string
+	rootDir       string
 }
 
 // ExecuteCommand executes the ADD command
@@ -50,7 +50,7 @@ type AddCommand struct {
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	uid, gid, err := util.GetUserGroup(a.cmd.Chown, replacementEnvs)
+	uid, gid, err := util.GetUserGroup(a.rootDir, a.cmd.Chown, replacementEnvs)
 	if err != nil {
 		return errors.Wrap(err, "getting user group from chown")
 	}
@@ -61,8 +61,8 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 	}
 
 	// prepend rootDir in case we are chrooting
-	if !strings.HasPrefix(dest, kConfig.RootDir) {
-		dest = filepath.Join(kConfig.RootDir, dest)
+	if !strings.HasPrefix(dest, a.rootDir) {
+		dest = filepath.Join(a.rootDir, dest)
 	}
 
 	var unresolvedSrcs []string

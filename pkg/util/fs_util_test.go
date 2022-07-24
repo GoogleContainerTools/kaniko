@@ -218,10 +218,7 @@ func Test_ParentDirectories(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			original := config.RootDir
-			defer func() { config.RootDir = original }()
-			config.RootDir = tt.rootDir
-			actual := ParentDirectories(tt.path)
+			actual := ParentDirectories(tt.rootDir, tt.path)
 
 			testutil.CheckErrorAndDeepEqual(t, false, nil, tt.expected, actual)
 		})
@@ -1092,6 +1089,16 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 
 	expectedFiles = append(expectedFiles, secondLayerFiles...)
 
+	// override InitIgnoreList func since tempDir could be part of the ignorelist on some systems and fail the test
+	originalFunc := InitIgnoreList
+	InitIgnoreList = func(detectFilesystem bool) error {
+		ignorelist = defaultIgnoreList
+		return nil
+	}
+	defer func() {
+		InitIgnoreList = originalFunc
+	}()
+
 	actualFiles, err := GetFSFromLayers(root, layers, opts...)
 
 	assertGetFSFromLayers(
@@ -1192,6 +1199,15 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 		mockLayer2,
 	}
 
+	// override InitIgnoreList func since tempDir could be part of the ignorelist on some systems and fail the test
+	originalFunc := InitIgnoreList
+	InitIgnoreList = func(detectFilesystem bool) error {
+		ignorelist = defaultIgnoreList
+		return nil
+	}
+	defer func() {
+		InitIgnoreList = originalFunc
+	}()
 	actualFiles, err := GetFSFromLayers(root, layers, opts...)
 
 	assertGetFSFromLayers(
@@ -1280,6 +1296,15 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 		mockLayer,
 	}
 
+	// override InitIgnoreList func since tempDir could be part of the ignorelist on some systems and fail the test
+	originalFunc := InitIgnoreList
+	InitIgnoreList = func(detectFilesystem bool) error {
+		ignorelist = defaultIgnoreList
+		return nil
+	}
+	defer func() {
+		InitIgnoreList = originalFunc
+	}()
 	actualFiles, err := GetFSFromLayers(root, layers, opts...)
 	assertGetFSFromLayers(
 		t,

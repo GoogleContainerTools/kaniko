@@ -37,13 +37,13 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
-	"github.com/GoogleContainerTools/kaniko/pkg/chroot"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	image_util "github.com/GoogleContainerTools/kaniko/pkg/image"
 	"github.com/GoogleContainerTools/kaniko/pkg/image/remote"
+	"github.com/GoogleContainerTools/kaniko/pkg/isolation"
 	"github.com/GoogleContainerTools/kaniko/pkg/snapshot"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -56,6 +56,7 @@ const emptyTarSize = 1024
 // for testing
 var (
 	initializeConfig = initConfig
+	newIsolator      = newIsolatorFunc
 )
 
 type (
@@ -84,6 +85,7 @@ type stageBuilder struct {
 	snapshotter      snapShotter
 	layerCache       cache.LayerCache
 	pushLayerToCache cachePusher
+	isolator         isolation.Isolator
 }
 
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
@@ -116,13 +118,6 @@ func newStageBuilder(
 		return nil, errors.Wrap(err, "failed to initialize ignore list")
 	}
 
-	hasher, err := getHasher(opts.SnapshotMode)
-	if err != nil {
-		return nil, err
-	}
-	l := snapshot.NewLayeredMap(hasher)
-	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
-
 	digest, err := sourceImage.Digest()
 	if err != nil {
 		return nil, err
@@ -131,7 +126,6 @@ func newStageBuilder(
 		stage:            stage,
 		image:            sourceImage,
 		cf:               imageConfig,
-		snapshotter:      snapshotter,
 		baseImageDigest:  digest.String(),
 		opts:             opts,
 		fileContext:      fileContext,
@@ -142,17 +136,7 @@ func newStageBuilder(
 			Opts: opts,
 		},
 		pushLayerToCache: pushLayerToCache,
-	}
-
-	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, fileContext, opts.RunV2, opts.CacheCopyLayers)
-		if err != nil {
-			return nil, err
-		}
-		if command == nil {
-			continue
-		}
-		s.cmds = append(s.cmds, command)
+		isolator:         newIsolator(opts.Isolation),
 	}
 
 	if args != nil {
@@ -162,6 +146,30 @@ func newStageBuilder(
 	}
 	s.args.AddMetaArgs(s.stage.MetaArgs)
 	return s, nil
+}
+
+func (s *stageBuilder) parseCommands(rootDir string) error {
+	for _, cmd := range s.stage.Commands {
+		command, err := commands.GetCommand(cmd, s.fileContext, s.opts.RunV2, s.opts.CacheCopyLayers, rootDir)
+		if err != nil {
+			return err
+		}
+		if command == nil {
+			continue
+		}
+		s.cmds = append(s.cmds, command)
+	}
+	return nil
+}
+
+func (s *stageBuilder) setupSnapshotter(rootDir string) error {
+	hasher, err := getHasher(s.opts.SnapshotMode)
+	if err != nil {
+		return err
+	}
+	l := snapshot.NewLayeredMap(hasher)
+	s.snapshotter = snapshot.NewSnapshotter(l, rootDir)
+	return nil
 }
 
 func initConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.ConfigFile, error) {
@@ -317,7 +325,7 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 	return nil
 }
 
-func (s *stageBuilder) build() error {
+func (s *stageBuilder) build(rootDir string) error {
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	var compositeKey *CompositeCache
 	if cacheKey, ok := s.digestToCacheKey[s.baseImageDigest]; ok {
@@ -353,7 +361,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	if shouldUnpack {
-		err := unpackFS(s.image, s.opts.ImageFSExtractRetry)
+		err := unpackFS(s.image, rootDir, s.opts.ImageFSExtractRetry)
 		if err != nil {
 			return fmt.Errorf("unpacking fs: %w", err)
 		}
@@ -384,29 +392,13 @@ func (s *stageBuilder) build() error {
 	return nil
 }
 
-func (s *stageBuilder) isolate() (exitFunc func() error, err error) {
-	switch s.opts.Isolation {
+func newIsolatorFunc(isoType string) isolation.Isolator {
+	switch isoType {
 	case "chroot":
-		newRoot, err := chroot.TmpDirInHome()
-		if err != nil {
-			return nil, fmt.Errorf("getting newRoot: %w", err)
-		}
-		exitFunc, err := chroot.PrepareMounts(newRoot)
-		if err != nil {
-			return nil, fmt.Errorf("creating mounts: %w", err)
-		}
-		originalRoot := config.RootDir
-		config.RootDir = newRoot
-		revertFunc := func() error {
-			config.RootDir = originalRoot
-			err = exitFunc()
-			return err
-		}
-		return revertFunc, nil
-	case "none":
-		return func() error { return nil }, nil
+		return isolation.Chroot{}
+	default:
+		return isolation.None{}
 	}
-	return nil, fmt.Errorf("unknown isolation method: %s", s.opts.Isolation)
 }
 
 func (s *stageBuilder) runCommand(
@@ -495,11 +487,11 @@ func (s *stageBuilder) runCommand(
 	return nil
 }
 
-func unpackFS(image v1.Image, retryCount int) error {
+func unpackFS(image v1.Image, rootDir string, retryCount int) error {
 	t := timing.Start("FS Unpacking")
 
 	retryFunc := func() error {
-		_, err := util.GetFSFromImage(config.RootDir, image, util.ExtractFile)
+		_, err := util.GetFSFromImage(rootDir, image, util.ExtractFile)
 		return err
 	}
 
@@ -665,11 +657,11 @@ func CalculateDependencies(
 }
 
 func createNeededBuildDirs() error {
-	err := os.MkdirAll(config.KanikoDependencyDir, os.ModeDir)
+	err := os.MkdirAll(config.KanikoDependencyDir, 0755)
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(config.KanikoIntermediateStagesDir, os.ModeDir)
+	return os.MkdirAll(config.KanikoIntermediateStagesDir, 0755)
 }
 
 // DoBuild executes building the Dockerfile
@@ -747,18 +739,25 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 	// lock thread during execution because thread hopping would break out of the namespace during isolation
 	// runtime.LockOSThread()
 	// defer runtime.UnlockOSThread()
-	exitIsolation, err := sb.isolate()
+	newRoot, exitIsolation, err := sb.isolator.NewRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "isolating")
+		return nil, fmt.Errorf("getting new root dir from isolator: %w", err)
 	}
 	defer func() {
-		err := exitIsolation()
-		if err != nil {
-			logrus.Fatalf("exiting isolation: %v", err)
-		}
+		err = exitIsolation()
 	}()
 
-	if err := sb.build(); err != nil {
+	err = sb.parseCommands(newRoot)
+	if err != nil {
+		return nil, fmt.Errorf("parsing commands: %w", err)
+	}
+
+	err = sb.setupSnapshotter(newRoot)
+	if err != nil {
+		return nil, fmt.Errorf("setup snapshotter: %w", err)
+	}
+
+	if err := sb.build(newRoot); err != nil {
 		return nil, errors.Wrap(err, "error building stage")
 	}
 
@@ -808,7 +807,7 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 			}
 		}
 		if sb.opts.Cleanup {
-			if err = util.DeleteFilesystem(); err != nil {
+			if err = util.DeleteFilesystem(newRoot); err != nil {
 				return nil, err
 			}
 		}
@@ -820,12 +819,12 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 		}
 	}
 
-	filesToSave, err := filesToSave(sb.crossStageDeps[stage.Index])
+	filesToSave, err := filesToSave(newRoot, sb.crossStageDeps[stage.Index])
 	if err != nil {
 		return nil, err
 	}
 	dstDir := filepath.Join(config.KanikoDependencyDir, strconv.Itoa(stage.Index))
-	if err := os.Mkdir(dstDir, 0644); err != nil {
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		if !errors.Is(err, os.ErrExist) {
 			return nil, errors.Wrap(err,
 				fmt.Sprintf("to create workspace for stage %s",
@@ -835,13 +834,13 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 	}
 	for _, p := range filesToSave {
 		logrus.Infof("Saving file %s for later use", p)
-		if err := util.CopyFileOrSymlink(p, dstDir, config.RootDir); err != nil {
+		if err := util.CopyFileOrSymlink(p, dstDir, newRoot); err != nil {
 			return nil, errors.Wrap(err, "could not save file")
 		}
 	}
 
 	// Delete the filesystem
-	if err := util.DeleteFilesystem(); err != nil {
+	if err := util.DeleteFilesystem(newRoot); err != nil {
 		return nil, fmt.Errorf("deleting file system after stage %d: %w", stage.Index, err)
 	}
 	return nil, nil
@@ -849,24 +848,24 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 
 // fileToSave returns all the files matching the given pattern in deps.
 // If a file is a symlink, it also returns the target file.
-func filesToSave(deps []string) ([]string, error) {
+func filesToSave(rootDir string, deps []string) ([]string, error) {
 	srcFiles := []string{}
 	for _, src := range deps {
-		srcs, err := filepath.Glob(filepath.Join(config.RootDir, src))
+		srcs, err := filepath.Glob(filepath.Join(rootDir, src))
 		if err != nil {
 			return nil, err
 		}
 		for _, f := range srcs {
 			if link, err := util.EvalSymLink(f); err == nil {
-				link, err = filepath.Rel(config.RootDir, link)
+				link, err = filepath.Rel(rootDir, link)
 				if err != nil {
-					return nil, errors.Wrap(err, fmt.Sprintf("could not find relative path to %s", config.RootDir))
+					return nil, errors.Wrap(err, fmt.Sprintf("could not find relative path to %s", rootDir))
 				}
 				srcFiles = append(srcFiles, link)
 			}
-			f, err = filepath.Rel(config.RootDir, f)
+			f, err = filepath.Rel(rootDir, f)
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("could not find relative path to %s", config.RootDir))
+				return nil, errors.Wrap(err, fmt.Sprintf("could not find relative path to %s", rootDir))
 			}
 			srcFiles = append(srcFiles, f)
 		}

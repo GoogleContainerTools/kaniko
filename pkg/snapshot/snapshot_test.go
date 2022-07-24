@@ -65,11 +65,11 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		batPath: "baz",
 	}
 	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPath) {
-		if path == "/" {
-			snapshotFiles["/"] = ""
-			continue
+		// only append paths that have the testDir as prefix.
+		// This is done, because the snapshotters root is set to testDir
+		if strings.HasPrefix(path, testDirWithoutLeadingSlash) {
+			snapshotFiles[path+"/"] = ""
 		}
-		snapshotFiles[path+"/"] = ""
 	}
 
 	actualFiles := []string{}
@@ -155,11 +155,11 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		batPathWithoutLeadingSlash: "baz2",
 	}
 	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(batPathWithoutLeadingSlash) {
-		if path == "/" {
-			snapshotFiles["/"] = ""
-			continue
+		// only append paths that have the testDir as prefix.
+		// This is done, because the snapshotters root is set to testDir
+		if strings.HasPrefix(path, testDirWithoutLeadingSlash) {
+			snapshotFiles[path+"/"] = ""
 		}
-		snapshotFiles[path+"/"] = ""
 	}
 
 	foundFiles := []string{}
@@ -215,7 +215,11 @@ func TestSnapshotFiles(t *testing.T) {
 		filepath.Join(testDirWithoutLeadingSlash, "foo"),
 	}
 	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(filepath.Join(testDir, "foo")) {
-		expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
+		// only append paths that have the testDir as prefix.
+		// This is done, because the snapshotters root is set to testDir
+		if strings.HasPrefix(path, testDirWithoutLeadingSlash) {
+			expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
+		}
 	}
 
 	// Check contents of the snapshot, make sure contents is equivalent to snapshotFiles
@@ -451,10 +455,13 @@ func TestSnapshotIncludesParentDirBeforeWhiteoutFile(t *testing.T) {
 		filepath.Join(testDirWithoutLeadingSlash, "kaniko/.wh.file"),
 		filepath.Join(testDirWithoutLeadingSlash, "kaniko/new-file"),
 		filepath.Join(testDirWithoutLeadingSlash, ".wh.bar"),
-		"/",
 	}
 	for parentDir := filepath.Dir(expectedFiles[0]); parentDir != "."; parentDir = filepath.Dir(parentDir) {
-		expectedFiles = append(expectedFiles, parentDir+"/")
+		// only append paths that have the testDir as prefix.
+		// This is done, because the snapshotters root is set to testDir
+		if strings.HasPrefix(parentDir, testDirWithoutLeadingSlash) {
+			expectedFiles = append(expectedFiles, strings.TrimRight(parentDir, "/")+"/")
+		}
 	}
 
 	// Sorting does the right thing in this case. The expected order for a directory is:

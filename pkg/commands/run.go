@@ -23,7 +23,6 @@ import (
 	"strings"
 	"syscall"
 
-	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -35,7 +34,8 @@ import (
 
 type RunCommand struct {
 	BaseCommand
-	cmd *instructions.RunCommand
+	cmd     *instructions.RunCommand
+	rootDir string
 }
 
 // for testing
@@ -44,10 +44,10 @@ var (
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	return runCommandInExec(config, buildArgs, r.cmd)
+	return runCommandInExec(config, buildArgs, r.cmd, r.rootDir)
 }
 
-func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand) error {
+func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand, rootDir string) error {
 	var newCommand []string
 	if cmdRun.PrependShell {
 		// This is the default shell on Linux
@@ -98,7 +98,7 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 
 	// If specified, run the command as a specific user
 	if userStr != "" {
-		creds, err := util.SyscallCredentials(userStr)
+		creds, err := util.SyscallCredentials(rootDir, userStr)
 		if err != nil {
 			return fmt.Errorf("get syscallCredentials from userStr %v: %w", userStr, err)
 		}
@@ -106,19 +106,19 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 		cmd.SysProcAttr.Credential = creds
 	}
 
-	env, err := addDefaultHOME(userStr, replacementEnvs)
+	env, err := addDefaultHOME(rootDir, userStr, replacementEnvs)
 	if err != nil {
 		return errors.Wrap(err, "adding default HOME variable")
 	}
 
 	cmd.Env = env
-	if kConfig.RootDir != "/" {
-    logrus.Debugf("running command in chroot dir %v", kConfig.RootDir)
-		cmd.SysProcAttr.Chroot = kConfig.RootDir
-    if cmd.Dir == "" {
-      // chdir after chroot to run process inside new root
-      cmd.Dir = "/"
-    }
+	if rootDir != "/" {
+		logrus.Debugf("running command in chroot dir %v", rootDir)
+		cmd.SysProcAttr.Chroot = rootDir
+		if cmd.Dir == "" {
+			// chdir after chroot to run process inside new root
+			cmd.Dir = "/"
+		}
 	}
 
 	logrus.Infof("Running: %s", cmd.Args)
@@ -142,7 +142,7 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set
-func addDefaultHOME(u string, envs []string) ([]string, error) {
+func addDefaultHOME(rootDir string, u string, envs []string) ([]string, error) {
 	for _, env := range envs {
 		split := strings.SplitN(env, "=", 2)
 		if split[0] == constants.HOME {
@@ -157,7 +157,7 @@ func addDefaultHOME(u string, envs []string) ([]string, error) {
 
 	// If user is set to username, set value of HOME to /home/${user}
 	// Otherwise the user is set to uid and HOME is /
-	userObj, err := userLookup(u)
+	userObj, err := userLookup(rootDir, u)
 	if err != nil {
 		return nil, fmt.Errorf("lookup user %v: %w", u, err)
 	}
@@ -185,6 +185,7 @@ func (r *RunCommand) CacheCommand(img v1.Image) DockerCommand {
 		img:       img,
 		cmd:       r.cmd,
 		extractFn: util.ExtractFile,
+		rootDir:   r.rootDir,
 	}
 }
 
@@ -207,6 +208,7 @@ type CachingRunCommand struct {
 	extractedFiles []string
 	cmd            *instructions.RunCommand
 	extractFn      util.ExtractFunction
+	rootDir        string
 }
 
 func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -229,7 +231,7 @@ func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *docker
 	cr.layer = layers[0]
 
 	cr.extractedFiles, err = util.GetFSFromLayers(
-		kConfig.RootDir,
+		cr.rootDir,
 		layers,
 		util.ExtractFunc(cr.extractFn),
 		util.IncludeWhiteout(),

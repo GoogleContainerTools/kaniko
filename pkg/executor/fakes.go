@@ -195,3 +195,15 @@ func (f fakeImage) LayerByDigest(v1.Hash) (v1.Layer, error) {
 func (f fakeImage) LayerByDiffID(v1.Hash) (v1.Layer, error) {
 	return fakeLayer{}, nil
 }
+
+
+
+// fakeIsolator isolator is used for testing
+// fakeIsolator.dir will be used as the new root
+type fakeIsolator struct {
+	dir string
+}
+
+func (t fakeIsolator) NewRoot() (newRoot string, exitFunc func() error, err error) {
+	return t.dir, func() error { return nil }, err
+}

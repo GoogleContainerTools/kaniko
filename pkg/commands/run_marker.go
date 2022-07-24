@@ -28,15 +28,16 @@ import (
 
 type RunMarkerCommand struct {
 	BaseCommand
-	cmd   *instructions.RunCommand
-	Files []string
+	cmd     *instructions.RunCommand
+	Files   []string
+	rootDir string
 }
 
 func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// run command `touch filemarker`
 	logrus.Debugf("Using new RunMarker command")
 	prevFilesMap, _ := util.GetFSInfoMap("/", map[string]os.FileInfo{})
-	if err := runCommandInExec(config, buildArgs, r.cmd); err != nil {
+	if err := runCommandInExec(config, buildArgs, r.cmd, r.rootDir); err != nil {
 		return err
 	}
 	_, r.Files = util.GetFSInfoMap("/", prevFilesMap)

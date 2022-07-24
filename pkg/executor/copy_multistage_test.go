@@ -24,13 +24,25 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
+	"github.com/GoogleContainerTools/kaniko/pkg/isolation"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
 func TestCopyCommand_Multistage(t *testing.T) {
+
 	t.Run("copy a file across multistage", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
+
+		// override isolation creator func
+		original := newIsolator
+		newIsolator = func(isoType string) isolation.Isolator {
+			return fakeIsolator{dir: testDir}
+		}
+		defer func() {
+			newIsolator = original
+		}()
+
 		dockerFile := fmt.Sprintf(`
 FROM scratch as first
 COPY foo/bam.txt copied/
@@ -45,7 +57,9 @@ COPY --from=first copied/bam.txt output/bam.txt`)
 			SnapshotMode:   constants.SnapshotModeFull,
 		}
 		_, err := DoBuild(opts)
-		testutil.CheckNoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		// Check Image has one layer bam.txt
 		files, err := ioutil.ReadDir(filepath.Join(testDir, "output"))
 		if err != nil {
@@ -59,6 +73,16 @@ COPY --from=first copied/bam.txt output/bam.txt`)
 	t.Run("copy a file across multistage into a directory", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
+
+		// override isolation creator func
+		original := newIsolator
+		newIsolator = func(isoType string) isolation.Isolator {
+			return fakeIsolator{dir: testDir}
+		}
+		defer func() {
+			newIsolator = original
+		}()
+
 		dockerFile := fmt.Sprintf(`
 FROM scratch as first
 COPY foo/bam.txt copied/
@@ -73,7 +97,9 @@ COPY --from=first copied/bam.txt output/`)
 			SnapshotMode:   constants.SnapshotModeFull,
 		}
 		_, err := DoBuild(opts)
-		testutil.CheckNoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		files, err := ioutil.ReadDir(filepath.Join(testDir, "output"))
 		if err != nil {
 			t.Fatal(err)
@@ -84,6 +110,16 @@ COPY --from=first copied/bam.txt output/`)
 	t.Run("copy directory across multistage into a directory", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
+
+		// override isolation creator func
+		original := newIsolator
+		newIsolator = func(isoType string) isolation.Isolator {
+			return fakeIsolator{dir: testDir}
+		}
+		defer func() {
+			newIsolator = original
+		}()
+
 		dockerFile := fmt.Sprintf(`
 FROM scratch as first
 COPY foo copied
@@ -98,7 +134,9 @@ COPY --from=first copied another`)
 			SnapshotMode:   constants.SnapshotModeFull,
 		}
 		_, err := DoBuild(opts)
-		testutil.CheckNoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		// Check Image has one layer bam.txt
 		files, err := ioutil.ReadDir(filepath.Join(testDir, "another"))
 		if err != nil {
@@ -133,11 +171,17 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	//          - exec.link -> ../exec
 	//      exec
 
-	// Make directory for stage or else the executor will create with permissions 0664
-	// and we will run into issue https://github.com/golang/go/issues/22323
-	if err := os.MkdirAll(filepath.Join(testDir, "kaniko/0"), 0755); err != nil {
+	originalKanikoDepsDir := config.KanikoDependencyDir
+	originalKanikoStagesDir := config.KanikoIntermediateStagesDir
+	config.KanikoDependencyDir = filepath.Join(testDir, "kaniko", "saved")
+	config.KanikoIntermediateStagesDir = filepath.Join(testDir, "kaniko", "stages")
+
+	kanikoDir := filepath.Join(testDir, "kaniko")
+	// Make kanikoDir
+	if err := os.MkdirAll(kanikoDir, 0755); err != nil {
 		t.Fatal(err)
 	}
+
 	workspace := filepath.Join(testDir, "workspace")
 	// Make foo
 	if err := os.MkdirAll(filepath.Join(workspace, "foo"), 0755); err != nil {
@@ -161,7 +205,6 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	os.Symlink("../exec", filepath.Join(workspace, "bin", "exec.link"))
 
 	// set up config
-	config.RootDir = testDir
 	config.KanikoDir = fmt.Sprintf("%s/%s", testDir, "kaniko")
 	// Write path to ignore list
 	if err := os.MkdirAll(filepath.Join(testDir, "proc"), 0755); err != nil {
@@ -177,7 +220,8 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	}
 	config.IgnoreListPath = mFile
 	return testDir, func() {
-		config.RootDir = constants.RootDir
 		config.IgnoreListPath = constants.IgnoreListPath
+		config.KanikoIntermediateStagesDir = originalKanikoStagesDir
+		config.KanikoDependencyDir = originalKanikoDepsDir
 	}
 }

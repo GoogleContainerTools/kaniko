@@ -843,7 +843,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		uid := os.Getuid()
 		gid := os.Getgid()
 
-		getUserGroup = func(userStr string, _ []string) (int64, int64, error) {
+		getUserGroup = func(rootDir, userStr string, _ []string) (int64, int64, error) {
 			return int64(uid), int64(gid), nil
 		}
 
@@ -888,7 +888,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		original := getUserGroup
 		defer func() { getUserGroup = original }()
 
-		getUserGroup = func(userStr string, _ []string) (int64, int64, error) {
+		getUserGroup = func(rootDir, userStr string, _ []string) (int64, int64, error) {
 			return 12345, 12345, nil
 		}
 

@@ -92,7 +92,7 @@ func TestSyscallCredentials(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SyscallCredentials(tt.args.userStr)
+			got, err := SyscallCredentials("/", tt.args.userStr)
 			testutil.CheckErrorAndDeepEqual(t, tt.wantErr, err, tt.want, got)
 		})
 	}

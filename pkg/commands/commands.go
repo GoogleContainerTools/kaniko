@@ -60,15 +60,15 @@ type DockerCommand interface {
 	ShouldDetectDeletedFiles() bool
 }
 
-func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool, cacheCopy bool) (DockerCommand, error) {
+func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool, cacheCopy bool, rootDir string) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
 		if useNewRun {
-			return &RunMarkerCommand{cmd: c}, nil
+			return &RunMarkerCommand{cmd: c, rootDir: rootDir}, nil
 		}
-		return &RunCommand{cmd: c}, nil
+		return &RunCommand{cmd: c, rootDir: rootDir}, nil
 	case *instructions.CopyCommand:
-		return &CopyCommand{cmd: c, fileContext: fileContext, shdCache: cacheCopy}, nil
+		return &CopyCommand{cmd: c, fileContext: fileContext, shdCache: cacheCopy, rootDir: rootDir}, nil
 	case *instructions.ExposeCommand:
 		return &ExposeCommand{cmd: c}, nil
 	case *instructions.EnvCommand:
@@ -76,7 +76,7 @@ func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRu
 	case *instructions.WorkdirCommand:
 		return &WorkdirCommand{cmd: c}, nil
 	case *instructions.AddCommand:
-		return &AddCommand{cmd: c, fileContext: fileContext}, nil
+		return &AddCommand{cmd: c, fileContext: fileContext, rootDir: rootDir}, nil
 	case *instructions.CmdCommand:
 		return &CmdCommand{cmd: c}, nil
 	case *instructions.EntrypointCommand:

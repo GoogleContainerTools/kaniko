@@ -43,6 +43,7 @@ type CopyCommand struct {
 	fileContext   util.FileContext
 	snapshotFiles []string
 	shdCache      bool
+	rootDir       string
 }
 
 func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -52,7 +53,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
-	uid, gid, err := getUserGroup(c.cmd.Chown, replacementEnvs)
+	uid, gid, err := getUserGroup(c.rootDir, c.cmd.Chown, replacementEnvs)
 	logrus.Debugf("found uid %v and gid %v for chown string %v", uid, gid, c.cmd.Chown)
 	if err != nil {
 		return errors.Wrap(err, "getting user group from chown")
@@ -76,7 +77,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 		cwd := config.WorkingDir
 		if cwd == "" {
-			cwd = kConfig.RootDir
+			cwd = c.rootDir
 		}
 
 		destPath, err := util.DestinationFilepath(fullPath, dest, cwd)
@@ -92,8 +93,8 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		// prepend rootDir in case we are chrooting
-		if !strings.HasPrefix(destPath, kConfig.RootDir) {
-			destPath = filepath.Join(kConfig.RootDir, destPath)
+		if !strings.HasPrefix(destPath, c.rootDir) {
+			destPath = filepath.Join(c.rootDir, destPath)
 		}
 
 		if fi.IsDir() {
@@ -175,6 +176,7 @@ type CachingCopyCommand struct {
 	cmd            *instructions.CopyCommand
 	fileContext    util.FileContext
 	extractFn      util.ExtractFunction
+	rootDir        string
 }
 
 func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -195,7 +197,7 @@ func (cr *CachingCopyCommand) ExecuteCommand(config *v1.Config, buildArgs *docke
 	}
 
 	cr.layer = layers[0]
-	cr.extractedFiles, err = util.GetFSFromLayers(kConfig.RootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
+	cr.extractedFiles, err = util.GetFSFromLayers(cr.rootDir, layers, util.ExtractFunc(cr.extractFn), util.IncludeWhiteout())
 
 	logrus.Tracef("ExtractedFiles: %s", cr.extractedFiles)
 	if err != nil {

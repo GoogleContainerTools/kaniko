@@ -19,11 +19,10 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 )
-
-var RootDir string
 
 // KanikoDir is the path to the Kaniko directory
 var KanikoDir = func() string {
@@ -42,15 +41,15 @@ var BuildContextDir = fmt.Sprintf("%s/buildcontext/", KanikoDir)
 
 // KanikoIntermediateStagesDir is where we will store intermediate stages
 // as tarballs in case they are needed later on
-var KanikoIntermediateStagesDir = fmt.Sprintf("%s/stages/", KanikoDir)
+var KanikoIntermediateStagesDir =  filepath.Join(KanikoDir, "stages")
 
 // KanikoDependencyDir will store files that need to be
 // used later on during built process
-var KanikoDependencyDir = fmt.Sprintf("%s/saved/", KanikoDir)
+var KanikoDependencyDir = filepath.Join(KanikoDir, "saved")
 
 var IgnoreListPath string
 
 func init() {
-	RootDir = constants.RootDir
+	// RootDir = constants.RootDir
 	IgnoreListPath = constants.IgnoreListPath
 }

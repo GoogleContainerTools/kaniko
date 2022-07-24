@@ -74,7 +74,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 		return "", nil
 	}
 
-	filesToAdd, err := filesystem.ResolvePaths(files, s.ignorelist)
+	filesToAdd, err := filesystem.ResolvePaths(s.directory, files, s.ignorelist)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +112,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 
 	t := util.NewTar(f)
 	defer t.Close()
-	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
+	if err := writeToTar(s.directory, t, filesToAdd, filesToWhiteout); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -134,7 +134,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		return "", err
 	}
 
-	if err := writeToTar(t, filesToAdd, filesToWhiteOut); err != nil {
+	if err := writeToTar(s.directory, t, filesToAdd, filesToWhiteOut); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -164,7 +164,7 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	timer := timing.Start("Resolving Paths")
 
 	filesToAdd := []string{}
-	resolvedFiles, err := filesystem.ResolvePaths(changedPaths, s.ignorelist)
+	resolvedFiles, err := filesystem.ResolvePaths(s.directory, changedPaths, s.ignorelist)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -216,7 +216,7 @@ func removeObsoleteWhiteouts(deletedFiles map[string]struct{}) (filesToWhiteout 
 	return filesToWhiteout
 }
 
-func writeToTar(t util.Tar, files, whiteouts []string) error {
+func writeToTar(rootDir string, t util.Tar, files, whiteouts []string) error {
 	timer := timing.Start("Writing tar file")
 	defer timing.DefaultRun.Stop(timer)
 
@@ -224,7 +224,7 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	addedPaths := make(map[string]bool)
 
 	for _, path := range whiteouts {
-		if err := addParentDirectories(t, addedPaths, path); err != nil {
+		if err := addParentDirectories(rootDir, t, addedPaths, path); err != nil {
 			return err
 		}
 		if err := t.Whiteout(path); err != nil {
@@ -233,7 +233,7 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	}
 
 	for _, path := range files {
-		if err := addParentDirectories(t, addedPaths, path); err != nil {
+		if err := addParentDirectories(rootDir, t, addedPaths, path); err != nil {
 			return err
 		}
 		if _, pathAdded := addedPaths[path]; pathAdded {
@@ -247,8 +247,8 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	return nil
 }
 
-func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) error {
-	for _, parentPath := range util.ParentDirectories(path) {
+func addParentDirectories(rootDir string, t util.Tar, addedPaths map[string]bool, path string) error {
+	for _, parentPath := range util.ParentDirectories(rootDir, path) {
 		if _, pathAdded := addedPaths[parentPath]; pathAdded {
 			continue
 		}

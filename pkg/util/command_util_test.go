@@ -278,7 +278,7 @@ var matchSourcesTests = []struct {
 
 func Test_MatchSources(t *testing.T) {
 	for _, test := range matchSourcesTests {
-		actualFiles, err := matchSources(test.srcs, test.files)
+		actualFiles, err := matchSources("/", test.srcs, test.files)
 		sort.Strings(actualFiles)
 		sort.Strings(test.expectedFiles)
 		testutil.CheckErrorAndDeepEqual(t, false, err, test.expectedFiles, actualFiles)
@@ -558,7 +558,7 @@ func TestGetUserGroup(t *testing.T) {
 		description  string
 		chown        string
 		env          []string
-		mockIDGetter func(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error)
+		mockIDGetter func(rootDir string, userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error)
 		// needed, in case uid is a valid number, but group is a name
 		mockGroupIDGetter func(groupStr string) (*user.Group, error)
 		expectedU         int64
@@ -569,7 +569,7 @@ func TestGetUserGroup(t *testing.T) {
 			description: "non empty chown",
 			chown:       "some:some",
 			env:         []string{},
-			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+			mockIDGetter: func(string, string, string, bool) (uint32, uint32, error) {
 				return 100, 1000, nil
 			},
 			expectedU: 100,
@@ -579,7 +579,7 @@ func TestGetUserGroup(t *testing.T) {
 			description: "non empty chown with env replacement",
 			chown:       "some:$foo",
 			env:         []string{"foo=key"},
-			mockIDGetter: func(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
+			mockIDGetter: func(rootDir string, userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
 				if userStr == "some" && groupStr == "key" {
 					return 10, 100, nil
 				}
@@ -590,7 +590,7 @@ func TestGetUserGroup(t *testing.T) {
 		},
 		{
 			description: "empty chown string",
-			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+			mockIDGetter: func(string, string, string, bool) (uint32, uint32, error) {
 				return 0, 0, fmt.Errorf("should not be called")
 			},
 			expectedU: -1,
@@ -604,7 +604,7 @@ func TestGetUserGroup(t *testing.T) {
 				getUIDAndGIDFunc = originalIDGetter
 			}()
 			getUIDAndGIDFunc = tc.mockIDGetter
-			uid, gid, err := GetUserGroup(tc.chown, tc.env)
+			uid, gid, err := GetUserGroup("/", tc.chown, tc.env)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, uid, tc.expectedU)
 			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, gid, tc.expectedG)
 		})
@@ -796,7 +796,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		uid, gid, err := getUIDAndGIDFromString(tt.args.userGroupStr, tt.args.fallbackToUID)
+		uid, gid, err := getUIDAndGIDFromString("/", tt.args.userGroupStr, tt.args.fallbackToUID)
 		testutil.CheckError(t, tt.wantErr, err)
 		if uid != tt.expected.userID || gid != tt.expected.groupID {
 			t.Errorf("%v failed. Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d",
@@ -849,7 +849,7 @@ func TestLookupUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.testname, func(t *testing.T) {
-			got, err := LookupUser(tt.args.userStr)
+			got, err := LookupUser("/", tt.args.userStr)
 			testutil.CheckErrorAndDeepEqual(t, tt.wantErr, err, tt.expected, got)
 		})
 	}
