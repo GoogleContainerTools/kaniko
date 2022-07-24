@@ -14,6 +14,7 @@
 
 FROM debian:9.11
 USER 1001:1001
+RUN ["echo", "hello"]
 RUN echo "hey2" > /tmp/foo
 USER 1001
 RUN echo "hello" > /tmp/foobar

@@ -30,8 +30,6 @@ import (
 // Tar unifies calls to download and unpack the build context.
 type Tar struct {
 	context string
-	// rootDir is the destination 
-	rootDir string
 }
 
 // UnpackTarFromBuildContext unpack the compressed tar file
