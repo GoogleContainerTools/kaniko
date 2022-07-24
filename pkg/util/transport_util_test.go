@@ -39,6 +39,14 @@ func (m *mockedCertPool) append(path string) error {
 	return nil
 }
 
+type mockedKeyPairLoader struct {
+}
+
+func (p *mockedKeyPairLoader) load(certFile, keyFile string) (tls.Certificate, error) {
+	foo := tls.Certificate{}
+	return foo, nil
+}
+
 func Test_makeTransport(t *testing.T) {
 	registryName := "my.registry.name"
 
@@ -92,15 +100,38 @@ func Test_makeTransport(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "RegistriesClientCertificates set for registry",
+			opts: config.RegistryOptions{RegistriesClientCertificates: map[string]string{registryName: "/path/to/client/certificate.cert,/path/to/client/key.key"}},
+			check: func(config *tls.Config, pool *mockedCertPool) {
+				if len(config.Certificates) != 1 {
+					t.Errorf("makeTransport().RegistriesClientCertificates not loaded for desired registry")
+				}
+			},
+		},
+		{
+			name: "RegistriesClientCertificates set for another registry",
+			opts: config.RegistryOptions{RegistriesClientCertificates: map[string]string{fmt.Sprintf("other.%s=", registryName): "/path/to/the/certificate.cert"}},
+			check: func(config *tls.Config, pool *mockedCertPool) {
+				if len(config.Certificates) != 0 {
+					t.Errorf("makeTransport().RegistriesClientCertificates certificate loaded for other registry")
+				}
+			},
+		},
 	}
 	savedSystemCertLoader := systemCertLoader
-	defer func() { systemCertLoader = savedSystemCertLoader }()
+	savedSystemKeyPairLoader := systemKeyPairLoader
+	defer func() {
+		systemCertLoader = savedSystemCertLoader
+		systemKeyPairLoader = savedSystemKeyPairLoader
+	}()
 	for _, tt := range tests {
 		var certificatesPath []string
 		certPool := &mockedCertPool{
 			certificatesPath: certificatesPath,
 		}
 		systemCertLoader = certPool
+		systemKeyPairLoader = &mockedKeyPairLoader{}
 		t.Run(tt.name, func(t *testing.T) {
 			tr := MakeTransport(tt.opts, registryName)
 			tt.check(tr.(*http.Transport).TLSClientConfig, certPool)

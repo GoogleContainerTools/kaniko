@@ -52,6 +52,19 @@ func (p *X509CertPool) append(path string) error {
 
 var systemCertLoader CertPool
 
+type KeyPairLoader interface {
+	load(string, string) (tls.Certificate, error)
+}
+
+type X509KeyPairLoader struct {
+}
+
+func (p *X509KeyPairLoader) load(certFile, keyFile string) (tls.Certificate, error) {
+	return tls.LoadX509KeyPair(certFile, keyFile)
+}
+
+var systemKeyPairLoader KeyPairLoader
+
 func init() {
 	systemCertPool, err := x509.SystemCertPool()
 	if err != nil {
@@ -61,6 +74,8 @@ func init() {
 	systemCertLoader = &X509CertPool{
 		inner: *systemCertPool,
 	}
+
+	systemKeyPairLoader = &X509KeyPairLoader{}
 }
 
 func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundTripper {
@@ -85,7 +100,7 @@ func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundT
 		if len(certFiles) != 2 {
 			logrus.Warnf("Failed to load client certificate/key '%s' for %s, format is %s=/path/to/cert,/path/to/key\n", clientCertificatePath, registryName, registryName)
 		} else {
-			cert, err := tls.LoadX509KeyPair(certFiles[0], certFiles[1])
+			cert, err := systemKeyPairLoader.load(certFiles[0], certFiles[1])
 			if err != nil {
 				logrus.Warnf("Failed to load client certificate/key '%s' for %s: %s\n", clientCertificatePath, registryName, err)
 			} else {
