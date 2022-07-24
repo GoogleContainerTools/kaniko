@@ -203,7 +203,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 				count:          &count,
 				expectedCount:  1,
 				expectLayer:    true,
-				extractedFiles: []string{"/foo.txt"},
+				extractedFiles: []string{filepath.Join(testDir, "foo.txt")},
 				contextFiles:   []string{"foo.txt"},
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
