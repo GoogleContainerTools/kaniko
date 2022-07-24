@@ -95,7 +95,7 @@ type FSConfig struct {
 
 type FSOpt func(*FSConfig)
 
-// for testing
+// InitIgnoreList is global for testing purposes
 var InitIgnoreList = InitIgnoreListFunc
 
 func IgnoreList() []IgnoreListEntry {
@@ -428,13 +428,6 @@ func CheckProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
 
 func CheckIgnoreList(path string) bool {
 	return CheckProvidedIgnoreList(path, ignorelist)
-}
-
-func checkIgnoreListRoot(dir string, root string) bool {
-	if dir == root {
-		return false
-	}
-	return CheckIgnoreList(dir)
 }
 
 // Get ignorelist from roots of mounted files

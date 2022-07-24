@@ -184,7 +184,7 @@ func createDest(srcinfo fs.FileInfo, dest string) error {
 
 func mount(src, dest, mountType string, flags uintptr) error {
 	logrus.Debugf("mounting %v to %v", src, dest)
-	err := unix.Mount(src, dest, mountType, uintptr(flags), "")
+	err := unix.Mount(src, dest, mountType, flags, "")
 	if err != nil {
 		return fmt.Errorf("mounting %v to %v: %w", src, dest, err)
 	}

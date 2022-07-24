@@ -110,6 +110,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 			Chown:          a.cmd.Chown,
 		},
 		fileContext: a.fileContext,
+		rootDir:     a.rootDir,
 	}
 
 	if err := copyCmd.ExecuteCommand(config, buildArgs); err != nil {
