@@ -80,7 +80,7 @@ func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundT
 		}
 	}
 
-	if clientCertificatePath := opts.ClientCertificates[registryName]; clientCertificatePath != "" {
+	if clientCertificatePath := opts.RegistriesClientCertificates[registryName]; clientCertificatePath != "" {
 		certFiles := strings.Split(clientCertificatePath, ",")
 		if len(certFiles) != 2 {
 			logrus.Warnf("Failed to load client certificate/key '%s' for %s, format is %s=/path/to/cert,/path/to/key\n", clientCertificatePath, registryName, registryName)
