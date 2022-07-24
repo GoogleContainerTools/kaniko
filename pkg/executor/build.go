@@ -113,11 +113,6 @@ func newStageBuilder(
 		return nil, err
 	}
 
-	err = util.InitIgnoreList(true)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize ignore list")
-	}
-
 	digest, err := sourceImage.Digest()
 	if err != nil {
 		return nil, err
@@ -374,12 +369,9 @@ func (s *stageBuilder) build(rootDir string) error {
 		if command == nil {
 			continue
 		}
-		if command.RequiresUnpackedFS() {
-			shouldUnpack = true
-		}
 
 		t := timing.Start("Command: " + command.String())
-		err := s.runCommand(index, command, compositeKey, t, &initSnapshotTaken, cacheGroup, shouldUnpack)
+		err := s.runCommand(index, command, compositeKey, t, &initSnapshotTaken, cacheGroup)
 		if err != nil {
 			return fmt.Errorf("running command %s: %w", command, err)
 		}
@@ -408,7 +400,6 @@ func (s *stageBuilder) runCommand(
 	t *timing.Timer,
 	initSnapshotTaken *bool,
 	cacheGroup *errgroup.Group,
-	shouldUnpack bool,
 ) error {
 	// If the command uses files from the context, add them.
 	files, err := cmd.FilesUsedFromContext(&s.cf.Config, s.args)
@@ -746,6 +737,12 @@ func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
 	defer func() {
 		err = exitIsolation()
 	}()
+
+	// initIgnoreList after isolation, because isolation could create new mounts that need to be respected
+	err = util.InitIgnoreList(true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize ignore list")
+	}
 
 	err = sb.parseCommands(newRoot)
 	if err != nil {
