@@ -65,7 +65,7 @@ func GetUser(rootdir string, userStr string) (*user.User, error) {
 }
 
 func GetAdditionalGroupIDs(rootdir string, user *user.User) ([]string, error) {
-  gids, err := lookupAdditionalGroupsForUser(rootdir, user)
+	gids, err := lookupAdditionalGroupsForUser(rootdir, user)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func GetAdditionalGroupIDs(rootdir string, user *user.User) ([]string, error) {
 	for _, gid := range gids {
 		gidsStr = append(gidsStr, fmt.Sprint(gid))
 	}
-  return gidsStr, nil
+	return gidsStr, nil
 }
 
 // GetGroup returns the gid by looking it up in the /etc/group file

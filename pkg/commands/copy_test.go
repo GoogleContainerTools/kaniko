@@ -179,7 +179,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 		}(),
 		func() testCase {
 			c := &CachingCopyCommand{
-				img: fakeImage{},
+				img:     fakeImage{},
 				rootDir: tempDir,
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {

@@ -395,6 +395,7 @@ func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cac
 			"--cache-repo", cacheRepo,
 			"--cache-dir", cacheDir,
 		)
+		dockerRunFlags = append(dockerRunFlags, args...)
 		kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
 		_, err := RunCommandWithoutTest(kanikoCmd)

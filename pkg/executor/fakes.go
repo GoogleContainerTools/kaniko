@@ -196,8 +196,6 @@ func (f fakeImage) LayerByDiffID(v1.Hash) (v1.Layer, error) {
 	return fakeLayer{}, nil
 }
 
-
-
 // fakeIsolator isolator is used for testing
 // fakeIsolator.dir will be used as the new root
 type fakeIsolator struct {

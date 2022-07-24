@@ -449,7 +449,6 @@ func TestSnapshotIncludesParentDirBeforeWhiteoutFile(t *testing.T) {
 		"kaniko/new-file",
 	}
 
-
 	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
 }
 

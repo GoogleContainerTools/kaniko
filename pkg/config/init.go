@@ -41,7 +41,7 @@ var BuildContextDir = fmt.Sprintf("%s/buildcontext/", KanikoDir)
 
 // KanikoIntermediateStagesDir is where we will store intermediate stages
 // as tarballs in case they are needed later on
-var KanikoIntermediateStagesDir =  filepath.Join(KanikoDir, "stages")
+var KanikoIntermediateStagesDir = filepath.Join(KanikoDir, "stages")
 
 // KanikoDependencyDir will store files that need to be
 // used later on during built process
