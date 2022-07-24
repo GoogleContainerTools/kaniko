@@ -36,6 +36,7 @@ type RegistryOptions struct {
 	InsecureRegistries      multiArg
 	SkipTLSVerifyRegistries multiArg
 	RegistriesCertificates  keyValueArg
+	ClientCertificates      keyValueArg
 	Insecure                bool
 	SkipTLSVerify           bool
 	InsecurePull            bool

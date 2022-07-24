@@ -19,6 +19,7 @@ package util
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"strings"
 
 	"io/ioutil"
 	"net/http"
@@ -78,5 +79,20 @@ func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundT
 			}
 		}
 	}
+
+	if clientCertificatePath := opts.ClientCertificates[registryName]; clientCertificatePath != "" {
+		certFiles := strings.Split(clientCertificatePath, ",")
+		if len(certFiles) != 2 {
+			logrus.Warnf("Failed to load client certificate/key '%s' for %s, format is %s=/path/to/cert,/path/to/key\n", clientCertificatePath, registryName, registryName)
+		} else {
+			cert, err := tls.LoadX509KeyPair(certFiles[0], certFiles[1])
+			if err != nil {
+				logrus.Warnf("Failed to load client certificate/key '%s' for %s: %s\n", clientCertificatePath, registryName, err)
+			} else {
+				tr.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{cert}
+			}
+		}
+	}
+
 	return tr
 }
