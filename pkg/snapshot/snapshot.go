@@ -110,7 +110,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 		sort.Strings(filesToWhiteout)
 	}
 
-	t := util.NewTar(f)
+	t := util.NewTar(s.directory, f)
 	defer t.Close()
 	if err := writeToTar(s.directory, t, filesToAdd, filesToWhiteout); err != nil {
 		return "", err
@@ -126,7 +126,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	t := util.NewTar(f)
+	t := util.NewTar(s.directory, f)
 	defer t.Close()
 
 	filesToAdd, filesToWhiteOut, err := s.scanFullFilesystem()

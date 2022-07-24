@@ -39,22 +39,24 @@ import (
 type Tar struct {
 	hardlinks map[uint64]string
 	w         *tar.Writer
+	rootDir   string
 }
 
 // NewTar will create an instance of Tar that can write files to the writer at f.
-func NewTar(f io.Writer) Tar {
+func NewTar(rootDir string, f io.Writer) Tar {
 	w := tar.NewWriter(f)
 	return Tar{
 		w:         w,
 		hardlinks: map[uint64]string{},
+		rootDir:   rootDir,
 	}
 }
 
-func CreateTarballOfDirectory(pathToDir string, f io.Writer) error {
+func CreateTarballOfDirectory(rootDir string, pathToDir string, f io.Writer) error {
 	if !filepath.IsAbs(pathToDir) {
 		return errors.New("pathToDir is not absolute")
 	}
-	tarWriter := NewTar(f)
+	tarWriter := NewTar(rootDir, f)
 	defer tarWriter.Close()
 
 	walkFn := func(path string, d fs.DirEntry, err error) error {
@@ -106,10 +108,13 @@ func (t *Tar) AddFileToTar(p string) error {
 		// allow entry for / to preserve permission changes etc. (currently ignored anyway by Docker runtime)
 		hdr.Name = "/"
 	} else {
+		// trim off the rootDirectory of the file inside the tarball.
+		// This is done because of chroot isolation possibility
+		trimmed := strings.TrimPrefix(p, t.rootDir)
 		// Docker uses no leading / in the tarball
-		hdr.Name = strings.TrimPrefix(p, "/")
-		hdr.Name = strings.TrimLeft(hdr.Name, "/")
+		hdr.Name = strings.TrimLeft(trimmed, "/")
 	}
+	logrus.Debugf("using name %v for file %v in tarball", hdr.Name, p)
 	if hdr.Typeflag == tar.TypeDir && !strings.HasSuffix(hdr.Name, "/") {
 		hdr.Name = hdr.Name + "/"
 	}
@@ -184,7 +189,7 @@ func (t *Tar) Whiteout(p string) error {
 
 	th := &tar.Header{
 		// Docker uses no leading / in the tarball
-		Name: strings.TrimLeft(filepath.Join(dir, name), "/"),
+		Name: strings.TrimLeft(filepath.Join(dir, name), t.rootDir),
 		Size: 0,
 	}
 	if err := t.w.WriteHeader(th); err != nil {

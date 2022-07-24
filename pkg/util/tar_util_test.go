@@ -71,7 +71,7 @@ func Test_AddFileToTar(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	tarw := NewTar(buf)
+	tarw := NewTar(testDir, buf)
 	if err := tarw.AddFileToTar(path); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func setUpFilesAndTars(testDir string) error {
 }
 
 func createTar(testdir string, writer io.Writer) error {
-	t := NewTar(writer)
+	t := NewTar(testdir, writer)
 	defer t.Close()
 	for _, regFile := range regularFiles {
 		filePath := filepath.Join(testdir, regFile)
@@ -136,7 +136,7 @@ func Test_CreateTarballOfDirectory(t *testing.T) {
 	wantErr := false
 	createFilesInTempDir(t, tmpDir)
 	f := &bytes.Buffer{}
-	err := CreateTarballOfDirectory(tmpDir, f)
+	err := CreateTarballOfDirectory(tmpDir, tmpDir, f)
 	testutil.CheckError(t, wantErr, err)
 
 	extracedFilesDir := filepath.Join(tmpDir, "extracted")

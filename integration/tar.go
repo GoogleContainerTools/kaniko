@@ -49,7 +49,7 @@ func CreateIntegrationTarball() (string, error) {
 	gzipWriter := gzip.NewWriter(file)
 	defer gzipWriter.Close()
 
-	err = util.CreateTarballOfDirectory(dir, file)
+	err = util.CreateTarballOfDirectory("/", dir, file)
 	if err != nil {
 		return "", fmt.Errorf("creating tarball of integration dir: %w", err)
 	}
