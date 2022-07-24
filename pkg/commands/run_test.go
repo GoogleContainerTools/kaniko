@@ -167,6 +167,8 @@ meow meow meow meow
 }
 
 func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
+	testDir := t.TempDir()
+
 	tarContent, err := prepareTarFixture(t, []string{"foo.txt"})
 	if err != nil {
 		t.Errorf("couldn't prepare tar fixture %v", err)
@@ -193,6 +195,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 						fakeLayer{TarContent: tarContent},
 					},
 				},
+				rootDir: testDir,
 			}
 			count := 0
 			tc := testCase{
@@ -211,7 +214,9 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 			return tc
 		}(),
 		func() testCase {
-			c := &CachingRunCommand{}
+			c := &CachingRunCommand{
+				rootDir: testDir,
+			}
 			tc := testCase{
 				desctiption: "with no image",
 				expectErr:   true,
@@ -224,7 +229,8 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 		}(),
 		func() testCase {
 			c := &CachingRunCommand{
-				img: fakeImage{},
+				img:     fakeImage{},
+				rootDir: testDir,
 			}
 
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
@@ -244,6 +250,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 						fakeLayer{},
 					},
 				},
+				rootDir: testDir,
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
 				return nil

@@ -19,15 +19,18 @@ func (c Chroot) NewRoot() (newRoot string, exitFunc func() error, err error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("getting newRoot: %w", err)
 	}
-	exitFunc, err = chroot.PrepareMounts(newRoot)
+	revertMounts, err := chroot.PrepareMounts(newRoot)
 	if err != nil {
 		return "", nil, fmt.Errorf("creating mounts: %w", err)
 	}
-	revertFunc := func() error {
-		err = exitFunc()
-		return err
+	exitFunc = func() error {
+		errRevert := revertMounts()
+		if errRevert != nil {
+			return errRevert
+		}
+		return nil
 	}
-	return newRoot, revertFunc, nil
+	return newRoot, exitFunc, nil
 }
 
 type None struct{}
@@ -35,4 +38,3 @@ type None struct{}
 func (n None) NewRoot() (newRoot string, exitFunc func() error, err error) {
 	return "/", func() error { return nil }, nil
 }
-

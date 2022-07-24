@@ -26,12 +26,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	chrootuser "github.com/GoogleContainerTools/kaniko/pkg/chroot/user"
-	"github.com/GoogleContainerTools/kaniko/pkg/config"
 )
 
-
 // groupIDs returns all of the group ID's a user is a member of
-func groupIDs(u *user.User) ([]string, error) {
+func groupIDs(rootDir string, u *user.User) ([]string, error) {
 	logrus.Infof("Performing slow lookup of group ids for %s", u.Username)
 
 	// user can have no gid if it's a non existing user
@@ -39,5 +37,5 @@ func groupIDs(u *user.User) ([]string, error) {
 		return []string{}, nil
 	}
 
-	return chrootuser.GetAdditionalGroupIDs(config.RootDir, u)
+	return chrootuser.GetAdditionalGroupIDs(rootDir, u)
 }
