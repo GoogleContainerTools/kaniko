@@ -145,6 +145,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 						"foo.txt", "foo.txt",
 					},
 				},
+				rootDir: tempDir,
 			}
 			count := 0
 			tc := testCase{
@@ -152,7 +153,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 				count:          &count,
 				expectedCount:  1,
 				expectLayer:    true,
-				extractedFiles: []string{"/foo.txt"},
+				extractedFiles: []string{filepath.Join(tempDir, "foo.txt")},
 				contextFiles:   []string{"foo.txt"},
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
@@ -163,7 +164,9 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 			return tc
 		}(),
 		func() testCase {
-			c := &CachingCopyCommand{}
+			c := &CachingCopyCommand{
+				rootDir: tempDir,
+			}
 			tc := testCase{
 				desctiption: "with no image",
 				expectErr:   true,
@@ -177,6 +180,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 		func() testCase {
 			c := &CachingCopyCommand{
 				img: fakeImage{},
+				rootDir: tempDir,
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
 				return nil
@@ -194,6 +198,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 						fakeLayer{},
 					},
 				},
+				rootDir: tempDir,
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
 				return nil
