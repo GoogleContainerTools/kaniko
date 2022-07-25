@@ -21,6 +21,7 @@ import (
 	"regexp"
 
 	"cloud.google.com/go/internal/trace"
+	storagepb "cloud.google.com/go/storage/internal/apiv2/stubs"
 	raw "google.golang.org/api/storage/v1"
 )
 
@@ -91,6 +92,30 @@ func toNotification(rn *raw.Notification) *Notification {
 	return n
 }
 
+func toNotificationFromProto(pbn *storagepb.Notification) *Notification {
+	n := &Notification{
+		ID:               pbn.GetName(),
+		EventTypes:       pbn.GetEventTypes(),
+		ObjectNamePrefix: pbn.GetObjectNamePrefix(),
+		CustomAttributes: pbn.GetCustomAttributes(),
+		PayloadFormat:    pbn.GetPayloadFormat(),
+	}
+	n.TopicProjectID, n.TopicID = parseNotificationTopic(pbn.Topic)
+	return n
+}
+
+func toProtoNotification(n *Notification) *storagepb.Notification {
+	return &storagepb.Notification{
+		Name: n.ID,
+		Topic: fmt.Sprintf("//pubsub.googleapis.com/projects/%s/topics/%s",
+			n.TopicProjectID, n.TopicID),
+		EventTypes:       n.EventTypes,
+		ObjectNamePrefix: n.ObjectNamePrefix,
+		CustomAttributes: n.CustomAttributes,
+		PayloadFormat:    n.PayloadFormat,
+	}
+}
+
 var topicRE = regexp.MustCompile("^//pubsub.googleapis.com/projects/([^/]+)/topics/([^/]+)")
 
 // parseNotificationTopic extracts the project and topic IDs from from the full
@@ -142,7 +167,7 @@ func (b *BucketHandle) AddNotification(ctx context.Context, n *Notification) (re
 	err = run(ctx, func() error {
 		rn, err = call.Context(ctx).Do()
 		return err
-	}, b.retry, false)
+	}, b.retry, false, setRetryHeaderHTTP(call))
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +189,7 @@ func (b *BucketHandle) Notifications(ctx context.Context) (n map[string]*Notific
 	err = run(ctx, func() error {
 		res, err = call.Context(ctx).Do()
 		return err
-	}, b.retry, true)
+	}, b.retry, true, setRetryHeaderHTTP(call))
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +200,14 @@ func notificationsToMap(rns []*raw.Notification) map[string]*Notification {
 	m := map[string]*Notification{}
 	for _, rn := range rns {
 		m[rn.Id] = toNotification(rn)
+	}
+	return m
+}
+
+func notificationsToMapFromProto(ns []*storagepb.Notification) map[string]*Notification {
+	m := map[string]*Notification{}
+	for _, n := range ns {
+		m[n.Name] = toNotificationFromProto(n)
 	}
 	return m
 }
@@ -191,5 +224,5 @@ func (b *BucketHandle) DeleteNotification(ctx context.Context, id string) (err e
 	}
 	return run(ctx, func() error {
 		return call.Context(ctx).Do()
-	}, b.retry, true)
+	}, b.retry, true, setRetryHeaderHTTP(call))
 }

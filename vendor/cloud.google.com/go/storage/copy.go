@@ -142,7 +142,7 @@ func (c *Copier) callRewrite(ctx context.Context, rawObj *raw.Object) (*raw.Rewr
 	retryCall := func() error { res, err = call.Do(); return err }
 	isIdempotent := c.dst.conds != nil && (c.dst.conds.GenerationMatch != 0 || c.dst.conds.DoesNotExist)
 
-	if err := run(ctx, retryCall, c.dst.retry, isIdempotent); err != nil {
+	if err := run(ctx, retryCall, c.dst.retry, isIdempotent, setRetryHeaderHTTP(call)); err != nil {
 		return nil, err
 	}
 	c.RewriteToken = res.RewriteToken
@@ -192,13 +192,6 @@ func (c *Composer) Run(ctx context.Context) (attrs *ObjectAttrs, err error) {
 		return nil, errors.New("storage: at least one source object must be specified")
 	}
 
-	req := &raw.ComposeRequest{}
-	// Compose requires a non-empty Destination, so we always set it,
-	// even if the caller-provided ObjectAttrs is the zero value.
-	req.Destination = c.ObjectAttrs.toRawObject(c.dst.bucket)
-	if c.SendCRC32C {
-		req.Destination.Crc32c = encodeUint32(c.ObjectAttrs.CRC32C)
-	}
 	for _, src := range c.srcs {
 		if err := src.validate(); err != nil {
 			return nil, err
@@ -209,6 +202,17 @@ func (c *Composer) Run(ctx context.Context) (attrs *ObjectAttrs, err error) {
 		if src.encryptionKey != nil {
 			return nil, fmt.Errorf("storage: compose source %s.%s must not have encryption key", src.bucket, src.object)
 		}
+	}
+
+	// TODO: transport agnostic interface starts here.
+	req := &raw.ComposeRequest{}
+	// Compose requires a non-empty Destination, so we always set it,
+	// even if the caller-provided ObjectAttrs is the zero value.
+	req.Destination = c.ObjectAttrs.toRawObject(c.dst.bucket)
+	if c.SendCRC32C {
+		req.Destination.Crc32c = encodeUint32(c.ObjectAttrs.CRC32C)
+	}
+	for _, src := range c.srcs {
 		srcObj := &raw.ComposeRequestSourceObjects{
 			Name: src.object,
 		}
@@ -237,7 +241,7 @@ func (c *Composer) Run(ctx context.Context) (attrs *ObjectAttrs, err error) {
 	retryCall := func() error { obj, err = call.Do(); return err }
 	isIdempotent := c.dst.conds != nil && (c.dst.conds.GenerationMatch != 0 || c.dst.conds.DoesNotExist)
 
-	if err := run(ctx, retryCall, c.dst.retry, isIdempotent); err != nil {
+	if err := run(ctx, retryCall, c.dst.retry, isIdempotent, setRetryHeaderHTTP(call)); err != nil {
 		return nil, err
 	}
 	return newObject(obj), nil
