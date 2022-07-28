@@ -6,7 +6,6 @@ package chroot
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -14,18 +13,23 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/idtools"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/gocapability/capability"
 	"golang.org/x/sys/unix"
 )
 
 const (
-	parentProcess = "chroot-parent-process"
-	childProcess  = "chroot-child-process"
+	parentProcess   = "chroot-parent-process"
+	childProcess    = "chroot-child-process"
+	confPipeKey     = "kaniko_conf_pipe"
+	continuePipeKey = "kaniko_continue_pipe"
+	pidPipeKey      = "kaniko_pid_pipe"
 )
 
 func init() {
@@ -78,17 +82,45 @@ type config struct {
 
 // Run will execute the cmd inside a chrooted and newly created namespace environment
 func Run(cmd *exec.Cmd, newRoot string) error {
+
 	// lockOSThread because changing the thread would kick us out of the namespaces
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
 	// Create a pipe for passing configuration down to the next process.
-	preader, pwriter, err := os.Pipe()
+	confReader, confWriter, err := os.Pipe()
 	if err != nil {
-		return fmt.Errorf("error creating configuration pipe: %w", err)
+		return fmt.Errorf("error creating configuration pipes: %w", err)
 	}
-	defer preader.Close()
-	defer pwriter.Close()
+	defer confReader.Close()
+	defer confWriter.Close()
+
+	// Create a pipe for getting the pid of child.
+	// Use this method instead of checking in the parent, because we wouldn't
+	// know when the child is ready
+	pidReader, pidWriter, err := os.Pipe()
+	if err != nil {
+		return fmt.Errorf("error creating pid pipes: %w", err)
+	}
+	defer pidReader.Close()
+	defer func() {
+		if pidWriter != nil {
+			pidWriter.Close()
+		}
+	}()
+
+	// Create a pipe signaling the child to continue
+	// Child will wait until something is sent over this pipe
+	continueReader, continueWriter, err := os.Pipe()
+	if err != nil {
+		return fmt.Errorf("error creating pid pipes: %w", err)
+	}
+	defer func() {
+		if continueReader != nil {
+			continueReader.Close()
+		}
+	}()
+	defer continueWriter.Close()
 
 	// marshal config for communication with subprocess
 	c := config{
@@ -97,29 +129,102 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 	}
 
 	reexecCmd := reexec.Command(parentProcess)
+
+	// create env before appending files, because len(ExtraFIles) would be wrong otherwise
+	reexecCmd.Env = append(reexecCmd.Env, fmt.Sprintf("%s=%d", pidPipeKey, len(reexecCmd.ExtraFiles)+3))
+	reexecCmd.ExtraFiles = append(reexecCmd.ExtraFiles, pidWriter)
+	reexecCmd.Env = append(reexecCmd.Env, fmt.Sprintf("%s=%d", continuePipeKey, len(reexecCmd.ExtraFiles)+3))
+	reexecCmd.ExtraFiles = append(reexecCmd.ExtraFiles, continueReader)
+
 	reexecCmd.Stderr, reexecCmd.Stdout, reexecCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
 	sysProcAttr := reexecCmd.SysProcAttr
 	if sysProcAttr == nil {
 		sysProcAttr = &syscall.SysProcAttr{}
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
-	sysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
-	sysProcAttr.UidMappings = []syscall.SysProcIDMap{
-		{
-			ContainerID: 0,
-			HostID:      os.Getuid(),
-			Size:        1,
-		},
-	}
-	sysProcAttr.GidMappings = []syscall.SysProcIDMap{
-		{
-			ContainerID: 0,
-			HostID:      os.Getgid(),
-			Size:        1,
-		},
+	sysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
+
+	uid := os.Getuid()
+	gid := os.Getgid()
+
+	uidmap, gidmap := []idtools.Mapping{}, []idtools.Mapping{}
+	// only create additional mappings if running rootless
+	if uid != 0 {
+		u, err := util.LookupUser("/", fmt.Sprint(uid))
+		if err != nil {
+			return fmt.Errorf("lookup user for %v: %w", uid, err)
+		}
+
+		group, err := util.LookupGroup("/", fmt.Sprint(gid))
+		if err != nil {
+			return fmt.Errorf("lookup group for %v: %w", gid, err)
+		}
+
+		uidmap, gidmap, err = idtools.GetSubIDMappings(uint32(uid), uint32(gid), u.Username, group.Name)
+		if err != nil {
+			return fmt.Errorf("getting subid mappings: %w", err)
+		}
 	}
 
-	return copyConfigIntoPipeAndRunChild(reexecCmd, &c, preader, pwriter)
+	// Map our UID and GID, then the subuid and subgid ranges,
+	// consecutively, starting at 0, to get the mappings to use for
+	// a copy of ourselves.
+	uidmap = append([]idtools.Mapping{{HostID: uint32(uid), ContainerID: 0, Size: 1}}, uidmap...)
+	gidmap = append([]idtools.Mapping{{HostID: uint32(gid), ContainerID: 0, Size: 1}}, gidmap...)
+
+	err = copyConfigIntoPipeAndStartChild(reexecCmd, &c, confReader, confWriter)
+	if err != nil {
+		fmt.Fprint(continueWriter, err)
+		return err
+	}
+
+	// Close the ends of the pipes that the parent doesn't need.
+	continueReader.Close()
+	continueReader = nil
+	pidWriter.Close()
+	pidWriter = nil
+
+	pidbuf := make([]byte, 8)
+	n, err := pidReader.Read(pidbuf)
+	if err != nil {
+		err = fmt.Errorf("reading pid from child pipe: %w", err)
+		fmt.Fprint(continueWriter, err)
+		return err
+	}
+
+	pid, err := strconv.Atoi(string(pidbuf[:n]))
+	if err != nil {
+		err = fmt.Errorf("converting pid from child to integer: %w", err)
+		fmt.Fprint(continueWriter, err)
+		return err
+	}
+
+	err = idtools.SetUidMap(pid, uidmap)
+	if err != nil {
+		err = fmt.Errorf("apply subuid mappings: %w", err)
+		fmt.Fprint(continueWriter, err)
+		return err
+	}
+
+	err = idtools.SetGidMap(pid, gidmap)
+	if err != nil {
+		err = fmt.Errorf("apply subgid mappings: %w", err)
+		fmt.Fprint(continueWriter, err)
+		return err
+	}
+
+	// nothing went wrong, so lets continue child
+	_, err = fmt.Fprint(continueWriter, "continue")
+	if err != nil {
+		return fmt.Errorf("writing to child continue pipe: %w", err)
+	}
+	continueWriter.Close()
+
+	err = reexecCmd.Wait()
+	if err != nil {
+		return fmt.Errorf("waiting for reexec process: %w", err)
+	}
+	return nil
 }
 
 // runParentProcessMain will create all needed mounts, pivot_root and execute the child
@@ -128,15 +233,36 @@ func runParentProcessMain() {
 	// don't unlock because this function will only be called in a new process
 	runtime.LockOSThread()
 
+	pidStr := fmt.Sprint(os.Getpid())
+	pidPipe, err := getPipeFromKey(pidPipeKey)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error getting pid pipe: %v\n", err)
+		os.Exit(1)
+	}
+	defer pidPipe.Close()
+
+	_, err = io.WriteString(pidPipe, pidStr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error writing pid to pidpipe: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = waitForContinue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error writing pid to pidpipe: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("i am uid %d\n", os.Getuid())
+
 	c, err := unmarshalConfigFromPipe()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v", err)
+		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v\n", err)
 		os.Exit(1)
 	}
 	// create mounts for pivot_root
 	undo, err := prepareMounts(c.NewRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating mounts: %v", err)
+		fmt.Fprintf(os.Stderr, "error creating mounts: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -144,25 +270,25 @@ func runParentProcessMain() {
 		logrus.Debug("undo mounting of chroot isolation")
 		undoErr := undo()
 		if undoErr != nil {
-			fmt.Fprintf(os.Stderr, "error undo mounting: %s", undoErr)
+			fmt.Fprintf(os.Stderr, "error undo mounting: %s\n", undoErr)
 			os.Exit(1)
 		}
 	}()
 
 	err = pivotRoot(c.NewRoot)
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
 	// Create a pipe for passing configuration down to the next process.
-	preader, pwriter, err := os.Pipe()
+	confReader, confWriter, err := os.Pipe()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating configuration pipe: %v", err)
+		fmt.Fprintf(os.Stderr, "error creating configuration pipe: %v\n", err)
 		os.Exit(1)
 	}
-	defer pwriter.Close()
-	defer preader.Close()
+	defer confWriter.Close()
+	defer confReader.Close()
 
 	childCmd := reexec.Command(childProcess)
 
@@ -172,12 +298,20 @@ func runParentProcessMain() {
 		sysProcAttr = &syscall.SysProcAttr{}
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
+	// delay pid namespace until here, because pid would be wrong otherwise
+	sysProcAttr.Cloneflags = syscall.CLONE_NEWPID
 
-	err = copyConfigIntoPipeAndRunChild(childCmd, &c, preader, pwriter)
+	err = copyConfigIntoPipeAndStartChild(childCmd, &c, confReader, confWriter)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error running child: %v", err)
+		fmt.Fprintf(os.Stderr, "error running child: %v\n", err)
 		os.Exit(1)
 	}
+	childCmd.Wait()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error waiting for child: %v\n", err)
+		os.Exit(1)
+	}
+
 }
 
 // runChildProcess will set capabilities and execute the initial cmd
@@ -187,100 +321,87 @@ func runChildProcessMain() {
 
 	c, err := unmarshalConfigFromPipe()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v", err)
+		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v\n", err)
 		os.Exit(1)
 	}
 
 	err = setCapabilities()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error setting capabilities: %v", err)
+		fmt.Fprintf(os.Stderr, "error setting capabilities: %v\n", err)
 		os.Exit(1)
 	}
 	cmd := cmdToExecCmd(c.Cmd)
 	err = cmd.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error running original command: %v", err)
+		fmt.Fprintf(os.Stderr, "error running original command: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func copyConfigIntoPipeAndRunChild(child *exec.Cmd, conf *config, preader *os.File, pwriter *os.File) error {
+// copyConfigIntoPipeAndStartChild will marshal the config into a pipe which will be passed into child.
+// After that, the child will start, but not wait for it.
+func copyConfigIntoPipeAndStartChild(child *exec.Cmd, conf *config, confReader, confWriter *os.File) error {
 	// marshal config for communication with subprocess
 	confData, err := json.Marshal(conf)
 	if err != nil {
 		return fmt.Errorf("marshaling configuration: %w", err)
 	}
 
-	child.ExtraFiles = append(child.ExtraFiles, preader)
+	child.Env = append(child.Env, fmt.Sprintf("%s=%d", confPipeKey, len(child.ExtraFiles)+3))
+	child.ExtraFiles = append(child.ExtraFiles, confReader)
 
 	err = child.Start()
 	if err != nil {
 		return fmt.Errorf("starting child process: %w", err)
 	}
-	_, err = io.Copy(pwriter, bytes.NewReader(confData))
+	_, err = io.Copy(confWriter, bytes.NewReader(confData))
 	if err != nil {
 		return fmt.Errorf("copy configuration to pipe: %w", err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		return fmt.Errorf("waiting for child process: %w", err)
 	}
 	return nil
 }
 
+// waitForContinue will block until we read something from the continue pipe.
+// This pipe will be used by the parent if it errors or child can continue execution
+func waitForContinue() error {
+	continuePipe, err := getPipeFromKey(continuePipeKey)
+	if err != nil {
+		return fmt.Errorf("creating continue pipe: %w", err)
+	}
+	buf := make([]byte, 1024)
+	_, err = continuePipe.Read(buf)
+	if err != nil {
+		return fmt.Errorf("reading from continue pipe: %w", err)
+	}
+	logrus.Info("recieved from continue pipe, continue")
+	return nil
+}
+
+func getPipeFromKey(key string) (*os.File, error) {
+	fdStr := os.Getenv(key)
+	if fdStr == "" {
+		return nil, fmt.Errorf("%v is not set, can't create pipe", key)
+	}
+	fd, err := strconv.Atoi(fdStr)
+	if err != nil {
+		return nil, fmt.Errorf("converting %v to integer: %w", fdStr, err)
+	}
+	logrus.Infof("getting pipe from fd %d", fd)
+	return os.NewFile(uintptr(fd), key), nil
+}
+
 func unmarshalConfigFromPipe() (config, error) {
-	// cmd.ExtraFiles sets file descriptor i+3
-	confPipe := os.NewFile(3, "confpipe")
-	if confPipe == nil {
-		return config{}, errors.New("error reading cmd config")
+	confPipe, err := getPipeFromKey(confPipeKey)
+	if err != nil {
+		return config{}, fmt.Errorf("creating conf pipe: %w", err)
 	}
 	defer confPipe.Close()
 	var c config
-	err := json.NewDecoder(confPipe).Decode(&c)
+	err = json.NewDecoder(confPipe).Decode(&c)
 	if err != nil {
 		return c, fmt.Errorf("decoding cmd config: %v", err)
 	}
 	return c, nil
-}
-
-// defaultCapabilities returns a Linux kernel default capabilities
-var defaultCapabilities = []capability.Cap{
-	capability.CAP_CHOWN,
-	capability.CAP_DAC_OVERRIDE,
-	capability.CAP_FSETID,
-	capability.CAP_FOWNER,
-	capability.CAP_MKNOD,
-	capability.CAP_NET_RAW,
-	capability.CAP_SETGID,
-	capability.CAP_SETUID,
-	capability.CAP_SETFCAP,
-	capability.CAP_SETPCAP,
-	capability.CAP_NET_BIND_SERVICE,
-	capability.CAP_KILL,
-	capability.CAP_AUDIT_WRITE,
-}
-
-// setCapabilities sets capabilities for ourselves, to be more or less inherited by any processes that we'll start.
-func setCapabilities() error {
-	caps, err := capability.NewPid2(0)
-	if err != nil {
-		return err
-	}
-	capMap := map[capability.CapType][]capability.Cap{
-		capability.BOUNDING:    defaultCapabilities,
-		capability.EFFECTIVE:   defaultCapabilities,
-		capability.INHERITABLE: {},
-		capability.PERMITTED:   defaultCapabilities,
-	}
-	for capType, capList := range capMap {
-		caps.Set(capType, capList...)
-	}
-	err = caps.Apply(capability.CAPS | capability.BOUNDS | capability.AMBS)
-	if err != nil {
-		return fmt.Errorf("applying capabiliies: %w", err)
-	}
-	return nil
 }
 
 func pivotRoot(newRoot string) error {

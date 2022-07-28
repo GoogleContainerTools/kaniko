@@ -66,12 +66,12 @@ func TestRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.newRoot = tempDir
 			if err = Run(tt.args.cmd, tt.args.newRoot); (err != nil) != tt.wantErr {
-				errOutput, err := io.ReadAll(stderr)
-				if err != nil {
-					t.Fatalf("can't read stderr: %v", err)
+				output, errRead := io.ReadAll(stderr)
+				if errRead != nil {
+					t.Fatalf("can't read stderr: %v", errRead)
 				}
-				t.Logf("stderr output: %s\n", errOutput)
-				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
+				t.Logf("stderr output: %s\n", output)
+				t.Fatalf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			output, err := io.ReadAll(stderr)

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"os/exec"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -202,6 +203,10 @@ type fakeIsolator struct {
 	dir string
 }
 
-func (t fakeIsolator) NewRoot() (newRoot string, exitFunc func() error, err error) {
-	return t.dir, func() error { return nil }, err
+func (t fakeIsolator) NewRoot() (newRoot string, err error) {
+	return t.dir, err
+}
+
+func (t fakeIsolator) ExecRunCommand(cmd *exec.Cmd) error {
+	return nil
 }

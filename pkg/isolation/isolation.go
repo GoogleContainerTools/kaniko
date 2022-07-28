@@ -34,7 +34,11 @@ func (c *Chroot) ExecRunCommand(cmd *exec.Cmd) (err error) {
 	if c.rootDir == "" {
 		return errors.New("NewRoot() was not executed beforehand")
 	}
-	return chroot.Run(cmd, c.rootDir)
+	err = chroot.Run(cmd, c.rootDir)
+	if err != nil {
+		return fmt.Errorf("running command in chroot env: %w", err)
+	}
+	return nil
 }
 
 type None struct{}

@@ -145,7 +145,7 @@ func newStageBuilder(
 
 func (s *stageBuilder) parseCommands(rootDir string) error {
 	for _, cmd := range s.stage.Commands {
-		command, err := commands.GetCommand(cmd, s.fileContext, s.opts.RunV2, s.opts.CacheCopyLayers, rootDir)
+		command, err := commands.GetCommand(cmd, s.fileContext, s.opts.RunV2, s.opts.CacheCopyLayers, rootDir, s.isolator)
 		if err != nil {
 			return err
 		}
@@ -387,7 +387,7 @@ func (s *stageBuilder) build(rootDir string) error {
 func newIsolatorFunc(isoType string) isolation.Isolator {
 	switch isoType {
 	case "chroot":
-		return isolation.Chroot{}
+		return new(isolation.Chroot)
 	default:
 		return isolation.None{}
 	}
@@ -727,16 +727,10 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 }
 
 func runStage(stage config.KanikoStage, sb *stageBuilder) (v1.Image, error) {
-	// lock thread during execution because thread hopping would break out of the namespace during isolation
-	// runtime.LockOSThread()
-	// defer runtime.UnlockOSThread()
-	newRoot, exitIsolation, err := sb.isolator.NewRoot()
+	newRoot, err := sb.isolator.NewRoot()
 	if err != nil {
 		return nil, fmt.Errorf("getting new root dir from isolator: %w", err)
 	}
-	defer func() {
-		err = exitIsolation()
-	}()
 
 	// initIgnoreList after isolation, because isolation could create new mounts that need to be respected
 	err = util.InitIgnoreList(true)

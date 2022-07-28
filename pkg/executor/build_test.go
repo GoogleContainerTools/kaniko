@@ -31,6 +31,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/isolation"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/testutil"
 	"github.com/containerd/containerd/platforms"
@@ -1328,6 +1329,7 @@ func getCommands(fileContext util.FileContext, cmds []instructions.Command, cach
 			false,
 			cacheCopy,
 			rootDir,
+			isolation.None{},
 		)
 		if err != nil {
 			panic(err)
@@ -1423,7 +1425,7 @@ func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
 			}
 
 			fc := util.FileContext{Root: "workspace"}
-			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true, "")
+			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true, "", isolation.None{})
 			if err != nil {
 				t.Fatal(err)
 			}

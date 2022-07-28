@@ -409,7 +409,7 @@ func parseGID(groupStr string, fallbackToUID bool) (uint32, error) {
 // getGIDFromName tries to parse the groupStr into an existing group.
 // if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
 func getGIDFromName(rootDir string, groupStr string, fallbackToUID bool) (uint32, error) {
-	group, err := lookupGroup(rootDir, groupStr)
+	group, err := LookupGroup(rootDir, groupStr)
 	if err != nil {
 		// at this point user.LookupGroup and user.LookupGroudId failed, so the group doesnt exist
 		// try to raw parse the groupStr as a gid
@@ -418,9 +418,9 @@ func getGIDFromName(rootDir string, groupStr string, fallbackToUID bool) (uint32
 	return parseGID(group.Gid, fallbackToUID)
 }
 
-// lookupGroup will use chrootuser.GetGroup function to get the group
+// LookupGroup will use chrootuser.GetGroup function to get the group
 // This is done to get the group struct in environments, where the group file is not at /etc/group
-func lookupGroup(rootDir string, group string) (*user.Group, error) {
+func LookupGroup(rootDir string, group string) (*user.Group, error) {
 	if rootDir != "/" {
 		logrus.Debugf("detected chroot environment, getting group %v via chrootuser pkg", group)
 		group, err := chrootuser.GetGroup(rootDir, group)

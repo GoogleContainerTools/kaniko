@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/isolation"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -28,16 +29,17 @@ import (
 
 type RunMarkerCommand struct {
 	BaseCommand
-	cmd     *instructions.RunCommand
-	Files   []string
-	rootDir string
+	cmd      *instructions.RunCommand
+	Files    []string
+	rootDir  string
+	isolator isolation.Isolator
 }
 
 func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	// run command `touch filemarker`
 	logrus.Debugf("Using new RunMarker command")
 	prevFilesMap, _ := util.GetFSInfoMap("/", map[string]os.FileInfo{})
-	if err := runCommandInExec(config, buildArgs, r.cmd, r.rootDir); err != nil {
+	if err := runCommandInExec(config, buildArgs, r.cmd, r.rootDir, r.isolator); err != nil {
 		return err
 	}
 	_, r.Files = util.GetFSInfoMap("/", prevFilesMap)

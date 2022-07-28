@@ -35,9 +35,9 @@ import (
 
 type RunCommand struct {
 	BaseCommand
-	cmd     *instructions.RunCommand
+	cmd      *instructions.RunCommand
 	isolator isolation.Isolator
-	rootDir string
+	rootDir  string
 }
 
 // for testing
@@ -46,10 +46,10 @@ var (
 )
 
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	return runCommandInExec(config, buildArgs, r.cmd, r.rootDir)
+	return runCommandInExec(config, buildArgs, r.cmd, r.rootDir, r.isolator)
 }
 
-func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand, rootDir string) error {
+func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun *instructions.RunCommand, rootDir string, isolator isolation.Isolator) error {
 	var newCommand []string
 	if cmdRun.PrependShell {
 		// This is the default shell on Linux
@@ -114,17 +114,9 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 	}
 
 	cmd.Env = env
-	if rootDir != "/" {
-		logrus.Debugf("running command in chroot dir %v", rootDir)
-		cmd.SysProcAttr.Chroot = rootDir
-		if cmd.Dir == "" {
-			// chdir after chroot to run process inside new root
-			cmd.Dir = "/"
-		}
-	}
 
 	logrus.Infof("Running: %s", cmd.Args)
-	return nil
+	return isolator.ExecRunCommand(cmd)
 }
 
 // addDefaultHOME adds the default value for HOME if it isn't already set

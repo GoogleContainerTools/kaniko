@@ -44,10 +44,27 @@ RUN \
 FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
+FROM debian:bullseye-slim AS passwd
+RUN echo "root:x:0:" > /etc/group 
+RUN echo "root:x:0:0:root:/root:/sbin/nologin" > /etc/passwd
+
+# idmap runnable without --privileged (but still requires seccomp=unconfined apparmor=unconfined)
+FROM alpine AS idmap
+ARG SHADOW_VERSION
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apk add --no-cache automake autoconf gettext git build-base libcap-dev libtool make gettext gettext-dev linux-pam-dev expect byacc
+RUN git clone https://github.com/shadow-maint/shadow.git /shadow
+WORKDIR /shadow
+RUN git fetch && git checkout $SHADOW_VERSION
+RUN  ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
+  --disable-shared --enable-static=yes 
+RUN make && \
+  cp src/newuidmap src/newgidmap /bin
+
 FROM scratch
 # Create kaniko directory with world write permission to allow non root run
 # use musl busybox since it's staticly compiled
-RUN --mount=from=busybox:musl,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko /root && chmod 777 /kaniko"] 
+RUN --mount=from=busybox:musl,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko /root /etc && chmod 777 /kaniko"] 
 
 COPY --from=0 /src/out/executor /kaniko/executor
 COPY --from=0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
@@ -56,6 +73,16 @@ COPY --from=0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
+COPY --from=passwd /etc/passwd /etc/group /etc/
+COPY --from=idmap /bin/newuidmap /bin/newgidmap /kaniko/
+# shadowutils is not a static binary, need to use musl libc
+COPY --from=idmap /lib/ld-musl-*.so.1 /lib/libc.musl-*.so.1 /lib/
+
+COPY --from=wildwildangel/setcap-static:sha-5657804 /setcap-static /kaniko/setcap
+# set setuid and setgid capabilties on newuidmap and newgidmap
+RUN ["/kaniko/setcap", "cap_setuid+eip", "/kaniko/newuidmap"]
+RUN ["/kaniko/setcap", "cap_setgid+eip", "/kaniko/newgidmap"]
+
 ENV HOME /root
 ENV USER root
 ENV PATH /usr/local/bin:/kaniko

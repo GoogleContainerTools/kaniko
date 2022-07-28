@@ -18,6 +18,7 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/isolation"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -60,13 +61,13 @@ type DockerCommand interface {
 	ShouldDetectDeletedFiles() bool
 }
 
-func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool, cacheCopy bool, rootDir string) (DockerCommand, error) {
+func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool, cacheCopy bool, rootDir string, isolator isolation.Isolator) (DockerCommand, error) {
 	switch c := cmd.(type) {
 	case *instructions.RunCommand:
 		if useNewRun {
-			return &RunMarkerCommand{cmd: c, rootDir: rootDir}, nil
+			return &RunMarkerCommand{cmd: c, rootDir: rootDir, isolator: isolator}, nil
 		}
-		return &RunCommand{cmd: c, rootDir: rootDir}, nil
+		return &RunCommand{cmd: c, rootDir: rootDir, isolator: isolator}, nil
 	case *instructions.CopyCommand:
 		return &CopyCommand{cmd: c, fileContext: fileContext, shdCache: cacheCopy, rootDir: rootDir}, nil
 	case *instructions.ExposeCommand:
