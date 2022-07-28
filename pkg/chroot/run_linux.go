@@ -17,19 +17,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GoogleContainerTools/kaniko/pkg/idtools"
-	"github.com/GoogleContainerTools/kaniko/pkg/util"
+	"github.com/GoogleContainerTools/kaniko/pkg/unshare"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
 const (
-	parentProcess   = "chroot-parent-process"
-	childProcess    = "chroot-child-process"
-	confPipeKey     = "kaniko_conf_pipe"
-	continuePipeKey = "kaniko_continue_pipe"
-	pidPipeKey      = "kaniko_pid_pipe"
+	parentProcess = "chroot-parent-process"
+	childProcess  = "chroot-child-process"
+	confPipeKey   = "kaniko_conf_pipe"
 )
 
 func init() {
@@ -95,134 +92,31 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 	defer confReader.Close()
 	defer confWriter.Close()
 
-	// Create a pipe for getting the pid of child.
-	// Use this method instead of checking in the parent, because we wouldn't
-	// know when the child is ready
-	pidReader, pidWriter, err := os.Pipe()
-	if err != nil {
-		return fmt.Errorf("error creating pid pipes: %w", err)
-	}
-	defer pidReader.Close()
-	defer func() {
-		if pidWriter != nil {
-			pidWriter.Close()
-		}
-	}()
-
-	// Create a pipe signaling the child to continue
-	// Child will wait until something is sent over this pipe
-	continueReader, continueWriter, err := os.Pipe()
-	if err != nil {
-		return fmt.Errorf("error creating pid pipes: %w", err)
-	}
-	defer func() {
-		if continueReader != nil {
-			continueReader.Close()
-		}
-	}()
-	defer continueWriter.Close()
-
 	// marshal config for communication with subprocess
 	c := config{
 		Cmd:     execCmdToCmd(cmd),
 		NewRoot: newRoot,
 	}
 
-	reexecCmd := reexec.Command(parentProcess)
+	unshareCmd := unshare.Command(parentProcess)
 
-	// create env before appending files, because len(ExtraFIles) would be wrong otherwise
-	reexecCmd.Env = append(reexecCmd.Env, fmt.Sprintf("%s=%d", pidPipeKey, len(reexecCmd.ExtraFiles)+3))
-	reexecCmd.ExtraFiles = append(reexecCmd.ExtraFiles, pidWriter)
-	reexecCmd.Env = append(reexecCmd.Env, fmt.Sprintf("%s=%d", continuePipeKey, len(reexecCmd.ExtraFiles)+3))
-	reexecCmd.ExtraFiles = append(reexecCmd.ExtraFiles, continueReader)
-
-	reexecCmd.Stderr, reexecCmd.Stdout, reexecCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
-	sysProcAttr := reexecCmd.SysProcAttr
+	unshareCmd.Stderr, unshareCmd.Stdout, unshareCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
+	sysProcAttr := unshareCmd.SysProcAttr
 	if sysProcAttr == nil {
 		sysProcAttr = &syscall.SysProcAttr{}
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
 	sysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
 
-	uid := os.Getuid()
-	gid := os.Getgid()
-
-	uidmap, gidmap := []idtools.Mapping{}, []idtools.Mapping{}
-	// only create additional mappings if running rootless
-	if uid != 0 {
-		u, err := util.LookupUser("/", fmt.Sprint(uid))
-		if err != nil {
-			return fmt.Errorf("lookup user for %v: %w", uid, err)
-		}
-
-		group, err := util.LookupGroup("/", fmt.Sprint(gid))
-		if err != nil {
-			return fmt.Errorf("lookup group for %v: %w", gid, err)
-		}
-
-		uidmap, gidmap, err = idtools.GetSubIDMappings(uint32(uid), uint32(gid), u.Username, group.Name)
-		if err != nil {
-			return fmt.Errorf("getting subid mappings: %w", err)
-		}
-	}
-
-	// Map our UID and GID, then the subuid and subgid ranges,
-	// consecutively, starting at 0, to get the mappings to use for
-	// a copy of ourselves.
-	uidmap = append([]idtools.Mapping{{HostID: uint32(uid), ContainerID: 0, Size: 1}}, uidmap...)
-	gidmap = append([]idtools.Mapping{{HostID: uint32(gid), ContainerID: 0, Size: 1}}, gidmap...)
-
-	err = copyConfigIntoPipeAndStartChild(reexecCmd, &c, confReader, confWriter)
+	err = copyConfigIntoPipeAndStartChild(unshareCmd, &c, confReader, confWriter)
 	if err != nil {
-		fmt.Fprint(continueWriter, err)
-		return err
+		fmt.Fprintf(os.Stderr, "error running unshare cmd: %v\n", err)
+		os.Exit(1)
 	}
-
-	// Close the ends of the pipes that the parent doesn't need.
-	continueReader.Close()
-	continueReader = nil
-	pidWriter.Close()
-	pidWriter = nil
-
-	pidbuf := make([]byte, 8)
-	n, err := pidReader.Read(pidbuf)
+	err = unshareCmd.Wait()
 	if err != nil {
-		err = fmt.Errorf("reading pid from child pipe: %w", err)
-		fmt.Fprint(continueWriter, err)
-		return err
-	}
-
-	pid, err := strconv.Atoi(string(pidbuf[:n]))
-	if err != nil {
-		err = fmt.Errorf("converting pid from child to integer: %w", err)
-		fmt.Fprint(continueWriter, err)
-		return err
-	}
-
-	err = idtools.SetUidMap(pid, uidmap)
-	if err != nil {
-		err = fmt.Errorf("apply subuid mappings: %w", err)
-		fmt.Fprint(continueWriter, err)
-		return err
-	}
-
-	err = idtools.SetGidMap(pid, gidmap)
-	if err != nil {
-		err = fmt.Errorf("apply subgid mappings: %w", err)
-		fmt.Fprint(continueWriter, err)
-		return err
-	}
-
-	// nothing went wrong, so lets continue child
-	_, err = fmt.Fprint(continueWriter, "continue")
-	if err != nil {
-		return fmt.Errorf("writing to child continue pipe: %w", err)
-	}
-	continueWriter.Close()
-
-	err = reexecCmd.Wait()
-	if err != nil {
-		return fmt.Errorf("waiting for reexec process: %w", err)
+		fmt.Fprintf(os.Stderr, "error waiting for unshare cmd: %v\n", err)
+		os.Exit(1)
 	}
 	return nil
 }
@@ -232,27 +126,8 @@ func runParentProcessMain() {
 	// lockOSThread because changing the thread would kick us out of the namespaces
 	// don't unlock because this function will only be called in a new process
 	runtime.LockOSThread()
-
-	pidStr := fmt.Sprint(os.Getpid())
-	pidPipe, err := getPipeFromKey(pidPipeKey)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error getting pid pipe: %v\n", err)
-		os.Exit(1)
-	}
-	defer pidPipe.Close()
-
-	_, err = io.WriteString(pidPipe, pidStr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error writing pid to pidpipe: %v\n", err)
-		os.Exit(1)
-	}
-
-	err = waitForContinue()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error writing pid to pidpipe: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("i am uid %d\n", os.Getuid())
+	// wait for child to become ready
+	unshare.ChildWait()
 
 	c, err := unmarshalConfigFromPipe()
 	if err != nil {
@@ -290,7 +165,7 @@ func runParentProcessMain() {
 	defer confWriter.Close()
 	defer confReader.Close()
 
-	childCmd := reexec.Command(childProcess)
+	childCmd := unshare.Command(childProcess)
 
 	childCmd.Stderr, childCmd.Stdout, childCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
 	sysProcAttr := childCmd.SysProcAttr
@@ -318,6 +193,7 @@ func runParentProcessMain() {
 // TODO: add apparmor and seccomp profiles
 func runChildProcessMain() {
 	runtime.LockOSThread()
+	unshare.ChildWait()
 
 	c, err := unmarshalConfigFromPipe()
 	if err != nil {
@@ -340,7 +216,7 @@ func runChildProcessMain() {
 
 // copyConfigIntoPipeAndStartChild will marshal the config into a pipe which will be passed into child.
 // After that, the child will start, but not wait for it.
-func copyConfigIntoPipeAndStartChild(child *exec.Cmd, conf *config, confReader, confWriter *os.File) error {
+func copyConfigIntoPipeAndStartChild(child *unshare.Cmd, conf *config, confReader, confWriter *os.File) error {
 	// marshal config for communication with subprocess
 	confData, err := json.Marshal(conf)
 	if err != nil {
@@ -361,40 +237,16 @@ func copyConfigIntoPipeAndStartChild(child *exec.Cmd, conf *config, confReader, 
 	return nil
 }
 
-// waitForContinue will block until we read something from the continue pipe.
-// This pipe will be used by the parent if it errors or child can continue execution
-func waitForContinue() error {
-	continuePipe, err := getPipeFromKey(continuePipeKey)
-	if err != nil {
-		return fmt.Errorf("creating continue pipe: %w", err)
-	}
-	buf := make([]byte, 1024)
-	_, err = continuePipe.Read(buf)
-	if err != nil {
-		return fmt.Errorf("reading from continue pipe: %w", err)
-	}
-	logrus.Info("recieved from continue pipe, continue")
-	return nil
-}
-
-func getPipeFromKey(key string) (*os.File, error) {
-	fdStr := os.Getenv(key)
+func unmarshalConfigFromPipe() (config, error) {
+	fdStr := os.Getenv(confPipeKey)
 	if fdStr == "" {
-		return nil, fmt.Errorf("%v is not set, can't create pipe", key)
+		return config{}, fmt.Errorf("%v is not set, can't create pipe", confPipeKey)
 	}
 	fd, err := strconv.Atoi(fdStr)
 	if err != nil {
-		return nil, fmt.Errorf("converting %v to integer: %w", fdStr, err)
+		return config{}, fmt.Errorf("converting %v to integer: %w", fdStr, err)
 	}
-	logrus.Infof("getting pipe from fd %d", fd)
-	return os.NewFile(uintptr(fd), key), nil
-}
-
-func unmarshalConfigFromPipe() (config, error) {
-	confPipe, err := getPipeFromKey(confPipeKey)
-	if err != nil {
-		return config{}, fmt.Errorf("creating conf pipe: %w", err)
-	}
+	confPipe := os.NewFile(uintptr(fd), confPipeKey)
 	defer confPipe.Close()
 	var c config
 	err = json.NewDecoder(confPipe).Decode(&c)
@@ -423,7 +275,6 @@ func pivotRoot(newRoot string) error {
 func prepareMounts(newRoot string, additionalMounts ...string) (undoMount func() error, err error) {
 	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE)
 	devFlags := bindFlags | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_RDONLY
-	procFlags := devFlags | unix.MS_NODEV
 	sysFlags := devFlags | unix.MS_NODEV
 	type mountOpts struct {
 		flags     uintptr
@@ -435,7 +286,6 @@ func prepareMounts(newRoot string, additionalMounts ...string) (undoMount func()
 		"/etc/hosts":       {flags: unix.MS_RDONLY | bindFlags},
 		"/dev":             {flags: devFlags},
 		"/sys":             {flags: sysFlags},
-		"/proc":            {flags: procFlags},
 	}
 	for _, add := range additionalMounts {
 		mounts[add] = mountOpts{flags: bindFlags}

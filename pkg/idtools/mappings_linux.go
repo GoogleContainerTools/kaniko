@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -89,8 +90,8 @@ func runNewIDMap(path, pid string, mappings []Mapping) error {
 	mappingBuffer := new(bytes.Buffer)
 	for _, m := range mappings {
 		mStr := fmt.Sprintf("%d %d %d ", m.ContainerID, m.HostID, m.Size)
-		logrus.Infof("mapping string for %v is %s", path, mStr)
-		fmt.Fprintf(mappingBuffer, mStr)
+		logrus.Infof("args for %v: %s %s", path, pid, mStr)
+		fmt.Fprint(mappingBuffer, mStr)
 	}
 	args := []string{
 		pid,
@@ -105,6 +106,57 @@ func runNewIDMap(path, pid string, mappings []Mapping) error {
 		return fmt.Errorf("%v failed: %s %w", path, output.String(), err)
 	}
 	return nil
+}
+
+// getHostIDMappings reads mappings from the named node under /proc.
+func getHostIDMappings(path string) ([]Mapping, error) {
+	var mappings []Mapping
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading ID mappings from %q: %w", path, err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			return nil, fmt.Errorf("line %q from %q has %d fields, not 3", line, path, len(fields))
+		}
+		cid, err := strconv.ParseUint(fields[0], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("parsing container ID value %q from line %q in %q: %w", fields[0], line, path, err)
+		}
+		hid, err := strconv.ParseUint(fields[1], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("parsing host ID value %q from line %q in %q: %w", fields[1], line, path, err)
+		}
+		size, err := strconv.ParseUint(fields[2], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("parsing size value %q from line %q in %q: %w", fields[2], line, path, err)
+		}
+		mappings = append(mappings, Mapping{ContainerID: uint32(cid), HostID: uint32(hid), Size: uint32(size)})
+	}
+	return mappings, nil
+}
+
+// GetHostIDMappings reads mappings for the specified process (or the current
+// process if pid is "self" or an empty string) from the kernel.
+func GetHostIDMappings(pid string) ([]Mapping, []Mapping, error) {
+	if pid == "" {
+		pid = "self"
+	}
+	uidmapPath := filepath.Join("proc", pid, "uid_map")
+	uidmap, err := getHostIDMappings(uidmapPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	gidmapPath := filepath.Join("proc", pid, "gid_map")
+	gidmap, err := getHostIDMappings(gidmapPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	return uidmap, gidmap, nil
 }
 
 // GetSubIDMappings reads mappings from /etc/subuid and /etc/subgid.

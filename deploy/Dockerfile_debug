@@ -92,8 +92,7 @@ COPY --from=wildwildangel/setcap-static:sha-5657804 /setcap-static /kaniko/setca
 RUN ["/kaniko/setcap", "cap_setuid+eip", "/kaniko/newuidmap"]
 RUN ["/kaniko/setcap", "cap_setgid+eip", "/kaniko/newgidmap"]
 
-ENV HOME /root
-ENV USER root
+USER root
 ENV PATH /usr/local/bin:/kaniko:/busybox
 ENV SSL_CERT_DIR=/kaniko/ssl/certs
 ENV DOCKER_CONFIG /kaniko/.docker/
