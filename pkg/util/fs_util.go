@@ -1116,6 +1116,7 @@ func GetFSInfoMap(dir string, existing map[string]os.FileInfo) (map[string]os.Fi
 	godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
 			if CheckIgnoreList(path) {
+				ent.IsDirOrSymlinkToDir()
 				if IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
 					return filepath.SkipDir

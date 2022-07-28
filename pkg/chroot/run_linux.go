@@ -4,62 +4,302 @@
 package chroot
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"time"
 
-	mobymount "github.com/moby/sys/mount"
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/sirupsen/logrus"
+	"github.com/syndtr/gocapability/capability"
 	"golang.org/x/sys/unix"
 )
 
-// func Chroot(newRoot string, additionalMounts ...string) (func() error, error) {
-// 	// root fd for reverting
-// 	root, err := os.Open("/")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	unmountFunc, err := PrepareMounts(newRoot, additionalMounts...)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	revertFunc := func() error {
-// 		logrus.Debug("exit chroot")
-// 		defer root.Close()
-// 		defer func() {
-// 			err2 := unmountFunc()
-// 			if err2 != nil {
-// 				err = err2
-// 			}
-// 		}()
-// 		if err2 := root.Chdir(); err2 != nil {
-// 			err = err2
-// 		}
-// 		// check for errors first instead of returning, because unmount needs to be called after chroot
-// 		err2 := unix.Chroot(".")
-// 		if err2 != nil {
-// 			err = fmt.Errorf("chroot back to old root: %w", err2)
-// 		}
-// 		return nil
-// 	}
-// 	logrus.Debugf("chdir into %v", newRoot)
-// 	err = unix.Chdir(newRoot)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("chdir to %v before chroot: %w", newRoot, err)
-// 	}
-// 	err = unix.Chroot(newRoot)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("chroot to %v: %w", newRoot, err)
-// 	}
-// 	return revertFunc, nil
-// }
+const (
+	parentProcess = "chroot-parent-process"
+	childProcess  = "chroot-child-process"
+)
 
-func PrepareMounts(newRoot string, additionalMounts ...string) (undoMount func() error, err error) {
+func init() {
+	reexec.Register(parentProcess, runParentProcessMain)
+	reexec.Register(childProcess, runChildProcessMain)
+	// when a reexec main was invoked, exit immediately
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
+
+// cmd is exec.Cmd without io.Reader and io.Writer fields
+// cmd is exec.Cmd without io.Reader and io.Writer fields
+type cmd struct {
+	Path    string               `json:"path,omitempty"`
+	Args    []string             `json:"args,omitempty"`
+	Env     []string             `json:"env,omitempty"`
+	SysAttr *syscall.SysProcAttr `json:"sys_attr,omitempty"`
+	Dir     string               `json:"dir,omitempty"`
+}
+
+func execCmdToCmd(execCmd *exec.Cmd) *cmd {
+	return &cmd{
+		Path:    execCmd.Path,
+		Args:    execCmd.Args,
+		Env:     execCmd.Env,
+		SysAttr: execCmd.SysProcAttr,
+		Dir:     execCmd.Dir,
+	}
+}
+
+func cmdToExecCmd(cmd *cmd) *exec.Cmd {
+	return &exec.Cmd{
+		Path:        cmd.Path,
+		Args:        cmd.Args,
+		Env:         cmd.Env,
+		SysProcAttr: cmd.SysAttr,
+		Dir:         cmd.Dir,
+		// set std{in,out,err} to os versions because they didn't get marshaled
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+}
+
+type config struct {
+	Cmd     *cmd   `json:"cmd,omitempty"`
+	NewRoot string `json:"new_root,omitempty"`
+}
+
+// Run will execute the cmd inside a chrooted and newly created namespace environment
+func Run(cmd *exec.Cmd, newRoot string) error {
+	// lockOSThread because changing the thread would kick us out of the namespaces
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// Create a pipe for passing configuration down to the next process.
+	preader, pwriter, err := os.Pipe()
+	if err != nil {
+		return fmt.Errorf("error creating configuration pipe: %w", err)
+	}
+	defer preader.Close()
+	defer pwriter.Close()
+
+	// marshal config for communication with subprocess
+	c := config{
+		Cmd:     execCmdToCmd(cmd),
+		NewRoot: newRoot,
+	}
+
+	reexecCmd := reexec.Command(parentProcess)
+	reexecCmd.Stderr, reexecCmd.Stdout, reexecCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
+	sysProcAttr := reexecCmd.SysProcAttr
+	if sysProcAttr == nil {
+		sysProcAttr = &syscall.SysProcAttr{}
+	}
+	sysProcAttr.Pdeathsig = syscall.SIGKILL
+	sysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
+	sysProcAttr.UidMappings = []syscall.SysProcIDMap{
+		{
+			ContainerID: 0,
+			HostID:      os.Getuid(),
+			Size:        1,
+		},
+	}
+	sysProcAttr.GidMappings = []syscall.SysProcIDMap{
+		{
+			ContainerID: 0,
+			HostID:      os.Getgid(),
+			Size:        1,
+		},
+	}
+
+	return copyConfigIntoPipeAndRunChild(reexecCmd, &c, preader, pwriter)
+}
+
+// runParentProcessMain will create all needed mounts, pivot_root and execute the child
+func runParentProcessMain() {
+	// lockOSThread because changing the thread would kick us out of the namespaces
+	// don't unlock because this function will only be called in a new process
+	runtime.LockOSThread()
+
+	c, err := unmarshalConfigFromPipe()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v", err)
+		os.Exit(1)
+	}
+	// create mounts for pivot_root
+	undo, err := prepareMounts(c.NewRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error creating mounts: %v", err)
+		os.Exit(1)
+	}
+
+	defer func() {
+		logrus.Debug("undo mounting of chroot isolation")
+		undoErr := undo()
+		if undoErr != nil {
+			fmt.Fprintf(os.Stderr, "error undo mounting: %s", undoErr)
+			os.Exit(1)
+		}
+	}()
+
+	err = pivotRoot(c.NewRoot)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	// Create a pipe for passing configuration down to the next process.
+	preader, pwriter, err := os.Pipe()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error creating configuration pipe: %v", err)
+		os.Exit(1)
+	}
+	defer pwriter.Close()
+	defer preader.Close()
+
+	childCmd := reexec.Command(childProcess)
+
+	childCmd.Stderr, childCmd.Stdout, childCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
+	sysProcAttr := childCmd.SysProcAttr
+	if sysProcAttr == nil {
+		sysProcAttr = &syscall.SysProcAttr{}
+	}
+	sysProcAttr.Pdeathsig = syscall.SIGKILL
+
+	err = copyConfigIntoPipeAndRunChild(childCmd, &c, preader, pwriter)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error running child: %v", err)
+		os.Exit(1)
+	}
+}
+
+// runChildProcess will set capabilities and execute the initial cmd
+// TODO: add apparmor and seccomp profiles
+func runChildProcessMain() {
+	runtime.LockOSThread()
+
+	c, err := unmarshalConfigFromPipe()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v", err)
+		os.Exit(1)
+	}
+
+	err = setCapabilities()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error setting capabilities: %v", err)
+		os.Exit(1)
+	}
+	cmd := cmdToExecCmd(c.Cmd)
+	err = cmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error running original command: %v", err)
+		os.Exit(1)
+	}
+}
+
+func copyConfigIntoPipeAndRunChild(child *exec.Cmd, conf *config, preader *os.File, pwriter *os.File) error {
+	// marshal config for communication with subprocess
+	confData, err := json.Marshal(conf)
+	if err != nil {
+		return fmt.Errorf("marshaling configuration: %w", err)
+	}
+
+	child.ExtraFiles = append(child.ExtraFiles, preader)
+
+	err = child.Start()
+	if err != nil {
+		return fmt.Errorf("starting child process: %w", err)
+	}
+	_, err = io.Copy(pwriter, bytes.NewReader(confData))
+	if err != nil {
+		return fmt.Errorf("copy configuration to pipe: %w", err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		return fmt.Errorf("waiting for child process: %w", err)
+	}
+	return nil
+}
+
+func unmarshalConfigFromPipe() (config, error) {
+	// cmd.ExtraFiles sets file descriptor i+3
+	confPipe := os.NewFile(3, "confpipe")
+	if confPipe == nil {
+		return config{}, errors.New("error reading cmd config")
+	}
+	defer confPipe.Close()
+	var c config
+	err := json.NewDecoder(confPipe).Decode(&c)
+	if err != nil {
+		return c, fmt.Errorf("decoding cmd config: %v", err)
+	}
+	return c, nil
+}
+
+// defaultCapabilities returns a Linux kernel default capabilities
+var defaultCapabilities = []capability.Cap{
+	capability.CAP_CHOWN,
+	capability.CAP_DAC_OVERRIDE,
+	capability.CAP_FSETID,
+	capability.CAP_FOWNER,
+	capability.CAP_MKNOD,
+	capability.CAP_NET_RAW,
+	capability.CAP_SETGID,
+	capability.CAP_SETUID,
+	capability.CAP_SETFCAP,
+	capability.CAP_SETPCAP,
+	capability.CAP_NET_BIND_SERVICE,
+	capability.CAP_KILL,
+	capability.CAP_AUDIT_WRITE,
+}
+
+// setCapabilities sets capabilities for ourselves, to be more or less inherited by any processes that we'll start.
+func setCapabilities() error {
+	caps, err := capability.NewPid2(0)
+	if err != nil {
+		return err
+	}
+	capMap := map[capability.CapType][]capability.Cap{
+		capability.BOUNDING:    defaultCapabilities,
+		capability.EFFECTIVE:   defaultCapabilities,
+		capability.INHERITABLE: {},
+		capability.PERMITTED:   defaultCapabilities,
+	}
+	for capType, capList := range capMap {
+		caps.Set(capType, capList...)
+	}
+	err = caps.Apply(capability.CAPS | capability.BOUNDS | capability.AMBS)
+	if err != nil {
+		return fmt.Errorf("applying capabiliies: %w", err)
+	}
+	return nil
+}
+
+func pivotRoot(newRoot string) error {
+	err := unix.Chdir(newRoot)
+	if err != nil {
+		return fmt.Errorf("chdir to newRoot: %w", err)
+	}
+	err = unix.PivotRoot(newRoot, newRoot)
+	if err != nil {
+		return fmt.Errorf("syscall pivot_root: %w", err)
+	}
+	err = unmount(".")
+	if err != nil {
+		return fmt.Errorf("unmounting newRoot after pivot_root: %w", err)
+	}
+	return nil
+}
+
+func prepareMounts(newRoot string, additionalMounts ...string) (undoMount func() error, err error) {
 	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE)
 	devFlags := bindFlags | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_RDONLY
 	procFlags := devFlags | unix.MS_NODEV
@@ -94,17 +334,18 @@ func PrepareMounts(newRoot string, additionalMounts ...string) (undoMount func()
 		if err != nil {
 			return nil, err
 		}
-		err = makeMountPrivate(dest)
-		if err != nil {
-			return nil, err
-		}
+	}
+	// self mount newRoot for pivot_root
+	// unmount will happen after pivot_root is called
+	err = mount(newRoot, newRoot, "", bindFlags)
+	if err != nil {
+		return nil, err
 	}
 
 	undoMount = func() error {
 		for src := range mounts {
-			dest := filepath.Join(newRoot, src)
-			logrus.Debugf("unmounting %v", dest)
-			err := unmount(dest)
+			logrus.Debugf("unmounting %v", src)
+			err := unmount(src)
 			if err != nil {
 				return err
 			}
@@ -112,30 +353,6 @@ func PrepareMounts(newRoot string, additionalMounts ...string) (undoMount func()
 		return nil
 	}
 	return undoMount, nil
-}
-
-// createNewMountNamespace unshares into a new mount namespace for this process.
-// This is not working with the current implementation because we need to exit this mount namespace
-// before unmount the bind mounts (/proc, /dev etc.).
-// For more information, see: https://man7.org/linux/man-pages/man7/mount_namespaces.7.html#NOTES - Chapter: Resitrctions on mount namespaces
-func createNewMountNamespace() error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	// Create a new mount namespace in which to do the things we're doing.
-	if err := unix.Unshare(unix.CLONE_NEWNS); err != nil {
-		return fmt.Errorf("error creating new mount namespace: %w", err)
-	}
-	return nil
-}
-
-// makeMountPrivate sets target to a rprivate mount.
-func makeMountPrivate(target string) error {
-	// Make all of our mounts private to our namespace.
-	err := mobymount.MakeRPrivate(target)
-	if err != nil {
-		return fmt.Errorf("making %v private for new mnt namespace: %w", target, err)
-	}
-	return nil
 }
 
 func unmount(dest string) error {
@@ -151,6 +368,15 @@ func unmount(dest string) error {
 		if err != nil {
 			return fmt.Errorf("unmounting %q (retried %d times): %v", dest, retries, err)
 		}
+	}
+	return nil
+}
+
+func mount(src, dest, mountType string, flags uintptr) error {
+	logrus.Debugf("mounting %v to %v", src, dest)
+	err := unix.Mount(src, dest, mountType, uintptr(flags), "")
+	if err != nil {
+		return fmt.Errorf("mounting %v to %v: %w", src, dest, err)
 	}
 	return nil
 }
@@ -178,15 +404,6 @@ func createDest(srcinfo fs.FileInfo, dest string) error {
 			}
 			file.Close()
 		}
-	}
-	return nil
-}
-
-func mount(src, dest, mountType string, flags uintptr) error {
-	logrus.Debugf("mounting %v to %v", src, dest)
-	err := unix.Mount(src, dest, mountType, flags, "")
-	if err != nil {
-		return fmt.Errorf("mounting %v to %v: %w", src, dest, err)
 	}
 	return nil
 }

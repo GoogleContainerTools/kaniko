@@ -2,39 +2,63 @@ package isolation
 
 import (
 	"fmt"
+	"os/exec"
+	"syscall"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/chroot"
+	"github.com/pkg/errors"
 )
 
 type Isolator interface {
-	NewRoot() (newRoot string, exitFunc func() error, err error)
+	NewRoot() (newRoot string, err error)
+	ExecRunCommand(cmd *exec.Cmd) error
 }
 
-type Chroot struct{}
+type Chroot struct {
+	// rootDir holds the dir created by NewRoot
+	rootDir string
+}
 
-var _ Isolator = Chroot{}
+var _ Isolator = &Chroot{}
 
-func (c Chroot) NewRoot() (newRoot string, exitFunc func() error, err error) {
+func (c *Chroot) NewRoot() (newRoot string, err error) {
 	newRoot, err = chroot.TmpDirInHome()
 	if err != nil {
-		return "", nil, fmt.Errorf("getting newRoot: %w", err)
+		return "", fmt.Errorf("getting newRoot: %w", err)
 	}
-	revertMounts, err := chroot.PrepareMounts(newRoot)
-	if err != nil {
-		return "", nil, fmt.Errorf("creating mounts: %w", err)
+	c.rootDir = newRoot
+	return newRoot, nil
+}
+
+func (c *Chroot) ExecRunCommand(cmd *exec.Cmd) (err error) {
+	if c.rootDir == "" {
+		return errors.New("NewRoot() was not executed beforehand")
 	}
-	exitFunc = func() error {
-		errRevert := revertMounts()
-		if errRevert != nil {
-			return errRevert
-		}
-		return nil
-	}
-	return newRoot, exitFunc, nil
+	return chroot.Run(cmd, c.rootDir)
 }
 
 type None struct{}
 
-func (n None) NewRoot() (newRoot string, exitFunc func() error, err error) {
-	return "/", func() error { return nil }, nil
+func (n None) NewRoot() (newRoot string, err error) {
+	return "/", nil
+}
+
+func (n None) ExecRunCommand(cmd *exec.Cmd) error {
+	if err := cmd.Start(); err != nil {
+		return errors.Wrap(err, "starting command")
+	}
+
+	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+	if err != nil {
+		return errors.Wrap(err, "getting group id for process")
+	}
+	if err := cmd.Wait(); err != nil {
+		return errors.Wrap(err, "waiting for process to exit")
+	}
+
+	//it's not an error if there are no grandchildren
+	if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil && err.Error() != "no such process" {
+		return err
+	}
+	return nil
 }

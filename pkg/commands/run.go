@@ -25,6 +25,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/GoogleContainerTools/kaniko/pkg/isolation"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -35,6 +36,7 @@ import (
 type RunCommand struct {
 	BaseCommand
 	cmd     *instructions.RunCommand
+	isolator isolation.Isolator
 	rootDir string
 }
 
@@ -122,22 +124,6 @@ func runCommandInExec(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmdRun
 	}
 
 	logrus.Infof("Running: %s", cmd.Args)
-	if err := cmd.Start(); err != nil {
-		return errors.Wrap(err, "starting command")
-	}
-
-	pgid, err := syscall.Getpgid(cmd.Process.Pid)
-	if err != nil {
-		return errors.Wrap(err, "getting group id for process")
-	}
-	if err := cmd.Wait(); err != nil {
-		return errors.Wrap(err, "waiting for process to exit")
-	}
-
-	//it's not an error if there are no grandchildren
-	if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil && err.Error() != "no such process" {
-		return err
-	}
 	return nil
 }
 
