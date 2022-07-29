@@ -34,9 +34,8 @@ func init() {
 
 func TestUnshareNamespaces(t *testing.T) {
 	for name, flag := range namespaces {
-		c := Command(reportReexecKey)
 		// always create user namespace because we might not be running as root
-		c.SysProcAttr.Unshareflags = syscall.CLONE_NEWUSER | uintptr(flag)
+		c := Command(syscall.CLONE_NEWUSER|flag, reportReexecKey)
 		buf := new(bytes.Buffer)
 		c.Stderr, c.Stdout = buf, buf
 
@@ -61,7 +60,7 @@ func TestUnshareNamespaces(t *testing.T) {
 func TestUnshareIDMappings(t *testing.T) {
 	tests := []struct {
 		name         string
-		unshareFlags uintptr
+		unshareFlags int
 		want         report
 	}{
 		{
@@ -91,8 +90,7 @@ func TestUnshareIDMappings(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := Command(reportReexecKey)
-			c.SysProcAttr.Unshareflags = tt.unshareFlags
+			c := Command(tt.unshareFlags, reportReexecKey)
 			buf := new(bytes.Buffer)
 			c.Stderr, c.Stdout = buf, buf
 

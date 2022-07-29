@@ -31,11 +31,19 @@ type Cmd struct {
 }
 
 // Command will create a new Cmd with a reexec.Command set to args.
+//
+// Also set SysProcAttr.UnshareFlags to unshareFlags.
+// Use 0 if you don't want to create any namespaces.
+//
 // Make sure that reexec.Init() will be called in your program.
-func Command(args ...string) *Cmd {
-	return &Cmd{
+func Command(unshareFlags int, args ...string) *Cmd {
+	c := &Cmd{
 		Cmd: reexec.Command(args...),
 	}
+	// SysProcAttr will always be created from reexec.Command()
+	// so don't worry about nil pointer
+	c.SysProcAttr.Unshareflags = uintptr(unshareFlags)
+	return c
 }
 
 func (c *Cmd) Run() error {
@@ -203,7 +211,7 @@ func childWait() {
 	}
 }
 
-//  writeSetGroup will write val to /proc/PID/setgroups
+// writeSetGroup will write val to /proc/PID/setgroups
 //
 // Since Linux 3.19 unprivileged writing of /proc/self/gid_map
 // has been disabled unless /proc/self/setgroups is written

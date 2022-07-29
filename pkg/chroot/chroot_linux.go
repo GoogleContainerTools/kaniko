@@ -98,7 +98,7 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 		NewRoot: newRoot,
 	}
 
-	unshareCmd := unshare.Command(parentProcess)
+	unshareCmd := unshare.Command(syscall.CLONE_NEWUSER|syscall.CLONE_NEWNS, parentProcess)
 
 	unshareCmd.Stderr, unshareCmd.Stdout, unshareCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
 	sysProcAttr := unshareCmd.SysProcAttr
@@ -106,7 +106,6 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 		sysProcAttr = &syscall.SysProcAttr{}
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
-	sysProcAttr.Unshareflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
 
 	err = copyConfigIntoPipeAndStartChild(unshareCmd, &c, confReader, confWriter)
 	if err != nil {
@@ -163,8 +162,9 @@ func runParentProcessMain() {
 	}
 	defer confWriter.Close()
 	defer confReader.Close()
-
-	childCmd := unshare.Command(childProcess)
+	
+	// delay pid namespace until here, because pid would be wrong otherwise
+	childCmd := unshare.Command(syscall.CLONE_NEWPID, childProcess)
 
 	childCmd.Stderr, childCmd.Stdout, childCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
 	sysProcAttr := childCmd.SysProcAttr
@@ -172,8 +172,6 @@ func runParentProcessMain() {
 		sysProcAttr = &syscall.SysProcAttr{}
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
-	// delay pid namespace until here, because pid would be wrong otherwise
-	sysProcAttr.Unshareflags = syscall.CLONE_NEWPID
 
 	err = copyConfigIntoPipeAndStartChild(childCmd, &c, confReader, confWriter)
 	if err != nil {
