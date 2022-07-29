@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -146,12 +145,12 @@ func GetHostIDMappings(pid string) ([]Mapping, []Mapping, error) {
 	if pid == "" {
 		pid = "self"
 	}
-	uidmapPath := filepath.Join("proc", pid, "uid_map")
+	uidmapPath := fmt.Sprintf("/proc/%v/uid_map", pid)
 	uidmap, err := getHostIDMappings(uidmapPath)
 	if err != nil {
 		return nil, nil, err
 	}
-	gidmapPath := filepath.Join("proc", pid, "gid_map")
+	gidmapPath := fmt.Sprintf("/proc/%v/gid_map", pid)
 	gidmap, err := getHostIDMappings(gidmapPath)
 	if err != nil {
 		return nil, nil, err

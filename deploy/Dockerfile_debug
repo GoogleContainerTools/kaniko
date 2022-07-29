@@ -60,8 +60,18 @@ WORKDIR /shadow
 RUN git fetch && git checkout $SHADOW_VERSION
 RUN  ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
   --disable-shared --enable-static=yes 
-RUN make && \
-  cp src/newuidmap src/newgidmap /bin
+RUN make
+# set setgid and setuid filemode bits on new{gid,uid}map
+RUN chmod g+s src/newgidmap && chmod u+s src/newuidmap
+
+RUN wget -O patchelf.tar.gz https://github.com/NixOS/patchelf/releases/download/${PATCHELF_VERSION}/patchelf-${PATCHELF_VERSION}-$(uname -m).tar.gz && \
+  tar xf patchelf.tar.gz && \
+  cp bin/patchelf /bin
+
+# use patchelf to modify the library path so lib musl can reside in /kaniko/lib dir
+RUN patchelf --set-interpreter /kaniko/lib/ld-musl-$(uname -m).so.1 src/newuidmap
+RUN patchelf --set-interpreter /kaniko/lib/ld-musl-$(uname -m).so.1 src/newgidmap
+
 
 # use musl busybox since it's staticly compiled on all platforms
 FROM busybox:musl as busybox
@@ -82,7 +92,7 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 COPY --from=passwd /etc/passwd /etc/group /etc/
-COPY --from=idmap /bin/newuidmap /bin/newgidmap /kaniko/
+COPY --from=idmap /shadow/src/newuidmap /shadow/src/newgidmap /kaniko/
 # shadowutils is not a static binary, need to use musl libc
 COPY --from=idmap /lib/ld-musl-*.so.1 /lib/libc.musl-*.so.1 /lib/
 

@@ -50,7 +50,8 @@ RUN echo "root:x:0:0:root:/root:/sbin/nologin" > /etc/passwd
 
 # idmap runnable without --privileged (but still requires seccomp=unconfined apparmor=unconfined)
 FROM alpine AS idmap
-ARG SHADOW_VERSION
+ARG SHADOW_VERSION="v4.11.1"
+ARG PATCHELF_VERSION="0.15.0"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apk add --no-cache automake autoconf gettext git build-base libcap-dev libtool make gettext gettext-dev linux-pam-dev expect byacc
 RUN git clone https://github.com/shadow-maint/shadow.git /shadow
@@ -58,8 +59,17 @@ WORKDIR /shadow
 RUN git fetch && git checkout $SHADOW_VERSION
 RUN  ./autogen.sh --disable-nls --disable-man --without-audit --without-selinux --without-acl --without-attr --without-tcb --without-nscd \
   --disable-shared --enable-static=yes 
-RUN make && \
-  cp src/newuidmap src/newgidmap /bin
+RUN make 
+# set setgid and setuid filemode bits on new{gid,uid}map
+RUN chmod g+s src/newgidmap && chmod u+s src/newuidmap
+
+RUN wget -O patchelf.tar.gz https://github.com/NixOS/patchelf/releases/download/${PATCHELF_VERSION}/patchelf-${PATCHELF_VERSION}-$(uname -m).tar.gz && \
+  tar xf patchelf.tar.gz && \
+  cp bin/patchelf /bin
+
+# use patchelf to modify the library path so lib musl can reside in /kaniko/lib dir
+RUN patchelf --set-interpreter /kaniko/lib/ld-musl-$(uname -m).so.1 src/newuidmap
+RUN patchelf --set-interpreter /kaniko/lib/ld-musl-$(uname -m).so.1 src/newgidmap
 
 FROM scratch
 # Create kaniko directory with world write permission to allow non root run
@@ -74,14 +84,9 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
 COPY --from=0 /kaniko/.docker /kaniko/.docker
 COPY files/nsswitch.conf /etc/nsswitch.conf
 COPY --from=passwd /etc/passwd /etc/group /etc/
-COPY --from=idmap /bin/newuidmap /bin/newgidmap /kaniko/
+COPY --from=idmap /shadow/src/newuidmap /shadow/src/newgidmap /kaniko/
 # shadowutils is not a static binary, need to use musl libc
-COPY --from=idmap /lib/ld-musl-*.so.1 /lib/libc.musl-*.so.1 /lib/
-
-COPY --from=wildwildangel/setcap-static:sha-5657804 /setcap-static /kaniko/setcap
-# set setuid and setgid capabilties on newuidmap and newgidmap
-RUN ["/kaniko/setcap", "cap_setuid+eip", "/kaniko/newuidmap"]
-RUN ["/kaniko/setcap", "cap_setgid+eip", "/kaniko/newgidmap"]
+COPY --from=idmap /lib/ld-musl-*.so.1 /lib/libc.musl-*.so.1 /kaniko/lib/
 
 USER root
 ENV PATH /usr/local/bin:/kaniko

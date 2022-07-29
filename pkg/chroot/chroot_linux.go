@@ -106,7 +106,7 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 		sysProcAttr = &syscall.SysProcAttr{}
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
-	sysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
+	sysProcAttr.Unshareflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
 
 	err = copyConfigIntoPipeAndStartChild(unshareCmd, &c, confReader, confWriter)
 	if err != nil {
@@ -121,13 +121,12 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 	return nil
 }
 
-// runParentProcessMain will create all needed mounts, pivot_root and execute the child
+// runParentProcessMain will create all needed mounts, pivot_root and execute the child.
+// This is always executed inside a unshared environment.
 func runParentProcessMain() {
 	// lockOSThread because changing the thread would kick us out of the namespaces
-	// don't unlock because this function will only be called in a new process
 	runtime.LockOSThread()
-	// wait for child to become ready
-	unshare.ChildWait()
+	defer runtime.UnlockOSThread()
 
 	c, err := unmarshalConfigFromPipe()
 	if err != nil {
@@ -174,7 +173,7 @@ func runParentProcessMain() {
 	}
 	sysProcAttr.Pdeathsig = syscall.SIGKILL
 	// delay pid namespace until here, because pid would be wrong otherwise
-	sysProcAttr.Cloneflags = syscall.CLONE_NEWPID
+	sysProcAttr.Unshareflags = syscall.CLONE_NEWPID
 
 	err = copyConfigIntoPipeAndStartChild(childCmd, &c, confReader, confWriter)
 	if err != nil {
@@ -193,7 +192,7 @@ func runParentProcessMain() {
 // TODO: add apparmor and seccomp profiles
 func runChildProcessMain() {
 	runtime.LockOSThread()
-	unshare.ChildWait()
+	defer runtime.UnlockOSThread()
 
 	c, err := unmarshalConfigFromPipe()
 	if err != nil {
@@ -276,6 +275,7 @@ func prepareMounts(newRoot string, additionalMounts ...string) (undoMount func()
 	bindFlags := uintptr(unix.MS_BIND | unix.MS_REC | unix.MS_PRIVATE)
 	devFlags := bindFlags | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_RDONLY
 	sysFlags := devFlags | unix.MS_NODEV
+	procFlags := devFlags | unix.MS_NODEV
 	type mountOpts struct {
 		flags     uintptr
 		mountType string
@@ -286,6 +286,7 @@ func prepareMounts(newRoot string, additionalMounts ...string) (undoMount func()
 		"/etc/hosts":       {flags: unix.MS_RDONLY | bindFlags},
 		"/dev":             {flags: devFlags},
 		"/sys":             {flags: sysFlags},
+		"/proc":            {flags: procFlags},
 	}
 	for _, add := range additionalMounts {
 		mounts[add] = mountOpts{flags: bindFlags}
