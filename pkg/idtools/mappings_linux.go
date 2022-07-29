@@ -86,17 +86,18 @@ func SetGidMap(pid int, gidmap []Mapping) error {
 
 func runNewIDMap(path, pid string, mappings []Mapping) error {
 	// newuidmap and newgidmap are only allowed once per process
-	mappingBuffer := new(bytes.Buffer)
+	var mapStr string
 	for _, m := range mappings {
-		mStr := fmt.Sprintf("%d %d %d ", m.ContainerID, m.HostID, m.Size)
-		logrus.Infof("args for %v: %s %s", path, pid, mStr)
-		fmt.Fprint(mappingBuffer, mStr)
+		mapStr += fmt.Sprintf("%d %d %d\n", m.ContainerID, m.HostID, m.Size)
 	}
 	args := []string{
 		pid,
 	}
-	args = append(args, strings.Fields(mappingBuffer.String())...)
+	// replace \n with " " because newuidmap expects it that way
+	args = append(args, strings.Fields(strings.ReplaceAll(mapStr, "\n", " "))...)
+
 	cmd := exec.Command(path, args...)
+	logrus.Infof("running %s", cmd)
 
 	output := new(bytes.Buffer)
 	cmd.Stdout, cmd.Stderr = output, output
@@ -164,7 +165,7 @@ func GetSubIDMappings(uid, gid uint32, user, group string) ([]Mapping, []Mapping
 }
 
 func newIDMappings(uid, gid uint32, username, group string) (uidmap []Mapping, gidmap []Mapping, err error) {
-	uidFile, err := os.Open(subgidFile)
+	uidFile, err := os.Open(subuidFile)
 	if err != nil {
 		return uidmap, gidmap, err
 	}

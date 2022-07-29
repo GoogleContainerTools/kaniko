@@ -15,6 +15,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/idtools"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -123,38 +124,28 @@ func (c *Cmd) Start() error {
 		uid := os.Getuid()
 		gid := os.Getgid()
 
-		uidmap, gidmap := []idtools.Mapping{}, []idtools.Mapping{}
-		if uid != 0 {
-			u, err := util.LookupUser("/", fmt.Sprint(uid))
-			if err != nil {
-				return fmt.Errorf("lookup user for %v: %w", uid, err)
-			}
-
-			group, err := util.LookupGroup("/", fmt.Sprint(gid))
-			if err != nil {
-				return fmt.Errorf("lookup group for %v: %w", gid, err)
-			}
-
-			uidmap, gidmap, err = idtools.GetSubIDMappings(uint32(uid), uint32(gid), u.Username, group.Name)
-			if err != nil {
-				return fmt.Errorf("getting subid mappings: %w", err)
-			}
-
-			// Map our UID and GID, then the subuid and subgid ranges,
-			// consecutively, starting at 0, to get the mappings to use for
-			// a copy of ourselves.
-			uidmap = append([]idtools.Mapping{{HostID: uint32(uid), ContainerID: 0, Size: 1}}, uidmap...)
-			gidmap = append([]idtools.Mapping{{HostID: uint32(gid), ContainerID: 0, Size: 1}}, gidmap...)
-		} else {
-			// Read the set of ID mappings that we're currently using.
-			uidmap, gidmap, err = idtools.GetHostIDMappings("")
-			if err != nil {
-				return fmt.Errorf("getting hostID mappings: %w", err)
-			}
+		u, err := util.LookupUser("/", fmt.Sprint(uid))
+		if err != nil {
+			return fmt.Errorf("lookup user for %v: %w", uid, err)
 		}
 
+		group, err := util.LookupGroup("/", fmt.Sprint(gid))
+		if err != nil {
+			return fmt.Errorf("lookup group for %v: %w", gid, err)
+		}
+
+		uidmap, gidmap, err := idtools.GetSubIDMappings(uint32(uid), uint32(gid), u.Username, group.Name)
+		if err != nil {
+			logrus.Warnf("getting subid mappings failed, fall back to single mapping")
+		}
+		// Map our UID and GID, then the subuid and subgid ranges,
+		// consecutively, starting at 0, to get the mappings to use for
+		// a copy of ourselves.
+		uidmap = append([]idtools.Mapping{{HostID: uint32(uid), ContainerID: 0, Size: 1}}, uidmap...)
+		gidmap = append([]idtools.Mapping{{HostID: uint32(gid), ContainerID: 0, Size: 1}}, gidmap...)
+
 		if err = idtools.SetUidMap(pid, uidmap); err != nil {
-			err = fmt.Errorf("apply subuid mappings: %w", err)
+			err = fmt.Errorf("apply subuid mapping: %w", err)
 			fmt.Fprint(continueWriter, err)
 			return err
 		}
@@ -167,7 +158,7 @@ func (c *Cmd) Start() error {
 		}
 
 		if err = idtools.SetGidMap(pid, gidmap); err != nil {
-			err = fmt.Errorf("apply subgid mappings: %w", err)
+			err = fmt.Errorf("apply subgid mapping: %w", err)
 			fmt.Fprint(continueWriter, err)
 			return err
 		}
@@ -184,9 +175,10 @@ func (c *Cmd) Start() error {
 // childWait will be executed before any unshare Command is run.
 func childWait() {
 	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 	// early return if we were not called from unshare.Command()
 	if os.Getenv(insideUnshareCommandKey) == "" {
+		// unlock threads if we are not in unshared environment
+		runtime.UnlockOSThread()
 		return
 	}
 
@@ -227,6 +219,24 @@ func writeToSetGroups(pid int, val string) error {
 	_, err = f.Write([]byte(val))
 	if err != nil {
 		return fmt.Errorf("writing %v to %v: %w", val, path, err)
+	}
+	return nil
+}
+
+// write to proc map file will write 0 {UID,GID} 1 to /proc/pid/{uid,gid}_map
+// fileType is uid_map or gid_map
+func writeToProcMapFile(pid int, uidOrGid uint32, fileType string) error {
+	path := fmt.Sprintf("/proc/%d/%s", pid, fileType)
+	f, err := os.OpenFile(path, os.O_TRUNC|os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	mapStr := fmt.Sprintf("0 %d 1", pid)
+	_, err = f.Write([]byte(mapStr))
+	if err != nil {
+		return fmt.Errorf("writing to %v: %w", path, err)
 	}
 	return nil
 }

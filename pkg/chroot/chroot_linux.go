@@ -19,6 +19,7 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/unshare"
 	"github.com/docker/docker/pkg/reexec"
+	mobymount "github.com/moby/sys/mount"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -79,7 +80,6 @@ type config struct {
 
 // Run will execute the cmd inside a chrooted and newly created namespace environment
 func Run(cmd *exec.Cmd, newRoot string) error {
-
 	// lockOSThread because changing the thread would kick us out of the namespaces
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -99,7 +99,6 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 	}
 
 	unshareCmd := unshare.Command(syscall.CLONE_NEWUSER|syscall.CLONE_NEWNS, parentProcess)
-
 	unshareCmd.Stderr, unshareCmd.Stdout, unshareCmd.Stdin = os.Stderr, os.Stdout, os.Stdin
 	sysProcAttr := unshareCmd.SysProcAttr
 	if sysProcAttr == nil {
@@ -109,13 +108,15 @@ func Run(cmd *exec.Cmd, newRoot string) error {
 
 	err = copyConfigIntoPipeAndStartChild(unshareCmd, &c, confReader, confWriter)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error running unshare cmd: %v\n", err)
-		os.Exit(1)
+		err = fmt.Errorf("running unshare cmd: %w", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return err
 	}
 	err = unshareCmd.Wait()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error waiting for unshare cmd: %v\n", err)
-		os.Exit(1)
+		err = fmt.Errorf("error waiting for unshare cmd: %w", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return err
 	}
 	return nil
 }
@@ -132,6 +133,21 @@ func runParentProcessMain() {
 		fmt.Fprintf(os.Stderr, "error unmarshal config from pipe: %v\n", err)
 		os.Exit(1)
 	}
+
+	// TODO: remove debug stuff
+	logrus.Infof("i am %d", os.Getuid())
+	uidmap, err := os.Open("/proc/self/uid_map")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open uid_map for inspection: %v\n", err)
+		os.Exit(1)
+	}
+	uidmapContent, err := io.ReadAll(uidmap)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reading uid_map for inspection: %v\n", err)
+		os.Exit(1)
+	}
+	logrus.Infof("uid_map content: %s", uidmapContent)
+
 	// create mounts for pivot_root
 	undo, err := prepareMounts(c.NewRoot)
 	if err != nil {
@@ -162,7 +178,7 @@ func runParentProcessMain() {
 	}
 	defer confWriter.Close()
 	defer confReader.Close()
-	
+
 	// delay pid namespace until here, because pid would be wrong otherwise
 	childCmd := unshare.Command(syscall.CLONE_NEWPID, childProcess)
 
@@ -211,7 +227,7 @@ func runChildProcessMain() {
 	}
 }
 
-// copyConfigIntoPipeAndStartChild will marshal the config into a pipe which will be passed into child.
+// copyConfigIntoPipeAndStartChild will marshal the config into a pipe which will be passed to child.
 // After that, the child will start, but not wait for it.
 func copyConfigIntoPipeAndStartChild(child *unshare.Cmd, conf *config, confReader, confWriter *os.File) error {
 	// marshal config for communication with subprocess
@@ -289,7 +305,15 @@ func prepareMounts(newRoot string, additionalMounts ...string) (undoMount func()
 	for _, add := range additionalMounts {
 		mounts[add] = mountOpts{flags: bindFlags}
 	}
-
+	// Create a new mount namespace in which to do the things we're doing.
+	if err := unix.Unshare(unix.CLONE_NEWNS); err != nil {
+		return nil, fmt.Errorf("error creating new mount namespace for %v: %w", newRoot, err)
+	}
+	// before mounting, make sure to make all mounts private
+	err = mobymount.MakeRPrivate("/")
+	if err != nil {
+		return nil, fmt.Errorf("marking mounts on / private: %w", err)
+	}
 	for src, opts := range mounts {
 		srcinfo, err := os.Lstat(src)
 		if err != nil {

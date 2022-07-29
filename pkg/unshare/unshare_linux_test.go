@@ -81,7 +81,7 @@ func TestUnshareIDMappings(t *testing.T) {
 			unshareFlags: syscall.CLONE_NEWUSER,
 			want: func() report {
 				var r report
-				r.Uidmap, r.Gidmap = expectedRootlessMappings(t)
+				r.Uidmap, r.Gidmap = expectedMappings(t)
 				// when using user namespace we want to be root inside there
 				r.Uid = 0
 				return r
@@ -127,7 +127,7 @@ func getNamespaceLinks() (map[string]string, error) {
 	return found, nil
 }
 
-func expectedRootlessMappings(t *testing.T) ([]idtools.Mapping, []idtools.Mapping) {
+func expectedMappings(t *testing.T) ([]idtools.Mapping, []idtools.Mapping) {
 	u := testutil.GetCurrentUser(t)
 	uid, err := strconv.Atoi(u.Uid)
 	if err != nil {

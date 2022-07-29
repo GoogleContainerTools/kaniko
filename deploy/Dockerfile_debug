@@ -52,7 +52,8 @@ RUN echo "root:x:0:0:root:/root:/sbin/nologin" > /etc/passwd
 
 # idmap runnable without --privileged (but still requires seccomp=unconfined apparmor=unconfined)
 FROM alpine AS idmap
-ARG SHADOW_VERSION
+ARG SHADOW_VERSION="v4.11.1"
+ARG PATCHELF_VERSION="0.15.0"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apk add --no-cache automake autoconf gettext git build-base libcap-dev libtool make gettext gettext-dev linux-pam-dev expect byacc
 RUN git clone https://github.com/shadow-maint/shadow.git /shadow
@@ -94,13 +95,7 @@ COPY files/nsswitch.conf /etc/nsswitch.conf
 COPY --from=passwd /etc/passwd /etc/group /etc/
 COPY --from=idmap /shadow/src/newuidmap /shadow/src/newgidmap /kaniko/
 # shadowutils is not a static binary, need to use musl libc
-COPY --from=idmap /lib/ld-musl-*.so.1 /lib/libc.musl-*.so.1 /lib/
-
-
-COPY --from=wildwildangel/setcap-static:sha-5657804 /setcap-static /kaniko/setcap
-# set setuid and setgid capabilties on newuidmap and newgidmap
-RUN ["/kaniko/setcap", "cap_setuid+eip", "/kaniko/newuidmap"]
-RUN ["/kaniko/setcap", "cap_setgid+eip", "/kaniko/newgidmap"]
+COPY --from=idmap /lib/ld-musl-*.so.1 /lib/libc.musl-*.so.1 /kaniko/lib/
 
 USER root
 ENV PATH /usr/local/bin:/kaniko:/busybox
