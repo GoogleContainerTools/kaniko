@@ -126,12 +126,16 @@ func (c *Cmd) Start() error {
 
 		u, err := util.LookupUser("/", fmt.Sprint(uid))
 		if err != nil {
-			return fmt.Errorf("lookup user for %v: %w", uid, err)
+			err = fmt.Errorf("lookup user for %v: %w", uid, err)
+			fmt.Fprint(continueWriter, err)
+			return err
 		}
 
 		group, err := util.LookupGroup("/", fmt.Sprint(gid))
 		if err != nil {
-			return fmt.Errorf("lookup group for %v: %w", gid, err)
+			err = fmt.Errorf("lookup group for %v: %w", gid, err)
+			fmt.Fprint(continueWriter, err)
+			return err
 		}
 
 		uidmap, gidmap, err := idtools.GetSubIDMappings(uint32(uid), uint32(gid), u.Username, group.Name)
