@@ -91,7 +91,7 @@ jobs:
 
     # Sign images if not a PR.
     - if: github.event_name != 'pull_request'
-      uses: sigstore/cosign-installer@d6a3abf1bdea83574e28d40543793018b6035605
+      uses: sigstore/cosign-installer@09a077b27eb1310dcfb21981bee195b30ce09de0
       with:
         cosign-release: 'v1.4.1'
     - if: github.event_name != 'pull_request'
