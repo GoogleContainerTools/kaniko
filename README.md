@@ -400,7 +400,7 @@ as a remote image destination:
 ### Caching
 
 #### Caching Layers
-kaniko can cache layers created by `RUN` (and `COPY`, configured by the `--cache-copy-layers` flag) commands in a remote repository.
+kaniko can cache layers created by `RUN`(configured by flag `--cache-run-layers`) and `COPY` (configured by flag `--cache-copy-layers`) commands in a remote repository.
 Before executing a command, kaniko checks the cache for the layer.
 If it exists, kaniko will pull and extract the cached layer instead of executing the command.
 If not, kaniko will execute the command and then push the newly created layer to the cache.
@@ -668,6 +668,10 @@ _This flag must be used in conjunction with the `--cache=true` flag._
 #### --cache-copy-layers
 
 Set this flag to cache copy layers.
+
+#### --cache-run-layers
+
+Set this flag to cache run layers (default=true).
 
 #### --cache-ttl duration
 

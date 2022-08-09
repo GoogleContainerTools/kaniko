@@ -77,6 +77,7 @@ type KanikoOptions struct {
 	SkipUnusedStages       bool
 	RunV2                  bool
 	CacheCopyLayers        bool
+	CacheRunLayers         bool
 	ForceBuildMetadata     bool
 }
 

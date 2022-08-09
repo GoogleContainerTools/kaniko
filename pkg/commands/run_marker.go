@@ -28,8 +28,9 @@ import (
 
 type RunMarkerCommand struct {
 	BaseCommand
-	cmd   *instructions.RunCommand
-	Files []string
+	cmd      *instructions.RunCommand
+	Files    []string
+	shdCache bool
 }
 
 func (r *RunMarkerCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
@@ -77,7 +78,7 @@ func (r *RunMarkerCommand) RequiresUnpackedFS() bool {
 }
 
 func (r *RunMarkerCommand) ShouldCacheOutput() bool {
-	return true
+	return r.shdCache
 }
 
 func (r *RunMarkerCommand) ShouldDetectDeletedFiles() bool {
