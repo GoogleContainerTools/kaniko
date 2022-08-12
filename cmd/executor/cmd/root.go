@@ -260,7 +260,6 @@ func checkKanikoDir(dir string) error {
 		if err := os.RemoveAll(constants.DefaultKanikoPath); err != nil {
 			return err
 		}
-		
 		// After remove DefaultKankoPath, the DOKCER_CONFIG env will point to a non-exist dir, so we should update DOCKER_CONFIG env to new dir
 		if err := os.Setenv("DOCKER_CONFIG", filepath.Join(dir, "/.docker")); err != nil {
 			return err
