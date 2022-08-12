@@ -261,7 +261,7 @@ func checkKanikoDir(dir string) error {
 			return err
 		}
 		
-		// After Remove DefaultKankoPath, the DOKCER_CONFIG env will point to a non-exit dir, so we should update DOCKER_CONFIG env to user defined kaniko dir
+		// After remove DefaultKankoPath, the DOKCER_CONFIG env will point to a non-exist dir, so we should update DOCKER_CONFIG env to new dir
 		if err := os.Setenv("DOCKER_CONFIG", filepath.Join(dir, "/.docker")); err != nil {
 			return err
 		}
