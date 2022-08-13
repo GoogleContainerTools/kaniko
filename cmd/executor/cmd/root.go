@@ -223,6 +223,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.RunV2, "use-new-run", "", false, "Use the experimental run implementation for detecting changes without requiring file system snapshots.")
 	RootCmd.PersistentFlags().Var(&opts.Git, "git", "Branch to clone if build context is a git repository")
 	RootCmd.PersistentFlags().BoolVarP(&opts.CacheCopyLayers, "cache-copy-layers", "", false, "Caches copy layers")
+	RootCmd.PersistentFlags().BoolVarP(&opts.CacheRunLayers, "cache-run-layers", "", true, "Caches run layers")
 	RootCmd.PersistentFlags().VarP(&opts.IgnorePaths, "ignore-path", "", "Ignore these paths when taking a snapshot. Set it repeatedly for multiple paths.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.ForceBuildMetadata, "force-build-metadata", "", false, "Force add metadata layers to build image")
 
@@ -259,6 +260,10 @@ func checkKanikoDir(dir string) error {
 		}
 
 		if err := os.RemoveAll(constants.DefaultKanikoPath); err != nil {
+			return err
+		}
+		// After remove DefaultKankoPath, the DOKCER_CONFIG env will point to a non-exist dir, so we should update DOCKER_CONFIG env to new dir
+		if err := os.Setenv("DOCKER_CONFIG", filepath.Join(dir, "/.docker")); err != nil {
 			return err
 		}
 	}

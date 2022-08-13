@@ -913,7 +913,7 @@ COPY %s foo.txt
 				expectedCacheKeys: []string{copyCommandCacheKey},
 				// CachingCopyCommand is not pushed to the cache
 				pushedCacheKeys: []string{},
-				commands:        getCommands(util.FileContext{Root: dir}, cmds, true),
+				commands:        getCommands(util.FileContext{Root: dir}, cmds, true, false),
 				fileName:        filename,
 			}
 		}(),
@@ -970,7 +970,7 @@ COPY %s foo.txt
 				rootDir:           dir,
 				expectedCacheKeys: []string{hash},
 				pushedCacheKeys:   []string{hash},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds, true),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, true, false),
 				fileName:          filename,
 			}
 		}(),
@@ -1034,7 +1034,7 @@ COPY %s bar.txt
 			cmds := stage.Commands
 			return testcase{
 				description: "cached run command followed by uncached copy command results in consistent read and write hashes",
-				opts:        &config.KanikoOptions{Cache: true, CacheCopyLayers: true},
+				opts:        &config.KanikoOptions{Cache: true, CacheCopyLayers: true, CacheRunLayers: true},
 				rootDir:     dir,
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
 				layerCache: &fakeLayerCache{
@@ -1045,7 +1045,7 @@ COPY %s bar.txt
 				// hash1 is the read cachekey for the first layer
 				expectedCacheKeys: []string{hash1, hash2},
 				pushedCacheKeys:   []string{hash2},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds, true),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, true, true),
 			}
 		}(),
 		func() testcase {
@@ -1108,7 +1108,7 @@ RUN foobar
 			cmds := stage.Commands
 			return testcase{
 				description: "copy command followed by cached run command results in consistent read and write hashes",
-				opts:        &config.KanikoOptions{Cache: true},
+				opts:        &config.KanikoOptions{Cache: true, CacheRunLayers: true},
 				rootDir:     dir,
 				config:      &v1.ConfigFile{Config: v1.Config{WorkingDir: destDir}},
 				layerCache: &fakeLayerCache{
@@ -1118,7 +1118,7 @@ RUN foobar
 				image:             image,
 				expectedCacheKeys: []string{runHash},
 				pushedCacheKeys:   []string{},
-				commands:          getCommands(util.FileContext{Root: dir}, cmds, false),
+				commands:          getCommands(util.FileContext{Root: dir}, cmds, false, true),
 			}
 		}(),
 		func() testcase {
@@ -1331,7 +1331,7 @@ func assertCacheKeys(t *testing.T, expectedCacheKeys, actualCacheKeys []string, 
 	}
 }
 
-func getCommands(fileContext util.FileContext, cmds []instructions.Command, cacheCopy bool) []commands.DockerCommand {
+func getCommands(fileContext util.FileContext, cmds []instructions.Command, cacheCopy, cacheRun bool) []commands.DockerCommand {
 	outCommands := make([]commands.DockerCommand, 0)
 	for _, c := range cmds {
 		cmd, err := commands.GetCommand(
@@ -1339,6 +1339,7 @@ func getCommands(fileContext util.FileContext, cmds []instructions.Command, cach
 			fileContext,
 			false,
 			cacheCopy,
+			cacheRun,
 		)
 		if err != nil {
 			panic(err)
@@ -1434,7 +1435,7 @@ func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
 			}
 
 			fc := util.FileContext{Root: "workspace"}
-			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true)
+			copyCommand, err := commands.GetCommand(instructions[0], fc, false, true, true)
 			if err != nil {
 				t.Fatal(err)
 			}
