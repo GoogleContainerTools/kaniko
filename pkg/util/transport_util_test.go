@@ -111,7 +111,7 @@ func Test_makeTransport(t *testing.T) {
 		},
 		{
 			name: "RegistriesClientCertificates set for another registry",
-			opts: config.RegistryOptions{RegistriesClientCertificates: map[string]string{fmt.Sprintf("other.%s=", registryName): "/path/to/the/certificate.cert"}},
+			opts: config.RegistryOptions{RegistriesClientCertificates: map[string]string{fmt.Sprintf("other.%s", registryName): "/path/to/client/certificate.cert,/path/to/key.key,/path/to/extra.crt"}},
 			check: func(config *tls.Config, pool *mockedCertPool) {
 				if len(config.Certificates) != 0 {
 					t.Errorf("makeTransport().RegistriesClientCertificates certificate loaded for other registry")
