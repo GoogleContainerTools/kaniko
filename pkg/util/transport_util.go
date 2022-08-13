@@ -98,7 +98,7 @@ func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundT
 	if clientCertificatePath := opts.RegistriesClientCertificates[registryName]; clientCertificatePath != "" {
 		certFiles := strings.Split(clientCertificatePath, ",")
 		if len(certFiles) != 2 {
-			logrus.Warnf("Failed to load client certificate/key '%s' for %s, format is %s=/path/to/cert,/path/to/key\n", clientCertificatePath, registryName, registryName)
+			logrus.Warnf("Failed to load client certificate/key '%s=%s', expected format: %s=/path/to/cert,/path/to/key\n", registryName, clientCertificatePath, registryName)
 		} else {
 			cert, err := systemKeyPairLoader.load(certFiles[0], certFiles[1])
 			if err != nil {
