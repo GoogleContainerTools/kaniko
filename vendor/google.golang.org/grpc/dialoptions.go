@@ -20,12 +20,11 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 
 	"google.golang.org/grpc/backoff"
-	"google.golang.org/grpc/balancer"
+	"google.golang.org/grpc/channelz"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/internal"
@@ -36,6 +35,15 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
+func init() {
+	internal.AddExtraDialOptions = func(opt ...DialOption) {
+		extraDialOptions = append(extraDialOptions, opt...)
+	}
+	internal.ClearExtraDialOptions = func() {
+		extraDialOptions = nil
+	}
+}
+
 // dialOptions configure a Dial call. dialOptions are set by the DialOption
 // values passed to Dial.
 type dialOptions struct {
@@ -45,19 +53,17 @@ type dialOptions struct {
 	chainUnaryInts  []UnaryClientInterceptor
 	chainStreamInts []StreamClientInterceptor
 
-	cp              Compressor
-	dc              Decompressor
-	bs              internalbackoff.Strategy
-	block           bool
-	returnLastError bool
-	timeout         time.Duration
-	scChan          <-chan ServiceConfig
-	authority       string
-	copts           transport.ConnectOptions
-	callOptions     []CallOption
-	// This is used by WithBalancerName dial option.
-	balancerBuilder             balancer.Builder
-	channelzParentID            int64
+	cp                          Compressor
+	dc                          Decompressor
+	bs                          internalbackoff.Strategy
+	block                       bool
+	returnLastError             bool
+	timeout                     time.Duration
+	scChan                      <-chan ServiceConfig
+	authority                   string
+	copts                       transport.ConnectOptions
+	callOptions                 []CallOption
+	channelzParentID            *channelz.Identifier
 	disableServiceConfig        bool
 	disableRetry                bool
 	disableHealthCheck          bool
@@ -72,6 +78,8 @@ type dialOptions struct {
 type DialOption interface {
 	apply(*dialOptions)
 }
+
+var extraDialOptions []DialOption
 
 // EmptyDialOption does not alter the dial configuration. It can be embedded in
 // another structure to build custom dial options.
@@ -195,25 +203,6 @@ func WithDecompressor(dc Decompressor) DialOption {
 	})
 }
 
-// WithBalancerName sets the balancer that the ClientConn will be initialized
-// with. Balancer registered with balancerName will be used. This function
-// panics if no balancer was registered by balancerName.
-//
-// The balancer cannot be overridden by balancer option specified by service
-// config.
-//
-// Deprecated: use WithDefaultServiceConfig and WithDisableServiceConfig
-// instead.  Will be removed in a future 1.x release.
-func WithBalancerName(balancerName string) DialOption {
-	builder := balancer.Get(balancerName)
-	if builder == nil {
-		panic(fmt.Sprintf("grpc.WithBalancerName: no balancer is registered for name %v", balancerName))
-	}
-	return newFuncDialOption(func(o *dialOptions) {
-		o.balancerBuilder = builder
-	})
-}
-
 // WithServiceConfig returns a DialOption which has a channel to read the
 // service configuration.
 //
@@ -304,8 +293,8 @@ func WithReturnConnectionError() DialOption {
 // WithCredentialsBundle or WithPerRPCCredentials) which require transport
 // security is incompatible and will cause grpc.Dial() to fail.
 //
-// Deprecated: use WithTransportCredentials and insecure.NewCredentials() instead.
-// Will be supported throughout 1.x.
+// Deprecated: use WithTransportCredentials and insecure.NewCredentials()
+// instead. Will be supported throughout 1.x.
 func WithInsecure() DialOption {
 	return newFuncDialOption(func(o *dialOptions) {
 		o.copts.TransportCredentials = insecure.NewCredentials()
@@ -402,7 +391,7 @@ func WithDialer(f func(string, time.Duration) (net.Conn, error)) DialOption {
 // all the RPCs and underlying network connections in this ClientConn.
 func WithStatsHandler(h stats.Handler) DialOption {
 	return newFuncDialOption(func(o *dialOptions) {
-		o.copts.StatsHandler = h
+		o.copts.StatsHandlers = append(o.copts.StatsHandlers, h)
 	})
 }
 
@@ -498,7 +487,7 @@ func WithAuthority(a string) DialOption {
 //
 // Notice: This API is EXPERIMENTAL and may be changed or removed in a
 // later release.
-func WithChannelzParentID(id int64) DialOption {
+func WithChannelzParentID(id *channelz.Identifier) DialOption {
 	return newFuncDialOption(func(o *dialOptions) {
 		o.channelzParentID = id
 	})
