@@ -231,9 +231,9 @@ func addKanikoOptionsFlags() {
 
 	// Deprecated flags.
 	// TODO: Remove after >= 2.0.0
-	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotModeDeprecated, "snapshotMode", "", "deprecated", "This flag is deprecated. Please use '--snapshot-mode'.")
-	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatformDeprecated, "customPlatform", "", "deprecated", "This flag is deprecated. Please use '--custom-platform'.")
-	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "deprecated", "This flag is deprecated. Please use '--tar-path'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotModeDeprecated, "snapshotMode", "", "", "This flag is deprecated. Please use '--snapshot-mode'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatformDeprecated, "customPlatform", "", "", "This flag is deprecated. Please use '--custom-platform'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "This flag is deprecated. Please use '--tar-path'.")
 
 	// Allow setting --registry-mirror using an environment variable.
 	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
