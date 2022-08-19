@@ -285,7 +285,7 @@ func checkContained() bool {
 // checkNoDeprecatedFlags return an error if deprecated flags are used.
 func checkNoDeprecatedFlags() error {
 	if opts.CustomPlatformDeprecated != "" {
-		return errors.New("flag --customPlatform is deprecated. Use: --custom-platform")
+		return errors.New("flag --customPlatform is deprecated. Use: --custom-platform : " + opts.CustomPlatformDeprecated)
 	}
 	if opts.SnapshotModeDeprecated != "" {
 		return errors.New("flag --snapshotMode is deprecated. Use: --snapshot-mode")
