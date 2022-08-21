@@ -19,6 +19,7 @@ package util
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"strings"
 
 	"io/ioutil"
@@ -78,7 +79,7 @@ func init() {
 	systemKeyPairLoader = &X509KeyPairLoader{}
 }
 
-func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundTripper {
+func MakeTransport(opts config.RegistryOptions, registryName string) (http.RoundTripper, error) {
 	// Create a transport to set our user-agent.
 	var tr http.RoundTripper = http.DefaultTransport.(*http.Transport).Clone()
 	if opts.SkipTLSVerify || opts.SkipTLSVerifyRegistries.Contains(registryName) {
@@ -98,16 +99,16 @@ func MakeTransport(opts config.RegistryOptions, registryName string) http.RoundT
 	if clientCertificatePath := opts.RegistriesClientCertificates[registryName]; clientCertificatePath != "" {
 		certFiles := strings.Split(clientCertificatePath, ",")
 		if len(certFiles) != 2 {
-			logrus.Warnf("Failed to load client certificate/key '%s=%s', expected format: %s=/path/to/cert,/path/to/key\n", registryName, clientCertificatePath, registryName)
+			return nil, fmt.Errorf("failed to load client certificate/key '%s=%s', expected format: %s=/path/to/cert,/path/to/key", registryName, clientCertificatePath, registryName)
 		} else {
 			cert, err := systemKeyPairLoader.load(certFiles[0], certFiles[1])
 			if err != nil {
-				logrus.Warnf("Failed to load client certificate/key '%s' for %s: %s\n", clientCertificatePath, registryName, err)
+				return nil, fmt.Errorf("failed to load client certificate/key '%s' for %s: %w", clientCertificatePath, registryName, err)
 			} else {
 				tr.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{cert}
 			}
 		}
 	}
 
-	return tr
+	return tr, nil
 }
