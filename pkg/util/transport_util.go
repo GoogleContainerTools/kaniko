@@ -88,7 +88,7 @@ func MakeTransport(opts config.RegistryOptions, registryName string) (http.Round
 		}
 	} else if certificatePath := opts.RegistriesCertificates[registryName]; certificatePath != "" {
 		if err := systemCertLoader.append(certificatePath); err != nil {
-			logrus.WithError(err).Warnf("Failed to load certificate %s for %s\n", certificatePath, registryName)
+			return nil, fmt.Errorf("failed to load certificate %s for %s: %w", certificatePath, registryName, err)
 		} else {
 			tr.(*http.Transport).TLSClientConfig = &tls.Config{
 				RootCAs: systemCertLoader.value(),
