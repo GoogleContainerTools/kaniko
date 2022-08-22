@@ -62,11 +62,30 @@ func init() {
 	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "Please use ignore-var-run instead.")
 }
 
+func valdiateFlags() {
+	checkNoDeprecatedFlags()
+
+	// Allow setting --registry-mirror using an environment variable.
+	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
+		opts.RegistryMirrors.Set(val)
+	}
+
+	// Default the custom platform flag to our current platform, and validate it.
+	if opts.CustomPlatform == "" {
+		opts.CustomPlatform = platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
+	}
+	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
+		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
+	}
+}
+
 // RootCmd is the kaniko command that is run
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
+
+			valdiateFlags()
 
 			// Command line flag takes precedence over the KANIKO_DIR environment variable.
 			dir := config.KanikoDir
@@ -85,7 +104,7 @@ var RootCmd = &cobra.Command{
 			}
 
 			if !opts.NoPush && len(opts.Destinations) == 0 {
-				return errors.New("You must provide --destination, or use --no-push")
+				return errors.New("you must provide --destination, or use --no-push")
 			}
 			if err := cacheFlagsValid(); err != nil {
 				return errors.Wrap(err, "cache flags invalid")
@@ -97,10 +116,10 @@ var RootCmd = &cobra.Command{
 				return errors.Wrap(err, "error resolving dockerfile path")
 			}
 			if len(opts.Destinations) == 0 && opts.ImageNameDigestFile != "" {
-				return errors.New("You must provide --destination if setting ImageNameDigestFile")
+				return errors.New("you must provide --destination if setting ImageNameDigestFile")
 			}
 			if len(opts.Destinations) == 0 && opts.ImageNameTagDigestFile != "" {
-				return errors.New("You must provide --destination if setting ImageNameTagDigestFile")
+				return errors.New("you must provide --destination if setting ImageNameTagDigestFile")
 			}
 			// Update ignored paths
 			if opts.IgnoreVarRun {
@@ -184,8 +203,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().StringVarP(&ctxSubPath, "context-sub-path", "", "", "Sub path within the given context.")
 	RootCmd.PersistentFlags().StringVarP(&opts.Bucket, "bucket", "b", "", "Name of the GCS bucket from which to access build context as tarball.")
 	RootCmd.PersistentFlags().VarP(&opts.Destinations, "destination", "d", "Registry the final image should be pushed to. Set it repeatedly for multiple destinations.")
-	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshotMode", "", "full", "Change the file attributes inspected during snapshotting")
-	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "customPlatform", "", "", "Specify the build platform if different from the current host")
+	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotMode, "snapshot-mode", "", "full", "Change the file attributes inspected during snapshotting")
+	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "custom-platform", "", "", "Specify the build platform if different from the current host")
 	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Insecure, "insecure", "", false, "Push to insecure registry using plain HTTP")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerify, "skip-tls-verify", "", false, "Push to insecure registry ignoring TLS verify")
@@ -194,7 +213,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().IntVar(&opts.PushRetry, "push-retry", 0, "Number of retries for the push operation")
 	RootCmd.PersistentFlags().IntVar(&opts.ImageFSExtractRetry, "image-fs-extract-retry", 0, "Number of retries for image FS extraction")
 	RootCmd.PersistentFlags().StringVarP(&opts.KanikoDir, "kaniko-dir", "", constants.DefaultKanikoPath, "Path to the kaniko directory, this takes precedence over the KANIKO_DIR environment variable.")
-	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "Path to save the image in as a tarball instead of pushing")
+	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tar-path", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Reproducible, "reproducible", "", false, "Strip timestamps out of the image to make it reproducible")
 	RootCmd.PersistentFlags().StringVarP(&opts.Target, "target", "", "", "Set the target build stage to build")
@@ -225,18 +244,10 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.IgnorePaths, "ignore-path", "", "Ignore these paths when taking a snapshot. Set it repeatedly for multiple paths.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.ForceBuildMetadata, "force-build-metadata", "", false, "Force add metadata layers to build image")
 
-	// Allow setting --registry-mirror using an environment variable.
-	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
-		opts.RegistryMirrors.Set(val)
-	}
-
-	// Default the custom platform flag to our current platform, and validate it.
-	if opts.CustomPlatform == "" {
-		opts.CustomPlatform = platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
-	}
-	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
-		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
-	}
+	// Deprecated flags.
+	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotModeDeprecated, "snapshotMode", "", "", "This flag is deprecated. Please use '--snapshot-mode'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatformDeprecated, "customPlatform", "", "", "This flag is deprecated. Please use '--custom-platform'.")
+	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "This flag is deprecated. Please use '--tar-path'.")
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -270,6 +281,26 @@ func checkKanikoDir(dir string) error {
 
 func checkContained() bool {
 	return proc.GetContainerRuntime(0, 0) != proc.RuntimeNotFound
+}
+
+// checkNoDeprecatedFlags return an error if deprecated flags are used.
+func checkNoDeprecatedFlags() {
+
+	// In version >=2.0.0 make it fail (`Warn` -> `Fatal`)
+	if opts.CustomPlatformDeprecated != "" {
+		logrus.Warn("Flag --customPlatform is deprecated. Use: --custom-platform")
+		opts.CustomPlatform = opts.CustomPlatformDeprecated
+	}
+
+	if opts.SnapshotModeDeprecated != "" {
+		logrus.Warn("Flag --snapshotMode is deprecated. Use: --snapshot-mode")
+		opts.SnapshotMode = opts.SnapshotModeDeprecated
+	}
+
+	if opts.TarPathDeprecated != "" {
+		logrus.Warn("Flag --tarPath is deprecated. Use: --tar-path")
+		opts.TarPath = opts.TarPathDeprecated
+	}
 }
 
 // cacheFlagsValid makes sure the flags passed in related to caching are valid

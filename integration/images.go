@@ -82,7 +82,7 @@ var additionalDockerFlagsMap = map[string][]string{
 var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_add":                    {"--single-snapshot"},
 	"Dockerfile_test_run_new":                {"--use-new-run=true"},
-	"Dockerfile_test_run_redo":               {"--snapshotMode=redo"},
+	"Dockerfile_test_run_redo":               {"--snapshot-mode=redo"},
 	"Dockerfile_test_scratch":                {"--single-snapshot"},
 	"Dockerfile_test_maintainer":             {"--single-snapshot"},
 	"Dockerfile_test_target":                 {"--target=second"},
