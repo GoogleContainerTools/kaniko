@@ -62,11 +62,30 @@ func init() {
 	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "Please use ignore-var-run instead.")
 }
 
+func valdiateFlags() {
+	checkNoDeprecatedFlags()
+
+	// Allow setting --registry-mirror using an environment variable.
+	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
+		opts.RegistryMirrors.Set(val)
+	}
+
+	// Default the custom platform flag to our current platform, and validate it.
+	if opts.CustomPlatform == "" {
+		opts.CustomPlatform = platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
+	}
+	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
+		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
+	}
+}
+
 // RootCmd is the kaniko command that is run
 var RootCmd = &cobra.Command{
 	Use: "executor",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
+
+			valdiateFlags()
 
 			// Command line flag takes precedence over the KANIKO_DIR environment variable.
 			dir := config.KanikoDir
@@ -82,10 +101,6 @@ var RootCmd = &cobra.Command{
 
 			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
 				return err
-			}
-
-			if err := checkNoDeprecatedFlags(); err != nil {
-				return errors.Wrap(err, "deprecated flags used")
 			}
 
 			if !opts.NoPush && len(opts.Destinations) == 0 {
@@ -230,23 +245,9 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.ForceBuildMetadata, "force-build-metadata", "", false, "Force add metadata layers to build image")
 
 	// Deprecated flags.
-	// TODO: Remove after >= 2.0.0
 	RootCmd.PersistentFlags().StringVarP(&opts.SnapshotModeDeprecated, "snapshotMode", "", "", "This flag is deprecated. Please use '--snapshot-mode'.")
 	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatformDeprecated, "customPlatform", "", "", "This flag is deprecated. Please use '--custom-platform'.")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tarPath", "", "", "This flag is deprecated. Please use '--tar-path'.")
-
-	// Allow setting --registry-mirror using an environment variable.
-	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
-		opts.RegistryMirrors.Set(val)
-	}
-
-	// Default the custom platform flag to our current platform, and validate it.
-	if opts.CustomPlatform == "" {
-		opts.CustomPlatform = platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
-	}
-	if _, err := v1.ParsePlatform(opts.CustomPlatform); err != nil {
-		logrus.Fatalf("Invalid platform %q: %v", opts.CustomPlatform, err)
-	}
 }
 
 // addHiddenFlags marks certain flags as hidden from the executor help text
@@ -283,18 +284,23 @@ func checkContained() bool {
 }
 
 // checkNoDeprecatedFlags return an error if deprecated flags are used.
-func checkNoDeprecatedFlags() error {
+func checkNoDeprecatedFlags() {
+
+	// In version >=2.0.0 make it fail (`Warn` -> `Fatal`)
 	if opts.CustomPlatformDeprecated != "" {
-		return errors.New("flag --customPlatform is deprecated. Use: --custom-platform : " + opts.CustomPlatformDeprecated)
-	}
-	if opts.SnapshotModeDeprecated != "" {
-		return errors.New("flag --snapshotMode is deprecated. Use: --snapshot-mode")
-	}
-	if opts.TarPathDeprecated != "" {
-		return errors.New("flag --tarPath is deprecated. Use: --tar-path")
+		logrus.Warn("Flag --customPlatform is deprecated. Use: --custom-platform")
+		opts.CustomPlatform = opts.CustomPlatformDeprecated
 	}
 
-	return nil
+	if opts.SnapshotModeDeprecated != "" {
+		logrus.Warn("Flag --snapshotMode is deprecated. Use: --snapshot-mode")
+		opts.SnapshotMode = opts.SnapshotModeDeprecated
+	}
+
+	if opts.TarPathDeprecated != "" {
+		logrus.Warn("Flag --tarPath is deprecated. Use: --tar-path")
+		opts.TarPath = opts.TarPathDeprecated
+	}
 }
 
 // cacheFlagsValid makes sure the flags passed in related to caching are valid
