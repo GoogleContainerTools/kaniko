@@ -480,12 +480,6 @@ cache for the layer. If it exists, kaniko will pull and extract the cached layer
 instead of executing the command. If not, kaniko will execute the command and
 then push the newly created layer to the cache.
 
-kaniko can cache layers created by `RUN` (and `COPY`, configured by the
-`--cache-copy-layers` flag) commands in a remote repository. Before executing a
-command, kaniko checks the cache for the layer. If it exists, kaniko will pull
-and extract the cached layer instead of executing the command. If not, kaniko
-will execute the command and then push the newly created layer to the cache.
-
 Note that kaniko cannot read layers from the cache after a cache miss: once a
 layer has not been found in the cache, all subsequent layers are built locally
 without consulting the cache.
