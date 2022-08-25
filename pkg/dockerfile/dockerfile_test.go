@@ -52,7 +52,7 @@ func Test_ParseStages_NoMultistageWithCacheCopy(t *testing.T) {
 	}
 
 	opts := &config.KanikoOptions{
-		DockerfilePath: tmpfile.Name(),
+		DockerfilePath:  tmpfile.Name(),
 		CacheCopyLayers: true,
 	}
 
