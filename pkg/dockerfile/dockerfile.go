@@ -58,6 +58,10 @@ func ParseStages(opts *config.KanikoOptions) ([]instructions.Stage, []instructio
 		return nil, nil, errors.Wrap(err, "parsing dockerfile")
 	}
 
+	if opts.CacheCopyLayers && len(stages) >= 2 {
+		return nil, nil, errors.New("kaniko does not support caching copy layers in multistage builds")
+	}
+
 	metaArgs, err = expandNested(metaArgs, opts.BuildArgs)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "expanding meta ARGs")
