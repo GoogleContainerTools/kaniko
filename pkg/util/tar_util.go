@@ -149,7 +149,7 @@ const (
 )
 
 // writeSecurityXattrToTarHeader writes security.capability
-// xattrs from a a tar header to filesystem
+// xattrs from a tar header to filesystem
 func writeSecurityXattrToToFile(path string, hdr *tar.Header) error {
 	if hdr.Xattrs == nil {
 		return nil
@@ -253,7 +253,7 @@ func UnpackLocalTarArchive(path, dest string) ([]string, error) {
 	return nil, errors.New("path does not lead to local tar archive")
 }
 
-//IsFileLocalTarArchive returns true if the file is a local tar archive
+// IsFileLocalTarArchive returns true if the file is a local tar archive
 func IsFileLocalTarArchive(src string) bool {
 	compressed, _ := fileIsCompressedTar(src)
 	uncompressed := fileIsUncompressedTar(src)

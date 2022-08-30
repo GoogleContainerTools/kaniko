@@ -120,7 +120,7 @@ func filesWithParentDirs(files []string) []string {
 }
 
 // resolveSymlinkAncestor returns the ancestor link of the provided symlink path or returns the
-// the path if it is not a link. The ancestor link is the filenode whose type is a Symlink.
+// path if it is not a link. The ancestor link is the filenode whose type is a Symlink.
 // E.G /baz/boom/bar.txt links to /usr/bin/bar.txt but /baz/boom/bar.txt itself is not a link.
 // Instead /bar/boom is actually a link to /usr/bin. In this case resolveSymlinkAncestor would
 // return /bar/boom.
@@ -147,7 +147,7 @@ loop:
 			// one of its ancestors could be a symlink. We call filepath.EvalSymlinks
 			// to test whether there are any links in the path. If the output of
 			// EvalSymlinks is different than the input we know one of the nodes in the
-			// the path is a link.
+			// path is a link.
 			target, err := filepath.EvalSymlinks(newPath)
 			if err != nil {
 				return "", err
