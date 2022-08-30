@@ -7,7 +7,7 @@
 - fix: Refactor LayersMap to correct old strange code behavior [#2066](https://github.com/GoogleContainerTools/kaniko/pull/2066)
 - Fix missing setuid flags on COPY --from=build operation [#2089](https://github.com/GoogleContainerTools/kaniko/pull/2089)
 - Fixes #2046: make target stage lookup case insensitive [#2047](https://github.com/GoogleContainerTools/kaniko/pull/2047)
-- Add GitLab CI credentials helper [#2040]((https://github.com/GoogleContainerTools/kaniko/pull/2040))
+- Add GitLab CI credentials helper [#2040](https://github.com/GoogleContainerTools/kaniko/pull/2040)
 - and a number of dependency bumps
 
 

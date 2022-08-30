@@ -48,38 +48,41 @@ type RegistryOptions struct {
 type KanikoOptions struct {
 	RegistryOptions
 	CacheOptions
-	Destinations           multiArg
-	BuildArgs              multiArg
-	Labels                 multiArg
-	Git                    KanikoGitOptions
-	IgnorePaths            multiArg
-	DockerfilePath         string
-	SrcContext             string
-	SnapshotMode           string
-	CustomPlatform         string
-	Bucket                 string
-	TarPath                string
-	KanikoDir              string
-	Target                 string
-	CacheRepo              string
-	DigestFile             string
-	ImageNameDigestFile    string
-	ImageNameTagDigestFile string
-	OCILayoutPath          string
-	ImageFSExtractRetry    int
-	SingleSnapshot         bool
-	Reproducible           bool
-	NoPush                 bool
-	NoPushCache            bool
-	Cache                  bool
-	Cleanup                bool
-	CompressedCaching      bool
-	IgnoreVarRun           bool
-	SkipUnusedStages       bool
-	RunV2                  bool
-	CacheCopyLayers        bool
-	CacheRunLayers         bool
-	ForceBuildMetadata     bool
+	Destinations             multiArg
+	BuildArgs                multiArg
+	Labels                   multiArg
+	Git                      KanikoGitOptions
+	IgnorePaths              multiArg
+	DockerfilePath           string
+	SrcContext               string
+	SnapshotMode             string
+	SnapshotModeDeprecated   string
+	CustomPlatform           string
+	CustomPlatformDeprecated string
+	Bucket                   string
+	TarPath                  string
+	TarPathDeprecated        string
+	KanikoDir                string
+	Target                   string
+	CacheRepo                string
+	DigestFile               string
+	ImageNameDigestFile      string
+	ImageNameTagDigestFile   string
+	OCILayoutPath            string
+	ImageFSExtractRetry      int
+	SingleSnapshot           bool
+	Reproducible             bool
+	NoPush                   bool
+	NoPushCache              bool
+	Cache                    bool
+	Cleanup                  bool
+	CompressedCaching        bool
+	IgnoreVarRun             bool
+	SkipUnusedStages         bool
+	RunV2                    bool
+	CacheCopyLayers          bool
+	CacheRunLayers           bool
+	ForceBuildMetadata       bool
 }
 
 type KanikoGitOptions struct {

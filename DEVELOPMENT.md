@@ -186,7 +186,7 @@ steps:
   args:
   - --build-arg=NUM=${_COUNT}
   - --no-push
-  - --snapshotMode=redo
+  - --snapshot-mode=redo
   env:
   - 'BENCHMARK_FILE=gs://$PROJECT_ID/gcb/benchmark_file'
 ```
