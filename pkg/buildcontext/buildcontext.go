@@ -52,7 +52,7 @@ func GetBuildContext(srcContext string, opts BuildOptions) (BuildContext, error)
 		case constants.GCSBuildContextPrefix:
 			return &GCS{context: context}, nil
 		case constants.S3BuildContextPrefix:
-			return &S3{context: context}, nil
+			return &S3{context: srcContext}, nil
 		case constants.LocalDirBuildContextPrefix:
 			return &Dir{context: context}, nil
 		case constants.GitBuildContextPrefix:
