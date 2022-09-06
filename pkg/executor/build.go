@@ -55,6 +55,7 @@ const emptyTarSize = 1024
 // for testing
 var (
 	initializeConfig = initConfig
+	getFSFromImage   = util.GetFSFromImage
 )
 
 type cachePusher func(*config.KanikoOptions, string, string, string) error
@@ -322,12 +323,15 @@ func (s *stageBuilder) build() error {
 	if len(s.crossStageDeps[s.stage.Index]) > 0 {
 		shouldUnpack = true
 	}
+	if s.stage.Index == 0 && s.opts.InitialFSUnpacked {
+		shouldUnpack = false
+	}
 
 	if shouldUnpack {
 		t := timing.Start("FS Unpacking")
 
 		retryFunc := func() error {
-			_, err := util.GetFSFromImage(config.RootDir, s.image, util.ExtractFile)
+			_, err := getFSFromImage(config.RootDir, s.image, util.ExtractFile)
 			return err
 		}
 
@@ -622,7 +626,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	var args *dockerfile.BuildArgs
 
 	for index, stage := range kanikoStages {
-
 		sb, err := newStageBuilder(
 			args, opts, stage,
 			crossStageDependencies,
