@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -519,6 +520,39 @@ func TestInitializeConfig(t *testing.T) {
 		}
 		actual, _ := initializeConfig(img, nil)
 		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
+	}
+}
+
+func Test_newLayerCache(t *testing.T) {
+	tests := []struct {
+		description string
+		opts        *config.KanikoOptions
+		assert      func(layerCache cache.LayerCache) error
+	}{
+		{
+			description: "default layer cache is registry cache",
+			opts:        &config.KanikoOptions{CacheRepo: "some-cache-repo"},
+			assert: func(layerCache cache.LayerCache) error {
+				foundCache, ok := layerCache.(*cache.RegistryCache)
+				if !ok {
+					return fmt.Errorf("expected layer cache to be a registry cache")
+				}
+				if foundCache.Opts.CacheRepo != "some-cache-repo" {
+					return fmt.Errorf(
+						"expected cache repo to be %q; got %q", "some-cache-repo", foundCache.Opts.CacheRepo,
+					)
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			actual := newLayerCache(tt.opts)
+			if err := tt.assert(actual); err != nil {
+				t.Errorf("Expected error to be nil but was %v", err)
+			}
+		})
 	}
 }
 

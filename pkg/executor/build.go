@@ -127,9 +127,7 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 		crossStageDeps:   crossStageDeps,
 		digestToCacheKey: dcm,
 		stageIdxToDigest: sid,
-		layerCache: &cache.RegistryCache{
-			Opts: opts,
-		},
+		layerCache:       newLayerCache(opts),
 		pushLayerToCache: pushLayerToCache,
 	}
 
@@ -182,6 +180,12 @@ func initConfig(img partial.WithConfigFile, opts *config.KanikoOptions) (*v1.Con
 	}
 
 	return imageConfig, nil
+}
+
+func newLayerCache(opts *config.KanikoOptions) cache.LayerCache {
+	return &cache.RegistryCache{
+		Opts: opts,
+	}
 }
 
 func (s *stageBuilder) populateCompositeKey(command fmt.Stringer, files []string, compositeKey CompositeCache, args *dockerfile.BuildArgs, env []string) (CompositeCache, error) {
