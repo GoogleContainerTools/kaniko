@@ -84,7 +84,11 @@ func CheckPushPermissions(opts *config.KanikoOptions) error {
 	} else if opts.NoPush && !opts.NoPushCache {
 		// When no push is set, we want to check permissions for the cache repo
 		// instead of the destinations
-		targets = []string{opts.CacheRepo}
+		if isOCILayout(opts.CacheRepo) {
+			targets = []string{} // no need to check push permissions if we're just writing to disk
+		} else {
+			targets = []string{opts.CacheRepo}
+		}
 	}
 
 	checked := map[string]bool{}
@@ -289,8 +293,8 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	return nil
 }
 
-// pushLayerToCache pushes layer (tagged with cacheKey) to opts.Cache
-// if opts.Cache doesn't exist, infer the cache from the given destination
+// pushLayerToCache pushes layer (tagged with cacheKey) to opts.CacheRepo
+// if opts.CacheRepo doesn't exist, infer the cache from the given destination
 func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath string, createdBy string) error {
 	var layer v1.Layer
 	var err error
@@ -331,5 +335,9 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	cacheOpts.Destinations = []string{cache}
 	cacheOpts.InsecureRegistries = opts.InsecureRegistries
 	cacheOpts.SkipTLSVerifyRegistries = opts.SkipTLSVerifyRegistries
+	if isOCILayout(cache) {
+		cacheOpts.OCILayoutPath = strings.TrimPrefix(cache, "oci:")
+		cacheOpts.NoPush = true
+	}
 	return DoPush(empty, &cacheOpts)
 }
