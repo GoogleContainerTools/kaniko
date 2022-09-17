@@ -727,17 +727,20 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 
 func Test_stageBuilder_build(t *testing.T) {
 	type testcase struct {
-		description       string
-		opts              *config.KanikoOptions
-		args              map[string]string
-		layerCache        *fakeLayerCache
-		expectedCacheKeys []string
-		pushedCacheKeys   []string
-		commands          []commands.DockerCommand
-		fileName          string
-		rootDir           string
-		image             v1.Image
-		config            *v1.ConfigFile
+		description        string
+		opts               *config.KanikoOptions
+		args               map[string]string
+		layerCache         *fakeLayerCache
+		expectedCacheKeys  []string
+		pushedCacheKeys    []string
+		commands           []commands.DockerCommand
+		fileName           string
+		rootDir            string
+		image              v1.Image
+		config             *v1.ConfigFile
+		stage              config.KanikoStage
+		crossStageDeps     map[int][]string
+		mockGetFSFromImage func(root string, img v1.Image, extract util.ExtractFunction) ([]string, error)
 	}
 
 	testCases := []testcase{
@@ -1238,6 +1241,15 @@ RUN foobar
 				rootDir:           dir,
 			}
 		}(),
+		{
+			description:    "fs unpacked",
+			opts:           &config.KanikoOptions{InitialFSUnpacked: true},
+			stage:          config.KanikoStage{Index: 0},
+			crossStageDeps: map[int][]string{0: {"some-dep"}},
+			mockGetFSFromImage: func(root string, img v1.Image, extract util.ExtractFunction) ([]string, error) {
+				return nil, fmt.Errorf("getFSFromImage shouldn't be called if fs is already unpacked")
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
@@ -1293,6 +1305,13 @@ RUN foobar
 			tmp := config.RootDir
 			if tc.rootDir != "" {
 				config.RootDir = tc.rootDir
+			}
+			sb.stage = tc.stage
+			sb.crossStageDeps = tc.crossStageDeps
+			if tc.mockGetFSFromImage != nil {
+				original := getFSFromImage
+				defer func() { getFSFromImage = original }()
+				getFSFromImage = tc.mockGetFSFromImage
 			}
 			err := sb.build()
 			if err != nil {
