@@ -89,10 +89,9 @@ func MakeTransport(opts config.RegistryOptions, registryName string) (http.Round
 	} else if certificatePath := opts.RegistriesCertificates[registryName]; certificatePath != "" {
 		if err := systemCertLoader.append(certificatePath); err != nil {
 			return nil, fmt.Errorf("failed to load certificate %s for %s: %w", certificatePath, registryName, err)
-		} else {
-			tr.(*http.Transport).TLSClientConfig = &tls.Config{
-				RootCAs: systemCertLoader.value(),
-			}
+		}
+		tr.(*http.Transport).TLSClientConfig = &tls.Config{
+			RootCAs: systemCertLoader.value(),
 		}
 	}
 
@@ -100,14 +99,12 @@ func MakeTransport(opts config.RegistryOptions, registryName string) (http.Round
 		certFiles := strings.Split(clientCertificatePath, ",")
 		if len(certFiles) != 2 {
 			return nil, fmt.Errorf("failed to load client certificate/key '%s=%s', expected format: %s=/path/to/cert,/path/to/key", registryName, clientCertificatePath, registryName)
-		} else {
-			cert, err := systemKeyPairLoader.load(certFiles[0], certFiles[1])
-			if err != nil {
-				return nil, fmt.Errorf("failed to load client certificate/key '%s' for %s: %w", clientCertificatePath, registryName, err)
-			} else {
-				tr.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{cert}
-			}
 		}
+		cert, err := systemKeyPairLoader.load(certFiles[0], certFiles[1])
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client certificate/key '%s' for %s: %w", clientCertificatePath, registryName, err)
+		}
+		tr.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	return tr, nil
