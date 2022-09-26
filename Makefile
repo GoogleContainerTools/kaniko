@@ -15,7 +15,7 @@
 # Bump these on release
 VERSION_MAJOR ?= 1
 VERSION_MINOR ?= 9
-VERSION_BUILD ?= 0
+VERSION_BUILD ?= 1
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 VERSION_PACKAGE = $(REPOPATH/pkg/version)
@@ -99,7 +99,7 @@ k8s-executor-build-push:
 
 .PHONY: images
 images: DOCKER_BUILDKIT=1
-images: 
+images:
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:slim -f deploy/Dockerfile_slim .

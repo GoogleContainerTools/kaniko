@@ -1,3 +1,115 @@
+# v1.9.1 Release 2022-09-26
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.9.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.9.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.9.1-slim
+```
+
+
+* (fix):Pass full URI path to `bucket.GetNameAndFilepathFromURI` [#2221](https://github.com/GoogleContainerTools/kaniko/pull/2221)
+* Add the ability to skip unpacking the initial file system [#2234](https://github.com/GoogleContainerTools/kaniko/pull/2234)
+* chore: remove duplicate word in comments [#2232](https://github.com/GoogleContainerTools/kaniko/pull/2232)
+* docs(CHANGELOG.md): fix link to issue #2040 [#2228](https://github.com/GoogleContainerTools/kaniko/pull/2228)
+* feat: disable cache-copy-layers in multistage builds; closes 2065 [#2227](https://github.com/GoogleContainerTools/kaniko/pull/2227)
+* bump cosign version so it can sign [#2224](https://github.com/GoogleContainerTools/kaniko/pull/2224)
+* fix(README.md): remove duplicate caching section [#2223](https://github.com/GoogleContainerTools/kaniko/pull/2223)
+* refactor: Make CLI argument names consistent [#2084](https://github.com/GoogleContainerTools/kaniko/pull/2084)
+* fix(KanikoDir): update DOCKER_CONFIG env when use custom kanikoDir [#2202](https://github.com/GoogleContainerTools/kaniko/pull/2202)
+* (fix):Pass full URI path to `bucket.GetNameAndFilepathFromURI` [#2221](https://github.com/GoogleContainerTools/kaniko/pull/2221)
+* Add the ability to skip unpacking the initial file system [#2234](https://github.com/GoogleContainerTools/kaniko/pull/2234)
+* chore: remove duplicate word in comments [#2232](https://github.com/GoogleContainerTools/kaniko/pull/2232)
+* docs(CHANGELOG.md): fix link to issue #2040 [#2228](https://github.com/GoogleContainerTools/kaniko/pull/2228)
+* feat: disable cache-copy-layers in multistage builds; closes 2065 [#2227](https://github.com/GoogleContainerTools/kaniko/pull/2227)
+* bump cosign version so it can sign [#2224](https://github.com/GoogleContainerTools/kaniko/pull/2224)
+* fix(README.md): remove duplicate caching section [#2223](https://github.com/GoogleContainerTools/kaniko/pull/2223)
+* refactor: Make CLI argument names consistent [#2084](https://github.com/GoogleContainerTools/kaniko/pull/2084)
+* fix(KanikoDir): update DOCKER_CONFIG env when use custom kanikoDir [#2202](https://github.com/GoogleContainerTools/kaniko/pull/2202)
+Huge thank you for this release towards our contributors: 
+- Aaruni Aggarwal
+- Abirdcfly
+- Adrian Newby
+- almg80
+- Anbraten
+- Andreas Fleig
+- Andrei Kvapil
+- ankitm123
+- Benjamin Krenn
+- Bernardo Marques
+- Bryan A. S
+- chenggui53
+- Chuang Wang
+- claudex
+- Dávid Szakállas
+- Dawei Ma
+- dependabot[bot]
+- Diego Gonzalez
+- dmr
+- ejose19
+- Eng Zer Jun
+- ePirat
+- Florian Apolloner
+- François JACQUES
+- Gabriel Nützi
+- Gilbert Gilb's
+- Guillaume Calmettes
+- Herman
+- Hingbong Lo
+- Igor Scheller
+- Ishant Mrinal Haloi
+- Jack
+- Jake Sanders
+- Janosch Maier
+- Jason D'Amour
+- Jason Hall
+- Jasper Ben Orschulko
+- jeunii
+- Jonas Gröger
+- Jose Donizetti
+- Kamal Nasser
+- Konstantin Demin
+- Kun Lu
+- Lars Seipel
+- Liwen Guo
+- Lukas
+- Matt Moore
+- Max Walther
+- Mikhail Vasin
+- Natalie Arellano
+- Naveen
+- nihilo
+- Oliver Gregorius
+- Pat Litke
+- Patrick Barker
+- priyawadhwa
+- Ramy
+- Rhianna
+- Sebastiaan Tammer
+- Sigurd Spieckermann
+- Silvano Cirujano Cuesta
+- Tejal Desai
+- Tony De La Nuez
+- Travis DePrato
+- Víctor
+- Wolfgang Walther
+- wwade
+- Yahav Itzhak
+- ygelfand
+- Yonatan Koren
+- zhouhaibing089
+
 # v1.9.0 Release 2022-08-09
 
 ## Highlights
@@ -27,7 +139,7 @@ gcr.io/kaniko-project/executor:v1.9.0-debug
 The slim executor images which don't contain any authentication binaries are available at:
 ```
 gcr.io/kaniko-project/executor:slim
-gcr.io/kaniko-project/executor:v1.9.1-slim
+gcr.io/kaniko-project/executor:v1.9.0-slim
 ```
 
 * add cache option for run command [#2032](https://github.com/GoogleContainerTools/kaniko/pull/2032)
