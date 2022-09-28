@@ -559,38 +559,54 @@ func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder
 // Build each image with kaniko twice, and then make sure they're exactly the same
 func TestCache(t *testing.T) {
 	populateVolumeCache()
+
+	// Build dockerfiles with registry cache
 	for dockerfile := range imageBuilder.TestCacheDockerfiles {
-		args := []string{}
-		if dockerfile == "Dockerfile_test_cache_copy" {
-			args = append(args, "--cache-copy-layers=true")
-		}
 		t.Run("test_cache_"+dockerfile, func(t *testing.T) {
 			dockerfile := dockerfile
-			t.Parallel()
-
 			cache := filepath.Join(config.imageRepo, "cache", fmt.Sprintf("%v", time.Now().UnixNano()))
-			// Build the initial image which will cache layers
-			if err := imageBuilder.buildCachedImages(config, cache, dockerfilesPath, 0, args); err != nil {
-				t.Fatalf("error building cached image for the first time: %v", err)
-			}
-			// Build the second image which should pull from the cache
-			if err := imageBuilder.buildCachedImages(config, cache, dockerfilesPath, 1, args); err != nil {
-				t.Fatalf("error building cached image for the second time: %v", err)
-			}
-			// Make sure both images are the same
-			kanikoVersion0 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 0)
-			kanikoVersion1 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 1)
+			t.Parallel()
+			verifyBuildWith(t, cache, dockerfile)
+		})
+	}
 
-			diff := containerDiff(t, kanikoVersion0, kanikoVersion1)
-
-			expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
-			checkContainerDiffOutput(t, diff, expected)
+	// Build dockerfiles with layout cache
+	for dockerfile := range imageBuilder.TestOCICacheDockerfiles {
+		t.Run("test_oci_cache_"+dockerfile, func(t *testing.T) {
+			dockerfile := dockerfile
+			cache := filepath.Join("oci:", cacheDir, "cached", fmt.Sprintf("%v", time.Now().UnixNano()))
+			t.Parallel()
+			verifyBuildWith(t, cache, dockerfile)
 		})
 	}
 
 	if err := logBenchmarks("benchmark_cache"); err != nil {
 		t.Logf("Failed to create benchmark file: %v", err)
 	}
+}
+
+func verifyBuildWith(t *testing.T, cache, dockerfile string) {
+	args := []string{}
+	if strings.HasPrefix(dockerfile, "Dockerfile_test_cache_copy") {
+		args = append(args, "--cache-copy-layers=true")
+	}
+
+	// Build the initial image which will cache layers
+	if err := imageBuilder.buildCachedImage(config, cache, dockerfilesPath, dockerfile, 0, args); err != nil {
+		t.Fatalf("error building cached image for the first time: %v", err)
+	}
+	// Build the second image which should pull from the cache
+	if err := imageBuilder.buildCachedImage(config, cache, dockerfilesPath, dockerfile, 1, args); err != nil {
+		t.Fatalf("error building cached image for the second time: %v", err)
+	}
+	// Make sure both images are the same
+	kanikoVersion0 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 0)
+	kanikoVersion1 := GetVersionedKanikoImage(config.imageRepo, dockerfile, 1)
+
+	diff := containerDiff(t, kanikoVersion0, kanikoVersion1)
+
+	expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
+	checkContainerDiffOutput(t, diff, expected)
 }
 
 func TestRelativePaths(t *testing.T) {

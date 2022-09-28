@@ -186,9 +186,10 @@ func FindDockerFiles(dir, dockerfilesPattern string) ([]string, error) {
 // keeps track of which files have been built.
 type DockerFileBuilder struct {
 	// Holds all available docker files and whether or not they've been built
-	filesBuilt           map[string]struct{}
-	DockerfilesToIgnore  map[string]struct{}
-	TestCacheDockerfiles map[string]struct{}
+	filesBuilt              map[string]struct{}
+	DockerfilesToIgnore     map[string]struct{}
+	TestCacheDockerfiles    map[string]struct{}
+	TestOCICacheDockerfiles map[string]struct{}
 }
 
 type logger func(string, ...interface{})
@@ -215,6 +216,12 @@ func NewDockerFileBuilder() *DockerFileBuilder {
 		"Dockerfile_test_cache_install": {},
 		"Dockerfile_test_cache_perm":    {},
 		"Dockerfile_test_cache_copy":    {},
+	}
+	d.TestOCICacheDockerfiles = map[string]struct{}{
+		"Dockerfile_test_cache_oci":         {},
+		"Dockerfile_test_cache_install_oci": {},
+		"Dockerfile_test_cache_perm_oci":    {},
+		"Dockerfile_test_cache_copy_oci":    {},
 	}
 	return &d
 }
@@ -355,42 +362,40 @@ func populateVolumeCache() error {
 	return nil
 }
 
-// buildCachedImages builds the images for testing caching via kaniko where version is the nth time this image has been built
-func (d *DockerFileBuilder) buildCachedImages(config *integrationTestConfig, cacheRepo, dockerfilesPath string, version int, args []string) error {
+// buildCachedImage builds the image for testing caching via kaniko where version is the nth time this image has been built
+func (d *DockerFileBuilder) buildCachedImage(config *integrationTestConfig, cacheRepo, dockerfilesPath, dockerfile string, version int, args []string) error {
 	imageRepo, serviceAccount := config.imageRepo, config.serviceAccount
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 
 	cacheFlag := "--cache=true"
 
-	for dockerfile := range d.TestCacheDockerfiles {
-		benchmarkEnv := "BENCHMARK_FILE=false"
-		if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
-			os.Mkdir("benchmarks", 0755)
-			benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
-		}
-		kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
+	benchmarkEnv := "BENCHMARK_FILE=false"
+	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
+		os.Mkdir("benchmarks", 0755)
+		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
+	}
+	kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
 
-		dockerRunFlags := []string{"run", "--net=host",
-			"-v", cwd + ":/workspace",
-			"-e", benchmarkEnv}
-		dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
-		dockerRunFlags = append(dockerRunFlags, ExecutorImage,
-			"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
-			"-d", kanikoImage,
-			"-c", buildContextPath,
-			cacheFlag,
-			"--cache-repo", cacheRepo,
-			"--cache-dir", cacheDir)
-		for _, v := range args {
-			dockerRunFlags = append(dockerRunFlags, v)
-		}
-		kanikoCmd := exec.Command("docker", dockerRunFlags...)
+	dockerRunFlags := []string{"run", "--net=host",
+		"-v", cwd + ":/workspace",
+		"-e", benchmarkEnv}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
+		"-d", kanikoImage,
+		"-c", buildContextPath,
+		cacheFlag,
+		"--cache-repo", cacheRepo,
+		"--cache-dir", cacheDir)
+	for _, v := range args {
+		dockerRunFlags = append(dockerRunFlags, v)
+	}
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
 
-		_, err := RunCommandWithoutTest(kanikoCmd)
-		if err != nil {
-			return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %w", kanikoImage, kanikoCmd.Args, err)
-		}
+	_, err := RunCommandWithoutTest(kanikoCmd)
+	if err != nil {
+		return fmt.Errorf("Failed to build cached image %s with kaniko command \"%s\": %w", kanikoImage, kanikoCmd.Args, err)
 	}
 	return nil
 }

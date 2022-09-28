@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -28,6 +29,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
@@ -73,21 +75,78 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 		return nil, err
 	}
 
+	if err = verifyImage(img, rc.Opts.CacheTTL, cache); err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+func verifyImage(img v1.Image, cacheTTL time.Duration, cache string) error {
 	cf, err := img.ConfigFile()
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("retrieving config file for %s", cache))
+		return errors.Wrap(err, fmt.Sprintf("retrieving config file for %s", cache))
 	}
 
-	expiry := cf.Created.Add(rc.Opts.CacheTTL)
+	expiry := cf.Created.Add(cacheTTL)
 	// Layer is stale, rebuild it.
 	if expiry.Before(time.Now()) {
 		logrus.Infof("Cache entry expired: %s", cache)
-		return nil, fmt.Errorf("Cache entry expired: %s", cache)
+		return fmt.Errorf("Cache entry expired: %s", cache)
 	}
 
 	// Force the manifest to be populated
 	if _, err := img.RawManifest(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// LayoutCache is the OCI image layout cache
+type LayoutCache struct {
+	Opts *config.KanikoOptions
+}
+
+func (lc *LayoutCache) RetrieveLayer(ck string) (v1.Image, error) {
+	cache, err := Destination(lc.Opts, ck)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting cache destination")
+	}
+	logrus.Infof("Checking for cached layer %s...", cache)
+
+	var img v1.Image
+	if img, err = locateImage(strings.TrimPrefix(cache, "oci:")); err != nil {
+		return nil, errors.Wrap(err, "locating cache image")
+	}
+
+	if err = verifyImage(img, lc.Opts.CacheTTL, cache); err != nil {
 		return nil, err
+	}
+	return img, nil
+}
+
+func locateImage(path string) (v1.Image, error) {
+	var img v1.Image
+	layoutPath, err := layout.FromPath(path)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("constructing layout path from %s", path))
+	}
+	index, err := layoutPath.ImageIndex()
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("retrieving index file for %s", layoutPath))
+	}
+	manifest, err := index.IndexManifest()
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("retrieving manifest file for %s", layoutPath))
+	}
+	for _, m := range manifest.Manifests {
+		// assume there is only one image
+		img, err = layoutPath.Image(m.Digest)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("initializing image with digest %s", m.Digest.String()))
+		}
+	}
+	if img == nil {
+		return nil, fmt.Errorf("path contains no images")
 	}
 	return img, nil
 }

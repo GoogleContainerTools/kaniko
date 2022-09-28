@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -520,6 +521,36 @@ func TestInitializeConfig(t *testing.T) {
 		actual, _ := initializeConfig(img, nil)
 		testutil.CheckDeepEqual(t, tt.expected, actual.Config)
 	}
+}
+
+func Test_newLayerCache_defaultCache(t *testing.T) {
+	t.Run("default layer cache is registry cache", func(t *testing.T) {
+		layerCache := newLayerCache(&config.KanikoOptions{CacheRepo: "some-cache-repo"})
+		foundCache, ok := layerCache.(*cache.RegistryCache)
+		if !ok {
+			t.Error("expected layer cache to be a registry cache")
+		}
+		if foundCache.Opts.CacheRepo != "some-cache-repo" {
+			t.Errorf(
+				"expected cache repo to be 'some-cache-repo'; got %q", foundCache.Opts.CacheRepo,
+			)
+		}
+	})
+}
+
+func Test_newLayerCache_layoutCache(t *testing.T) {
+	t.Run("when cache repo has 'oci:' prefix layer cache is layout cache", func(t *testing.T) {
+		layerCache := newLayerCache(&config.KanikoOptions{CacheRepo: "oci:/some-cache-repo"})
+		foundCache, ok := layerCache.(*cache.LayoutCache)
+		if !ok {
+			t.Error("expected layer cache to be a layout cache")
+		}
+		if foundCache.Opts.CacheRepo != "oci:/some-cache-repo" {
+			t.Errorf(
+				"expected cache repo to be 'oci:/some-cache-repo'; got %q", foundCache.Opts.CacheRepo,
+			)
+		}
+	})
 }
 
 func Test_stageBuilder_optimize(t *testing.T) {

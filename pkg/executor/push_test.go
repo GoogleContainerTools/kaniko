@@ -252,74 +252,99 @@ func TestImageNameTagDigestFile(t *testing.T) {
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 }
 
-var calledExecCommand = []bool{}
-var calledCheckPushPermission = false
+var checkPushPermsCallCount = 0
 
-func setCalledFalse() {
-	calledExecCommand = []bool{}
-	calledCheckPushPermission = false
+func resetCalledCount() {
+	checkPushPermsCallCount = 0
 }
 
 func fakeCheckPushPermission(ref name.Reference, kc authn.Keychain, t http.RoundTripper) error {
-	calledCheckPushPermission = true
+	checkPushPermsCallCount++
 	return nil
 }
 
 func TestCheckPushPermissions(t *testing.T) {
 	tests := []struct {
-		description           string
-		Destination           []string
-		ShouldCallExecCommand []bool
-		ExistingConfig        bool
+		description                     string
+		cacheRepo                       string
+		checkPushPermsExpectedCallCount int
+		destinations                    []string
+		existingConfig                  bool
+		noPush                          bool
+		noPushCache                     bool
 	}{
-		{"a gcr image without config", []string{"gcr.io/test-image"}, []bool{true}, false},
-		{"a gcr image with config", []string{"gcr.io/test-image"}, []bool{false}, true},
-		{"a pkg.dev image without config", []string{"us-docker.pkg.dev/test-image"}, []bool{true}, false},
-		{"a pkg.dev image with config", []string{"us-docker.pkg.dev/test-image"}, []bool{false}, true},
-		{"localhost registry with config", []string{"localhost:5000/test-image"}, []bool{false}, false},
-		{"localhost registry without config", []string{"localhost:5000/test-image"}, []bool{false}, true},
-		{"any other registry", []string{"notgcr.io/test-image"}, []bool{false}, false},
-		{"multiple destinations pushed to different registry",
-			[]string{
+		{description: "a gcr image without config", destinations: []string{"gcr.io/test-image"}, checkPushPermsExpectedCallCount: 1},
+		{description: "a gcr image with config", destinations: []string{"gcr.io/test-image"}, existingConfig: true, checkPushPermsExpectedCallCount: 1},
+		{description: "a pkg.dev image without config", destinations: []string{"us-docker.pkg.dev/test-image"}, checkPushPermsExpectedCallCount: 1},
+		{description: "a pkg.dev image with config", destinations: []string{"us-docker.pkg.dev/test-image"}, existingConfig: true, checkPushPermsExpectedCallCount: 1},
+		{description: "localhost registry without config", destinations: []string{"localhost:5000/test-image"}, checkPushPermsExpectedCallCount: 1},
+		{description: "localhost registry with config", destinations: []string{"localhost:5000/test-image"}, existingConfig: true, checkPushPermsExpectedCallCount: 1},
+		{description: "any other registry", destinations: []string{"notgcr.io/test-image"}, checkPushPermsExpectedCallCount: 1},
+		{
+			description: "multiple destinations pushed to different registry",
+			destinations: []string{
 				"us-central1-docker.pkg.dev/prj/test-image",
 				"us-west-docker.pkg.dev/prj/test-image",
 			},
-			[]bool{true, true}, false,
+			checkPushPermsExpectedCallCount: 2,
 		},
-		{"same image names with different tags",
-			[]string{
+		{
+			description: "same image names with different tags",
+			destinations: []string{
 				"us-central1-docker.pkg.dev/prj/test-image:tag1",
 				"us-central1-docker.pkg.dev/prj/test-image:tag2",
 			},
-			[]bool{true, true}, false,
+			checkPushPermsExpectedCallCount: 1,
 		},
-		{"same destination image multiple times",
-			[]string{
+		{
+			description: "same destination image multiple times",
+			destinations: []string{
 				"us-central1-docker.pkg.dev/prj/test-image",
 				"us-central1-docker.pkg.dev/prj/test-image",
 			},
-			[]bool{true, false}, false,
+			checkPushPermsExpectedCallCount: 1,
+		},
+		{
+			description:                     "no push and no push cache",
+			destinations:                    []string{"us-central1-docker.pkg.dev/prj/test-image"},
+			checkPushPermsExpectedCallCount: 0,
+			noPush:                          true,
+			noPushCache:                     true,
+		},
+		{
+			description:                     "no push and push cache",
+			destinations:                    []string{"us-central1-docker.pkg.dev/prj/test-image"},
+			cacheRepo:                       "us-central1-docker.pkg.dev/prj/cache-image",
+			checkPushPermsExpectedCallCount: 1,
+			noPush:                          true,
+		},
+		{
+			description:                     "no push and cache repo is OCI image layout",
+			destinations:                    []string{"us-central1-docker.pkg.dev/prj/test-image"},
+			cacheRepo:                       "oci:/some-layout-path",
+			checkPushPermsExpectedCallCount: 0,
+			noPush:                          true,
 		},
 	}
 
 	checkRemotePushPermission = fakeCheckPushPermission
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			setCalledFalse()
+			resetCalledCount()
 			fs = afero.NewMemMapFs()
 			opts := config.KanikoOptions{
-				Destinations: test.Destination,
+				CacheRepo:    test.cacheRepo,
+				Destinations: test.destinations,
+				NoPush:       test.noPush,
+				NoPushCache:  test.noPushCache,
 			}
-			if test.ExistingConfig {
+			if test.existingConfig {
 				afero.WriteFile(fs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
 				defer fs.Remove(util.DockerConfLocation())
 			}
 			CheckPushPermissions(&opts)
-			for i, shdCall := range test.ShouldCallExecCommand {
-				if i < len(calledExecCommand) && shdCall != calledExecCommand[i] {
-					t.Errorf("Expected calledExecCommand to be %v however it was %v",
-						calledExecCommand, shdCall)
-				}
+			if checkPushPermsCallCount != test.checkPushPermsExpectedCallCount {
+				t.Errorf("expected check push permissions call count to be %d but it was %d", test.checkPushPermsExpectedCallCount, checkPushPermsCallCount)
 			}
 		})
 	}
