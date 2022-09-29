@@ -348,7 +348,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		currFile.Close()
 	case tar.TypeDir:
 		logrus.Tracef("Creating dir %s", path)
-		if err := mkdirAllWithPermissions(path, mode, int64(uid), int64(gid)); err != nil {
+		if err := MkdirAllWithPermissions(path, mode, int64(uid), int64(gid)); err != nil {
 			return err
 		}
 
@@ -663,7 +663,7 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 
 			mode := fi.Mode()
 			uid, gid := DetermineTargetFileOwnership(fi, uid, gid)
-			if err := mkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
+			if err := MkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
 			}
 		} else if IsSymlink(fi) {
@@ -806,7 +806,7 @@ func Volumes() []string {
 	return volumes
 }
 
-func mkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
+func MkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
 	// Check if a file already exists on the path, if yes then delete it
 	info, err := os.Stat(path)
 	if err == nil && !info.IsDir() {

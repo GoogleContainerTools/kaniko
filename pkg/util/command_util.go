@@ -442,8 +442,8 @@ func LookupUser(userStr string) (*user.User, error) {
 	userObj, err := user.Lookup(userStr)
 	if err != nil {
 		unknownUserErr := new(user.UnknownUserError)
-		// only return if it's not an unknown user error
-		if !errors.As(err, unknownUserErr) {
+		// only return if it's not an unknown user error or the passwd file does not exist
+		if !errors.As(err, unknownUserErr) && !os.IsNotExist(err) {
 			return nil, err
 		}
 

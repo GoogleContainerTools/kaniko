@@ -1,0 +1,41 @@
+FROM debian:9.11
+RUN groupadd -g 10000 bar
+RUN useradd -c "Foo user" -u 10000 -g 10000 -m foo
+
+
+# no passwd file
+FROM scratch
+
+# without a USER Set
+WORKDIR /workdir/wo/user
+
+USER 9999
+WORKDIR /workdir/w/uid
+
+USER 9999:9999
+WORKDIR /workdir/w/uid_gid
+
+USER 0
+WORKDIR /workdir/w/root_uid
+
+USER root
+WORKDIR /workdir/w/root_username
+
+# with passwd file
+COPY --from=0 /etc/passwd /etc/passwd
+COPY --from=0 /etc/group /etc/group
+
+USER foo
+WORKDIR /workdir/w/foo_username
+
+USER foo:10000
+WORKDIR /workdir/w/foo_username_gid
+
+USER 10000
+WORKDIR /workdir/w/foo_uid
+
+USER 10000:10000
+WORKDIR /workdir/w/foo_uid_gid
+
+USER 10000:bar
+WORKDIR /workdir/w/foo_uid_groupname

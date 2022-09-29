@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/pkg/errors"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -35,7 +36,7 @@ type WorkdirCommand struct {
 }
 
 // For testing
-var mkdir = os.MkdirAll
+var mkdirAllWithPermissions = util.MkdirAllWithPermissions
 
 func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("Cmd: workdir")
@@ -59,9 +60,21 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 	// Only create and snapshot the dir if it didn't exist already
 	w.snapshotFiles = []string{}
 	if _, err := os.Stat(config.WorkingDir); os.IsNotExist(err) {
-		logrus.Infof("Creating directory %s", config.WorkingDir)
+		uid, gid := int64(-1), int64(-1)
+
+		if config.User != "" {
+			logrus.Debugf("Fetching uid and gid for USER '%s'", config.User)
+			uid, gid, err = util.GetUserGroup(config.User, replacementEnvs)
+			if err != nil {
+				return errors.Wrapf(err, "identifying uid and gid for user %s", config.User)
+			}
+		}
+
+		logrus.Infof("Creating directory %s with uid %d and gid %d", config.WorkingDir, uid, gid)
 		w.snapshotFiles = append(w.snapshotFiles, config.WorkingDir)
-		return mkdir(config.WorkingDir, 0755)
+		if err := mkdirAllWithPermissions(config.WorkingDir, 0755, uid, gid); err != nil {
+			return errors.Wrapf(err, "creating workdir %s", config.WorkingDir)
+		}
 	}
 	return nil
 }
