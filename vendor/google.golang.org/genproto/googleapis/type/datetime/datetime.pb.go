@@ -40,12 +40,12 @@ const (
 //
 // This type can represent a civil time in one of a few possible ways:
 //
-//  * When utc_offset is set and time_zone is unset: a civil time on a calendar
-//    day with a particular offset from UTC.
-//  * When time_zone is set and utc_offset is unset: a civil time on a calendar
-//    day in a particular time zone.
-//  * When neither time_zone nor utc_offset is set: a civil time on a calendar
-//    day in local time.
+//   - When utc_offset is set and time_zone is unset: a civil time on a calendar
+//     day with a particular offset from UTC.
+//   - When time_zone is set and utc_offset is unset: a civil time on a calendar
+//     day in a particular time zone.
+//   - When neither time_zone nor utc_offset is set: a civil time on a calendar
+//     day in local time.
 //
 // The date is relative to the Proleptic Gregorian Calendar.
 //
