@@ -777,7 +777,7 @@ and
 This flag allows you to pass in ARG values at build time, similarly to Docker.
 You can set it multiple times for multiple arguments.
 
-Note that passing values that contain spaces is not natively suppored - you need
+Note that passing values that contain spaces is not natively supported - you need
 to ensure that the IFS is set to null before your executor command. You can set
 this by adding `export IFS=''` before your executor call. See the following
 example
