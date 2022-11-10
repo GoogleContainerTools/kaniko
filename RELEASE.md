@@ -37,7 +37,7 @@ Please change all usages of `gcr.io/kaniko-project/executor:latest` to `gcr.io/Y
 ### Getting write access to the Kaniko Project
 In order to kick off kaniko release, you need to write access to Kaniko project.
 
-To get write access, please ping one of the [Kaniko Mantainers](https://github.com/orgs/GoogleContainerTools/teams/kaniko-maintainers/members). 
+To get write access, please ping one of the [Kaniko Maintainers](https://github.com/orgs/GoogleContainerTools/teams/kaniko-maintainers/members). 
 
 Once you have the correct access, you can kick off a release.
 
@@ -94,7 +94,7 @@ You could verify if the images are published using the `docker pull` command
 ```
 docker pull gcr.io/kaniko-project/executor:warmer-vX.Y.Z
 ```
-In case the images are still not published, ping one of the kaniko manintainers and they will provide the cloud build trigger logs.
+In case the images are still not published, ping one of the kaniko maintainers and they will provide the cloud build trigger logs.
 You can also request read access to the Google `kaniko-project`.
 
 4. Finally, once the images are published, create a release for the newly created [tag](https://github.com/GoogleContainerTools/kaniko/tags) and publish it. 
