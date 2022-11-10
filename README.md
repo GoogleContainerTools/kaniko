@@ -563,7 +563,7 @@ docker run -ti --rm -e GOOGLE_APPLICATION_CREDENTIALS=/kaniko/config.json \
 
 #### Pushing to GCR using Workload Identity
 
-If you have enabled Workload Indentity on your GKE cluster then you can use the
+If you have enabled Workload Identity on your GKE cluster then you can use the
 workload identity to push built images to GCR without adding a
 `GOOGLE_APPLICATION_CREDENTIALS` in your kaniko pod specification.
 
@@ -1004,7 +1004,7 @@ multiple times for multiple registries.
 #### Flag `--skip-unused-stages`
 
 This flag builds only used stages if defined to `true`. Otherwise it builds by
-default all stages, even the unnecessaries ones until it reaches the target
+default all stages, even the unnecessary ones until it reaches the target
 stage / end of Dockerfile
 
 #### Flag `--snapshotMode`
@@ -1124,7 +1124,7 @@ profiling,
 1. Add an environment variable `STACKLOG_PATH` to your
    [pod definition](https://github.com/GoogleContainerTools/kaniko/blob/master/examples/pod-build-profile.yaml#L15).
 2. If you are using the kaniko `debug` image, you can copy the file in the
-   `pre-stop` container lifecyle hook.
+   `pre-stop` container lifecycle hook.
 
 ## Comparison with Other Tools
 
