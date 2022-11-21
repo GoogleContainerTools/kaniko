@@ -144,6 +144,13 @@ func RedoHasher() func(string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
+		logrus.Warn("JASON'S DEBUG STUFF")
+		logrus.Warn(p)
+		logrus.Warn(fi.Mode().String())
+		logrus.Warn(fi.ModTime().String())
+		logrus.Warn([]byte(strconv.FormatInt(fi.Size(), 16)))
+
 		h.Write([]byte(fi.Mode().String()))
 		h.Write([]byte(fi.ModTime().String()))
 		h.Write([]byte(strconv.FormatInt(fi.Size(), 16)))
