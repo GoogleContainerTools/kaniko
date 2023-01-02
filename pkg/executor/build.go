@@ -62,6 +62,7 @@ var (
 type cachePusher func(*config.KanikoOptions, string, string, string) error
 type snapShotter interface {
 	Init() error
+	SetZeroTimestamps(bool)
 	TakeSnapshotFS() (string, error)
 	TakeSnapshot([]string, bool, bool) (string, error)
 }
@@ -112,6 +113,7 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 	}
 	l := snapshot.NewLayeredMap(hasher)
 	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
+	snapshotter.SetZeroTimestamps(opts.ZeroFileTimestamps || opts.Reproducible)
 
 	digest, err := sourceImage.Digest()
 	if err != nil {

@@ -38,9 +38,10 @@ var snapshotPathPrefix = ""
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
-	l          *LayeredMap
-	directory  string
-	ignorelist []util.IgnoreListEntry
+	l               *LayeredMap
+	directory       string
+	ignorelist      []util.IgnoreListEntry
+	zeroTimestamps  bool
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
@@ -58,6 +59,11 @@ func (s *Snapshotter) Init() error {
 // Key returns a string based on the current state of the file system
 func (s *Snapshotter) Key() (string, error) {
 	return s.l.Key()
+}
+
+// SetZeroTimestamps changes whether snapshots will have file timstamps cleared
+func (s *Snapshotter) SetZeroTimestamps(zeroTimestamps bool) {
+	s.zeroTimestamps = zeroTimestamps
 }
 
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
@@ -112,6 +118,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 	}
 
 	t := util.NewTar(f)
+	t.SetZeroTimestamps(s.zeroTimestamps)
 	defer t.Close()
 	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
 		return "", err
@@ -128,6 +135,7 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 	}
 	defer f.Close()
 	t := util.NewTar(f)
+	t.SetZeroTimestamps(s.zeroTimestamps)
 	defer t.Close()
 
 	filesToAdd, filesToWhiteOut, err := s.scanFullFilesystem()

@@ -106,6 +106,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--target`](#flag---target)
       - [Flag `--use-new-run`](#flag---use-new-run)
       - [Flag `--verbosity`](#flag---verbosity)
+      - [Flag `--zero-file-timestamps`](#flag---zero-file-timestamps)
       - [Flag `--ignore-var-run`](#flag---ignore-var-run)
       - [Flag `--ignore-path`](#flag---ignore-path)
       - [Flag `--image-fs-extract-retry`](#flag---image-fs-extract-retry)
@@ -975,7 +976,11 @@ are:
 #### Flag `--reproducible`
 
 Set this flag to strip timestamps out of the built image and make it
-reproducible.
+reproducible. This will also remove timestamps and environment-specific
+data like the build machine from the image and layer metadata.
+
+If you want to preserve image metadata but strip timestamps from layer
+contents, see [`--zero-file-timestamps`](#flag---zero-file-timestamps).
 
 #### Flag `--single-snapshot`
 
@@ -1042,6 +1047,16 @@ file system snapshots. In some cases, this may improve build performance by 75%.
 
 Set this flag as `--verbosity=<panic|fatal|error|warn|info|debug|trace>` to set
 the logging level. Defaults to `info`.
+
+#### Flag `--zero-file-timestamps`
+
+Set this flag to strip timestamps from the files inside each layer.
+This will result in different image hashes, but can save space on disk
+when images share identical layers, especially when combined with a
+[multi-stage build](https://docs.docker.com/build/building/multi-stage/).
+
+If you want a fully reproducible image, see
+[`--reproducible`](#flag---reproducible).
 
 #### Flag `--ignore-var-run`
 
