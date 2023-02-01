@@ -75,15 +75,11 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 	foundDockerConfig := false
 	home, err := homedir.Dir()
 	if err == nil {
-		if _, err := os.Stat(filepath.Join(home, ".docker/config.json")); err == nil {
-			foundDockerConfig = true
-		}
+		foundDockerConfig = fileExists(filepath.Join(home, ".docker/config.json"))
 	}
 	// If $HOME/.docker/config.json isn't found, check $DOCKER_CONFIG (if set)
 	if !foundDockerConfig && os.Getenv("DOCKER_CONFIG") != "" {
-		if _, err := os.Stat(filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json")); err == nil {
-			foundDockerConfig = true
-		}
+		foundDockerConfig = fileExists(filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json"))
 	}
 	// If either of those locations are found, load it using Docker's
 	// config.Load, which may fail if the config can't be parsed.
@@ -127,6 +123,10 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 		if err != nil {
 			return nil, err
 		}
+		// cf.GetAuthConfig automatically sets the ServerAddress attribute. Since
+		// we don't make use of it, clear the value for a proper "is-empty" test.
+		// See: https://github.com/google/go-containerregistry/issues/1510
+		cfg.ServerAddress = ""
 		if cfg != empty {
 			break
 		}
@@ -142,6 +142,12 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 		IdentityToken: cfg.IdentityToken,
 		RegistryToken: cfg.RegistryToken,
 	}), nil
+}
+
+// fileExists returns true if the given path exists and is not a directory.
+func fileExists(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && !fi.IsDir()
 }
 
 // Helper is a subset of the Docker credential helper credentials.Helper

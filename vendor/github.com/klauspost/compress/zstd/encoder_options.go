@@ -76,6 +76,7 @@ func WithEncoderCRC(b bool) EOption {
 // WithEncoderConcurrency will set the concurrency,
 // meaning the maximum number of encoders to run concurrently.
 // The value supplied must be at least 1.
+// For streams, setting a value of 1 will disable async compression.
 // By default this will be set to GOMAXPROCS.
 func WithEncoderConcurrency(n int) EOption {
 	return func(o *encoderOptions) error {
@@ -282,7 +283,7 @@ func WithNoEntropyCompression(b bool) EOption {
 // a decoder is allowed to reject a compressed frame which requests a memory size beyond decoder's authorized range.
 // For broader compatibility, decoders are recommended to support memory sizes of at least 8 MB.
 // This is only a recommendation, each decoder is free to support higher or lower limits, depending on local limitations.
-// If this is not specified, block encodes will automatically choose this based on the input size.
+// If this is not specified, block encodes will automatically choose this based on the input size and the window size.
 // This setting has no effect on streamed encodes.
 func WithSingleSegment(b bool) EOption {
 	return func(o *encoderOptions) error {
