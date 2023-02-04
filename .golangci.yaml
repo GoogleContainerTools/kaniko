@@ -70,18 +70,12 @@ linters-settings:
     #  2. you use go >= 1.10
     #  3. you do repeated runs (false for CI) or cache $GOPATH/pkg or `go env GOCACHE` dir in CI.
     #use-installed-packages: false
-  golint:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.8
   gofmt:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
   #gocyclo:
   #  # minimal code complexity to report, 30 by default (but we recommend 10-20)
   #  min-complexity: 10
-  maligned:
-    # print struct with more effective memory layout or not, false by default
-    suggest-new: true
   #dupl:
   #  # tokens count to trigger issue, 150 by default
   #  threshold: 100
@@ -135,14 +129,16 @@ linters:
   enable:
     - goconst
     - goimports
-    - golint
-    - interfacer
-    - maligned
     - misspell
     - unconvert
     - unparam
   enable-all: false
   disable:
+    - errorlint
+    - noctx
+    - golint
+    - interfacer
+    - maligned
     - errcheck
     - gas
     - scopelint

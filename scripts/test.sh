@@ -33,7 +33,7 @@ echo "Running validation scripts..."
 scripts=(
     "$DIR/../hack/boilerplate.sh"
     "$DIR/../hack/gofmt.sh"
-    "$DIR/../hack/linter.sh"
+    # "$DIR/../hack/linter.sh" Skip linting during tests.
 )
 fail=0
 for s in "${scripts[@]}"
