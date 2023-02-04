@@ -600,9 +600,9 @@ func AddVolumePathToIgnoreList(path string) {
 
 // DownloadFileToDest downloads the file at rawurl to the given dest for the ADD command
 // From add command docs:
-// 	1. If <src> is a remote file URL:
-// 		- destination will have permissions of 0600
-// 		- If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
+//  1. If <src> is a remote file URL:
+//     - destination will have permissions of 0600
+//     - If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
 func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
 	resp, err := http.Get(rawurl)
 	if err != nil {

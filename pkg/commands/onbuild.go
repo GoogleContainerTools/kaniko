@@ -28,7 +28,7 @@ type OnBuildCommand struct {
 	cmd *instructions.OnbuildCommand
 }
 
-//ExecuteCommand adds the specified expression in Onbuild to the config
+// ExecuteCommand adds the specified expression in Onbuild to the config
 func (o *OnBuildCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	logrus.Info("Cmd: ONBUILD")
 	logrus.Infof("Args: %s", o.cmd.Expression)
