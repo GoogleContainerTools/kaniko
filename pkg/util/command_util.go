@@ -291,7 +291,7 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 	if err != nil {
 		return false
 	}
-	_, err = http.Get(rawurl)
+	_, err = http.Get(rawurl) //nolint:noctx
 	return err == nil
 }
 

@@ -167,7 +167,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 		tr := tar.NewReader(r)
 		for {
 			hdr, err := tr.Next()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 
@@ -221,7 +221,7 @@ func DeleteFilesystem() error {
 	return filepath.Walk(config.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// ignore errors when deleting.
-			return nil
+			return nil //nolint:nilerr
 		}
 
 		if CheckIgnoreList(path) {
@@ -270,7 +270,7 @@ func UnTar(r io.Reader, dest string) ([]string, error) {
 	tr := tar.NewReader(r)
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -450,7 +450,7 @@ func DetectFilesystemIgnoreList(path string) error {
 	for {
 		line, err := reader.ReadString('\n')
 		logrus.Tracef("Read the following line from %s: %s", path, line)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
 		lineArr := strings.Split(line, " ")
@@ -604,7 +604,7 @@ func AddVolumePathToIgnoreList(path string) {
 //     - destination will have permissions of 0600
 //     - If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
 func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
-	resp, err := http.Get(rawurl)
+	resp, err := http.Get(rawurl) //nolint:noctx
 	if err != nil {
 		return err
 	}

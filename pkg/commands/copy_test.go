@@ -375,7 +375,7 @@ func Test_resolveIfSymlink(t *testing.T) {
 	for i, c := range cases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			res, e := resolveIfSymlink(c.destPath)
-			if e != c.err {
+			if !errors.Is(e, c.err) {
 				t.Errorf("%s: expected %v but got %v", c.destPath, c.err, e)
 			}
 

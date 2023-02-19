@@ -76,7 +76,7 @@ func TestSnapshotFSFileChange(t *testing.T) {
 	actualFiles := []string{}
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 
@@ -166,7 +166,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	foundFiles := []string{}
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		foundFiles = append(foundFiles, hdr.Name)
@@ -249,7 +249,7 @@ func TestEmptySnapshotFS(t *testing.T) {
 	}
 	tr := tar.NewReader(f)
 
-	if _, err := tr.Next(); err != io.EOF {
+	if _, err := tr.Next(); !errors.Is(err, io.EOF) {
 		t.Fatal("no files expected in tar, found files.")
 	}
 }
@@ -560,7 +560,7 @@ func TestSnapshotOmitsUnameGname(t *testing.T) {
 	tr := tar.NewReader(f)
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -637,7 +637,7 @@ func listFilesInTar(path string) ([]string, error) {
 	var files []string
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

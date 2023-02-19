@@ -714,18 +714,18 @@ func TestExitCodePropagation(t *testing.T) {
 }
 
 type fileDiff struct {
-	Name string
-	Size int
+	Name string `json:"Name"`
+	Size int    `json:"Size"`
 }
 
 type fileDiffResult struct {
-	Adds []fileDiff
-	Dels []fileDiff
+	Adds []fileDiff `json:"Adds"`
+	Dels []fileDiff `json:"Dels"`
 }
 
 type metaDiffResult struct {
-	Adds []string
-	Dels []string
+	Adds []string `json:"Adds"`
+	Dels []string `json:"Dels"`
 }
 
 type diffOutput struct {
