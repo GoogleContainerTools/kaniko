@@ -15,7 +15,7 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.14.0
 	github.com/aws/aws-sdk-go v1.44.24
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220228164355-396b2034c795
-	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
+	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/go-git/go-billy/v5 v5.3.1
@@ -150,3 +150,5 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
+
+replace github.com/docker/docker => github.com/docker/engine ea84732a7725
