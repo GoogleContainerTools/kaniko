@@ -150,5 +150,3 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
-
-replace github.com/docker/docker => github.com/docker/engine ea84732a7725
