@@ -17,6 +17,7 @@ package token
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -62,11 +63,46 @@ func getServicePrincipalToken(settings auth.EnvironmentSettings, resource string
 		return &adal.ServicePrincipalToken{}, fmt.Errorf("authentication method currently unsupported")
 	}
 
-	// 4. MSI
-	msiEndpoint, err := adal.GetMSIEndpoint()
-	if err != nil {
-		return &adal.ServicePrincipalToken{}, fmt.Errorf("unable to determine MSIEndpoint %w", err)
+	// federated OIDC JWT assertion
+	jwt, err := jwtLookup()
+	if err == nil {
+		clientID, isPresent := os.LookupEnv("AZURE_CLIENT_ID")
+		if !isPresent {
+			return &adal.ServicePrincipalToken{}, fmt.Errorf("failed to get client id from environment")
+		}
+		tenantID, isPresent := os.LookupEnv("AZURE_TENANT_ID")
+		if !isPresent {
+			return &adal.ServicePrincipalToken{}, fmt.Errorf("failed to get client id from environment")
+		}
+
+		oAuthConfig, err := adal.NewOAuthConfig(settings.Environment.ActiveDirectoryEndpoint, tenantID)
+		if err != nil {
+			return &adal.ServicePrincipalToken{}, fmt.Errorf("failed to initialise OAuthConfig - %w", err)
+		}
+
+		return adal.NewServicePrincipalTokenFromFederatedToken(*oAuthConfig, clientID, *jwt, resource)
 	}
 
-	return adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	// 4. MSI
+	return adal.NewServicePrincipalTokenFromManagedIdentity(resource, &adal.ManagedIdentityOptions{
+		ClientID: os.Getenv("AZURE_CLIENT_ID"),
+	})
+}
+
+func jwtLookup() (*string, error) {
+	jwt, isPresent := os.LookupEnv("AZURE_FEDERATED_TOKEN")
+	if isPresent {
+		return &jwt, nil
+	}
+
+	if jwtFile, isPresent := os.LookupEnv("AZURE_FEDERATED_TOKEN_FILE"); isPresent {
+		jwtBytes, err := os.ReadFile(jwtFile)
+		if err != nil {
+			return nil, err
+		}
+		jwt = string(jwtBytes)
+		return &jwt, nil
+	}
+
+	return nil, fmt.Errorf("no JWT found")
 }
