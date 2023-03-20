@@ -1,3 +1,4 @@
-FROM ubuntu:rolling as builder
+# ubuntu:bionic-20200219
+FROM ubuntu@sha256:04d48df82c938587820d7b6006f5071dbbffceb7ca01d2814f81857c631d44df as builder
 
 RUN apt-get update && apt-get -y upgrade && apt-get -y install lib32stdc++6 wget
