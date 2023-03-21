@@ -9,15 +9,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 
-	"github.com/containerd/containerd/sys"
+	"github.com/containerd/containerd/pkg/userns"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/docker/docker/pkg/system"
+	"golang.org/x/sys/unix"
 )
 
 type applyLayerResponse struct {
@@ -37,17 +36,14 @@ func applyLayer() {
 	runtime.LockOSThread()
 	flag.Parse()
 
-	inUserns := sys.RunningInUserNS()
+	inUserns := userns.RunningInUserNS()
 	if err := chroot(flag.Arg(0)); err != nil {
 		fatal(err)
 	}
 
 	// We need to be able to set any perms
-	oldmask, err := system.Umask(0)
-	defer system.Umask(oldmask)
-	if err != nil {
-		fatal(err)
-	}
+	oldmask := unix.Umask(0)
+	defer unix.Umask(oldmask)
 
 	if err := json.Unmarshal([]byte(os.Getenv("OPT")), &options); err != nil {
 		fatal(err)
@@ -57,7 +53,7 @@ func applyLayer() {
 		options.InUserNS = true
 	}
 
-	if tmpDir, err = ioutil.TempDir("/", "temp-docker-extract"); err != nil {
+	if tmpDir, err = os.MkdirTemp("/", "temp-docker-extract"); err != nil {
 		fatal(err)
 	}
 
@@ -96,7 +92,7 @@ func applyLayerHandler(dest string, layer io.Reader, options *archive.TarOptions
 	}
 	if options == nil {
 		options = &archive.TarOptions{}
-		if sys.RunningInUserNS() {
+		if userns.RunningInUserNS() {
 			options.InUserNS = true
 		}
 	}

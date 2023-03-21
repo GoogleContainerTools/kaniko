@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/cilium/ebpf"
@@ -15,10 +15,6 @@ import (
 
 var (
 	uprobeEventsPath = filepath.Join(tracefsPath, "uprobe_events")
-
-	// rgxUprobeSymbol is used to strip invalid characters from the uprobe symbol
-	// as they are not allowed to be used as the EVENT token in tracefs.
-	rgxUprobeSymbol = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 	uprobeRetprobeBit = struct {
 		once  sync.Once
@@ -46,15 +42,21 @@ var (
 type Executable struct {
 	// Path of the executable on the filesystem.
 	path string
-	// Parsed ELF symbols and dynamic symbols offsets.
-	offsets map[string]uint64
+	// Parsed ELF and dynamic symbols' addresses.
+	addresses map[string]uint64
 }
 
 // UprobeOptions defines additional parameters that will be used
 // when loading Uprobes.
 type UprobeOptions struct {
-	// Symbol offset. Must be provided in case of external symbols (shared libs).
-	// If set, overrides the offset eventually parsed from the executable.
+	// Symbol address. Must be provided in case of external symbols (shared libs).
+	// If set, overrides the address eventually parsed from the executable.
+	Address uint64
+	// The offset relative to given symbol. Useful when tracing an arbitrary point
+	// inside the frame of given symbol.
+	//
+	// Note: this field changed from being an absolute offset to being relative
+	// to Address.
 	Offset uint64
 	// Only set the uprobe on the given process ID. Useful when tracing
 	// shared library calls or programs that have many running instances.
@@ -70,6 +72,11 @@ type UprobeOptions struct {
 	// github.com/torvalds/linux/commit/1cc33161a83d
 	// github.com/torvalds/linux/commit/a6ca88b241d5
 	RefCtrOffset uint64
+	// Arbitrary value that can be fetched from an eBPF program
+	// via `bpf_get_attach_cookie()`.
+	//
+	// Needs kernel 5.15+.
+	Cookie uint64
 }
 
 // To open a new Executable, use:
@@ -99,8 +106,8 @@ func OpenExecutable(path string) (*Executable, error) {
 	}
 
 	ex := Executable{
-		path:    path,
-		offsets: make(map[string]uint64),
+		path:      path,
+		addresses: make(map[string]uint64),
 	}
 
 	if err := ex.load(se); err != nil {
@@ -129,7 +136,7 @@ func (ex *Executable) load(f *internal.SafeELFFile) error {
 			continue
 		}
 
-		off := s.Value
+		address := s.Value
 
 		// Loop over ELF segments.
 		for _, prog := range f.Progs {
@@ -145,32 +152,42 @@ func (ex *Executable) load(f *internal.SafeELFFile) error {
 				// fn symbol offset = fn symbol VA - .text VA + .text offset
 				//
 				// stackoverflow.com/a/40249502
-				off = s.Value - prog.Vaddr + prog.Off
+				address = s.Value - prog.Vaddr + prog.Off
 				break
 			}
 		}
 
-		ex.offsets[s.Name] = off
+		ex.addresses[s.Name] = address
 	}
 
 	return nil
 }
 
-func (ex *Executable) offset(symbol string) (uint64, error) {
-	if off, ok := ex.offsets[symbol]; ok {
-		// Symbols with location 0 from section undef are shared library calls and
-		// are relocated before the binary is executed. Dynamic linking is not
-		// implemented by the library, so mark this as unsupported for now.
-		//
-		// Since only offset values are stored and not elf.Symbol, if the value is 0,
-		// assume it's an external symbol.
-		if off == 0 {
-			return 0, fmt.Errorf("cannot resolve %s library call '%s', "+
-				"consider providing the offset via options: %w", ex.path, symbol, ErrNotSupported)
-		}
-		return off, nil
+// address calculates the address of a symbol in the executable.
+//
+// opts must not be nil.
+func (ex *Executable) address(symbol string, opts *UprobeOptions) (uint64, error) {
+	if opts.Address > 0 {
+		return opts.Address + opts.Offset, nil
 	}
-	return 0, fmt.Errorf("symbol %s: %w", symbol, ErrNoSymbol)
+
+	address, ok := ex.addresses[symbol]
+	if !ok {
+		return 0, fmt.Errorf("symbol %s: %w", symbol, ErrNoSymbol)
+	}
+
+	// Symbols with location 0 from section undef are shared library calls and
+	// are relocated before the binary is executed. Dynamic linking is not
+	// implemented by the library, so mark this as unsupported for now.
+	//
+	// Since only offset values are stored and not elf.Symbol, if the value is 0,
+	// assume it's an external symbol.
+	if address == 0 {
+		return 0, fmt.Errorf("cannot resolve %s library call '%s': %w "+
+			"(consider providing UprobeOptions.Address)", ex.path, symbol, ErrNotSupported)
+	}
+
+	return address + opts.Offset, nil
 }
 
 // Uprobe attaches the given eBPF program to a perf event that fires when the
@@ -185,6 +202,8 @@ func (ex *Executable) offset(symbol string) (uint64, error) {
 //
 //  up, err := ex.Uprobe("main", prog, &UprobeOptions{Offset: 0x123})
 //
+// Note: Setting the Offset field in the options supersedes the symbol's offset.
+//
 // Losing the reference to the resulting Link (up) will close the Uprobe
 // and prevent further execution of prog. The Link must be Closed during
 // program shutdown to avoid leaking system resources.
@@ -197,13 +216,13 @@ func (ex *Executable) Uprobe(symbol string, prog *ebpf.Program, opts *UprobeOpti
 		return nil, err
 	}
 
-	err = u.attach(prog)
+	lnk, err := attachPerfEvent(u, prog)
 	if err != nil {
 		u.Close()
 		return nil, err
 	}
 
-	return u, nil
+	return lnk, nil
 }
 
 // Uretprobe attaches the given eBPF program to a perf event that fires right
@@ -217,6 +236,8 @@ func (ex *Executable) Uprobe(symbol string, prog *ebpf.Program, opts *UprobeOpti
 //
 //  up, err := ex.Uretprobe("main", prog, &UprobeOptions{Offset: 0x123})
 //
+// Note: Setting the Offset field in the options supersedes the symbol's offset.
+//
 // Losing the reference to the resulting Link (up) will close the Uprobe
 // and prevent further execution of prog. The Link must be Closed during
 // program shutdown to avoid leaking system resources.
@@ -229,13 +250,13 @@ func (ex *Executable) Uretprobe(symbol string, prog *ebpf.Program, opts *UprobeO
 		return nil, err
 	}
 
-	err = u.attach(prog)
+	lnk, err := attachPerfEvent(u, prog)
 	if err != nil {
 		u.Close()
 		return nil, err
 	}
 
-	return u, nil
+	return lnk, nil
 }
 
 // uprobe opens a perf event for the given binary/symbol and attaches prog to it.
@@ -251,13 +272,9 @@ func (ex *Executable) uprobe(symbol string, prog *ebpf.Program, opts *UprobeOpti
 		opts = &UprobeOptions{}
 	}
 
-	offset := opts.Offset
-	if offset == 0 {
-		off, err := ex.offset(symbol)
-		if err != nil {
-			return nil, err
-		}
-		offset = off
+	offset, err := ex.address(symbol, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	pid := opts.PID
@@ -278,6 +295,7 @@ func (ex *Executable) uprobe(symbol string, prog *ebpf.Program, opts *UprobeOpti
 		pid:          pid,
 		refCtrOffset: opts.RefCtrOffset,
 		ret:          ret,
+		cookie:       opts.Cookie,
 	}
 
 	// Use uprobe PMU if the kernel has it available.
@@ -290,7 +308,7 @@ func (ex *Executable) uprobe(symbol string, prog *ebpf.Program, opts *UprobeOpti
 	}
 
 	// Use tracefs if uprobe PMU is missing.
-	args.symbol = uprobeSanitizedSymbol(symbol)
+	args.symbol = sanitizeSymbol(symbol)
 	tp, err = tracefsUprobe(args)
 	if err != nil {
 		return nil, fmt.Errorf("creating trace event '%s:%s' in tracefs: %w", ex.path, symbol, err)
@@ -309,9 +327,29 @@ func tracefsUprobe(args probeArgs) (*perfEvent, error) {
 	return tracefsProbe(uprobeType, args)
 }
 
-// uprobeSanitizedSymbol replaces every invalid characted for the tracefs api with an underscore.
-func uprobeSanitizedSymbol(symbol string) string {
-	return rgxUprobeSymbol.ReplaceAllString(symbol, "_")
+// sanitizeSymbol replaces every invalid character for the tracefs api with an underscore.
+// It is equivalent to calling regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString("_").
+func sanitizeSymbol(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	var skip bool
+	for _, c := range []byte(s) {
+		switch {
+		case c >= 'a' && c <= 'z',
+			c >= 'A' && c <= 'Z',
+			c >= '0' && c <= '9':
+			skip = false
+			b.WriteByte(c)
+
+		default:
+			if !skip {
+				b.WriteByte('_')
+				skip = true
+			}
+		}
+	}
+
+	return b.String()
 }
 
 // uprobeToken creates the PATH:OFFSET(REF_CTR_OFFSET) token for the tracefs api.

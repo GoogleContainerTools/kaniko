@@ -2,11 +2,10 @@ package chrootarchive // import "github.com/docker/docker/pkg/chrootarchive"
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/containerd/containerd/sys"
+	"github.com/containerd/containerd/pkg/userns"
 	"github.com/moby/sys/mount"
 	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
@@ -20,7 +19,7 @@ import (
 // This is similar to how libcontainer sets up a container's rootfs
 func chroot(path string) (err error) {
 	// if the engine is running in a user namespace we need to use actual chroot
-	if sys.RunningInUserNS() {
+	if userns.RunningInUserNS() {
 		return realChroot(path)
 	}
 	if err := unix.Unshare(unix.CLONE_NEWNS); err != nil {
@@ -44,7 +43,7 @@ func chroot(path string) (err error) {
 	}
 
 	// setup oldRoot for pivot_root
-	pivotDir, err := ioutil.TempDir(path, ".pivot_root")
+	pivotDir, err := os.MkdirTemp(path, ".pivot_root")
 	if err != nil {
 		return fmt.Errorf("Error setting up pivot dir: %v", err)
 	}

@@ -17,8 +17,9 @@
 package cgroups
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -70,7 +71,7 @@ func (c *cpuacctController) Stat(path string, stats *v1.Metrics) error {
 
 func (c *cpuacctController) percpuUsage(path string) ([]uint64, error) {
 	var usage []uint64
-	data, err := ioutil.ReadFile(filepath.Join(c.Path(path), "cpuacct.usage_percpu"))
+	data, err := os.ReadFile(filepath.Join(c.Path(path), "cpuacct.usage_percpu"))
 	if err != nil {
 		return nil, err
 	}
@@ -86,36 +87,41 @@ func (c *cpuacctController) percpuUsage(path string) ([]uint64, error) {
 
 func (c *cpuacctController) getUsage(path string) (user uint64, kernel uint64, err error) {
 	statPath := filepath.Join(c.Path(path), "cpuacct.stat")
-	data, err := ioutil.ReadFile(statPath)
+	f, err := os.Open(statPath)
 	if err != nil {
 		return 0, 0, err
 	}
-	fields := strings.Fields(string(data))
-	if len(fields) != 4 {
-		return 0, 0, fmt.Errorf("%q is expected to have 4 fields", statPath)
+	defer f.Close()
+	var (
+		raw = make(map[string]uint64)
+		sc  = bufio.NewScanner(f)
+	)
+	for sc.Scan() {
+		key, v, err := parseKV(sc.Text())
+		if err != nil {
+			return 0, 0, err
+		}
+		raw[key] = v
+	}
+	if err := sc.Err(); err != nil {
+		return 0, 0, err
 	}
 	for _, t := range []struct {
-		index int
 		name  string
 		value *uint64
 	}{
 		{
-			index: 0,
 			name:  "user",
 			value: &user,
 		},
 		{
-			index: 2,
 			name:  "system",
 			value: &kernel,
 		},
 	} {
-		if fields[t.index] != t.name {
-			return 0, 0, fmt.Errorf("expected field %q but found %q in %q", t.name, fields[t.index], statPath)
-		}
-		v, err := strconv.ParseUint(fields[t.index+1], 10, 64)
-		if err != nil {
-			return 0, 0, err
+		v, ok := raw[t.name]
+		if !ok {
+			return 0, 0, fmt.Errorf("expected field %q but not found in %q", t.name, statPath)
 		}
 		*t.value = v
 	}

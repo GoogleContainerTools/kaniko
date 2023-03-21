@@ -33,8 +33,8 @@ import (
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/karrick/godirwalk"

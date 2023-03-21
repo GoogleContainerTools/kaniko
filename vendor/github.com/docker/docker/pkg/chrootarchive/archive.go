@@ -3,28 +3,15 @@ package chrootarchive // import "github.com/docker/docker/pkg/chrootarchive"
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 )
 
-func init() {
-	// initialize nss libraries in Glibc so that the dynamic libraries are loaded in the host
-	// environment not in the chroot from untrusted files.
-	_, _ = user.Lookup("docker")
-	_, _ = net.LookupHost("localhost")
-}
-
 // NewArchiver returns a new Archiver which uses chrootarchive.Untar
-func NewArchiver(idMapping *idtools.IdentityMapping) *archive.Archiver {
-	if idMapping == nil {
-		idMapping = &idtools.IdentityMapping{}
-	}
+func NewArchiver(idMapping idtools.IdentityMapping) *archive.Archiver {
 	return &archive.Archiver{
 		Untar:     Untar,
 		IDMapping: idMapping,
@@ -34,7 +21,7 @@ func NewArchiver(idMapping *idtools.IdentityMapping) *archive.Archiver {
 // Untar reads a stream of bytes from `archive`, parses it as a tar archive,
 // and unpacks it into the directory at `dest`.
 // The archive may be compressed with one of the following algorithms:
-//  identity (uncompressed), gzip, bzip2, xz.
+// identity (uncompressed), gzip, bzip2, xz.
 func Untar(tarArchive io.Reader, dest string, options *archive.TarOptions) error {
 	return untarHandler(tarArchive, dest, options, true, dest)
 }
@@ -77,8 +64,7 @@ func untarHandler(tarArchive io.Reader, dest string, options *archive.TarOptions
 	// If dest is inside a root then directory is created within chroot by extractor.
 	// This case is only currently used by cp.
 	if dest == root {
-		idMapping := idtools.NewIDMappingsFromMaps(options.UIDMaps, options.GIDMaps)
-		rootIDs := idMapping.RootPair()
+		rootIDs := options.IDMap.RootPair()
 
 		dest = filepath.Clean(dest)
 		if _, err := os.Stat(dest); os.IsNotExist(err) {
@@ -88,7 +74,7 @@ func untarHandler(tarArchive io.Reader, dest string, options *archive.TarOptions
 		}
 	}
 
-	r := ioutil.NopCloser(tarArchive)
+	r := io.NopCloser(tarArchive)
 	if decompress {
 		decompressedArchive, err := archive.DecompressStream(tarArchive)
 		if err != nil {

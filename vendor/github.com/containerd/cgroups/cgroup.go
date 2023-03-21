@@ -84,7 +84,7 @@ func Load(hierarchy Hierarchy, path Path, opts ...InitOpts) (Cgroup, error) {
 	for _, s := range pathers(subsystems) {
 		p, err := path(s.Name())
 		if err != nil {
-			if  errors.Is(err, os.ErrNotExist) {
+			if errors.Is(err, os.ErrNotExist) {
 				return nil, ErrCgroupDeleted
 			}
 			if err == ErrControllerNotActive {
@@ -228,6 +228,15 @@ func (c *cgroup) Delete() error {
 	}
 	var errs []string
 	for _, s := range c.subsystems {
+		// kernel prevents cgroups with running process from being removed, check the tree is empty
+		procs, err := c.processes(s.Name(), true, cgroupProcs)
+		if err != nil {
+			return err
+		}
+		if len(procs) > 0 {
+			errs = append(errs, fmt.Sprintf("%s (contains running processes)", string(s.Name())))
+			continue
+		}
 		if d, ok := s.(deleter); ok {
 			sp, err := c.path(s.Name())
 			if err != nil {
@@ -247,6 +256,7 @@ func (c *cgroup) Delete() error {
 			if err := remove(path); err != nil {
 				errs = append(errs, path)
 			}
+			continue
 		}
 	}
 	if len(errs) > 0 {
