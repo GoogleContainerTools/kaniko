@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/minio/highwayhash"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -195,7 +196,7 @@ func Lgetxattr(path string, attr string) ([]byte, error) {
 	dest := make([]byte, 128)
 	sz, errno := unix.Lgetxattr(path, attr, dest)
 
-	for errno == unix.ERANGE {
+	for errors.Is(errno, unix.ERANGE) {
 		// Buffer too small, use zero-sized buffer to get the actual size
 		sz, errno = unix.Lgetxattr(path, attr, []byte{})
 		if errno != nil {
@@ -206,7 +207,7 @@ func Lgetxattr(path string, attr string) ([]byte, error) {
 	}
 
 	switch {
-	case errno == unix.ENODATA:
+	case errors.Is(errno, unix.ENODATA):
 		return nil, nil
 	case errno != nil:
 		return nil, errno

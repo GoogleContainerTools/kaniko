@@ -55,7 +55,8 @@ func (b *BuildArgs) ReplacementEnvs(envs []string) []string {
 	resultEnv := make([]string, len(envs))
 	copy(resultEnv, envs)
 	filtered := b.FilterAllowed(envs)
-	return append(resultEnv, filtered...)
+	// Disable makezero linter, since the previous make is paired with a same sized copy
+	return append(resultEnv, filtered...) //nolint:makezero
 }
 
 // AddMetaArgs adds the supplied args map to b's allowedMetaArgs

@@ -80,7 +80,7 @@ func (t *Tar) Close() {
 func (t *Tar) AddFileToTar(p string) error {
 	i, err := os.Lstat(p)
 	if err != nil {
-		return fmt.Errorf("Failed to get file info for %s: %s", p, err)
+		return fmt.Errorf("Failed to get file info for %s: %w", p, err)
 	}
 	linkDst := ""
 	if i.Mode()&os.ModeSymlink != 0 {
@@ -156,7 +156,7 @@ func writeSecurityXattrToToFile(path string, hdr *tar.Header) error {
 	}
 	if capability, ok := hdr.Xattrs[securityCapabilityXattr]; ok {
 		err := system.Lsetxattr(path, securityCapabilityXattr, []byte(capability), 0)
-		if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && err != system.ErrNotSupportedPlatform {
+		if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && !errors.Is(err, system.ErrNotSupportedPlatform) {
 			return errors.Wrapf(err, "failed to write %q attribute to %q", securityCapabilityXattr, path)
 		}
 	}
@@ -170,7 +170,7 @@ func readSecurityXattrToTarHeader(path string, hdr *tar.Header) error {
 		hdr.Xattrs = make(map[string]string)
 	}
 	capability, err := system.Lgetxattr(path, securityCapabilityXattr)
-	if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && err != system.ErrNotSupportedPlatform {
+	if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && !errors.Is(err, system.ErrNotSupportedPlatform) {
 		return errors.Wrapf(err, "failed to read %q attribute from %q", securityCapabilityXattr, path)
 	}
 	if capability != nil {

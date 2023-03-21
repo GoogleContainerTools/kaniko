@@ -17,6 +17,7 @@ limitations under the License.
 package snapshot
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -262,7 +263,7 @@ func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) e
 // filesWithLinks returns the symlink and the target path if its exists.
 func filesWithLinks(path string) ([]string, error) {
 	link, err := util.GetSymLink(path)
-	if err == util.ErrNotSymLink {
+	if errors.Is(err, util.ErrNotSymLink) {
 		return []string{path}, nil
 	} else if err != nil {
 		return nil, err
@@ -272,7 +273,7 @@ func filesWithLinks(path string) ([]string, error) {
 		link = filepath.Join(filepath.Dir(path), link)
 	}
 	if _, err := os.Stat(link); err != nil {
-		return []string{path}, nil
+		return []string{path}, nil //nolint:nilerr
 	}
 	return []string{path, link}, nil
 }

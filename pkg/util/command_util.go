@@ -173,10 +173,14 @@ func IsDestDir(path string) bool {
 
 // DestinationFilepath returns the destination filepath from the build context to the image filesystem
 // If source is a file:
+//
 //	If dest is a dir, copy it to /dest/relpath
-// 	If dest is a file, copy directly to dest
+//	If dest is a file, copy directly to dest
+//
 // If source is a dir:
+//
 //	Assume dest is also a dir, and copy to dest/
+//
 // If dest is not an absolute filepath, add /cwd to the beginning
 func DestinationFilepath(src, dest, cwd string) (string, error) {
 	_, srcFileName := filepath.Split(src)
@@ -287,7 +291,7 @@ func IsSrcRemoteFileURL(rawurl string) bool {
 	if err != nil {
 		return false
 	}
-	_, err = http.Get(rawurl)
+	_, err = http.Get(rawurl) //nolint:noctx
 	return err == nil
 }
 

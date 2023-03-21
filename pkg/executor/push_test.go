@@ -127,7 +127,7 @@ func TestHeaderAdded(t *testing.T) {
 				os.Setenv("UPSTREAM_CLIENT_TYPE", test.upstream)
 				defer func() { os.Unsetenv("UPSTREAM_CLIENT_TYPE") }()
 			}
-			req, err := http.NewRequest("GET", "dummy", nil)
+			req, err := http.NewRequest("GET", "dummy", nil) //nolint:noctx
 			if err != nil {
 				t.Fatalf("culd not create a req due to %s", err)
 			}
