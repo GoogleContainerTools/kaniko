@@ -17,12 +17,11 @@ package random
 import (
 	"archive/tar"
 	"bytes"
+	"crypto"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	mrand "math/rand"
 	"time"
 
@@ -47,7 +46,7 @@ func (ul *uncompressedLayer) DiffID() (v1.Hash, error) {
 
 // Uncompressed implements partial.UncompressedLayer
 func (ul *uncompressedLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewBuffer(ul.content)), nil
+	return io.NopCloser(bytes.NewBuffer(ul.content)), nil
 }
 
 // MediaType returns the media type of the layer
@@ -85,7 +84,7 @@ func Layer(byteSize int64, mt types.MediaType) (v1.Layer, error) {
 
 	// Hash the contents as we write it out to the buffer.
 	var b bytes.Buffer
-	hasher := sha256.New()
+	hasher := crypto.SHA256.New()
 	mw := io.MultiWriter(&b, hasher)
 
 	// Write a single file with a random name and random contents.

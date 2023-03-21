@@ -71,11 +71,13 @@ func (gk *googleKeychain) Resolve(target authn.Resource) (authn.Authenticator, e
 func resolve() authn.Authenticator {
 	auth, envErr := NewEnvAuthenticator()
 	if envErr == nil && auth != authn.Anonymous {
+		logs.Debug.Println("google.Keychain: using Application Default Credentials")
 		return auth
 	}
 
 	auth, gErr := NewGcloudAuthenticator()
 	if gErr == nil && auth != authn.Anonymous {
+		logs.Debug.Println("google.Keychain: using gcloud fallback")
 		return auth
 	}
 
