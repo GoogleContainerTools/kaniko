@@ -92,17 +92,14 @@ jobs:
 
     # Sign images if not a PR.
     - if: github.event_name != 'pull_request'
-      uses: sigstore/cosign-installer@b3413d484cc23cf8778c3d2aa361568d4eb54679 # v2.5.1
-      with:
-        cosign-release: 'v1.11.1'
+      uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # v3.0.1
     - if: github.event_name != 'pull_request'
-      env:
-        COSIGN_EXPERIMENTAL: "true"
       run: |
-        cosign sign \
+        cosign sign --yes \
             --key gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
             ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
-        cosign sign ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
+        cosign sign --yes \
+            ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
 
     # If a tag push, use crane to add more tags.
     - if: startsWith(github.ref, 'refs/tags/v')
