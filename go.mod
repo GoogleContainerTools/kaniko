@@ -2,14 +2,6 @@ module github.com/GoogleContainerTools/kaniko
 
 go 1.17
 
-// These match the docker/docker's dependencies configured in:
-// https://github.com/moby/moby/blob/v20.10.12/vendor.conf
-replace (
-	github.com/moby/buildkit => github.com/moby/buildkit v0.8.3
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc92
-	github.com/tonistiigi/fsutil => github.com/tonistiigi/fsutil v0.0.0-20201103201449-0834f99b7b85
-)
-
 require (
 	cloud.google.com/go/storage v1.29.0
 	github.com/Azure/azure-storage-blob-go v0.14.0
@@ -27,7 +19,7 @@ require (
 	github.com/google/slowjam v1.0.0
 	github.com/karrick/godirwalk v1.16.1
 	github.com/minio/highwayhash v1.0.2
-	github.com/moby/buildkit v0.9.3
+	github.com/moby/buildkit v0.11.4
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
@@ -65,16 +57,18 @@ require (
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.14.0 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.9.0 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.11.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.5 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.3.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.8.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.10.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.15.0 // indirect
-	github.com/aws/smithy-go v1.11.0 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.16.3 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.15.5 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.4 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.4 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.11.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.4 // indirect
+	github.com/aws/smithy-go v1.11.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
@@ -103,6 +97,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.2 // indirect
+	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -114,6 +109,8 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
+	github.com/moby/patternmatcher v0.5.0 // indirect
+	github.com/moby/sys/mount v0.3.3 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
@@ -132,6 +129,7 @@ require (
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/rootless-containers/rootlesskit v1.1.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20230105215944-fb433841cbfa // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	go.etcd.io/etcd/raft/v3 v3.5.6 // indirect
@@ -153,11 +151,14 @@ require (
 require (
 	github.com/Azure/azure-sdk-for-go v61.3.0+incompatible // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.14.0 // indirect
+	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.15.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.12.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/moby/patternmatcher v0.5.0 // indirect
+	github.com/kevinburke/ssh_config v1.1.0 // indirect
+	github.com/mattn/go-ieproxy v0.0.2 // indirect
 	github.com/moby/swarmkit/v2 v2.0.0-20230315203717-e28e8ba9bc83 // indirect
-	github.com/moby/sys/mount v0.3.0 // indirect
-	github.com/tonistiigi/fsutil v0.0.0-20220115021204-b19f7f9cb274 // indirect
+	github.com/xanzy/ssh-agent v0.3.1 // indirect
+	golang.org/x/sys v0.6.0
+	google.golang.org/api v0.110.0
 )

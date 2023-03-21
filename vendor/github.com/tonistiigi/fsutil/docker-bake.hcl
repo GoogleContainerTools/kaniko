@@ -1,5 +1,5 @@
 variable "GO_VERSION" {
-  default = "1.13"
+  default = "1.18"
 }
 
 group "default" {
@@ -28,11 +28,20 @@ target "test-noroot" {
 
 target "lint" {
   dockerfile = "./hack/dockerfiles/lint.Dockerfile"
+  args = {
+    GO_VERSION = "${GO_VERSION}"
+  }
 }
 
 target "validate-gomod" {
   dockerfile = "./hack/dockerfiles/gomod.Dockerfile"
   target = "validate"
+  args = {
+    # go mod may produce different results between go versions,
+    # if this becomes a problem, this should be switched to use
+    # a fixed go version.
+    GO_VERSION = "${GO_VERSION}"
+  }
 }
 
 target "gomod" {
@@ -54,5 +63,5 @@ target "shfmt" {
 
 target "cross" {
   inherits = ["build"]
-  platforms = ["linux/amd64", "linux/arm64", "linux/arm", "linux/ppc64le", "linux/s390x"]
+  platforms = ["linux/amd64", "linux/386", "linux/arm64", "linux/arm", "linux/ppc64le", "linux/s390x", "darwin/amd64", "darwin/arm64", "windows/amd64", "windows/arm64", "freebsd/amd64", "freebsd/arm64"]
 }

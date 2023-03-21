@@ -1,29 +1,36 @@
+//go:build !windows
+// +build !windows
+
 package devices
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"golang.org/x/sys/unix"
 )
 
-var (
-	// ErrNotADevice denotes that a file is not a valid linux device.
-	ErrNotADevice = errors.New("not a device node")
-)
+// ErrNotADevice denotes that a file is not a valid linux device.
+var ErrNotADevice = errors.New("not a device node")
 
 // Testing dependencies
 var (
-	unixLstat     = unix.Lstat
-	ioutilReadDir = ioutil.ReadDir
+	unixLstat = unix.Lstat
+	osReadDir = os.ReadDir
 )
 
-// Given the path to a device and its cgroup_permissions(which cannot be easily queried) look up the
-// information about a linux device and return that information as a Device struct.
-func DeviceFromPath(path, permissions string) (*configs.Device, error) {
+func mkDev(d *Rule) (uint64, error) {
+	if d.Major == Wildcard || d.Minor == Wildcard {
+		return 0, errors.New("cannot mkdev() device with wildcards")
+	}
+	return unix.Mkdev(uint32(d.Major), uint32(d.Minor)), nil
+}
+
+// DeviceFromPath takes the path to a device and its cgroup_permissions (which
+// cannot be easily queried) to look up the information about a linux device
+// and returns that information as a Device struct.
+func DeviceFromPath(path, permissions string) (*Device, error) {
 	var stat unix.Stat_t
 	err := unixLstat(path, &stat)
 	if err != nil {
@@ -31,49 +38,49 @@ func DeviceFromPath(path, permissions string) (*configs.Device, error) {
 	}
 
 	var (
-		devType   configs.DeviceType
+		devType   Type
 		mode      = stat.Mode
-		devNumber = uint64(stat.Rdev)
+		devNumber = uint64(stat.Rdev) //nolint:unconvert // Rdev is uint32 on e.g. MIPS.
 		major     = unix.Major(devNumber)
 		minor     = unix.Minor(devNumber)
 	)
 	switch mode & unix.S_IFMT {
 	case unix.S_IFBLK:
-		devType = configs.BlockDevice
+		devType = BlockDevice
 	case unix.S_IFCHR:
-		devType = configs.CharDevice
+		devType = CharDevice
 	case unix.S_IFIFO:
-		devType = configs.FifoDevice
+		devType = FifoDevice
 	default:
 		return nil, ErrNotADevice
 	}
-	return &configs.Device{
-		DeviceRule: configs.DeviceRule{
+	return &Device{
+		Rule: Rule{
 			Type:        devType,
 			Major:       int64(major),
 			Minor:       int64(minor),
-			Permissions: configs.DevicePermissions(permissions),
+			Permissions: Permissions(permissions),
 		},
 		Path:     path,
-		FileMode: os.FileMode(mode),
+		FileMode: os.FileMode(mode &^ unix.S_IFMT),
 		Uid:      stat.Uid,
 		Gid:      stat.Gid,
 	}, nil
 }
 
 // HostDevices returns all devices that can be found under /dev directory.
-func HostDevices() ([]*configs.Device, error) {
+func HostDevices() ([]*Device, error) {
 	return GetDevices("/dev")
 }
 
 // GetDevices recursively traverses a directory specified by path
 // and returns all devices found there.
-func GetDevices(path string) ([]*configs.Device, error) {
-	files, err := ioutilReadDir(path)
+func GetDevices(path string) ([]*Device, error) {
+	files, err := osReadDir(path)
 	if err != nil {
 		return nil, err
 	}
-	var out []*configs.Device
+	var out []*Device
 	for _, f := range files {
 		switch {
 		case f.IsDir():
@@ -96,7 +103,7 @@ func GetDevices(path string) ([]*configs.Device, error) {
 		}
 		device, err := DeviceFromPath(filepath.Join(path, f.Name()), "rwm")
 		if err != nil {
-			if err == ErrNotADevice {
+			if errors.Is(err, ErrNotADevice) {
 				continue
 			}
 			if os.IsNotExist(err) {
@@ -104,7 +111,7 @@ func GetDevices(path string) ([]*configs.Device, error) {
 			}
 			return nil, err
 		}
-		if device.Type == configs.FifoDevice {
+		if device.Type == FifoDevice {
 			continue
 		}
 		out = append(out, device)

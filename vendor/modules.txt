@@ -85,6 +85,9 @@ github.com/ProtonMail/go-crypto/openpgp/s2k
 # github.com/acomagu/bufpipe v1.0.3
 ## explicit; go 1.12
 github.com/acomagu/bufpipe
+# github.com/agext/levenshtein v1.2.3
+## explicit
+github.com/agext/levenshtein
 # github.com/aws/aws-sdk-go v1.44.24
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
@@ -138,7 +141,7 @@ github.com/aws/aws-sdk-go/service/sso
 github.com/aws/aws-sdk-go/service/sso/ssoiface
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
-# github.com/aws/aws-sdk-go-v2 v1.14.0
+# github.com/aws/aws-sdk-go-v2 v1.16.3
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2
 github.com/aws/aws-sdk-go-v2/aws
@@ -158,10 +161,10 @@ github.com/aws/aws-sdk-go-v2/internal/sdkio
 github.com/aws/aws-sdk-go-v2/internal/strings
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/config v1.14.0
+# github.com/aws/aws-sdk-go-v2/config v1.15.5
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/config
-# github.com/aws/aws-sdk-go-v2/credentials v1.9.0
+# github.com/aws/aws-sdk-go-v2/credentials v1.12.0
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/credentials
 github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds
@@ -170,17 +173,17 @@ github.com/aws/aws-sdk-go-v2/credentials/endpointcreds/internal/client
 github.com/aws/aws-sdk-go-v2/credentials/processcreds
 github.com/aws/aws-sdk-go-v2/credentials/ssocreds
 github.com/aws/aws-sdk-go-v2/credentials/stscreds
-# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.11.0
+# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.4
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
-# github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.5
+# github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.10
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/configsources
-# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.3.0
+# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.4
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
-# github.com/aws/aws-sdk-go-v2/internal/ini v1.3.6
+# github.com/aws/aws-sdk-go-v2/internal/ini v1.3.11
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/ini
 # github.com/aws/aws-sdk-go-v2/service/ecr v1.15.0
@@ -193,20 +196,20 @@ github.com/aws/aws-sdk-go-v2/service/ecr/types
 github.com/aws/aws-sdk-go-v2/service/ecrpublic
 github.com/aws/aws-sdk-go-v2/service/ecrpublic/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/ecrpublic/types
-# github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.8.0
+# github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.4
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url
-# github.com/aws/aws-sdk-go-v2/service/sso v1.10.0
+# github.com/aws/aws-sdk-go-v2/service/sso v1.11.4
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/service/sso
 github.com/aws/aws-sdk-go-v2/service/sso/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sso/types
-# github.com/aws/aws-sdk-go-v2/service/sts v1.15.0
+# github.com/aws/aws-sdk-go-v2/service/sts v1.16.4
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/aws-sdk-go-v2/service/sts/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sts/types
-# github.com/aws/smithy-go v1.11.0
+# github.com/aws/smithy-go v1.11.2
 ## explicit; go 1.15
 github.com/aws/smithy-go
 github.com/aws/smithy-go/document
@@ -559,6 +562,8 @@ github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-memdb v1.3.2
 ## explicit; go 1.12
 github.com/hashicorp/go-memdb
+# github.com/hashicorp/go-uuid v1.0.1
+## explicit
 # github.com/hashicorp/golang-lru v0.5.4
 ## explicit; go 1.12
 github.com/hashicorp/golang-lru/simplelru
@@ -601,14 +606,15 @@ github.com/minio/highwayhash
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir
-# github.com/moby/buildkit v0.9.3 => github.com/moby/buildkit v0.8.3
-## explicit; go 1.13
+# github.com/moby/buildkit v0.11.4
+## explicit; go 1.18
 github.com/moby/buildkit/frontend/dockerfile/command
 github.com/moby/buildkit/frontend/dockerfile/dockerignore
 github.com/moby/buildkit/frontend/dockerfile/instructions
 github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/util/stack
+github.com/moby/buildkit/util/suggest
 # github.com/moby/locker v1.0.1
 ## explicit; go 1.13
 github.com/moby/locker
@@ -625,7 +631,7 @@ github.com/moby/swarmkit/v2/log
 github.com/moby/swarmkit/v2/manager/raftselector
 github.com/moby/swarmkit/v2/protobuf/plugin
 github.com/moby/swarmkit/v2/protobuf/ptypes
-# github.com/moby/sys/mount v0.3.0
+# github.com/moby/sys/mount v0.3.3
 ## explicit; go 1.16
 github.com/moby/sys/mount
 # github.com/moby/sys/mountinfo v0.6.2
@@ -655,9 +661,8 @@ github.com/opencontainers/go-digest/digestset
 ## explicit; go 1.17
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.4 => github.com/opencontainers/runc v1.0.0-rc92
-## explicit; go 1.14
-github.com/opencontainers/runc/libcontainer/configs
+# github.com/opencontainers/runc v1.1.4
+## explicit; go 1.16
 github.com/opencontainers/runc/libcontainer/devices
 github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.1.0-rc.1
@@ -716,8 +721,8 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/tonistiigi/fsutil v0.0.0-20220115021204-b19f7f9cb274 => github.com/tonistiigi/fsutil v0.0.0-20201103201449-0834f99b7b85
-## explicit; go 1.13
+# github.com/tonistiigi/fsutil v0.0.0-20230105215944-fb433841cbfa
+## explicit; go 1.18
 github.com/tonistiigi/fsutil
 github.com/tonistiigi/fsutil/types
 # github.com/vbatts/tar-split v0.11.2
@@ -980,6 +985,3 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/warnings.v0 v0.1.2
 ## explicit
 gopkg.in/warnings.v0
-# github.com/moby/buildkit => github.com/moby/buildkit v0.8.3
-# github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc92
-# github.com/tonistiigi/fsutil => github.com/tonistiigi/fsutil v0.0.0-20201103201449-0834f99b7b85
