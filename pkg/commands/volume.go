@@ -54,7 +54,7 @@ func (v *VolumeCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.
 		if _, err := os.Stat(volume); os.IsNotExist(err) {
 			logrus.Infof("Creating directory %s", volume)
 			if err := os.MkdirAll(volume, 0755); err != nil {
-				return fmt.Errorf("could not create directory for volume %s: %s", volume, err)
+				return fmt.Errorf("could not create directory for volume %s: %w", volume, err)
 			}
 		}
 	}

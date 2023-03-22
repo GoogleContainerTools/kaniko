@@ -16,15 +16,13 @@ limitations under the License.
 
 package cache
 
+import "errors"
+
 // IsAlreadyCached returns true if the supplied error is of the type AlreadyCachedErr
 // otherwise it returns false.
 func IsAlreadyCached(err error) bool {
-	switch err.(type) {
-	case AlreadyCachedErr:
-		return true
-	}
-
-	return false
+	var e AlreadyCachedErr
+	return errors.As(err, &e)
 }
 
 // AlreadyCachedErr is returned when the Docker image requested for caching is already
@@ -39,13 +37,9 @@ func (a AlreadyCachedErr) Error() string {
 
 // IsNotFound returns true if the supplied error is of the type NotFoundErr
 // otherwise it returns false.
-func IsNotFound(e error) bool {
-	switch e.(type) {
-	case NotFoundErr:
-		return true
-	}
-
-	return false
+func IsNotFound(err error) bool {
+	var e NotFoundErr
+	return errors.As(err, &e)
 }
 
 // NotFoundErr is returned when the requested Docker image is not present in the cache.
@@ -59,13 +53,9 @@ func (e NotFoundErr) Error() string {
 
 // IsExpired returns true if the supplied error is of the type ExpiredErr
 // otherwise it returns false.
-func IsExpired(e error) bool {
-	switch e.(type) {
-	case ExpiredErr:
-		return true
-	}
-
-	return false
+func IsExpired(err error) bool {
+	var e ExpiredErr
+	return errors.As(err, &e)
 }
 
 // ExpiredErr is returned when the requested Docker image is present in the cache, but is

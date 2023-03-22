@@ -40,7 +40,7 @@ func ParseStages(opts *config.KanikoOptions) ([]instructions.Stage, []instructio
 	var d []uint8
 	match, _ := regexp.MatchString("^https?://", opts.DockerfilePath)
 	if match {
-		response, e := http.Get(opts.DockerfilePath)
+		response, e := http.Get(opts.DockerfilePath) //nolint:noctx
 		if e != nil {
 			return nil, nil, e
 		}

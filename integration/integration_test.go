@@ -282,7 +282,8 @@ func testGitBuildcontextHelper(t *testing.T, repo string) {
 
 // TestGitBuildcontext explicitly names the main branch
 // Example:
-//   git://github.com/myuser/repo#refs/heads/main
+//
+//	git://github.com/myuser/repo#refs/heads/main
 func TestGitBuildcontext(t *testing.T) {
 	repo := getGitRepo(false)
 	testGitBuildcontextHelper(t, repo)
@@ -290,7 +291,8 @@ func TestGitBuildcontext(t *testing.T) {
 
 // TestGitBuildcontextNoRef builds without any commit / branch reference
 // Example:
-//   git://github.com/myuser/repo
+//
+//	git://github.com/myuser/repo
 func TestGitBuildcontextNoRef(t *testing.T) {
 	t.Skip("Docker's behavior is to assume a 'master' branch, which the Kaniko repo doesn't have")
 	_, _, url := getBranchCommitAndURL()
@@ -299,7 +301,8 @@ func TestGitBuildcontextNoRef(t *testing.T) {
 
 // TestGitBuildcontextExplicitCommit uses an explicit commit hash instead of named reference
 // Example:
-//   git://github.com/myuser/repo#b873088c4a7b60bb7e216289c58da945d0d771b6
+//
+//	git://github.com/myuser/repo#b873088c4a7b60bb7e216289c58da945d0d771b6
 func TestGitBuildcontextExplicitCommit(t *testing.T) {
 	repo := getGitRepo(true)
 	testGitBuildcontextHelper(t, repo)
@@ -711,18 +714,18 @@ func TestExitCodePropagation(t *testing.T) {
 }
 
 type fileDiff struct {
-	Name string
-	Size int
+	Name string `json:"Name"`
+	Size int    `json:"Size"`
 }
 
 type fileDiffResult struct {
-	Adds []fileDiff
-	Dels []fileDiff
+	Adds []fileDiff `json:"Adds"`
+	Dels []fileDiff `json:"Dels"`
 }
 
 type metaDiffResult struct {
-	Adds []string
-	Dels []string
+	Adds []string `json:"Adds"`
+	Dels []string `json:"Dels"`
 }
 
 type diffOutput struct {

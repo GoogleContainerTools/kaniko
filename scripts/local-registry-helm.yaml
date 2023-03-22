@@ -1,0 +1,10 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: local-registry
+  namespace: kube-system
+spec:
+  chart: https://github.com/twuni/docker-registry.helm/archive/refs/tags/v2.2.2.tar.gz
+  set:
+    # Expose the registry server on localhost
+    service.type: "LoadBalancer"

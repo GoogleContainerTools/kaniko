@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -63,12 +62,12 @@ func (i *imageOpener) bufferedOpener() (io.ReadCloser, error) {
 			}
 			defer rc.Close()
 
-			return ioutil.ReadAll(rc)
+			return io.ReadAll(rc)
 		}()
 	})
 
 	// Wrap the bytes in a ReadCloser so it looks like an opened file.
-	return ioutil.NopCloser(bytes.NewReader(i.bytes)), i.err
+	return io.NopCloser(bytes.NewReader(i.bytes)), i.err
 }
 
 func (i *imageOpener) opener() tarball.Opener {

@@ -21,7 +21,7 @@ BIN=${DIR}/bin
 
 if [ ! -x "${BIN}/golangci-lint" ]; then
 	echo "Installing GolangCI-Lint"
-	"${DIR}/install_golint.sh" -b "${BIN}" v1.23.7
+	"${DIR}/install_golint.sh" -b "${BIN}" v1.51.1
 fi
 
 "${BIN}/golangci-lint" run

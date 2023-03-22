@@ -107,7 +107,7 @@ func checkErr(shouldErr bool, err error) error {
 		return fmt.Errorf("Expected error, but returned none")
 	}
 	if err != nil && !shouldErr {
-		return fmt.Errorf("Unexpected error: %s", err)
+		return fmt.Errorf("Unexpected error: %w", err)
 	}
 	return nil
 }

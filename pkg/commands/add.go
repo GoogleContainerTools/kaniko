@@ -38,12 +38,12 @@ type AddCommand struct {
 
 // ExecuteCommand executes the ADD command
 // Special stuff about ADD:
-// 	1. If <src> is a remote file URL:
-// 		- destination will have permissions of 0600
-// 		- If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
-// 		- If dest doesn't end with a slash, the filepath is inferred to be <dest>/<filename>
-// 	2. If <src> is a local tar archive:
-// 		- it is unpacked at the dest, as 'tar -x' would
+//  1. If <src> is a remote file URL:
+//     - destination will have permissions of 0600
+//     - If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
+//     - If dest doesn't end with a slash, the filepath is inferred to be <dest>/<filename>
+//  2. If <src> is a local tar archive:
+//     - it is unpacked at the dest, as 'tar -x' would
 func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
