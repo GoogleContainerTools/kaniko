@@ -142,10 +142,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 				},
 				fileContext: util.FileContext{Root: tempDir},
 				cmd: &instructions.CopyCommand{
-					SourcesAndDest: []string{
-						"foo.txt", "foo.txt",
-					},
-				},
+					SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"foo.txt"}, DestPath: "foo.txt"}},
 			}
 			count := 0
 			tc := testCase{
@@ -274,7 +271,8 @@ func TestCopyExecuteCmd(t *testing.T) {
 
 			cmd := CopyCommand{
 				cmd: &instructions.CopyCommand{
-					SourcesAndDest: test.sourcesAndDest,
+					SourcesAndDest: instructions.SourcesAndDest{SourcePaths: test.sourcesAndDest[0 : len(test.sourcesAndDest)-1],
+						DestPath: test.sourcesAndDest[len(test.sourcesAndDest)-1]},
 				},
 				fileContext: fileContext,
 			}
@@ -421,7 +419,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{srcDir, "dest"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir}, DestPath: "dest"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -453,7 +451,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		defer os.RemoveAll(testDir)
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{filepath.Join(srcDir, "bam.txt"), "dest/"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{filepath.Join(srcDir, "bam.txt")}, DestPath: "dest/"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -480,7 +478,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		defer os.RemoveAll(testDir)
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{filepath.Join(srcDir, "bam.txt"), "dest"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{filepath.Join(srcDir, "bam.txt")}, DestPath: "dest"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -509,7 +507,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{filepath.Join(srcDir, "bam.txt"), "dest"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{filepath.Join(srcDir, "bam.txt")}, DestPath: "dest"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -538,7 +536,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{filepath.Join(srcDir, "sym.link"), "dest/"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{filepath.Join(srcDir, "sym.link")}, DestPath: "dest/"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -583,7 +581,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{filepath.Join(srcDir, "dead.link"), "dest/"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{filepath.Join(srcDir, "dead.link")}, DestPath: "dest/"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -614,7 +612,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	t.Run("copy src symlink dir to a dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
-		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		expected, err := os.ReadDir(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -624,7 +622,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{"another", "dest"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"another"}, DestPath: "dest"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -638,13 +636,13 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err = cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with contents of srcDir
-		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		actual, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i, f := range actual {
 			testutil.CheckDeepEqual(t, expected[i].Name(), f.Name())
-			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
+			testutil.CheckDeepEqual(t, expected[i].Type(), f.Type())
 		}
 	})
 
@@ -670,7 +668,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{srcDir, "dest"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir}, DestPath: "dest"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -704,7 +702,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	t.Run("copy src symlink dir to a dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
-		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		expected, err := os.ReadDir(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -714,7 +712,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{"another", "dest"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"another"}, DestPath: "dest"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -728,13 +726,13 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err = cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with bam.txt and "dest" dir is a symlink
-		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		actual, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i, f := range actual {
 			testutil.CheckDeepEqual(t, expected[i].Name(), f.Name())
-			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
+			testutil.CheckDeepEqual(t, expected[i].Type(), f.Type())
 		}
 	})
 
@@ -757,7 +755,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{srcDir, linkedDest},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir}, DestPath: linkedDest},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -802,7 +800,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), linkedDest},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{fmt.Sprintf("%s/bam.txt", srcDir)}, DestPath: linkedDest},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -850,7 +848,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), testDir},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{fmt.Sprintf("%s/bam.txt", srcDir)}, DestPath: testDir},
 				Chown:          "alice:group",
 			},
 			fileContext: util.FileContext{Root: testDir},
@@ -895,7 +893,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{fmt.Sprintf("%s/bam.txt", srcDir), testDir},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{fmt.Sprintf("%s/bam.txt", srcDir)}, DestPath: testDir},
 				Chown:          "missing:missing",
 			},
 			fileContext: util.FileContext{Root: testDir},
@@ -927,7 +925,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		dest := filepath.Join(testDir, "copy")
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				SourcesAndDest: []string{srcDir, dest},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir}, DestPath: dest},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -939,7 +937,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		}
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
-		actual, err := ioutil.ReadDir(filepath.Join(dest, "another"))
+		actual, err := os.ReadDir(filepath.Join(dest, "another"))
 		if err != nil {
 			t.Fatal(err)
 		}

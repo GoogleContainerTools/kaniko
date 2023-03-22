@@ -1018,7 +1018,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 	root := t.TempDir()
 	// Write a whiteout path
 	d1 := []byte("Hello World\n")
-	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1067,7 +1067,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 	mockLayer := mockv1.NewMockLayer(ctrl)
 	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
 
-	rc := ioutil.NopCloser(buf)
+	rc := io.NopCloser(buf)
 	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
 
 	secondLayerFiles := []string{
@@ -1082,7 +1082,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 	mockLayer2 := mockv1.NewMockLayer(ctrl)
 	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
 
-	rc = ioutil.NopCloser(buf)
+	rc = io.NopCloser(buf)
 	mockLayer2.EXPECT().Uncompressed().Return(rc, nil)
 
 	layers := []v1.Layer{

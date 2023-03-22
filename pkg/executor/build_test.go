@@ -369,8 +369,8 @@ COPY --from=second /bar /bat
 				initializeConfig = tt.args.mockInitConfig
 			}
 
-			f, _ := ioutil.TempFile("", "")
-			ioutil.WriteFile(f.Name(), []byte(tt.args.dockerfile), 0755)
+			f, _ := os.CreateTemp("", "")
+			os.WriteFile(f.Name(), []byte(tt.args.dockerfile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
 				CustomPlatform: platforms.Format(platforms.Normalize(platforms.DefaultSpec())),

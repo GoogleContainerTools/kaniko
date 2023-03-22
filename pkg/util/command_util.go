@@ -95,9 +95,9 @@ func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, fileContext FileCont
 	if len(resolvedEnvs) == 0 {
 		return nil, "", errors.New("resolved envs is empty")
 	}
-	dest := resolvedEnvs[len(resolvedEnvs)-1]
+	dest := sd.DestPath
 	// Resolve wildcards and get a list of resolved sources
-	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)-1], fileContext.Root)
+	srcs, err := ResolveSources(resolvedEnvs[0:len(resolvedEnvs)], fileContext.Root)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve sources")
 	}
@@ -226,8 +226,8 @@ func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, er
 }
 
 func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []string, fileContext FileContext) error {
-	srcs := srcsAndDest.SourcePaths[:len(srcsAndDest.SourcePaths)-1]
-	dest := srcsAndDest.SourcePaths[len(srcsAndDest.SourcePaths)-1]
+	srcs := srcsAndDest.SourcePaths
+	dest := srcsAndDest.DestPath
 
 	if !ContainsWildcards(srcs) {
 		totalSrcs := 0
