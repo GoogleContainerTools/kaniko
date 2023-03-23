@@ -35,7 +35,7 @@ require (
 	github.com/spf13/afero v1.8.2
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/net v0.1.0
+	golang.org/x/net v0.8.0
 	golang.org/x/oauth2 v0.1.0
 	golang.org/x/sync v0.1.0
 )
@@ -45,8 +45,8 @@ require github.com/containerd/containerd v1.6.2
 require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.1 // indirect
-	golang.org/x/mod v0.6.0 // indirect
-	golang.org/x/tools v0.1.12 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/tools v0.6.0 // indirect
 )
 
 require (
@@ -145,8 +145,8 @@ require (
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/sys v0.1.0
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/sys v0.6.0
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.106.0

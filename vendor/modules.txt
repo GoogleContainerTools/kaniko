@@ -783,10 +783,10 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
-# golang.org/x/mod v0.6.0
+# golang.org/x/mod v0.8.0
 ## explicit; go 1.17
 golang.org/x/mod/semver
-# golang.org/x/net v0.1.0
+# golang.org/x/net v0.8.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -812,7 +812,7 @@ golang.org/x/oauth2/jwt
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/syncmap
-# golang.org/x/sys v0.1.0
+# golang.org/x/sys v0.6.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -820,7 +820,7 @@ golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.5.0
+# golang.org/x/text v0.8.0
 ## explicit; go 1.17
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
@@ -829,20 +829,21 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.1.12
+# golang.org/x/tools v0.6.0
 ## explicit; go 1.18
 golang.org/x/tools/cmd/stringer
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/go/internal/pkgbits
 golang.org/x/tools/go/packages
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
 golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/gcimporter
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/pkgbits
+golang.org/x/tools/internal/tokeninternal
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
