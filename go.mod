@@ -150,15 +150,8 @@ require (
 
 require (
 	github.com/Azure/azure-sdk-for-go v61.3.0+incompatible // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.14.0 // indirect
-	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.15.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.12.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/kevinburke/ssh_config v1.1.0 // indirect
-	github.com/mattn/go-ieproxy v0.0.2 // indirect
 	github.com/moby/swarmkit/v2 v2.0.0-20230315203717-e28e8ba9bc83 // indirect
-	github.com/xanzy/ssh-agent v0.3.1 // indirect
-	golang.org/x/sys v0.6.0
-	google.golang.org/api v0.110.0
 )
