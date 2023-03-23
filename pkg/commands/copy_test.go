@@ -117,7 +117,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 	buildArgs := &dockerfile.BuildArgs{}
 
 	type testCase struct {
-		desctiption    string
+		description    string
 		expectLayer    bool
 		expectErr      bool
 		count          *int
@@ -128,7 +128,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 	}
 	testCases := []testCase{
 		func() testCase {
-			err = ioutil.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("meow"), 0644)
+			err = os.WriteFile(filepath.Join(tempDir, "foo.txt"), []byte("meow"), 0644)
 			if err != nil {
 				t.Errorf("couldn't write tempfile %v", err)
 				t.FailNow()
@@ -142,11 +142,11 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 				},
 				fileContext: util.FileContext{Root: tempDir},
 				cmd: &instructions.CopyCommand{
-					SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"foo.txt"}, DestPath: "foo.txt"}},
+					SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"foo.txt"}, DestPath: ""}},
 			}
 			count := 0
 			tc := testCase{
-				desctiption:    "with valid image and valid layer",
+				description:    "with valid image and valid layer",
 				count:          &count,
 				expectedCount:  1,
 				expectLayer:    true,
@@ -163,7 +163,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 		func() testCase {
 			c := &CachingCopyCommand{}
 			tc := testCase{
-				desctiption: "with no image",
+				description: "with no image",
 				expectErr:   true,
 			}
 			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
@@ -180,7 +180,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 				return nil
 			}
 			return testCase{
-				desctiption: "with image containing no layers",
+				description: "with image containing no layers",
 				expectErr:   true,
 				command:     c,
 			}
@@ -197,7 +197,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 				return nil
 			}
 			tc := testCase{
-				desctiption: "with image one layer which has no tar content",
+				description: "with image one layer which has no tar content",
 				expectErr:   false, // this one probably should fail but doesn't because of how ExecuteCommand and util.GetFSFromLayers are implemented - cvgw- 2019-11-25
 				expectLayer: true,
 			}
@@ -207,7 +207,7 @@ func Test_CachingCopyCommand_ExecuteCommand(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.desctiption, func(t *testing.T) {
+		t.Run(tc.description, func(t *testing.T) {
 			c := tc.command
 			err := c.ExecuteCommand(config, buildArgs)
 			if !tc.expectErr && err != nil {
