@@ -88,7 +88,11 @@ func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool)
 
 func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, fileContext FileContext, envs []string) ([]string, string, error) {
 	// First, resolve any environment replacement
-	resolvedEnvs, err := ResolveEnvironmentReplacementList(sd.SourcePaths, envs, true)
+	paths := sd.SourcePaths
+	if sd.DestPath != "" {
+		paths = append(paths, sd.DestPath)
+	}
+	resolvedEnvs, err := ResolveEnvironmentReplacementList(paths, envs, true)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve environment")
 	}
