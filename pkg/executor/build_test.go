@@ -898,17 +898,16 @@ func Test_stageBuilder_build(t *testing.T) {
 			}
 			copyCommandCacheKey := hash
 			dockerFile := fmt.Sprintf(`
-FROM ubuntu:16.04
-COPY %s foo.txt
-`, filename)
-			f, _ := ioutil.TempFile("", "")
-			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
+		FROM ubuntu:16.04
+		COPY %s foo.txt
+		`, filename)
+			f, _ := os.CreateTemp("", "")
+			os.WriteFile(f.Name(), []byte(dockerFile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath:  f.Name(),
 				Cache:           true,
 				CacheCopyLayers: true,
 			}
-
 			testStages, metaArgs, err := dockerfile.ParseStages(opts)
 			if err != nil {
 				t.Errorf("Failed to parse test dockerfile to stages: %s", err)
@@ -968,8 +967,8 @@ COPY %s foo.txt
 FROM ubuntu:16.04
 COPY %s foo.txt
 `, filename)
-			f, _ := ioutil.TempFile("", "")
-			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
+			f, _ := os.CreateTemp("", "")
+			os.WriteFile(f.Name(), []byte(dockerFile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath:  f.Name(),
 				Cache:           true,
@@ -1047,8 +1046,8 @@ FROM ubuntu:16.04
 RUN foobar
 COPY %s bar.txt
 `, filename)
-			f, _ := ioutil.TempFile("", "")
-			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
+			f, _ := os.CreateTemp("", "")
+			os.WriteFile(f.Name(), []byte(dockerFile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
 			}
@@ -1122,7 +1121,7 @@ COPY %s bar.txt
 RUN foobar
 `, filename)
 			f, _ := ioutil.TempFile("", "")
-			ioutil.WriteFile(f.Name(), []byte(dockerFile), 0755)
+			os.WriteFile(f.Name(), []byte(dockerFile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
 			}
@@ -1286,7 +1285,7 @@ RUN foobar
 		t.Run(tc.description, func(t *testing.T) {
 			var fileName string
 			if tc.commands == nil {
-				file, err := ioutil.TempFile("", "foo")
+				file, err := os.CreateTemp("", "foo")
 				if err != nil {
 					t.Error(err)
 				}
@@ -1348,7 +1347,6 @@ RUN foobar
 			if err != nil {
 				t.Errorf("Expected error to be nil but was %v", err)
 			}
-			fmt.Println(lc.receivedKeys)
 			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
 			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
 
@@ -1397,7 +1395,6 @@ func getCommands(fileContext util.FileContext, cmds []instructions.Command, cach
 		outCommands = append(outCommands, cmd)
 	}
 	return outCommands
-
 }
 
 func tempDirAndFile(t *testing.T) (string, []string) {
