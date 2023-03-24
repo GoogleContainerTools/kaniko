@@ -92,7 +92,7 @@ func Layer(byteSize int64, mt types.MediaType) (v1.Layer, error) {
 	if err := tw.WriteHeader(&tar.Header{
 		Name:     fileName,
 		Size:     byteSize,
-		Typeflag: tar.TypeRegA,
+		Typeflag: tar.TypeReg,
 	}); err != nil {
 		return nil, err
 	}

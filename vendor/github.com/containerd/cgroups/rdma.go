@@ -17,7 +17,6 @@
 package cgroups
 
 import (
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -126,13 +125,13 @@ func toRdmaEntry(strEntries []string) []*v1.RdmaEntry {
 
 func (p *rdmaController) Stat(path string, stats *v1.Metrics) error {
 
-	currentData, err := ioutil.ReadFile(filepath.Join(p.Path(path), "rdma.current"))
+	currentData, err := os.ReadFile(filepath.Join(p.Path(path), "rdma.current"))
 	if err != nil {
 		return err
 	}
 	currentPerDevices := strings.Split(string(currentData), "\n")
 
-	maxData, err := ioutil.ReadFile(filepath.Join(p.Path(path), "rdma.max"))
+	maxData, err := os.ReadFile(filepath.Join(p.Path(path), "rdma.max"))
 	if err != nil {
 		return err
 	}

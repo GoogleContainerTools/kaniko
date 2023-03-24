@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -37,6 +36,7 @@ import (
 
 const (
 	cgroupProcs    = "cgroup.procs"
+	cgroupThreads  = "cgroup.threads"
 	defaultDirPerm = 0755
 )
 
@@ -227,7 +227,7 @@ func ToResources(spec *specs.LinuxResources) *Resources {
 	if i := spec.Rdma; i != nil {
 		resources.RDMA = &RDMA{}
 		for device, value := range spec.Rdma {
-			if device != "" && (value.HcaHandles != nil || value.HcaObjects != nil) {
+			if device != "" && (value.HcaHandles != nil && value.HcaObjects != nil) {
 				resources.RDMA.Limit = append(resources.RDMA.Limit, RDMAEntry{
 					Device:     device,
 					HcaHandles: *value.HcaHandles,
@@ -242,7 +242,7 @@ func ToResources(spec *specs.LinuxResources) *Resources {
 
 // Gets uint64 parsed content of single value cgroup stat file
 func getStatFileContentUint64(filePath string) uint64 {
-	contents, err := ioutil.ReadFile(filePath)
+	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return 0
 	}
@@ -264,7 +264,7 @@ func readIoStats(path string) []*stats.IOEntry {
 	// more details on the io.stat file format: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 	var usage []*stats.IOEntry
 	fpath := filepath.Join(path, "io.stat")
-	currentData, err := ioutil.ReadFile(fpath)
+	currentData, err := os.ReadFile(fpath)
 	if err != nil {
 		return usage
 	}
@@ -318,7 +318,7 @@ func readIoStats(path string) []*stats.IOEntry {
 }
 
 func rdmaStats(filepath string) []*stats.RdmaEntry {
-	currentData, err := ioutil.ReadFile(filepath)
+	currentData, err := os.ReadFile(filepath)
 	if err != nil {
 		return []*stats.RdmaEntry{}
 	}
@@ -406,7 +406,7 @@ func readHugeTlbStats(path string) []*stats.HugeTlbStat {
 				hugeTlb = &stats.HugeTlbStat{}
 			}
 			hugeTlb.Pagesize = pageSize
-			out, err := ioutil.ReadFile(filepath.Join(path, file.Name()))
+			out, err := os.ReadFile(filepath.Join(path, file.Name()))
 			if err != nil {
 				continue
 			}

@@ -22,13 +22,13 @@ const (
 	IterType          = sys.BPF_LINK_TYPE_ITER
 	NetNsType         = sys.BPF_LINK_TYPE_NETNS
 	XDPType           = sys.BPF_LINK_TYPE_XDP
+	PerfEventType     = sys.BPF_LINK_TYPE_PERF_EVENT
 )
 
 var haveProgAttach = internal.FeatureTest("BPF_PROG_ATTACH", "4.10", func() error {
 	prog, err := ebpf.NewProgram(&ebpf.ProgramSpec{
-		Type:       ebpf.CGroupSKB,
-		AttachType: ebpf.AttachCGroupInetIngress,
-		License:    "MIT",
+		Type:    ebpf.CGroupSKB,
+		License: "MIT",
 		Instructions: asm.Instructions{
 			asm.Mov.Imm(asm.R0, 0),
 			asm.Return(),

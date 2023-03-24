@@ -11,11 +11,10 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/docker/docker/pkg/system"
 	"golang.org/x/sys/windows"
 )
 
-func parseChownFlag(builder *Builder, state *dispatchState, chown, ctrRootPath string, identityMapping *idtools.IdentityMapping) (idtools.Identity, error) {
+func parseChownFlag(builder *Builder, state *dispatchState, chown, ctrRootPath string, identityMapping idtools.IdentityMapping) (idtools.Identity, error) {
 	if builder.options.Platform == "windows" {
 		return getAccountIdentity(builder, chown, ctrRootPath, state)
 	}
@@ -44,10 +43,10 @@ func getAccountIdentity(builder *Builder, accountName string, ctrRootPath string
 
 	// Check if the account name is one unique to containers.
 	if strings.EqualFold(accountName, "ContainerAdministrator") {
-		return idtools.Identity{SID: system.ContainerAdministratorSidString}, nil
+		return idtools.Identity{SID: idtools.ContainerAdministratorSidString}, nil
 
 	} else if strings.EqualFold(accountName, "ContainerUser") {
-		return idtools.Identity{SID: system.ContainerUserSidString}, nil
+		return idtools.Identity{SID: idtools.ContainerUserSidString}, nil
 	}
 
 	// All other lookups failed, so therefore determine if the account in

@@ -58,18 +58,6 @@ func AttachIter(opts IterOptions) (*Iter, error) {
 	return &Iter{RawLink{fd, ""}}, err
 }
 
-// LoadPinnedIter loads a pinned iterator from a bpffs.
-//
-// Deprecated: use LoadPinnedLink instead.
-func LoadPinnedIter(fileName string, opts *ebpf.LoadPinOptions) (*Iter, error) {
-	link, err := LoadPinnedRawLink(fileName, IterType, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Iter{*link}, err
-}
-
 // Iter represents an attached bpf_iter.
 type Iter struct {
 	RawLink

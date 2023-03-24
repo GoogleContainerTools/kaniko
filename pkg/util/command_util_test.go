@@ -490,7 +490,7 @@ func Test_IsSrcsValid(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error creating file context: %v", err)
 			}
-			err = IsSrcsValid(test.srcsAndDest, test.resolvedSources, fileContext)
+			err = IsSrcsValid(instructions.SourcesAndDest{SourcePaths: test.srcsAndDest[0 : len(test.srcsAndDest)-1], DestPath: test.srcsAndDest[len(test.srcsAndDest)-1]}, test.resolvedSources, fileContext)
 			testutil.CheckError(t, test.shouldErr, err)
 		})
 	}

@@ -98,7 +98,7 @@ func (a *AddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bui
 
 	copyCmd := CopyCommand{
 		cmd: &instructions.CopyCommand{
-			SourcesAndDest: append(unresolvedSrcs, dest),
+			SourcesAndDest: instructions.SourcesAndDest{SourcePaths: unresolvedSrcs, DestPath: dest},
 			Chown:          a.cmd.Chown,
 		},
 		fileContext: a.fileContext,

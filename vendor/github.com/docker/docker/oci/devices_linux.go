@@ -6,25 +6,25 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
-// Device transforms a libcontainer configs.Device to a specs.LinuxDevice object.
-func Device(d *configs.Device) specs.LinuxDevice {
+// Device transforms a libcontainer devices.Device to a specs.LinuxDevice object.
+func Device(d *devices.Device) specs.LinuxDevice {
 	return specs.LinuxDevice{
 		Type:     string(d.Type),
 		Path:     d.Path,
 		Major:    d.Major,
 		Minor:    d.Minor,
-		FileMode: fmPtr(int64(d.FileMode)),
+		FileMode: fmPtr(int64(d.FileMode &^ unix.S_IFMT)), // strip file type, as OCI spec only expects file-mode to be included
 		UID:      u32Ptr(int64(d.Uid)),
 		GID:      u32Ptr(int64(d.Gid)),
 	}
 }
 
-func deviceCgroup(d *configs.Device) specs.LinuxDeviceCgroup {
+func deviceCgroup(d *devices.Device) specs.LinuxDeviceCgroup {
 	return specs.LinuxDeviceCgroup{
 		Allow:  true,
 		Type:   string(d.Type),
@@ -55,10 +55,8 @@ func DevicesFromPath(pathOnHost, pathInContainer, cgroupPermissions string) (dev
 	// if the device is not a device node
 	// try to see if it's a directory holding many devices
 	if err == devices.ErrNotADevice {
-
 		// check if it is a directory
 		if src, e := os.Stat(resolvedPathOnHost); e == nil && src.IsDir() {
-
 			// mount the internal devices recursively
 			// TODO check if additional errors should be handled or logged
 			_ = filepath.Walk(resolvedPathOnHost, func(dpath string, f os.FileInfo, _ error) error {
