@@ -17,7 +17,7 @@
 package cgroups
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -58,7 +58,7 @@ func (f *freezerController) changeState(path string, state State) error {
 }
 
 func (f *freezerController) state(path string) (State, error) {
-	current, err := ioutil.ReadFile(filepath.Join(f.root, path, "freezer.state"))
+	current, err := os.ReadFile(filepath.Join(f.root, path, "freezer.state"))
 	if err != nil {
 		return "", err
 	}

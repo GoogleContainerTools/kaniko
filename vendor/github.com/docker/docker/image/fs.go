@@ -2,13 +2,12 @@ package image // import "github.com/docker/docker/image"
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/docker/docker/pkg/ioutils"
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -57,24 +56,24 @@ func newFSStore(root string) (*fs, error) {
 }
 
 func (s *fs) contentFile(dgst digest.Digest) string {
-	return filepath.Join(s.root, contentDirName, string(dgst.Algorithm()), dgst.Hex())
+	return filepath.Join(s.root, contentDirName, string(dgst.Algorithm()), dgst.Encoded())
 }
 
 func (s *fs) metadataDir(dgst digest.Digest) string {
-	return filepath.Join(s.root, metadataDirName, string(dgst.Algorithm()), dgst.Hex())
+	return filepath.Join(s.root, metadataDirName, string(dgst.Algorithm()), dgst.Encoded())
 }
 
 // Walk calls the supplied callback for each image ID in the storage backend.
 func (s *fs) Walk(f DigestWalkFunc) error {
 	// Only Canonical digest (sha256) is currently supported
 	s.RLock()
-	dir, err := ioutil.ReadDir(filepath.Join(s.root, contentDirName, string(digest.Canonical)))
+	dir, err := os.ReadDir(filepath.Join(s.root, contentDirName, string(digest.Canonical)))
 	s.RUnlock()
 	if err != nil {
 		return err
 	}
 	for _, v := range dir {
-		dgst := digest.NewDigestFromHex(string(digest.Canonical), v.Name())
+		dgst := digest.NewDigestFromEncoded(digest.Canonical, v.Name())
 		if err := dgst.Validate(); err != nil {
 			logrus.Debugf("skipping invalid digest %s: %s", dgst, err)
 			continue
@@ -95,7 +94,7 @@ func (s *fs) Get(dgst digest.Digest) ([]byte, error) {
 }
 
 func (s *fs) get(dgst digest.Digest) ([]byte, error) {
-	content, err := ioutil.ReadFile(s.contentFile(dgst))
+	content, err := os.ReadFile(s.contentFile(dgst))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get digest %s", dgst)
 	}
@@ -159,7 +158,7 @@ func (s *fs) GetMetadata(dgst digest.Digest, key string) ([]byte, error) {
 	if _, err := s.get(dgst); err != nil {
 		return nil, err
 	}
-	bytes, err := ioutil.ReadFile(filepath.Join(s.metadataDir(dgst), key))
+	bytes, err := os.ReadFile(filepath.Join(s.metadataDir(dgst), key))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read metadata")
 	}

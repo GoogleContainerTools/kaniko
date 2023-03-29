@@ -9,8 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -19,6 +20,13 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/pkg/errors"
 )
+
+func init() {
+	// initialize nss libraries in Glibc so that the dynamic libraries are loaded in the host
+	// environment not in the chroot from untrusted files.
+	_, _ = user.Lookup("docker")
+	_, _ = net.LookupHost("localhost")
+}
 
 // untar is the entry-point for docker-untar on re-exec. This is not used on
 // Windows as it does not support chroot, hence no point sandboxing through
@@ -112,7 +120,7 @@ func invokeUnpack(decompressedArchive io.Reader, dest string, options *archive.T
 		// when `xz -d -c -q | docker-untar ...` failed on docker-untar side,
 		// we need to exhaust `xz`'s output, otherwise the `xz` side will be
 		// pending on write pipe forever
-		io.Copy(ioutil.Discard, decompressedArchive)
+		io.Copy(io.Discard, decompressedArchive)
 
 		return fmt.Errorf("Error processing tar file(%v): %s", err, output)
 	}

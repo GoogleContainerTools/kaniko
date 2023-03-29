@@ -250,11 +250,11 @@ func Test_GetOnBuildInstructions(t *testing.T) {
 			stageToIdx: map[string]string{"builder": "0", "temp": "1"},
 			expCommands: []instructions.Command{
 				&instructions.CopyCommand{
-					SourcesAndDest: []string{"a.txt b.txt"},
+					SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"a.txt"}, DestPath: "b.txt"},
 					From:           "0",
 				},
 				&instructions.CopyCommand{
-					SourcesAndDest: []string{"/app /app"},
+					SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{"/app"}, DestPath: "/app"},
 					From:           "1",
 				},
 			}},

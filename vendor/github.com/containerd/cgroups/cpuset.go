@@ -19,7 +19,6 @@ package cgroups
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -87,10 +86,10 @@ func (c *cpusetController) Update(path string, resources *specs.LinuxResources) 
 }
 
 func (c *cpusetController) getValues(path string) (cpus []byte, mems []byte, err error) {
-	if cpus, err = ioutil.ReadFile(filepath.Join(path, "cpuset.cpus")); err != nil && !os.IsNotExist(err) {
+	if cpus, err = os.ReadFile(filepath.Join(path, "cpuset.cpus")); err != nil && !os.IsNotExist(err) {
 		return
 	}
-	if mems, err = ioutil.ReadFile(filepath.Join(path, "cpuset.mems")); err != nil && !os.IsNotExist(err) {
+	if mems, err = os.ReadFile(filepath.Join(path, "cpuset.mems")); err != nil && !os.IsNotExist(err) {
 		return
 	}
 	return cpus, mems, nil

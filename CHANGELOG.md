@@ -1,3 +1,122 @@
+# v1.9.2 Release 2023-03-27
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.9.2
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.9.2-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.9.2-slim
+```
+
+* fix(executor): make pax tar builds reproducible again [#2384](https://github.com/GoogleContainerTools/kaniko/pull/2384)
+* Upgrade docker [#2440](https://github.com/GoogleContainerTools/kaniko/pull/2440)
+* Update ACR credential helper to enable Azure Workload Identity [#2431](https://github.com/GoogleContainerTools/kaniko/pull/2431)
+* bump cosign version used to sign images [#2437](https://github.com/GoogleContainerTools/kaniko/pull/2437)
+* Fix Integration tests [#2425](https://github.com/GoogleContainerTools/kaniko/pull/2425)
+* chore(deps): bump golang from 1.17 to 1.19 in /deploy [#2328](https://github.com/GoogleContainerTools/kaniko/pull/2328)
+* chore: fix typo [#2316](https://github.com/GoogleContainerTools/kaniko/pull/2316)
+* ci: don't cache certs stage [#2296](https://github.com/GoogleContainerTools/kaniko/pull/2296)
+* fix(executor): make pax tar builds reproducible again [#2384](https://github.com/GoogleContainerTools/kaniko/pull/2384)
+* Upgrade docker [#2440](https://github.com/GoogleContainerTools/kaniko/pull/2440)
+* Update ACR credential helper to enable Azure Workload Identity [#2431](https://github.com/GoogleContainerTools/kaniko/pull/2431)
+* bump cosign version used to sign images [#2437](https://github.com/GoogleContainerTools/kaniko/pull/2437)
+* Fix Integration tests [#2425](https://github.com/GoogleContainerTools/kaniko/pull/2425)
+* chore(deps): bump golang from 1.17 to 1.19 in /deploy [#2328](https://github.com/GoogleContainerTools/kaniko/pull/2328)
+* chore: fix typo [#2316](https://github.com/GoogleContainerTools/kaniko/pull/2316)
+* ci: don't cache certs stage [#2296](https://github.com/GoogleContainerTools/kaniko/pull/2296)
+* chore: fix typo [#2289](https://github.com/GoogleContainerTools/kaniko/pull/2289)
+* fix(WORKDIR): use the config.User for the new dir permissions [#2269](https://github.com/GoogleContainerTools/kaniko/pull/2269)
+* Provide `--cache-repo` as OCI image layout path [#2250](https://github.com/GoogleContainerTools/kaniko/pull/2250)
+Huge thank you for this release towards our contributors: 
+- Aaruni Aggarwal
+- Abirdcfly
+- Adrian Newby
+- almg80
+- Anbraten
+- Andreas Fleig
+- Andrei Kvapil
+- ankitm123
+- Aris Buzachis
+- Benjamin Krenn
+- Bernardo Marques
+- Bryan A. S
+- chenggui53
+- Chuang Wang
+- claudex
+- Dávid Szakállas
+- Dawei Ma
+- dependabot[bot]
+- Diego Gonzalez
+- dmr
+- ejose19
+- Eng Zer Jun
+- ePirat
+- Florian Apolloner
+- François JACQUES
+- Gabriel Nützi
+- Gilbert Gilb's
+- Guillaume Calmettes
+- Herman
+- Hingbong Lo
+- Igor Scheller
+- Ishant Mrinal Haloi
+- Jack
+- Jake Sanders
+- Janosch Maier
+- Jason D'Amour
+- Jason Hall
+- Jasper Ben Orschulko
+- Jerry Jones
+- jeunii
+- Joe Kimmel
+- Joël Pepper
+- Jonas Gröger
+- Jose Donizetti
+- Junwon Kwon
+- Kamal Nasser
+- Konstantin Demin
+- Kun Lu
+- Lars Seipel
+- Liwen Guo
+- Lukas
+- Matt Moore
+- Max Walther
+- Mikhail Vasin
+- Natalie Arellano
+- Naveen
+- nihilo
+- Oliver Gregorius
+- Pat Litke
+- Patrick Barker
+- priyawadhwa
+- Ramy
+- Rhianna
+- Sebastiaan Tammer
+- Shude Li
+- Sigurd Spieckermann
+- Silvano Cirujano Cuesta
+- Tejal Desai
+- Tony De La Nuez
+- Travis DePrato
+- Viacheslav Artamonov
+- Víctor
+- Wolfgang Walther
+- wwade
+- Yahav Itzhak
+- ygelfand
+- Yonatan Koren
+- zhouhaibing089
+
 # v1.9.1 Release 2022-09-26
 
 The executor images in this release are:

@@ -17,7 +17,6 @@
 package cgroups
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -69,7 +68,7 @@ func (p *pidsController) Stat(path string, stats *v1.Metrics) error {
 		return err
 	}
 	var max uint64
-	maxData, err := ioutil.ReadFile(filepath.Join(p.Path(path), "pids.max"))
+	maxData, err := os.ReadFile(filepath.Join(p.Path(path), "pids.max"))
 	if err != nil {
 		return err
 	}

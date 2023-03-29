@@ -1,7 +1,6 @@
 package git // import "github.com/docker/docker/builder/remotecontext/git"
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,6 +20,7 @@ type gitRepo struct {
 	isolateConfig bool
 }
 
+// CloneOption changes the behaviour of Clone().
 type CloneOption func(*gitRepo)
 
 // WithIsolatedConfig disables reading the user or system gitconfig files when
@@ -50,7 +50,7 @@ func Clone(remoteURL string, opts ...CloneOption) (string, error) {
 func (repo gitRepo) clone() (checkoutDir string, err error) {
 	fetch := fetchArgs(repo.remote, repo.ref)
 
-	root, err := ioutil.TempDir("", "docker-build-git")
+	root, err := os.MkdirTemp("", "docker-build-git")
 	if err != nil {
 		return "", err
 	}
@@ -213,7 +213,7 @@ func (repo gitRepo) gitWithinDir(dir string, args ...string) ([]byte, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	// Disable unsafe remote protocols.
-	cmd.Env = append(cmd.Env, "GIT_PROTOCOL_FROM_USER=0")
+	cmd.Env = append(os.Environ(), "GIT_PROTOCOL_FROM_USER=0")
 
 	if repo.isolateConfig {
 		cmd.Env = append(cmd.Env,

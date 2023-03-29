@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -147,7 +147,7 @@ func (c *Value) write(path string, perm os.FileMode) error {
 	// Retry writes on EINTR; see:
 	//    https://github.com/golang/go/issues/38033
 	for {
-		err := ioutil.WriteFile(
+		err := os.WriteFile(
 			filepath.Join(path, c.filename),
 			data,
 			perm,
@@ -225,7 +225,7 @@ func setResources(path string, resources *Resources) error {
 }
 
 func (c *Manager) RootControllers() ([]string, error) {
-	b, err := ioutil.ReadFile(filepath.Join(c.unifiedMountpoint, controllersFile))
+	b, err := os.ReadFile(filepath.Join(c.unifiedMountpoint, controllersFile))
 	if err != nil {
 		return nil, err
 	}
@@ -233,11 +233,15 @@ func (c *Manager) RootControllers() ([]string, error) {
 }
 
 func (c *Manager) Controllers() ([]string, error) {
-	b, err := ioutil.ReadFile(filepath.Join(c.path, controllersFile))
+	b, err := os.ReadFile(filepath.Join(c.path, controllersFile))
 	if err != nil {
 		return nil, err
 	}
 	return strings.Fields(string(b)), nil
+}
+
+func (c *Manager) Update(resources *Resources) error {
+	return setResources(c.path, resources)
 }
 
 type ControllerToggle int
@@ -332,7 +336,23 @@ func (c *Manager) AddProc(pid uint64) error {
 	return writeValues(c.path, []Value{v})
 }
 
+func (c *Manager) AddThread(tid uint64) error {
+	v := Value{
+		filename: cgroupThreads,
+		value:    tid,
+	}
+	return writeValues(c.path, []Value{v})
+}
+
 func (c *Manager) Delete() error {
+	// kernel prevents cgroups with running process from being removed, check the tree is empty
+	processes, err := c.Procs(true)
+	if err != nil {
+		return err
+	}
+	if len(processes) > 0 {
+		return fmt.Errorf("cgroups: unable to remove path %q: still contains running processes", c.path)
+	}
 	return remove(c.path)
 }
 
@@ -360,6 +380,22 @@ func (c *Manager) Procs(recursive bool) ([]uint64, error) {
 		return nil
 	})
 	return processes, err
+}
+
+func (c *Manager) MoveTo(destination *Manager) error {
+	processes, err := c.Procs(true)
+	if err != nil {
+		return err
+	}
+	for _, p := range processes {
+		if err := destination.AddProc(p); err != nil {
+			if strings.Contains(err.Error(), "no such process") {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 var singleValueFiles = []string{
@@ -502,7 +538,7 @@ func readSingleFile(path string, file string, out map[string]interface{}) error 
 		return err
 	}
 	defer f.Close()
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return err
 	}
@@ -701,12 +737,39 @@ func setDevices(path string, devices []specs.LinuxDeviceCgroup) error {
 	return nil
 }
 
+// getSystemdFullPath returns the full systemd path when creating a systemd slice group.
+// the reason this is necessary is because the "-" character has a special meaning in
+// systemd slice. For example, when creating a slice called "my-group-112233.slice",
+// systemd will create a hierarchy like this:
+//      /sys/fs/cgroup/my.slice/my-group.slice/my-group-112233.slice
+func getSystemdFullPath(slice, group string) string {
+	return filepath.Join(defaultCgroup2Path, dashesToPath(slice), dashesToPath(group))
+}
+
+// dashesToPath converts a slice name with dashes to it's corresponding systemd filesystem path.
+func dashesToPath(in string) string {
+	path := ""
+	if strings.HasSuffix(in, ".slice") && strings.Contains(in, "-") {
+		parts := strings.Split(in, "-")
+		for i := range parts {
+			s := strings.Join(parts[0:i+1], "-")
+			if !strings.HasSuffix(s, ".slice") {
+				s += ".slice"
+			}
+			path = filepath.Join(path, s)
+		}
+	} else {
+		path = filepath.Join(path, in)
+	}
+	return path
+}
+
 func NewSystemd(slice, group string, pid int, resources *Resources) (*Manager, error) {
 	if slice == "" {
 		slice = defaultSlice
 	}
 	ctx := context.TODO()
-	path := filepath.Join(defaultCgroup2Path, slice, group)
+	path := getSystemdFullPath(slice, group)
 	conn, err := systemdDbus.NewWithContext(ctx)
 	if err != nil {
 		return &Manager{}, err
@@ -734,12 +797,17 @@ func NewSystemd(slice, group string, pid int, resources *Resources) (*Manager, e
 		properties = append(properties, newSystemdProperty("PIDs", []uint32{uint32(pid)}))
 	}
 
-	if resources.Memory != nil && *resources.Memory.Max != 0 {
+	if resources.Memory != nil && resources.Memory.Min != nil && *resources.Memory.Min != 0 {
+		properties = append(properties,
+			newSystemdProperty("MemoryMin", uint64(*resources.Memory.Min)))
+	}
+
+	if resources.Memory != nil && resources.Memory.Max != nil && *resources.Memory.Max != 0 {
 		properties = append(properties,
 			newSystemdProperty("MemoryMax", uint64(*resources.Memory.Max)))
 	}
 
-	if resources.CPU != nil && *resources.CPU.Weight != 0 {
+	if resources.CPU != nil && resources.CPU.Weight != nil && *resources.CPU.Weight != 0 {
 		properties = append(properties,
 			newSystemdProperty("CPUWeight", *resources.CPU.Weight))
 	}
@@ -796,9 +864,9 @@ func LoadSystemd(slice, group string) (*Manager, error) {
 	if slice == "" {
 		slice = defaultSlice
 	}
-	group = filepath.Join(defaultCgroup2Path, slice, group)
+	path := getSystemdFullPath(slice, group)
 	return &Manager{
-		path: group,
+		path: path,
 	}, nil
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/docker/docker/pkg/containerfs"
 	iradix "github.com/hashicorp/go-immutable-radix"
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 	"github.com/tonistiigi/fsutil"
 )
@@ -109,7 +109,7 @@ func (cs *CachableSource) HandleChange(kind fsutil.ChangeKind, p string, fi os.F
 	}
 
 	hfi := &fileInfo{
-		sum: h.Digest().Hex(),
+		sum: h.Digest().Encoded(),
 	}
 	cs.txn.Insert([]byte(p), hfi)
 	cs.mu.Unlock()

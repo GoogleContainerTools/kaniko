@@ -49,8 +49,8 @@ const (
 	RootUser         = "root"
 
 	// Docker command names
-	Cmd        = "cmd"
-	Entrypoint = "entrypoint"
+	Cmd        = "CMD"
+	Entrypoint = "ENTRYPOINT"
 
 	// Name of the .dockerignore file
 	Dockerignore = ".dockerignore"

@@ -587,11 +587,11 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 					if err != nil {
 						continue
 					}
-					resolved, err := util.ResolveEnvironmentReplacementList(cmd.SourcesAndDest, ba.ReplacementEnvs(cfg.Config.Env), true)
+					resolved, err := util.ResolveEnvironmentReplacementList(cmd.SourcesAndDest.SourcePaths, ba.ReplacementEnvs(cfg.Config.Env), true)
 					if err != nil {
 						return nil, err
 					}
-					depGraph[i] = append(depGraph[i], resolved[0:len(resolved)-1]...)
+					depGraph[i] = append(depGraph[i], resolved...)
 				}
 			case *instructions.EnvCommand:
 				if err := util.UpdateConfigEnv(cmd.Env, &cfg.Config, ba.ReplacementEnvs(cfg.Config.Env)); err != nil {

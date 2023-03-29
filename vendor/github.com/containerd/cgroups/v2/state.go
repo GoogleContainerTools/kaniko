@@ -17,7 +17,7 @@
 package v2
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -50,7 +50,7 @@ func (s State) Values() []Value {
 }
 
 func fetchState(path string) (State, error) {
-	current, err := ioutil.ReadFile(filepath.Join(path, cgroupFreeze))
+	current, err := os.ReadFile(filepath.Join(path, cgroupFreeze))
 	if err != nil {
 		return Unknown, err
 	}
