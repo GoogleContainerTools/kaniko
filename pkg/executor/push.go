@@ -306,9 +306,10 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 	}
 
 	switch opts.Compression {
-	case "zstd":
+	case config.ZStd:
 		layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
-	default:
+
+	case config.GZip:
 		// layer already gzipped by default
 	}
 

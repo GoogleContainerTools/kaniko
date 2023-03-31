@@ -526,9 +526,10 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 	}
 
 	switch s.opts.Compression {
-	case "zstd":
+	case config.ZStd:
 		layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
-	default:
+
+	case config.GZip:
 		// layer already gzipped by default
 	}
 
