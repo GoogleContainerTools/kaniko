@@ -68,6 +68,8 @@ type KanikoOptions struct {
 	ImageNameDigestFile      string
 	ImageNameTagDigestFile   string
 	OCILayoutPath            string
+	Compression              Compression
+	CompressionLevel         int
 	ImageFSExtractRetry      int
 	SingleSnapshot           bool
 	Reproducible             bool
@@ -123,6 +125,33 @@ func (k *KanikoGitOptions) Set(s string) error {
 		k.RecurseSubmodules = v
 	}
 	return nil
+}
+
+// Compression is an enumeration of the supported compression algorithms
+type Compression string
+
+// The collection of known MediaType values.
+const (
+	GZip Compression = "gzip"
+	ZStd Compression = "zstd"
+)
+
+func (c *Compression) String() string {
+	return string(*c)
+}
+
+func (c *Compression) Set(v string) error {
+	switch v {
+	case "gzip", "zstd":
+		*c = Compression(v)
+		return nil
+	default:
+		return errors.New(`must be either "gzip" or "zstd"`)
+	}
+}
+
+func (c *Compression) Type() string {
+	return "compression"
 }
 
 // WarmerOptions are options that are set by command line arguments to the cache warmer.

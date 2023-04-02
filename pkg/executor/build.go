@@ -515,12 +515,25 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 		return nil, nil
 	}
 
-	var layer v1.Layer
+	var layerOpts []tarball.LayerOption
+
 	if s.opts.CompressedCaching == true {
-		layer, err = tarball.LayerFromFile(tarPath, tarball.WithCompressedCaching)
-	} else {
-		layer, err = tarball.LayerFromFile(tarPath)
+		layerOpts = append(layerOpts, tarball.WithCompressedCaching)
 	}
+
+	if s.opts.CompressionLevel > 0 {
+		layerOpts = append(layerOpts, tarball.WithCompressionLevel(s.opts.CompressionLevel))
+	}
+
+	switch s.opts.Compression {
+	case config.ZStd:
+		layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
+
+	case config.GZip:
+		// layer already gzipped by default
+	}
+
+	layer, err := tarball.LayerFromFile(tarPath, layerOpts...)
 	if err != nil {
 		return nil, err
 	}

@@ -296,16 +296,28 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 // pushLayerToCache pushes layer (tagged with cacheKey) to opts.CacheRepo
 // if opts.CacheRepo doesn't exist, infer the cache from the given destination
 func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath string, createdBy string) error {
-	var layer v1.Layer
-	var err error
+	var layerOpts []tarball.LayerOption
 	if opts.CompressedCaching == true {
-		layer, err = tarball.LayerFromFile(tarPath, tarball.WithCompressedCaching)
-	} else {
-		layer, err = tarball.LayerFromFile(tarPath)
+		layerOpts = append(layerOpts, tarball.WithCompressedCaching)
 	}
+
+	if opts.CompressionLevel > 0 {
+		layerOpts = append(layerOpts, tarball.WithCompressionLevel(opts.CompressionLevel))
+	}
+
+	switch opts.Compression {
+	case config.ZStd:
+		layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
+
+	case config.GZip:
+		// layer already gzipped by default
+	}
+
+	layer, err := tarball.LayerFromFile(tarPath, layerOpts...)
 	if err != nil {
 		return err
 	}
+
 	cache, err := cache.Destination(opts, cacheKey)
 	if err != nil {
 		return errors.Wrap(err, "getting cache destination")
