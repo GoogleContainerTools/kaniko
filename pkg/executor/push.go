@@ -41,6 +41,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -307,7 +308,7 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 
 	switch opts.Compression {
 	case config.ZStd:
-		layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
+		layerOpts = append(layerOpts, tarball.WithCompression("zstd"), tarball.WithMediaType(types.OCILayerZStd))
 
 	case config.GZip:
 		// layer already gzipped by default
