@@ -102,7 +102,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--skip-tls-verify-registry`](#flag---skip-tls-verify-registry)
       - [Flag `--skip-unused-stages`](#flag---skip-unused-stages)
       - [Flag `--snapshotMode`](#flag---snapshotmode)
-      - [Flag `--tar-path`](#flag---tar-path)
+      - [Flag `--tarPath`](#flag---tarPath)
       - [Flag `--target`](#flag---target)
       - [Flag `--use-new-run`](#flag---use-new-run)
       - [Flag `--verbosity`](#flag---verbosity)
@@ -1023,9 +1023,9 @@ kaniko will snapshot the filesystem.
 - If `--snapshotMode=time` is set, only file mtime will be considered when
   snapshotting (see [limitations related to mtime](#mtime-and-snapshotting)).
 
-#### Flag `--tar-path`
+#### Flag `--tarPath`
 
-Set this flag as `--tar-path=<path>` to save the image as a tarball at path. You
+Set this flag as `--tarPath=<path>` to save the image as a tarball at path. You
 need to set `--destination` as well (for example `--destination=image`). If you
 want to save the image as tarball only you also need to set `--no-push`.
 
