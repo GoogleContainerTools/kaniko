@@ -239,6 +239,8 @@ github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
+# github.com/checkpoint-restore/go-criu/v5 v5.3.0
+## explicit; go 1.13
 # github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 ## explicit; go 1.18
 github.com/chrismellard/docker-credential-acr-env/pkg/credhelper
@@ -259,6 +261,8 @@ github.com/containerd/cgroups
 github.com/containerd/cgroups/stats/v1
 github.com/containerd/cgroups/v2
 github.com/containerd/cgroups/v2/stats
+# github.com/containerd/console v1.0.3
+## explicit; go 1.13
 # github.com/containerd/containerd v1.7.0
 ## explicit; go 1.19
 github.com/containerd/containerd/cio
@@ -289,6 +293,10 @@ github.com/containerd/typeurl
 # github.com/coreos/go-systemd/v22 v22.5.0
 ## explicit; go 1.12
 github.com/coreos/go-systemd/v22/dbus
+# github.com/cpuguy83/go-md2man/v2 v2.0.2
+## explicit; go 1.11
+# github.com/cyphar/filepath-securejoin v0.2.3
+## explicit; go 1.13
 # github.com/dimchansky/utfbom v1.1.1
 ## explicit
 github.com/dimchansky/utfbom
@@ -653,6 +661,8 @@ github.com/moby/term/windows
 # github.com/morikuni/aec v1.0.0
 ## explicit
 github.com/morikuni/aec
+# github.com/mrunalp/fileutils v0.5.0
+## explicit; go 1.13
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -704,6 +714,10 @@ github.com/prometheus/procfs/internal/util
 github.com/rootless-containers/rootlesskit/pkg/api
 github.com/rootless-containers/rootlesskit/pkg/api/client
 github.com/rootless-containers/rootlesskit/pkg/port
+# github.com/russross/blackfriday/v2 v2.1.0
+## explicit
+# github.com/seccomp/libseccomp-golang v0.9.2-0.20220502022130-f33da4d89646
+## explicit; go 1.14
 # github.com/sergi/go-diff v1.2.0
 ## explicit; go 1.12
 github.com/sergi/go-diff/diffmatchpatch
@@ -721,15 +735,23 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
+# github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
+## explicit
 # github.com/tonistiigi/fsutil v0.0.0-20230105215944-fb433841cbfa
 ## explicit; go 1.18
 github.com/tonistiigi/fsutil
 github.com/tonistiigi/fsutil/types
+# github.com/urfave/cli v1.22.12
+## explicit; go 1.11
 # github.com/vbatts/tar-split v0.11.2
 ## explicit; go 1.15
 github.com/vbatts/tar-split/archive/tar
 github.com/vbatts/tar-split/tar/asm
 github.com/vbatts/tar-split/tar/storage
+# github.com/vishvananda/netlink v1.2.1-beta.2
+## explicit; go 1.12
+# github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
+## explicit; go 1.12
 # github.com/xanzy/ssh-agent v0.3.1
 ## explicit; go 1.16
 github.com/xanzy/ssh-agent
