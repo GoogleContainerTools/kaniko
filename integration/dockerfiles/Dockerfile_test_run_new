@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM debian:9.11
+FROM debian:10.13
 RUN echo "hey" > /etc/foo
 RUN echo "baz" > /etc/baz
 RUN cp /etc/baz /etc/bar

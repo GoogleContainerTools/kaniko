@@ -1,4 +1,4 @@
-FROM debian:9.11 as base
+FROM debian:10.13 as base
 COPY . .
 
 FROM scratch as second
@@ -20,4 +20,4 @@ FROM fedora@sha256:c4cc32b09c6ae3f1353e7e33a8dda93dc41676b923d6d89afa996b421cc5a
 FROM fourth
 ARG file
 COPY --from=second /foo ${file}
-COPY --from=debian:9.11 /etc/os-release /new
+COPY --from=debian:10.13 /etc/os-release /new

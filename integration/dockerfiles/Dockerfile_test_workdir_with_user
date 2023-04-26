@@ -1,4 +1,4 @@
-FROM debian:9.11
+FROM debian:10.13
 RUN groupadd -g 10000 bar
 RUN useradd -c "Foo user" -u 10000 -g 10000 -m foo
 

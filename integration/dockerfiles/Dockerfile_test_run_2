@@ -15,6 +15,6 @@
 # Test to make sure the executor builds an image correctly
 # when no files are changed
 
-FROM debian:9.11
+FROM debian:10.13
 RUN echo "hey" 
 MAINTAINER kaniko

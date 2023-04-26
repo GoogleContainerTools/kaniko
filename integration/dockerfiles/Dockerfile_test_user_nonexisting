@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM debian:9.11
+FROM debian:10.13
 USER 1001:1001
 RUN echo "hey2" > /tmp/foo
 USER 1001

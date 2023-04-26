@@ -1,4 +1,4 @@
-FROM debian:9.11
+FROM debian:10.13
 # First, try adding some regular files
 ADD context/foo foo
 ADD context/foo /foodir/
