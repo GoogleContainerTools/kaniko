@@ -48,8 +48,8 @@ func TestBuildWithLocalTar(t *testing.T) {
 	nonExistingDockerfile := "Dockerfile_non_existing"
 
 	files := map[string]string{
-		validDockerfile:   "FROM debian:9.11\nRUN echo \"valid\"",
-		invalidDockerfile: "FROM debian:9.11\nRUN echo \"invalid\"",
+		validDockerfile:   "FROM debian:10.13\nRUN echo \"valid\"",
+		invalidDockerfile: "FROM debian:10.13\nRUN echo \"invalid\"",
 	}
 
 	if err := testutil.SetupFiles(testDir, files); err != nil {

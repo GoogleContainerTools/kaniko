@@ -16,7 +16,7 @@
 # /date should be the same regardless of when this image is built
 # if the cache is implemented correctly
 
-FROM debian:9.11
+FROM debian:10.13
 WORKDIR /foo
 RUN apt-get update && apt-get install -y make
 COPY context/bar /context

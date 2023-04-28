@@ -1,4 +1,4 @@
-FROM debian:9.11
+FROM debian:10.13
 RUN mkdir /foo
 RUN echo "hello" > /foo/hey
 VOLUME /foo/bar /tmp /qux/quux

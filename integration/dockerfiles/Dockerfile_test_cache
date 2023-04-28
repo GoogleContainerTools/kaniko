@@ -16,7 +16,7 @@
 # If the image is built twice, /date should be the same in both images
 # if the cache is implemented correctly
 
-FROM debian:9.11
+FROM debian:10.13
 RUN date > /date
 COPY context/foo /foo
 RUN echo hey
