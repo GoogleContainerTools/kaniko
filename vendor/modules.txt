@@ -88,7 +88,7 @@ github.com/acomagu/bufpipe
 # github.com/agext/levenshtein v1.2.3
 ## explicit
 github.com/agext/levenshtein
-# github.com/aws/aws-sdk-go v1.44.24
+# github.com/aws/aws-sdk-go v1.44.253
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn
