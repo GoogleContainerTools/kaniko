@@ -45,6 +45,8 @@ import (
 const (
 	DoNotChangeUID = -1
 	DoNotChangeGID = -1
+	DefaultUID     = 0
+	DefaultGID     = 0
 )
 
 const (
