@@ -57,7 +57,7 @@ var RootCmd = &cobra.Command{
 			return err
 		}
 
-		if len(opts.Images) == 0 || opts.DockerfilePath == "" {
+		if len(opts.Images) == 0 && opts.DockerfilePath == "" {
 			return errors.New("You must select at least one image to cache or a dockerfilepath to parse")
 		}
 
