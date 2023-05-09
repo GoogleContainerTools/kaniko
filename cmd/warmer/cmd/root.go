@@ -19,11 +19,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/logging"
+	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containerd/containerd/platforms"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
@@ -54,9 +57,14 @@ var RootCmd = &cobra.Command{
 			return err
 		}
 
-		if len(opts.Images) == 0 {
-			return errors.New("You must select at least one image to cache")
+		if len(opts.Images) == 0 || opts.DockerfilePath == "" {
+			return errors.New("You must select at least one image to cache or a dockerfilepath to parse")
 		}
+
+		if err := validateDockerfilePath(); err != nil {
+			return errors.Wrap(err, "error validating dockerfile path")
+		}
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -87,6 +95,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().VarP(&opts.RegistryMirrors, "registry-mirror", "", "Registry mirror to use as pull-through cache instead of docker.io. Set it repeatedly for multiple mirrors.")
 	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "customPlatform", "", "", "Specify the build platform if different from the current host")
+	RootCmd.PersistentFlags().StringVarP(&opts.DockerfilePath, "dockerfile", "d", "Dockerfile", "Path to the dockerfile to be built.")
+	RootCmd.PersistentFlags().VarP(&opts.BuildArgs, "build-arg", "", "This flag allows you to pass in ARG values at build time for construct Base image name. Set it repeatedly for multiple values.")
 
 	// Default the custom platform flag to our current platform, and validate it.
 	if opts.CustomPlatform == "" {
@@ -100,6 +110,29 @@ func addKanikoOptionsFlags() {
 // addHiddenFlags marks certain flags as hidden from the executor help text
 func addHiddenFlags() {
 	RootCmd.PersistentFlags().MarkHidden("azure-container-registry-config")
+}
+
+func validateDockerfilePath() error {
+	if isURL(opts.DockerfilePath) {
+		return nil
+	}
+	if util.FilepathExists(opts.DockerfilePath) {
+		abs, err := filepath.Abs(opts.DockerfilePath)
+		if err != nil {
+			return errors.Wrap(err, "getting absolute path for dockerfile")
+		}
+		opts.DockerfilePath = abs
+		return nil
+	}
+
+	return errors.New("please provide a valid path to a Dockerfile within the build context with --dockerfile")
+}
+
+func isURL(path string) bool {
+	if match, _ := regexp.MatchString("^https?://", path); match {
+		return true
+	}
+	return false
 }
 
 func exit(err error) {
