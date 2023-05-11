@@ -561,8 +561,8 @@ github.com/google/s2a-go/internal/v2
 github.com/google/s2a-go/internal/v2/certverifier
 github.com/google/s2a-go/internal/v2/remotesigner
 github.com/google/s2a-go/internal/v2/tlsconfigstore
-# github.com/google/slowjam v1.0.0
-## explicit; go 1.14
+# github.com/google/slowjam v1.0.1
+## explicit; go 1.19
 github.com/google/slowjam/pkg/stacklog
 # github.com/google/uuid v1.3.0
 ## explicit
