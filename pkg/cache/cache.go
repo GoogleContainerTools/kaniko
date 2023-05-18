@@ -68,7 +68,10 @@ func (rc *RegistryCache) RetrieveLayer(ck string) (v1.Image, error) {
 		cacheRef.Repository.Registry = newReg
 	}
 
-	tr := util.MakeTransport(rc.Opts.RegistryOptions, registryName)
+	tr, err := util.MakeTransport(rc.Opts.RegistryOptions, registryName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "making transport for registry %q", registryName)
+	}
 
 	img, err := remote.Image(cacheRef, remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()))
 	if err != nil {

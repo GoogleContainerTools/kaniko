@@ -126,7 +126,13 @@ func setNewRegistry(ref name.Reference, newReg name.Registry) name.Reference {
 }
 
 func remoteOptions(registryName string, opts config.RegistryOptions, customPlatform string) []remote.Option {
-	tr := util.MakeTransport(opts, registryName)
+	tr, err := util.MakeTransport(opts, registryName)
+
+	// The MakeTransport function will only return errors if there was a problem
+	// with registry certificates (Verification or mTLS)
+	if err != nil {
+		logrus.Fatalf("Unable to setup transport for registry %q: %v", customPlatform, err)
+	}
 
 	// The platform value has previously been validated.
 	platform, err := v1.ParsePlatform(customPlatform)

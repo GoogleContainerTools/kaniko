@@ -32,15 +32,16 @@ type CacheOptions struct {
 
 // RegistryOptions are all the options related to the registries, set by command line arguments.
 type RegistryOptions struct {
-	RegistryMirrors         multiArg
-	InsecureRegistries      multiArg
-	SkipTLSVerifyRegistries multiArg
-	RegistriesCertificates  keyValueArg
-	Insecure                bool
-	SkipTLSVerify           bool
-	InsecurePull            bool
-	SkipTLSVerifyPull       bool
-	PushRetry               int
+	RegistryMirrors              multiArg
+	InsecureRegistries           multiArg
+	SkipTLSVerifyRegistries      multiArg
+	RegistriesCertificates       keyValueArg
+	RegistriesClientCertificates keyValueArg
+	Insecure                     bool
+	SkipTLSVerify                bool
+	InsecurePull                 bool
+	SkipTLSVerifyPull            bool
+	PushRetry                    int
 }
 
 // KanikoOptions are options that are set by command line arguments

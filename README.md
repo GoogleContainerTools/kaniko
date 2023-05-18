@@ -955,6 +955,15 @@ registry.
 
 Expected format is `my.registry.url=/path/to/the/certificate.cert`
 
+#### Flag `--registry-client-cert`
+
+Set this flag to provide a certificate/key pair for mutual TLS (mTLS)
+communication with a given
+[registry that requires mTLS](https://docs.docker.com/engine/security/certificates/)
+for authentication.
+
+Expected format is `my.registry.url=/path/to/client/cert.crt,/path/to/client/key.key`
+
 #### Flag `--registry-mirror`
 
 Set this flag if you want to use a registry mirror instead of the default
