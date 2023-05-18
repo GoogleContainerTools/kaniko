@@ -77,7 +77,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--cleanup`](#flag---cleanup)
       - [Flag `--compressed-caching`](#flag---compressed-caching)
       - [Flag `--context-sub-path`](#flag---context-sub-path)
-      - [Flag `--customPlatform`](#flag---customplatform)
+      - [Flag `--custom-platform`](#flag---custom-platform)
       - [Flag `--digest-file`](#flag---digest-file)
       - [Flag `--dockerfile`](#flag---dockerfile)
       - [Flag `--force`](#flag---force)
@@ -101,7 +101,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--skip-tls-verify-pull`](#flag---skip-tls-verify-pull)
       - [Flag `--skip-tls-verify-registry`](#flag---skip-tls-verify-registry)
       - [Flag `--skip-unused-stages`](#flag---skip-unused-stages)
-      - [Flag `--snapshotMode`](#flag---snapshotmode)
+      - [Flag `--snapshot-mode`](#flag---snapshot-mode)
       - [Flag `--tar-path`](#flag---tar-path)
       - [Flag `--target`](#flag---target)
       - [Flag `--use-new-run`](#flag---use-new-run)
@@ -839,15 +839,15 @@ Set a sub path within the given `--context`.
 Its particularly useful when your context is, for example, a git repository, and
 you want to build one of its subfolders instead of the root folder.
 
-#### Flag `--customPlatform`
+#### Flag `--custom-platform`
 
 Allows to build with another default platform than the host, similarly to docker
 build --platform xxx the value has to be on the form
-`--customPlatform=linux/arm`, with acceptable values listed here:
+`--custom-platform=linux/arm`, with acceptable values listed here:
 [GOOS/GOARCH](https://gist.github.com/asukakenji/f15ba7e588ac42795f421b48b8aede63).
 
 It's also possible specifying CPU variants adding it as a third parameter (like
-`--customPlatform=linux/arm/v5`). Currently CPU variants are only known to be
+`--custom-platform=linux/arm/v5`). Currently CPU variants are only known to be
 used for the ARM architecture as listed here:
 [GOARM](https://github.com/golang/go/wiki/GoArm#supported-architectures)
 
@@ -1016,20 +1016,20 @@ This flag builds only used stages if defined to `true`. Otherwise it builds by
 default all stages, even the unnecessary ones until it reaches the target
 stage / end of Dockerfile
 
-#### Flag `--snapshotMode`
+#### Flag `--snapshot-mode`
 
-You can set the `--snapshotMode=<full (default), redo, time>` flag to set how
+You can set the `--snapshot-mode=<full (default), redo, time>` flag to set how
 kaniko will snapshot the filesystem.
 
-- If `--snapshotMode=full` is set, the full file contents and metadata are
+- If `--snapshot-mode=full` is set, the full file contents and metadata are
   considered when snapshotting. This is the least performant option, but also
   the most robust.
 
-- If `--snapshotMode=redo` is set, the file mtime, size, mode, owner uid and gid
+- If `--snapshot-mode=redo` is set, the file mtime, size, mode, owner uid and gid
   will be considered when snapshotting. This may be up to 50% faster than
   "full", particularly if your project has a large number files.
 
-- If `--snapshotMode=time` is set, only file mtime will be considered when
+- If `--snapshot-mode=time` is set, only file mtime will be considered when
   snapshotting (see [limitations related to mtime](#mtime-and-snapshotting)).
 
 #### Flag `--tar-path`
@@ -1193,14 +1193,14 @@ To Contribute to kaniko, see [DEVELOPMENT.md](DEVELOPMENT.md) and
 ### mtime and snapshotting
 
 When taking a snapshot, kaniko's hashing algorithms include (or in the case of
-[`--snapshotMode=time`](#--snapshotmode), only use) a file's
+[`--snapshot-mode=time`](#--snapshotmode), only use) a file's
 [`mtime`](https://en.wikipedia.org/wiki/Inode#POSIX_inode_description) to
 determine if the file has changed. Unfortunately, there is a delay between when
 changes to a file are made and when the `mtime` is updated. This means:
 
-- With the time-only snapshot mode (`--snapshotMode=time`), kaniko may miss
+- With the time-only snapshot mode (`--snapshot-mode=time`), kaniko may miss
   changes introduced by `RUN` commands entirely.
-- With the default snapshot mode (`--snapshotMode=full`), whether or not kaniko
+- With the default snapshot mode (`--snapshot-mode=full`), whether or not kaniko
   will add a layer in the case where a `RUN` command modifies a file **but the
   contents do not** change is theoretically non-deterministic. This _does not
   affect the contents_ which will still be correct, but it does affect the
