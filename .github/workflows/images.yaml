@@ -103,7 +103,7 @@ jobs:
 
     # If a tag push, use crane to add more tags.
     - if: startsWith(github.ref, 'refs/tags/v')
-      uses: imjasonh/setup-crane@5146f708a817ea23476677995bf2133943b9be0b # v0.1
+      uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
     - if: startsWith(github.ref, 'refs/tags/v')
       name: Apply release tags
       run: |
