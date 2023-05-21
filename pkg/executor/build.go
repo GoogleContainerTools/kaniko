@@ -312,6 +312,8 @@ func (s *stageBuilder) optimize(compositeKey CompositeCache, cfg v1.Config) erro
 }
 
 func (s *stageBuilder) build() error {
+	logrus.Infof("aprindle - DO NOT MERGE, ci/cd test")
+
 	// Set the initial cache key to be the base image digest, the build args and the SrcContext.
 	var compositeKey *CompositeCache
 	if cacheKey, ok := s.digestToCacheKey[s.baseImageDigest]; ok {
