@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	format "github.com/go-git/go-git/v5/plumbing/format/config"
@@ -26,6 +27,12 @@ type Branch struct {
 	// "true" and "interactive".  "false" is undocumented and
 	// typically represented by the non-existence of this field
 	Rebase string
+	// Description explains what the branch is for.
+	// Multi-line explanations may be used.
+	//
+	// Original git command to edit:
+	//	git branch --edit-description
+	Description string
 
 	raw *format.Subsection
 }
@@ -75,7 +82,25 @@ func (b *Branch) marshal() *format.Subsection {
 		b.raw.SetOption(rebaseKey, b.Rebase)
 	}
 
+	if b.Description == "" {
+		b.raw.RemoveOption(descriptionKey)
+	} else {
+		desc := quoteDescription(b.Description)
+		b.raw.SetOption(descriptionKey, desc)
+	}
+
 	return b.raw
+}
+
+// hack to trigger conditional quoting in the
+// plumbing/format/config/Encoder.encodeOptions
+//
+// Current Encoder implementation uses Go %q format if value contains a backslash character,
+// which is not consistent with reference git implementation.
+// git just replaces newline characters with \n, while Encoder prints them directly.
+// Until value quoting fix, we should escape description value by replacing newline characters with \n.
+func quoteDescription(desc string) string {
+	return strings.ReplaceAll(desc, "\n", `\n`)
 }
 
 func (b *Branch) unmarshal(s *format.Subsection) error {
@@ -85,6 +110,14 @@ func (b *Branch) unmarshal(s *format.Subsection) error {
 	b.Remote = b.raw.Options.Get(remoteSection)
 	b.Merge = plumbing.ReferenceName(b.raw.Options.Get(mergeKey))
 	b.Rebase = b.raw.Options.Get(rebaseKey)
+	b.Description = unquoteDescription(b.raw.Options.Get(descriptionKey))
 
 	return b.Validate()
+}
+
+// hack to enable conditional quoting in the
+// plumbing/format/config/Encoder.encodeOptions
+// goto quoteDescription for details.
+func unquoteDescription(desc string) string {
+	return strings.ReplaceAll(desc, `\n`, "\n")
 }

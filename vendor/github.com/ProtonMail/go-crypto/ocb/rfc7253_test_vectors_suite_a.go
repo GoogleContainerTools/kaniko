@@ -5,7 +5,7 @@ import (
 )
 
 // Test vectors from https://tools.ietf.org/html/rfc7253. Note that key is
-// shared accross tests.
+// shared across tests.
 var testKey, _ = hex.DecodeString("000102030405060708090A0B0C0D0E0F")
 
 var rfc7253testVectors = []struct {

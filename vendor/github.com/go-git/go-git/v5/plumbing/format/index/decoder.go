@@ -3,15 +3,15 @@ package index
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha1"
+	"crypto"
 	"errors"
-	"hash"
 	"io"
 	"io/ioutil"
 	"strconv"
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/hash"
 	"github.com/go-git/go-git/v5/utils/binary"
 )
 
@@ -49,7 +49,7 @@ type Decoder struct {
 
 // NewDecoder returns a new decoder that reads from r.
 func NewDecoder(r io.Reader) *Decoder {
-	h := sha1.New()
+	h := hash.New(crypto.SHA1)
 	return &Decoder{
 		r:         io.TeeReader(r, h),
 		hash:      h,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/internal/common"
+	"github.com/skeema/knownhosts"
 
 	"github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
@@ -121,10 +122,24 @@ func (c *command) connect() error {
 	if err != nil {
 		return err
 	}
+	hostWithPort := c.getHostWithPort()
+	if config.HostKeyCallback == nil {
+		kh, err := newKnownHosts()
+		if err != nil {
+			return err
+		}
+		config.HostKeyCallback = kh.HostKeyCallback()
+		config.HostKeyAlgorithms = kh.HostKeyAlgorithms(hostWithPort)
+	} else if len(config.HostKeyAlgorithms) == 0 {
+		// Set the HostKeyAlgorithms based on HostKeyCallback.
+		// For background see https://github.com/go-git/go-git/issues/411 as well as
+		// https://github.com/golang/go/issues/29286 for root cause.
+		config.HostKeyAlgorithms = knownhosts.HostKeyAlgorithms(config.HostKeyCallback, hostWithPort)
+	}
 
 	overrideConfig(c.config, config)
 
-	c.client, err = dial("tcp", c.getHostWithPort(), config)
+	c.client, err = dial("tcp", hostWithPort, config)
 	if err != nil {
 		return err
 	}

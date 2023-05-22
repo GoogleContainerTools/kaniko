@@ -2,19 +2,19 @@ package index
 
 import (
 	"bytes"
-	"crypto/sha1"
+	"crypto"
 	"errors"
-	"hash"
 	"io"
 	"sort"
 	"time"
 
+	"github.com/go-git/go-git/v5/plumbing/hash"
 	"github.com/go-git/go-git/v5/utils/binary"
 )
 
 var (
 	// EncodeVersionSupported is the range of supported index versions
-	EncodeVersionSupported uint32 = 2
+	EncodeVersionSupported uint32 = 3
 
 	// ErrInvalidTimestamp is returned by Encode if a Index with a Entry with
 	// negative timestamp values
@@ -29,16 +29,16 @@ type Encoder struct {
 
 // NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
-	h := sha1.New()
+	h := hash.New(crypto.SHA1)
 	mw := io.MultiWriter(w, h)
 	return &Encoder{mw, h}
 }
 
 // Encode writes the Index to the stream of the encoder.
 func (e *Encoder) Encode(idx *Index) error {
-	// TODO: support versions v3 and v4
+	// TODO: support v4
 	// TODO: support extensions
-	if idx.Version != EncodeVersionSupported {
+	if idx.Version > EncodeVersionSupported {
 		return ErrUnsupportedVersion
 	}
 
@@ -68,8 +68,12 @@ func (e *Encoder) encodeEntries(idx *Index) error {
 		if err := e.encodeEntry(entry); err != nil {
 			return err
 		}
+		entryLength := entryHeaderLength
+		if entry.IntentToAdd || entry.SkipWorktree {
+			entryLength += 2
+		}
 
-		wrote := entryHeaderLength + len(entry.Name)
+		wrote := entryLength + len(entry.Name)
 		if err := e.padEntry(wrote); err != nil {
 			return err
 		}
@@ -79,10 +83,6 @@ func (e *Encoder) encodeEntries(idx *Index) error {
 }
 
 func (e *Encoder) encodeEntry(entry *Entry) error {
-	if entry.IntentToAdd || entry.SkipWorktree {
-		return ErrUnsupportedVersion
-	}
-
 	sec, nsec, err := e.timeToUint32(&entry.CreatedAt)
 	if err != nil {
 		return err
@@ -110,8 +110,24 @@ func (e *Encoder) encodeEntry(entry *Entry) error {
 		entry.GID,
 		entry.Size,
 		entry.Hash[:],
-		flags,
 	}
+
+	flagsFlow := []interface{}{flags}
+
+	if entry.IntentToAdd || entry.SkipWorktree {
+		var extendedFlags uint16
+
+		if entry.IntentToAdd {
+			extendedFlags |= intentToAddMask
+		}
+		if entry.SkipWorktree {
+			extendedFlags |= skipWorkTreeMask
+		}
+
+		flagsFlow = []interface{}{flags | entryExtended, extendedFlags}
+	}
+
+	flow = append(flow, flagsFlow...)
 
 	if err := binary.Write(e.w, flow...); err != nil {
 		return err

@@ -943,6 +943,7 @@ func (d *DotGit) walkReferencesTree(refs *[]*plumbing.Reference, relPath []strin
 	files, err := d.fs.ReadDir(d.fs.Join(relPath...))
 	if err != nil {
 		if os.IsNotExist(err) {
+			// a race happened, and our directory is gone now
 			return nil
 		}
 
@@ -960,6 +961,10 @@ func (d *DotGit) walkReferencesTree(refs *[]*plumbing.Reference, relPath []strin
 		}
 
 		ref, err := d.readReferenceFile(".", strings.Join(newRelPath, "/"))
+		if os.IsNotExist(err) {
+			// a race happened, and our file is gone now
+			continue
+		}
 		if err != nil {
 			return err
 		}

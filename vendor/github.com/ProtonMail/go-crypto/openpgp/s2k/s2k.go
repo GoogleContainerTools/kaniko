@@ -172,7 +172,7 @@ func Iterated(out []byte, h hash.Hash, in []byte, salt []byte, count int) {
 // Generate generates valid parameters from given configuration.
 // It will enforce salted + hashed s2k method
 func Generate(rand io.Reader, c *Config) (*Params, error) {
-	hashId, ok := HashToHashId(c.Hash)
+	hashId, ok := algorithm.HashToHashId(c.Hash)
 	if !ok {
 		return nil, errors.UnsupportedError("no such hash")
 	}
@@ -262,7 +262,7 @@ func (params *Params) Function() (f func(out, in []byte), err error) {
 	if params.Dummy() {
 		return nil, errors.ErrDummyPrivateKey("dummy key found")
 	}
-	hashObj, ok := HashIdToHash(params.hashId)
+	hashObj, ok := algorithm.HashIdToHashWithSha1(params.hashId)
 	if !ok {
 		return nil, errors.UnsupportedError("hash for S2K function: " + strconv.Itoa(int(params.hashId)))
 	}
@@ -336,32 +336,4 @@ func Serialize(w io.Writer, key []byte, rand io.Reader, passphrase []byte, c *Co
 	}
 	f(key, passphrase)
 	return nil
-}
-
-// HashIdToHash returns a crypto.Hash which corresponds to the given OpenPGP
-// hash id.
-func HashIdToHash(id byte) (h crypto.Hash, ok bool) {
-	if hash, ok := algorithm.HashById[id]; ok {
-		return hash.HashFunc(), true
-	}
-	return 0, false
-}
-
-// HashIdToString returns the name of the hash function corresponding to the
-// given OpenPGP hash id.
-func HashIdToString(id byte) (name string, ok bool) {
-	if hash, ok := algorithm.HashById[id]; ok {
-		return hash.String(), true
-	}
-	return "", false
-}
-
-// HashIdToHash returns an OpenPGP hash id which corresponds the given Hash.
-func HashToHashId(h crypto.Hash) (id byte, ok bool) {
-	for id, hash := range algorithm.HashById {
-		if hash.HashFunc() == h {
-			return id, true
-		}
-	}
-	return 0, false
 }

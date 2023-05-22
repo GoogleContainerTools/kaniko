@@ -52,8 +52,8 @@ type DeltaObjectStorer interface {
 	DeltaObject(plumbing.ObjectType, plumbing.Hash) (plumbing.EncodedObject, error)
 }
 
-// Transactioner is a optional method for ObjectStorer, it enable transaction
-// base write and read operations in the storage
+// Transactioner is a optional method for ObjectStorer, it enables transactional read and write
+// operations.
 type Transactioner interface {
 	// Begin starts a transaction.
 	Begin() Transaction
@@ -87,8 +87,8 @@ type PackedObjectStorer interface {
 	DeleteOldObjectPackAndIndex(plumbing.Hash, time.Time) error
 }
 
-// PackfileWriter is a optional method for ObjectStorer, it enable direct write
-// of packfile to the storage
+// PackfileWriter is an optional method for ObjectStorer, it enables directly writing
+// a packfile to storage.
 type PackfileWriter interface {
 	// PackfileWriter returns a writer for writing a packfile to the storage
 	//

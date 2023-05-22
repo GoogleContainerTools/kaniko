@@ -56,7 +56,7 @@ var (
 	ErrWorktreeNotProvided       = errors.New("worktree should be provided")
 	ErrIsBareRepository          = errors.New("worktree not available in a bare repository")
 	ErrUnableToResolveCommit     = errors.New("unable to resolve commit")
-	ErrPackedObjectsNotSupported = errors.New("Packed objects not supported")
+	ErrPackedObjectsNotSupported = errors.New("packed objects not supported")
 )
 
 // Repository represents a git repository
@@ -280,6 +280,9 @@ func dotGitToOSFilesystems(path string, detect bool) (dot, wt billy.Filesystem, 
 
 		pathinfo, err := fs.Stat("/")
 		if !os.IsNotExist(err) {
+			if pathinfo == nil {
+				return nil, nil, err
+			}
 			if !pathinfo.IsDir() && detect {
 				fs = osfs.New(filepath.Dir(path))
 			}
@@ -747,21 +750,20 @@ func (r *Repository) buildTagSignature(tag *object.Tag, signKey *openpgp.Entity)
 // If you want to check to see if the tag is an annotated tag, you can call
 // TagObject on the hash of the reference in ForEach:
 //
-//   ref, err := r.Tag("v0.1.0")
-//   if err != nil {
-//     // Handle error
-//   }
+//	ref, err := r.Tag("v0.1.0")
+//	if err != nil {
+//	  // Handle error
+//	}
 //
-//   obj, err := r.TagObject(ref.Hash())
-//   switch err {
-//   case nil:
-//     // Tag object present
-//   case plumbing.ErrObjectNotFound:
-//     // Not a tag object
-//   default:
-//     // Some other error
-//   }
-//
+//	obj, err := r.TagObject(ref.Hash())
+//	switch err {
+//	case nil:
+//	  // Tag object present
+//	case plumbing.ErrObjectNotFound:
+//	  // Not a tag object
+//	default:
+//	  // Some other error
+//	}
 func (r *Repository) Tag(name string) (*plumbing.Reference, error) {
 	ref, err := r.Reference(plumbing.ReferenceName(path.Join("refs", "tags", name)), false)
 	if err != nil {
@@ -1238,26 +1240,25 @@ func commitIterFunc(order LogOrder) func(c *object.Commit) object.CommitIter {
 // If you want to check to see if the tag is an annotated tag, you can call
 // TagObject on the hash Reference passed in through ForEach:
 //
-//   iter, err := r.Tags()
-//   if err != nil {
-//     // Handle error
-//   }
+//	iter, err := r.Tags()
+//	if err != nil {
+//	  // Handle error
+//	}
 //
-//   if err := iter.ForEach(func (ref *plumbing.Reference) error {
-//     obj, err := r.TagObject(ref.Hash())
-//     switch err {
-//     case nil:
-//       // Tag object present
-//     case plumbing.ErrObjectNotFound:
-//       // Not a tag object
-//     default:
-//       // Some other error
-//       return err
-//     }
-//   }); err != nil {
-//     // Handle outer iterator error
-//   }
-//
+//	if err := iter.ForEach(func (ref *plumbing.Reference) error {
+//	  obj, err := r.TagObject(ref.Hash())
+//	  switch err {
+//	  case nil:
+//	    // Tag object present
+//	  case plumbing.ErrObjectNotFound:
+//	    // Not a tag object
+//	  default:
+//	    // Some other error
+//	    return err
+//	  }
+//	}); err != nil {
+//	  // Handle outer iterator error
+//	}
 func (r *Repository) Tags() (storer.ReferenceIter, error) {
 	refIter, err := r.Storer.IterReferences()
 	if err != nil {
@@ -1421,9 +1422,13 @@ func (r *Repository) Worktree() (*Worktree, error) {
 //
 // Implemented resolvers : HEAD, branch, tag, heads/branch, refs/heads/branch,
 // refs/tags/tag, refs/remotes/origin/branch, refs/remotes/origin/HEAD, tilde and caret (HEAD~1, master~^, tag~2, ref/heads/master~1, ...), selection by text (HEAD^{/fix nasty bug}), hash (prefix and full)
-func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error) {
-	p := revision.NewParserFromString(string(rev))
+func (r *Repository) ResolveRevision(in plumbing.Revision) (*plumbing.Hash, error) {
+	rev := in.String()
+	if rev == "" {
+		return &plumbing.ZeroHash, plumbing.ErrReferenceNotFound
+	}
 
+	p := revision.NewParserFromString(rev)
 	items, err := p.Parse()
 
 	if err != nil {
@@ -1547,11 +1552,15 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 			}
 
 			if c == nil {
-				return &plumbing.ZeroHash, fmt.Errorf(`No commit message match regexp : "%s"`, re.String())
+				return &plumbing.ZeroHash, fmt.Errorf("no commit message match regexp: %q", re.String())
 			}
 
 			commit = c
 		}
+	}
+
+	if commit == nil {
+		return &plumbing.ZeroHash, plumbing.ErrReferenceNotFound
 	}
 
 	return &commit.Hash, nil

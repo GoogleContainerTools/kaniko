@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -204,9 +205,9 @@ func (s *ObjectStorage) packfile(idx idxfile.Index, pack plumbing.Hash) (*packfi
 
 	var p *packfile.Packfile
 	if s.objectCache != nil {
-		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.objectCache)
+		p = packfile.NewPackfileWithCache(idx, s.dir.Fs(), f, s.objectCache, s.options.LargeObjectThreshold)
 	} else {
-		p = packfile.NewPackfile(idx, s.dir.Fs(), f)
+		p = packfile.NewPackfile(idx, s.dir.Fs(), f, s.options.LargeObjectThreshold)
 	}
 
 	return p, s.storePackfileInCache(pack, p)
@@ -389,7 +390,6 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedOb
 		return cacheObj, nil
 	}
 
-	obj = s.NewEncodedObject()
 	r, err := objfile.NewReader(f)
 	if err != nil {
 		return nil, err
@@ -402,6 +402,13 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedOb
 		return nil, err
 	}
 
+	if s.options.LargeObjectThreshold > 0 && size > s.options.LargeObjectThreshold {
+		obj = dotgit.NewEncodedObject(s.dir, h, t, size)
+		return obj, nil
+	}
+
+	obj = s.NewEncodedObject()
+
 	obj.SetType(t)
 	obj.SetSize(size)
 	w, err := obj.Writer()
@@ -413,8 +420,19 @@ func (s *ObjectStorage) getFromUnpacked(h plumbing.Hash) (obj plumbing.EncodedOb
 
 	s.objectCache.Put(obj)
 
-	_, err = io.Copy(w, r)
+	bufp := copyBufferPool.Get().(*[]byte)
+	buf := *bufp
+	_, err = io.CopyBuffer(w, r, buf)
+	copyBufferPool.Put(bufp)
+
 	return obj, err
+}
+
+var copyBufferPool = sync.Pool{
+	New: func() interface{} {
+		b := make([]byte, 32*1024)
+		return &b
+	},
 }
 
 // Get returns the object with the given hash, by searching for it in
@@ -595,6 +613,7 @@ func (s *ObjectStorage) buildPackfileIters(
 			return newPackfileIter(
 				s.dir.Fs(), pack, t, seen, s.index[h],
 				s.objectCache, s.options.KeepDescriptors,
+				s.options.LargeObjectThreshold,
 			)
 		},
 	}, nil
@@ -684,6 +703,7 @@ func NewPackfileIter(
 	idxFile billy.File,
 	t plumbing.ObjectType,
 	keepPack bool,
+	largeObjectThreshold int64,
 ) (storer.EncodedObjectIter, error) {
 	idx := idxfile.NewMemoryIndex()
 	if err := idxfile.NewDecoder(idxFile).Decode(idx); err != nil {
@@ -695,7 +715,7 @@ func NewPackfileIter(
 	}
 
 	seen := make(map[plumbing.Hash]struct{})
-	return newPackfileIter(fs, f, t, seen, idx, nil, keepPack)
+	return newPackfileIter(fs, f, t, seen, idx, nil, keepPack, largeObjectThreshold)
 }
 
 func newPackfileIter(
@@ -706,12 +726,13 @@ func newPackfileIter(
 	index idxfile.Index,
 	cache cache.Object,
 	keepPack bool,
+	largeObjectThreshold int64,
 ) (storer.EncodedObjectIter, error) {
 	var p *packfile.Packfile
 	if cache != nil {
-		p = packfile.NewPackfileWithCache(index, fs, f, cache)
+		p = packfile.NewPackfileWithCache(index, fs, f, cache, largeObjectThreshold)
 	} else {
-		p = packfile.NewPackfile(index, fs, f)
+		p = packfile.NewPackfile(index, fs, f, largeObjectThreshold)
 	}
 
 	iter, err := p.GetByType(t)

@@ -2,11 +2,12 @@ package plumbing
 
 import (
 	"bytes"
-	"crypto/sha1"
+	"crypto"
 	"encoding/hex"
-	"hash"
 	"sort"
 	"strconv"
+
+	"github.com/go-git/go-git/v5/plumbing/hash"
 )
 
 // Hash SHA1 hashed content
@@ -46,7 +47,7 @@ type Hasher struct {
 }
 
 func NewHasher(t ObjectType, size int64) Hasher {
-	h := Hasher{sha1.New()}
+	h := Hasher{hash.New(crypto.SHA1)}
 	h.Write(t.Bytes())
 	h.Write([]byte(" "))
 	h.Write([]byte(strconv.FormatInt(size, 10)))

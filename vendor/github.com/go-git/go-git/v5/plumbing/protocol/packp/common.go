@@ -19,7 +19,6 @@ var (
 	// common
 	sp  = []byte(" ")
 	eol = []byte("\n")
-	eq  = []byte{'='}
 
 	// advertised-refs
 	null       = []byte("\x00")

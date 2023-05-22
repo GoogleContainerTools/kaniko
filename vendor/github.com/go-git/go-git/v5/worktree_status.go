@@ -270,10 +270,6 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 }
 
 func (w *Worktree) doAddDirectory(idx *index.Index, s Status, directory string, ignorePattern []gitignore.Pattern) (added bool, err error) {
-	files, err := w.Filesystem.ReadDir(directory)
-	if err != nil {
-		return false, err
-	}
 	if len(ignorePattern) > 0 {
 		m := gitignore.NewMatcher(ignorePattern)
 		matchPath := strings.Split(directory, string(os.PathSeparator))
@@ -283,20 +279,13 @@ func (w *Worktree) doAddDirectory(idx *index.Index, s Status, directory string, 
 		}
 	}
 
-	for _, file := range files {
-		name := path.Join(directory, file.Name())
-
-		var a bool
-		if file.IsDir() {
-			if file.Name() == GitDirName {
-				// ignore special git directory
-				continue
-			}
-			a, err = w.doAddDirectory(idx, s, name, ignorePattern)
-		} else {
-			a, _, err = w.doAddFile(idx, s, name, ignorePattern)
+	for name := range s {
+		if !isPathInDirectory(name, filepath.ToSlash(filepath.Clean(directory))) {
+			continue
 		}
 
+		var a bool
+		a, _, err = w.doAddFile(idx, s, name, ignorePattern)
 		if err != nil {
 			return
 		}
@@ -307,6 +296,26 @@ func (w *Worktree) doAddDirectory(idx *index.Index, s Status, directory string, 
 	}
 
 	return
+}
+
+func isPathInDirectory(path, directory string) bool {
+	ps := strings.Split(path, "/")
+	ds := strings.Split(directory, "/")
+
+	if len(ds) == 1 && ds[0] == "." {
+		return true
+	}
+
+	if len(ps) < len(ds) {
+		return false
+	}
+
+	for i := 0; i < len(ds); i++ {
+		if ps[i] != ds[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // AddWithOptions file contents to the index,  updates the index using the

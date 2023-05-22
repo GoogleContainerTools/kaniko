@@ -27,7 +27,7 @@ build-git:
 
 test:
 	@echo "running against `git version`"; \
-	$(GOTEST) ./...
+	$(GOTEST) -race ./...
 
 test-coverage:
 	@echo "running against `git version`"; \

@@ -189,7 +189,7 @@ func (s *upSession) objectsToUpload(req *packp.UploadPackRequest) ([]plumbing.Ha
 }
 
 func (*upSession) setSupportedCapabilities(c *capability.List) error {
-	if err := c.Set(capability.Agent, capability.DefaultAgent); err != nil {
+	if err := c.Set(capability.Agent, capability.DefaultAgent()); err != nil {
 		return err
 	}
 
@@ -355,7 +355,7 @@ func (s *rpSession) reportStatus() *packp.ReportStatus {
 }
 
 func (*rpSession) setSupportedCapabilities(c *capability.List) error {
-	if err := c.Set(capability.Agent, capability.DefaultAgent); err != nil {
+	if err := c.Set(capability.Agent, capability.DefaultAgent()); err != nil {
 		return err
 	}
 

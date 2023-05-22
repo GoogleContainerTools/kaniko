@@ -77,14 +77,14 @@ func (c *command) StderrPipe() (io.Reader, error) {
 	return nil, nil
 }
 
-// StdinPipe return the underlying connection as WriteCloser, wrapped to prevent
+// StdinPipe returns the underlying connection as WriteCloser, wrapped to prevent
 // call to the Close function from the connection, a command execution in git
 // protocol can't be closed or killed
 func (c *command) StdinPipe() (io.WriteCloser, error) {
 	return ioutil.WriteNopCloser(c.conn), nil
 }
 
-// StdoutPipe return the underlying connection as Reader
+// StdoutPipe returns the underlying connection as Reader
 func (c *command) StdoutPipe() (io.Reader, error) {
 	return c.conn, nil
 }

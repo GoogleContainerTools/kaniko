@@ -95,7 +95,7 @@ func NewUploadRequestFromCapabilities(adv *capability.List) *UploadRequest {
 	}
 
 	if adv.Supports(capability.Agent) {
-		r.Capabilities.Set(capability.Agent, capability.DefaultAgent)
+		r.Capabilities.Set(capability.Agent, capability.DefaultAgent())
 	}
 
 	return r

@@ -15,7 +15,6 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5/internal/url"
 	format "github.com/go-git/go-git/v5/plumbing/format/config"
-	"github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -150,7 +149,7 @@ func ReadConfig(r io.Reader) (*Config, error) {
 // config file to the given scope, a empty one is returned.
 func LoadConfig(scope Scope) (*Config, error) {
 	if scope == LocalScope {
-		return nil, fmt.Errorf("LocalScope should be read from the a ConfigStorer.")
+		return nil, fmt.Errorf("LocalScope should be read from the a ConfigStorer")
 	}
 
 	files, err := Paths(scope)
@@ -185,7 +184,7 @@ func Paths(scope Scope) ([]string, error) {
 			files = append(files, filepath.Join(xdg, "git/config"))
 		}
 
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			return nil, err
 		}
@@ -247,6 +246,7 @@ const (
 	rebaseKey        = "rebase"
 	nameKey          = "name"
 	emailKey         = "email"
+	descriptionKey   = "description"
 	defaultBranchKey = "defaultBranch"
 
 	// DefaultPackWindow holds the number of previous objects used to

@@ -2,11 +2,12 @@ package packfile
 
 import (
 	"compress/zlib"
-	"crypto/sha1"
+	"crypto"
 	"fmt"
 	"io"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/hash"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/utils/binary"
 	"github.com/go-git/go-git/v5/utils/ioutil"
@@ -28,7 +29,7 @@ type Encoder struct {
 // OFSDeltaObject. To use Reference deltas, set useRefDeltas to true.
 func NewEncoder(w io.Writer, s storer.EncodedObjectStorer, useRefDeltas bool) *Encoder {
 	h := plumbing.Hasher{
-		Hash: sha1.New(),
+		Hash: hash.New(crypto.SHA1),
 	}
 	mw := io.MultiWriter(w, h)
 	ow := newOffsetWriter(mw)
