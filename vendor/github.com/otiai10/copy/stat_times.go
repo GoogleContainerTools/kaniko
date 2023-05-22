@@ -1,4 +1,5 @@
-// +build !windows,!darwin,!freebsd,!plan9,!netbsd
+//go:build !windows && !darwin && !freebsd && !plan9 && !netbsd && !js
+// +build !windows,!darwin,!freebsd,!plan9,!netbsd,!js
 
 // TODO: add more runtimes
 
