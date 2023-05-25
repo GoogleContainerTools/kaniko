@@ -1,3 +1,170 @@
+# v1.10.0 Release 2023-05-24
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.10.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.10.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.10.0-slim
+```
+
+* chore(deps): bump github.com/sirupsen/logrus from 1.9.0 to 1.9.2 [#2522](https://github.com/GoogleContainerTools/kaniko/pull/2522)
+* chore(deps): bump github.com/otiai10/copy from 1.7.0 to 1.11.0 [#2523](https://github.com/GoogleContainerTools/kaniko/pull/2523)
+* Add mTLS (client cert) registry authentication [#2180](https://github.com/GoogleContainerTools/kaniko/pull/2180)
+* chore: Revert "chore(deps): bump google-github-actions/setup-gcloud from 0.5.1 to 1.1.1 (#2502)" [#2524](https://github.com/GoogleContainerTools/kaniko/pull/2524)
+* Light editing to scripts in hack/gofmt [#2236](https://github.com/GoogleContainerTools/kaniko/pull/2236)
+* chore(deps): bump golang from 1.19 to 1.20 in /deploy [#2388](https://github.com/GoogleContainerTools/kaniko/pull/2388)
+* chore(deps): bump imjasonh/setup-crane from 0.1 to 0.3 [#2401](https://github.com/GoogleContainerTools/kaniko/pull/2401)
+* chore(deps): bump golang.org/x/sync from 0.1.0 to 0.2.0 [#2497](https://github.com/GoogleContainerTools/kaniko/pull/2497)
+* fix: Correct deprecated flags in `README.md` [#2335](https://github.com/GoogleContainerTools/kaniko/pull/2335)
+* chore(deps): bump docker/setup-qemu-action from 1.2.0 to 2.1.0 [#2287](https://github.com/GoogleContainerTools/kaniko/pull/2287)
+* Delete scorecards-analysis.yml [#2510](https://github.com/GoogleContainerTools/kaniko/pull/2510)
+* chore(deps): bump docker/build-push-action from 3.2.0 to 4.0.0 [#2505](https://github.com/GoogleContainerTools/kaniko/pull/2505)
+* chore(deps): bump github.com/docker/distribution from 2.8.1+incompatible to 2.8.2+incompatible [#2503](https://github.com/GoogleContainerTools/kaniko/pull/2503)
+* chore(deps): bump ossf/scorecard-action from 1.1.1 to 2.1.3 [#2506](https://github.com/GoogleContainerTools/kaniko/pull/2506)
+* chore(deps): bump golang.org/x/sys from 0.7.0 to 0.8.0 [#2507](https://github.com/GoogleContainerTools/kaniko/pull/2507)
+* chore(deps): bump github.com/google/go-containerregistry from 0.14.0 to 0.15.1 [#2508](https://github.com/GoogleContainerTools/kaniko/pull/2508)
+* chore(deps): bump github.com/google/slowjam from 1.0.0 to 1.0.1 [#2498](https://github.com/GoogleContainerTools/kaniko/pull/2498)
+* chore(deps): bump google-github-actions/setup-gcloud from 0.5.1 to 1.1.1 [#2502](https://github.com/GoogleContainerTools/kaniko/pull/2502)
+* chore: add .vscode/ dir to .gitignore [#2501](https://github.com/GoogleContainerTools/kaniko/pull/2501)
+* chore(deps): bump sigstore/cosign-installer from 3.0.1 to 3.0.3 [#2495](https://github.com/GoogleContainerTools/kaniko/pull/2495)
+* chore(deps): bump google.golang.org/api from 0.120.0 to 0.121.0 [#2496](https://github.com/GoogleContainerTools/kaniko/pull/2496)
+* chore(deps): bump github.com/spf13/afero from 1.9.2 to 1.9.5 [#2448](https://github.com/GoogleContainerTools/kaniko/pull/2448)
+* chore(deps): bump google.golang.org/api from 0.110.0 to 0.120.0 [#2484](https://github.com/GoogleContainerTools/kaniko/pull/2484)
+* chore(deps): bump github/codeql-action from 2.1.8 to 2.3.2 [#2487](https://github.com/GoogleContainerTools/kaniko/pull/2487)
+* chore(deps): bump github.com/docker/docker from 23.0.1+incompatible to 23.0.5+incompatible [#2489](https://github.com/GoogleContainerTools/kaniko/pull/2489)
+* chore(deps): bump github.com/aws/aws-sdk-go from 1.44.24 to 1.44.253 [#2490](https://github.com/GoogleContainerTools/kaniko/pull/2490)
+* fix: use debian buster to fix tests using no longer supported stretch which had broken apt-get urls [#2485](https://github.com/GoogleContainerTools/kaniko/pull/2485)
+* chore(deps): bump google.golang.org/protobuf from 1.29.0 to 1.29.1 [#2442](https://github.com/GoogleContainerTools/kaniko/pull/2442)
+* Use correct media type for zstd layers [#2459](https://github.com/GoogleContainerTools/kaniko/pull/2459)
+* Add support for zstd compression [#2313](https://github.com/GoogleContainerTools/kaniko/pull/2313)
+* chore(deps): bump github.com/opencontainers/runc from 1.1.4 to 1.1.5 [#2453](https://github.com/GoogleContainerTools/kaniko/pull/2453)
+* chore(deps): bump github.com/sirupsen/logrus from 1.9.0 to 1.9.2 [#2522](https://github.com/GoogleContainerTools/kaniko/pull/2522)
+* chore(deps): bump github.com/otiai10/copy from 1.7.0 to 1.11.0 [#2523](https://github.com/GoogleContainerTools/kaniko/pull/2523)
+* Add mTLS (client cert) registry authentication [#2180](https://github.com/GoogleContainerTools/kaniko/pull/2180)
+* chore: Revert "chore(deps): bump google-github-actions/setup-gcloud from 0.5.1 to 1.1.1 (#2502)" [#2524](https://github.com/GoogleContainerTools/kaniko/pull/2524)
+* Light editing to scripts in hack/gofmt [#2236](https://github.com/GoogleContainerTools/kaniko/pull/2236)
+* chore(deps): bump golang from 1.19 to 1.20 in /deploy [#2388](https://github.com/GoogleContainerTools/kaniko/pull/2388)
+* chore(deps): bump imjasonh/setup-crane from 0.1 to 0.3 [#2401](https://github.com/GoogleContainerTools/kaniko/pull/2401)
+* chore(deps): bump golang.org/x/sync from 0.1.0 to 0.2.0 [#2497](https://github.com/GoogleContainerTools/kaniko/pull/2497)
+* fix: Correct deprecated flags in `README.md` [#2335](https://github.com/GoogleContainerTools/kaniko/pull/2335)
+* chore(deps): bump docker/setup-qemu-action from 1.2.0 to 2.1.0 [#2287](https://github.com/GoogleContainerTools/kaniko/pull/2287)
+* Delete scorecards-analysis.yml [#2510](https://github.com/GoogleContainerTools/kaniko/pull/2510)
+* chore(deps): bump docker/build-push-action from 3.2.0 to 4.0.0 [#2505](https://github.com/GoogleContainerTools/kaniko/pull/2505)
+* chore(deps): bump github.com/docker/distribution from 2.8.1+incompatible to 2.8.2+incompatible [#2503](https://github.com/GoogleContainerTools/kaniko/pull/2503)
+* chore(deps): bump ossf/scorecard-action from 1.1.1 to 2.1.3 [#2506](https://github.com/GoogleContainerTools/kaniko/pull/2506)
+* chore(deps): bump golang.org/x/sys from 0.7.0 to 0.8.0 [#2507](https://github.com/GoogleContainerTools/kaniko/pull/2507)
+* chore(deps): bump github.com/google/go-containerregistry from 0.14.0 to 0.15.1 [#2508](https://github.com/GoogleContainerTools/kaniko/pull/2508)
+* chore(deps): bump github.com/google/slowjam from 1.0.0 to 1.0.1 [#2498](https://github.com/GoogleContainerTools/kaniko/pull/2498)
+* chore(deps): bump google-github-actions/setup-gcloud from 0.5.1 to 1.1.1 [#2502](https://github.com/GoogleContainerTools/kaniko/pull/2502)
+* chore: add .vscode/ dir to .gitignore [#2501](https://github.com/GoogleContainerTools/kaniko/pull/2501)
+* chore(deps): bump sigstore/cosign-installer from 3.0.1 to 3.0.3 [#2495](https://github.com/GoogleContainerTools/kaniko/pull/2495)
+* chore(deps): bump google.golang.org/api from 0.120.0 to 0.121.0 [#2496](https://github.com/GoogleContainerTools/kaniko/pull/2496)
+* chore(deps): bump github.com/spf13/afero from 1.9.2 to 1.9.5 [#2448](https://github.com/GoogleContainerTools/kaniko/pull/2448)
+* chore(deps): bump google.golang.org/api from 0.110.0 to 0.120.0 [#2484](https://github.com/GoogleContainerTools/kaniko/pull/2484)
+* chore(deps): bump github/codeql-action from 2.1.8 to 2.3.2 [#2487](https://github.com/GoogleContainerTools/kaniko/pull/2487)
+* chore(deps): bump github.com/docker/docker from 23.0.1+incompatible to 23.0.5+incompatible [#2489](https://github.com/GoogleContainerTools/kaniko/pull/2489)
+* chore(deps): bump github.com/aws/aws-sdk-go from 1.44.24 to 1.44.253 [#2490](https://github.com/GoogleContainerTools/kaniko/pull/2490)
+* fix: use debian buster to fix tests using no longer supported stretch which had broken apt-get urls [#2485](https://github.com/GoogleContainerTools/kaniko/pull/2485)
+* chore(deps): bump google.golang.org/protobuf from 1.29.0 to 1.29.1 [#2442](https://github.com/GoogleContainerTools/kaniko/pull/2442)
+* Use correct media type for zstd layers [#2459](https://github.com/GoogleContainerTools/kaniko/pull/2459)
+* Add support for zstd compression [#2313](https://github.com/GoogleContainerTools/kaniko/pull/2313)
+* chore(deps): bump github.com/opencontainers/runc from 1.1.4 to 1.1.5 [#2453](https://github.com/GoogleContainerTools/kaniko/pull/2453)
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- Aaruni Aggarwal
+- Abirdcfly
+- Adrian Newby
+- almg80
+- Anbraten
+- Andreas Fleig
+- Andrei Kvapil
+- ankitm123
+- Aris Buzachis
+- Benjamin Krenn
+- Bernardo Marques
+- Bryan A. S
+- chenggui53
+- Chuang Wang
+- claudex
+- Dávid Szakállas
+- Dawei Ma
+- dependabot[bot]
+- Diego Gonzalez
+- dmr
+- ejose19
+- Eng Zer Jun
+- ePirat
+- Eric
+- Florian Apolloner
+- François JACQUES
+- Gabriel Nützi
+- Gilbert Gilb's
+- Guillaume Calmettes
+- Herman
+- Hingbong Lo
+- Igor Scheller
+- Ishant Mrinal Haloi
+- Jack
+- Jake Sanders
+- Janosch Maier
+- Jason D'Amour
+- Jason Hall
+- Jasper Ben Orschulko
+- Jerry Jones
+- jeunii
+- Joe Kimmel
+- Joël Pepper
+- Jonas Gröger
+- Jose Donizetti
+- Junwon Kwon
+- Kamal Nasser
+- Konstantin Demin
+- Kun Lu
+- Lars Seipel
+- Lavrenti Frobeen
+- Liwen Guo
+- Lukas
+- Mark Moretto
+- Matt Moore
+- Max Walther
+- Mikhail Vasin
+- Natalie Arellano
+- Naveen
+- nihilo
+- Oliver Gregorius
+- Pat Litke
+- Patrick Barker
+- priyawadhwa
+- Ramy
+- Rhianna
+- Sebastiaan Tammer
+- Shude Li
+- Sigurd Spieckermann
+- Silvano Cirujano Cuesta
+- Tejal Desai
+- Tony De La Nuez
+- Travis DePrato
+- Viacheslav Artamonov
+- Víctor
+- Wolfgang Walther
+- wwade
+- Yahav Itzhak
+- ygelfand
+- Yonatan Koren
+- zhouhaibing089
+
 # v1.9.2 Release 2023-03-27
 
 The executor images in this release are:
