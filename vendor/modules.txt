@@ -629,7 +629,7 @@ github.com/minio/highwayhash
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir
-# github.com/moby/buildkit v0.11.4
+# github.com/moby/buildkit v0.11.6
 ## explicit; go 1.18
 github.com/moby/buildkit/frontend/dockerfile/command
 github.com/moby/buildkit/frontend/dockerfile/dockerignore
