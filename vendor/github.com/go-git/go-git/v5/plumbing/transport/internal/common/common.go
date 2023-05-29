@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	stdioutil "io/ioutil"
 	"strings"
 	"time"
 
@@ -156,7 +155,7 @@ func (c *client) listenFirstError(r io.Reader) chan string {
 			close(errLine)
 		}
 
-		_, _ = io.Copy(stdioutil.Discard, r)
+		_, _ = io.Copy(io.Discard, r)
 	}()
 
 	return errLine
@@ -374,7 +373,7 @@ func (s *session) checkNotFoundError() error {
 	case <-t.C:
 		return ErrTimeoutExceeded
 	case line, ok := <-s.firstErrLine:
-		if !ok {
+		if !ok || len(line) == 0 {
 			return nil
 		}
 
@@ -427,11 +426,6 @@ func isRepoNotFoundError(s string) bool {
 
 	return false
 }
-
-var (
-	nak = []byte("NAK")
-	eol = []byte("\n")
-)
 
 // uploadPack implements the git-upload-pack protocol.
 func uploadPack(w io.WriteCloser, r io.Reader, req *packp.UploadPackRequest) error {

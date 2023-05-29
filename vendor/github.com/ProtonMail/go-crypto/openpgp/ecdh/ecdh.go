@@ -8,10 +8,8 @@ package ecdh
 
 import (
 	"bytes"
-	"crypto/elliptic"
 	"errors"
 	"io"
-	"math/big"
 
 	"github.com/ProtonMail/go-crypto/openpgp/aes/keywrap"
 	"github.com/ProtonMail/go-crypto/openpgp/internal/algorithm"
@@ -24,9 +22,8 @@ type KDF struct {
 }
 
 type PublicKey struct {
-	ecc.CurveType
-	elliptic.Curve
-	X, Y *big.Int
+	curve ecc.ECDHCurve
+	Point []byte
 	KDF
 }
 
@@ -35,11 +32,56 @@ type PrivateKey struct {
 	D []byte
 }
 
-func GenerateKey(c elliptic.Curve, kdf KDF, rand io.Reader) (priv *PrivateKey, err error) {
+func NewPublicKey(curve ecc.ECDHCurve, kdfHash algorithm.Hash, kdfCipher algorithm.Cipher) *PublicKey {
+	return &PublicKey{
+		curve: curve,
+		KDF: KDF{
+			Hash:   kdfHash,
+			Cipher: kdfCipher,
+		},
+	}
+}
+
+func NewPrivateKey(key PublicKey) *PrivateKey {
+	return &PrivateKey{
+		PublicKey: key,
+	}
+}
+
+func (pk *PublicKey) GetCurve() ecc.ECDHCurve {
+	return pk.curve
+}
+
+func (pk *PublicKey) MarshalPoint() []byte {
+	return pk.curve.MarshalBytePoint(pk.Point)
+}
+
+func (pk *PublicKey) UnmarshalPoint(p []byte) error {
+	pk.Point = pk.curve.UnmarshalBytePoint(p)
+	if pk.Point == nil {
+		return errors.New("ecdh: failed to parse EC point")
+	}
+	return nil
+}
+
+func (sk *PrivateKey) MarshalByteSecret() []byte {
+	return sk.curve.MarshalByteSecret(sk.D)
+}
+
+func (sk *PrivateKey) UnmarshalByteSecret(d []byte) error {
+	sk.D = sk.curve.UnmarshalByteSecret(d)
+
+	if sk.D == nil {
+		return errors.New("ecdh: failed to parse scalar")
+	}
+	return nil
+}
+
+func GenerateKey(rand io.Reader, c ecc.ECDHCurve, kdf KDF) (priv *PrivateKey, err error) {
 	priv = new(PrivateKey)
-	priv.PublicKey.Curve = c
+	priv.PublicKey.curve = c
 	priv.PublicKey.KDF = kdf
-	priv.D, priv.PublicKey.X, priv.PublicKey.Y, err = elliptic.GenerateKey(c, rand)
+	priv.PublicKey.Point, priv.D, err = c.GenerateECDH(rand)
 	return
 }
 
@@ -56,22 +98,12 @@ func Encrypt(random io.Reader, pub *PublicKey, msg, curveOID, fingerprint []byte
 	}
 	m := append(msg, padding...)
 
-	if pub.CurveType == ecc.Curve25519 {
-		return X25519Encrypt(random, pub, m, curveOID, fingerprint)
-	}
-
-	d, x, y, err := elliptic.GenerateKey(pub.Curve, random)
+	ephemeral, zb, err := pub.curve.Encaps(random, pub.Point)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	vsG = elliptic.Marshal(pub.Curve, x, y)
-	zbBig, _ := pub.Curve.ScalarMult(pub.X, pub.Y, d)
-
-	byteLen := (pub.Curve.Params().BitSize + 7) >> 3
-	zb := make([]byte, byteLen)
-	zbBytes := zbBig.Bytes()
-	copy(zb[byteLen-len(zbBytes):], zbBytes)
+	vsG = pub.curve.MarshalBytePoint(ephemeral)
 
 	z, err := buildKey(pub, zb, curveOID, fingerprint, false, false)
 	if err != nil {
@@ -86,29 +118,34 @@ func Encrypt(random io.Reader, pub *PublicKey, msg, curveOID, fingerprint []byte
 
 }
 
-func Decrypt(priv *PrivateKey, vsG, m, curveOID, fingerprint []byte) (msg []byte, err error) {
-	if priv.PublicKey.CurveType == ecc.Curve25519 {
-		return X25519Decrypt(priv, vsG, m, curveOID, fingerprint)
+func Decrypt(priv *PrivateKey, vsG, c, curveOID, fingerprint []byte) (msg []byte, err error) {
+	var m []byte
+	zb, err := priv.PublicKey.curve.Decaps(priv.curve.UnmarshalBytePoint(vsG), priv.D)
+
+	// Try buildKey three times to workaround an old bug, see comments in buildKey.
+	for i := 0; i < 3; i++ {
+		var z []byte
+		// RFC6637 §8: "Compute Z = KDF( S, Z_len, Param );"
+		z, err = buildKey(&priv.PublicKey, zb, curveOID, fingerprint, i == 1, i == 2)
+		if err != nil {
+			return nil, err
+		}
+
+		// RFC6637 §8: "Compute C = AESKeyWrap( Z, c ) as per [RFC3394]"
+		m, err = keywrap.Unwrap(z, c)
+		if err == nil {
+			break
+		}
 	}
-	x, y := elliptic.Unmarshal(priv.Curve, vsG)
-	zbBig, _ := priv.Curve.ScalarMult(x, y, priv.D)
 
-	byteLen := (priv.Curve.Params().BitSize + 7) >> 3
-	zb := make([]byte, byteLen)
-	zbBytes := zbBig.Bytes()
-	copy(zb[byteLen-len(zbBytes):], zbBytes)
-
-	z, err := buildKey(&priv.PublicKey, zb, curveOID, fingerprint, false, false)
+	// Only return an error after we've tried all (required) variants of buildKey.
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := keywrap.Unwrap(z, m)
-	if err != nil {
-		return nil, err
-	}
-
-	return c[:len(c)-int(c[len(c)-1])], nil
+	// RFC6637 §8: "m = symm_alg_ID || session key || checksum || pkcs5_padding"
+	// The last byte should be the length of the padding, as per PKCS5; strip it off.
+	return m[:len(m)-int(m[len(m)-1])], nil
 }
 
 func buildKey(pub *PublicKey, zb []byte, curveOID, fingerprint []byte, stripLeading, stripTrailing bool) ([]byte, error) {
@@ -130,7 +167,7 @@ func buildKey(pub *PublicKey, zb []byte, curveOID, fingerprint []byte, stripLead
 	if _, err := param.Write(fingerprint[:20]); err != nil {
 		return nil, err
 	}
-	if param.Len() - len(curveOID) != 45 {
+	if param.Len()-len(curveOID) != 45 {
 		return nil, errors.New("ecdh: malformed KDF Param")
 	}
 
@@ -144,15 +181,19 @@ func buildKey(pub *PublicKey, zb []byte, curveOID, fingerprint []byte, stripLead
 	j := zbLen - 1
 	if stripLeading {
 		// Work around old go crypto bug where the leading zeros are missing.
-		for ; i < zbLen && zb[i] == 0; i++ {}
+		for i < zbLen && zb[i] == 0 {
+			i++
+		}
 	}
 	if stripTrailing {
 		// Work around old OpenPGP.js bug where insignificant trailing zeros in
 		// this little-endian number are missing.
 		// (See https://github.com/openpgpjs/openpgpjs/pull/853.)
-		for ; j >= 0 && zb[j] == 0; j-- {}
+		for j >= 0 && zb[j] == 0 {
+			j--
+		}
 	}
-	if _, err := h.Write(zb[i:j+1]); err != nil {
+	if _, err := h.Write(zb[i : j+1]); err != nil {
 		return nil, err
 	}
 	if _, err := h.Write(param.Bytes()); err != nil {
@@ -162,4 +203,8 @@ func buildKey(pub *PublicKey, zb []byte, curveOID, fingerprint []byte, stripLead
 
 	return mb[:pub.KDF.Cipher.KeySize()], nil // return oBits leftmost bits of MB.
 
+}
+
+func Validate(priv *PrivateKey) error {
+	return priv.curve.ValidateECDH(priv.Point, priv.D)
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type storage struct {
@@ -174,6 +175,8 @@ func clean(path string) string {
 type content struct {
 	name  string
 	bytes []byte
+
+	m sync.RWMutex
 }
 
 func (c *content) WriteAt(p []byte, off int64) (int, error) {
@@ -185,6 +188,7 @@ func (c *content) WriteAt(p []byte, off int64) (int, error) {
 		}
 	}
 
+	c.m.Lock()
 	prev := len(c.bytes)
 
 	diff := int(off) - prev
@@ -196,6 +200,7 @@ func (c *content) WriteAt(p []byte, off int64) (int, error) {
 	if len(c.bytes) < prev {
 		c.bytes = c.bytes[:prev]
 	}
+	c.m.Unlock()
 
 	return len(p), nil
 }
@@ -209,8 +214,10 @@ func (c *content) ReadAt(b []byte, off int64) (n int, err error) {
 		}
 	}
 
+	c.m.RLock()
 	size := int64(len(c.bytes))
 	if off >= size {
+		c.m.RUnlock()
 		return 0, io.EOF
 	}
 
@@ -220,10 +227,12 @@ func (c *content) ReadAt(b []byte, off int64) (n int, err error) {
 	}
 
 	btr := c.bytes[off : off+l]
+	n = copy(b, btr)
+
 	if len(btr) < len(b) {
 		err = io.EOF
 	}
-	n = copy(b, btr)
+	c.m.RUnlock()
 
 	return
 }

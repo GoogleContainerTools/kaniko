@@ -156,5 +156,12 @@ func parseUserId(id string) (name, comment, email string) {
 	name = strings.TrimSpace(id[n.start:n.end])
 	comment = strings.TrimSpace(id[c.start:c.end])
 	email = strings.TrimSpace(id[e.start:e.end])
+
+	// RFC 2822 3.4: alternate simple form of a mailbox
+	if email == "" && strings.ContainsRune(name, '@') {
+		email = name
+		name = ""
+	}
+
 	return
 }

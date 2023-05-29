@@ -1,7 +1,7 @@
 // Package brainpool implements Brainpool elliptic curves.
 // Implementation of rcurves is from github.com/ebfe/brainpool
 // Note that these curves are implemented with naive, non-constant time operations
-// and are likely not suitable for enviroments where timing attacks are a concern.
+// and are likely not suitable for environments where timing attacks are a concern.
 package brainpool
 
 import (
