@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/utils/ioutil"
+	"github.com/go-git/go-git/v5/utils/sync"
 )
 
 // See https://github.com/jelmer/dulwich/blob/master/dulwich/pack.py and
@@ -43,18 +44,16 @@ func getDelta(index *deltaIndex, base, target plumbing.EncodedObject) (o plumbin
 
 	defer ioutil.CheckClose(tr, &err)
 
-	bb := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(bb)
-	bb.Reset()
+	bb := sync.GetBytesBuffer()
+	defer sync.PutBytesBuffer(bb)
 
 	_, err = bb.ReadFrom(br)
 	if err != nil {
 		return nil, err
 	}
 
-	tb := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(tb)
-	tb.Reset()
+	tb := sync.GetBytesBuffer()
+	defer sync.PutBytesBuffer(tb)
 
 	_, err = tb.ReadFrom(tr)
 	if err != nil {
@@ -80,9 +79,8 @@ func DiffDelta(src, tgt []byte) []byte {
 }
 
 func diffDelta(index *deltaIndex, src []byte, tgt []byte) []byte {
-	buf := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(buf)
-	buf.Reset()
+	buf := sync.GetBytesBuffer()
+	defer sync.PutBytesBuffer(buf)
 	buf.Write(deltaEncodeSize(len(src)))
 	buf.Write(deltaEncodeSize(len(tgt)))
 
@@ -90,9 +88,8 @@ func diffDelta(index *deltaIndex, src []byte, tgt []byte) []byte {
 		index.init(src)
 	}
 
-	ibuf := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(ibuf)
-	ibuf.Reset()
+	ibuf := sync.GetBytesBuffer()
+	defer sync.PutBytesBuffer(ibuf)
 	for i := 0; i < len(tgt); i++ {
 		offset, l := index.findMatch(src, tgt, i)
 

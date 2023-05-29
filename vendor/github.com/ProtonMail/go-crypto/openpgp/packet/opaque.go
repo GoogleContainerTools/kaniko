@@ -84,8 +84,9 @@ func (or *OpaqueReader) Next() (op *OpaquePacket, err error) {
 // OpaqueSubpacket represents an unparsed OpenPGP subpacket,
 // as found in signature and user attribute packets.
 type OpaqueSubpacket struct {
-	SubType  uint8
-	Contents []byte
+	SubType       uint8
+	EncodedLength []byte // Store the original encoded length for signature verifications.
+	Contents      []byte
 }
 
 // OpaqueSubpackets extracts opaque, unparsed OpenPGP subpackets from
@@ -109,6 +110,7 @@ func OpaqueSubpackets(contents []byte) (result []*OpaqueSubpacket, err error) {
 func nextSubpacket(contents []byte) (subHeaderLen int, subPacket *OpaqueSubpacket, err error) {
 	// RFC 4880, section 5.2.3.1
 	var subLen uint32
+	var encodedLength []byte
 	if len(contents) < 1 {
 		goto Truncated
 	}
@@ -119,6 +121,7 @@ func nextSubpacket(contents []byte) (subHeaderLen int, subPacket *OpaqueSubpacke
 		if len(contents) < subHeaderLen {
 			goto Truncated
 		}
+		encodedLength = contents[0:1]
 		subLen = uint32(contents[0])
 		contents = contents[1:]
 	case contents[0] < 255:
@@ -126,6 +129,7 @@ func nextSubpacket(contents []byte) (subHeaderLen int, subPacket *OpaqueSubpacke
 		if len(contents) < subHeaderLen {
 			goto Truncated
 		}
+		encodedLength = contents[0:2]
 		subLen = uint32(contents[0]-192)<<8 + uint32(contents[1]) + 192
 		contents = contents[2:]
 	default:
@@ -133,16 +137,19 @@ func nextSubpacket(contents []byte) (subHeaderLen int, subPacket *OpaqueSubpacke
 		if len(contents) < subHeaderLen {
 			goto Truncated
 		}
+		encodedLength = contents[0:5]
 		subLen = uint32(contents[1])<<24 |
 			uint32(contents[2])<<16 |
 			uint32(contents[3])<<8 |
 			uint32(contents[4])
 		contents = contents[5:]
+
 	}
 	if subLen > uint32(len(contents)) || subLen == 0 {
 		goto Truncated
 	}
 	subPacket.SubType = contents[0]
+	subPacket.EncodedLength = encodedLength
 	subPacket.Contents = contents[1:subLen]
 	return
 Truncated:
@@ -152,7 +159,9 @@ Truncated:
 
 func (osp *OpaqueSubpacket) Serialize(w io.Writer) (err error) {
 	buf := make([]byte, 6)
-	n := serializeSubpacketLength(buf, len(osp.Contents)+1)
+	copy(buf, osp.EncodedLength)
+	n := len(osp.EncodedLength)
+
 	buf[n] = osp.SubType
 	if _, err = w.Write(buf[:n+1]); err != nil {
 		return

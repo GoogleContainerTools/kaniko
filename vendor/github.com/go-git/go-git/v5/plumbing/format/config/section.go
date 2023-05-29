@@ -103,7 +103,7 @@ func (s *Section) RemoveSubsection(name string) *Section {
 	return s
 }
 
-// Option return the value for the specified key. Empty string is returned if
+// Option returns the value for the specified key. Empty string is returned if
 // key does not exists.
 func (s *Section) Option(key string) string {
 	return s.Options.Get(key)

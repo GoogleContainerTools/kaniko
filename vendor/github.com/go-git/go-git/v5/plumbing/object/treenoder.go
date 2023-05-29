@@ -38,6 +38,10 @@ func NewTreeRootNode(t *Tree) noder.Noder {
 	}
 }
 
+func (t *treeNoder) Skip() bool {
+	return false
+}
+
 func (t *treeNoder) isRoot() bool {
 	return t.name == ""
 }

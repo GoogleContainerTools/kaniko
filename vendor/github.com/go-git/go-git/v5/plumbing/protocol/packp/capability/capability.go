@@ -1,6 +1,11 @@
 // Package capability defines the server and client capabilities.
 package capability
 
+import (
+	"fmt"
+	"os"
+)
+
 // Capability describes a server or client capability.
 type Capability string
 
@@ -238,7 +243,15 @@ const (
 	Filter Capability = "filter"
 )
 
-const DefaultAgent = "go-git/4.x"
+const userAgent = "go-git/5.x"
+
+// DefaultAgent provides the user agent string.
+func DefaultAgent() string {
+	if envUserAgent, ok := os.LookupEnv("GO_GIT_USER_AGENT_EXTRA"); ok {
+		return fmt.Sprintf("%s %s", userAgent, envUserAgent)
+	}
+	return userAgent
+}
 
 var known = map[Capability]bool{
 	MultiACK: true, MultiACKDetailed: true, NoDone: true, ThinPack: true,

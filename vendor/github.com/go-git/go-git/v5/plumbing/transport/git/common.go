@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 
 	"github.com/go-git/go-git/v5/plumbing/format/pktline"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -69,7 +70,7 @@ func (c *command) getHostWithPort() string {
 		port = DefaultPort
 	}
 
-	return fmt.Sprintf("%s:%d", host, port)
+	return net.JoinHostPort(host, strconv.Itoa(port))
 }
 
 // StderrPipe git protocol doesn't have any dedicated error channel
@@ -77,14 +78,14 @@ func (c *command) StderrPipe() (io.Reader, error) {
 	return nil, nil
 }
 
-// StdinPipe return the underlying connection as WriteCloser, wrapped to prevent
+// StdinPipe returns the underlying connection as WriteCloser, wrapped to prevent
 // call to the Close function from the connection, a command execution in git
 // protocol can't be closed or killed
 func (c *command) StdinPipe() (io.WriteCloser, error) {
 	return ioutil.WriteNopCloser(c.conn), nil
 }
 
-// StdoutPipe return the underlying connection as Reader
+// StdoutPipe returns the underlying connection as Reader
 func (c *command) StdoutPipe() (io.Reader, error) {
 	return c.conn, nil
 }
@@ -92,7 +93,7 @@ func (c *command) StdoutPipe() (io.Reader, error) {
 func endpointToCommand(cmd string, ep *transport.Endpoint) string {
 	host := ep.Host
 	if ep.Port != DefaultPort {
-		host = fmt.Sprintf("%s:%d", ep.Host, ep.Port)
+		host = net.JoinHostPort(ep.Host, strconv.Itoa(ep.Port))
 	}
 
 	return fmt.Sprintf("%s %s%chost=%s%c", cmd, ep.Path, 0, host, 0)

@@ -42,9 +42,16 @@ func NewUserAttributePhoto(photos ...image.Image) (uat *UserAttribute, err error
 		if err = jpeg.Encode(&buf, photo, nil); err != nil {
 			return
 		}
+
+		lengthBuf := make([]byte, 5)
+		n := serializeSubpacketLength(lengthBuf, len(buf.Bytes())+1)
+		lengthBuf = lengthBuf[:n]
+
 		uat.Contents = append(uat.Contents, &OpaqueSubpacket{
-			SubType:  UserAttrImageSubpacket,
-			Contents: buf.Bytes()})
+			SubType:       UserAttrImageSubpacket,
+			EncodedLength: lengthBuf,
+			Contents:      buf.Bytes(),
+		})
 	}
 	return
 }
