@@ -468,6 +468,41 @@ func Test_filesToSave(t *testing.T) {
 	}
 }
 
+func TestDeduplicatePaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []string
+		want  []string
+	}{
+		{
+			name:  "no duplicates",
+			input: []string{"file1.txt", "file2.txt", "usr/lib"},
+			want:  []string{"file1.txt", "file2.txt", "usr/lib"},
+		},
+		{
+			name:  "duplicates",
+			input: []string{"file1.txt", "file2.txt", "file2.txt", "usr/lib"},
+			want:  []string{"file1.txt", "file2.txt", "usr/lib"},
+		},
+		{
+			name:  "duplicates with paths",
+			input: []string{"file1.txt", "file2.txt", "file2.txt", "usr/lib", "usr/lib/ssl"},
+			want:  []string{"file1.txt", "file2.txt", "usr/lib"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := deduplicatePaths(tt.input)
+			sort.Strings(tt.want)
+			sort.Strings(got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TestDeduplicatePaths() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestInitializeConfig(t *testing.T) {
 	tests := []struct {
 		description string

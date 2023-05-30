@@ -1,4 +1,4 @@
-FROM debian:9.11
+FROM debian:10.13
 VOLUME /foo1
 RUN echo "hello" > /foo1/hello
 WORKDIR /foo1/bar

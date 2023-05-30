@@ -64,7 +64,7 @@ func (s RefSpec) IsExactSHA1() bool {
 	return plumbing.IsHash(s.Src())
 }
 
-// Src return the src side.
+// Src returns the src side.
 func (s RefSpec) Src() string {
 	spec := string(s)
 

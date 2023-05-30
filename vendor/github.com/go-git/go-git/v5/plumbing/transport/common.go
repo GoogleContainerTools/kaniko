@@ -112,10 +112,41 @@ type Endpoint struct {
 	Port int
 	// Path is the repository path.
 	Path string
-	// InsecureSkipTLS skips ssl verify if protocal is https
+	// InsecureSkipTLS skips ssl verify if protocol is https
 	InsecureSkipTLS bool
 	// CaBundle specify additional ca bundle with system cert pool
 	CaBundle []byte
+	// Proxy provides info required for connecting to a proxy.
+	Proxy ProxyOptions
+}
+
+type ProxyOptions struct {
+	URL      string
+	Username string
+	Password string
+}
+
+func (o *ProxyOptions) Validate() error {
+	if o.URL != "" {
+		_, err := url.Parse(o.URL)
+		return err
+	}
+	return nil
+}
+
+func (o *ProxyOptions) FullURL() (*url.URL, error) {
+	proxyURL, err := url.Parse(o.URL)
+	if err != nil {
+		return nil, err
+	}
+	if o.Username != "" {
+		if o.Password != "" {
+			proxyURL.User = url.UserPassword(o.Username, o.Password)
+		} else {
+			proxyURL.User = url.User(o.Username)
+		}
+	}
+	return proxyURL, nil
 }
 
 var defaultPorts = map[string]int{

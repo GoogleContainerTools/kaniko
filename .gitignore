@@ -5,3 +5,4 @@ BUILD.bazel
 .idea/**
 *.iml
 .vagrant
+.vscode/

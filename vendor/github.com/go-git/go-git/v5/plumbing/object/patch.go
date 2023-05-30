@@ -96,10 +96,6 @@ func filePatchWithContext(ctx context.Context, c *Change) (fdiff.FilePatch, erro
 
 }
 
-func filePatch(c *Change) (fdiff.FilePatch, error) {
-	return filePatchWithContext(context.Background(), c)
-}
-
 func fileContent(f *File) (content string, isBinary bool, err error) {
 	if f == nil {
 		return

@@ -31,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -527,7 +528,7 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 
 	switch s.opts.Compression {
 	case config.ZStd:
-		layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
+		layerOpts = append(layerOpts, tarball.WithCompression("zstd"), tarball.WithMediaType(types.OCILayerZStd))
 
 	case config.GZip:
 		// layer already gzipped by default
@@ -782,15 +783,51 @@ func filesToSave(deps []string) ([]string, error) {
 		}
 	}
 	// remove duplicates
+	deduped := deduplicatePaths(srcFiles)
+
+	return deduped, nil
+}
+
+// deduplicatePaths returns a deduplicated slice of shortest paths
+// For example {"usr/lib", "usr/lib/ssl"} will return only {"usr/lib"}
+func deduplicatePaths(paths []string) []string {
+	type node struct {
+		children map[string]*node
+		value    bool
+	}
+
+	root := &node{children: make(map[string]*node)}
+
+	// Create a tree marking all present paths
+	for _, f := range paths {
+		parts := strings.Split(f, "/")
+		current := root
+		for i := 0; i < len(parts)-1; i++ {
+			part := parts[i]
+			if _, ok := current.children[part]; !ok {
+				current.children[part] = &node{children: make(map[string]*node)}
+			}
+			current = current.children[part]
+		}
+		current.children[parts[len(parts)-1]] = &node{children: make(map[string]*node), value: true}
+	}
+
+	// Collect all paths
 	deduped := []string{}
-	m := map[string]struct{}{}
-	for _, f := range srcFiles {
-		if _, ok := m[f]; !ok {
-			deduped = append(deduped, f)
-			m[f] = struct{}{}
+	var traverse func(*node, string)
+	traverse = func(n *node, path string) {
+		if n.value {
+			deduped = append(deduped, strings.TrimPrefix(path, "/"))
+			return
+		}
+		for k, v := range n.children {
+			traverse(v, path+"/"+k)
 		}
 	}
-	return deduped, nil
+
+	traverse(root, "")
+
+	return deduped
 }
 
 func fetchExtraStages(stages []config.KanikoStage, opts *config.KanikoOptions) error {

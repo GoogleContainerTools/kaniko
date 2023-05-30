@@ -304,13 +304,38 @@ func DiffTreeContext(ctx context.Context, fromTree, toTree noder.Noder,
 				return nil, err
 			}
 		case onlyToRemains:
-			if err = ret.AddRecursiveInsert(to); err != nil {
-				return nil, err
+			if to.Skip() {
+				if err = ret.AddRecursiveDelete(to); err != nil {
+					return nil, err
+				}
+			} else {
+				if err = ret.AddRecursiveInsert(to); err != nil {
+					return nil, err
+				}
 			}
 			if err = ii.nextTo(); err != nil {
 				return nil, err
 			}
 		case bothHaveNodes:
+			if from.Skip() {
+				if err = ret.AddRecursiveDelete(from); err != nil {
+					return nil, err
+				}
+				if err := ii.nextBoth(); err != nil {
+					return nil, err
+				}
+				break
+			}
+			if to.Skip() {
+				if err = ret.AddRecursiveDelete(to); err != nil {
+					return nil, err
+				}
+				if err := ii.nextBoth(); err != nil {
+					return nil, err
+				}
+				break
+			}
+
 			if err = diffNodes(&ret, ii); err != nil {
 				return nil, err
 			}

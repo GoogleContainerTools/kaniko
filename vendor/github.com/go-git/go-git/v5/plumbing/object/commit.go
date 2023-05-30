@@ -1,7 +1,6 @@
 package object
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -14,6 +13,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/utils/ioutil"
+	"github.com/go-git/go-git/v5/utils/sync"
 )
 
 const (
@@ -180,9 +180,8 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	}
 	defer ioutil.CheckClose(reader, &err)
 
-	r := bufPool.Get().(*bufio.Reader)
-	defer bufPool.Put(r)
-	r.Reset(reader)
+	r := sync.GetBufioReader(reader)
+	defer sync.PutBufioReader(r)
 
 	var message bool
 	var pgpsig bool
