@@ -23,10 +23,10 @@ ENV CGO_ENABLED=0
 ENV GOBIN=/usr/local/bin
 
 # Get GCR credential helper
-RUN go install github.com/GoogleCloudPlatform/docker-credential-gcr@4cdd60d0f2d8a69bc70933f4d7718f9c4e956ff8
+RUN go install github.com/GoogleCloudPlatform/docker-credential-gcr@62afb2723512fd6572c6300024e0c94f734b0ae3 #v2.1.8
 
 # Get Amazon ECR credential helper
-RUN go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login@69c85dc22db6511932bbf119e1a0cc5c90c69a7f # v0.6.0
+RUN go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login@adf1bafd791ae7d4ff098108b1e91f36a4da5404 # v0.7.1
 
 # Get ACR docker env credential helper
 RUN go install github.com/chrismellard/docker-credential-acr-env@82a0ddb2758901b711d9d1614755b77e401598a1
