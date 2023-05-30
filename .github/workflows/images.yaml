@@ -72,6 +72,16 @@ jobs:
     - if: github.event_name != 'pull_request'
       run: gcloud auth configure-docker
 
+    # Don't build for all platforms on PRs.
+    - id: platforms
+      run: |
+        event="${{ github.event_name }}"
+        if [[ "$event" == "pull_request" ]]; then
+          echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
+        else
+          platforms="${{ matrix.platforms }}"
+          echo "platforms=${platforms}" >> $GITHUB_OUTPUT
+        fi
     # Build and push with Docker.
     - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18 # v2.1.0
       with:
@@ -82,7 +92,7 @@ jobs:
       with:
         context: .
         file: ${{ matrix.dockerfile }}
-        platforms: ${{ matrix.platforms }}
+        platforms: ${{ steps.platforms.outputs.platforms }}
         push: ${{ github.event_name != 'pull_request' }} # Only push if not a PR.
         tags: ${{ matrix.image-name }}:${{ matrix.tag }}
         no-cache-filters: certs
