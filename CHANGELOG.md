@@ -1033,13 +1033,13 @@ gcr.io/kaniko-project/executor:latest
 The debug images are available at:
 ```
 gcr.io/kaniko-project/executor:debug
-gcr.io/kaniko-project/executor:debug-v1.5.2 and
+gcr.io/kaniko-project/executor:v1.5.2-debug
 ```
 
 The slim executor images which don't contain any authentication binaries are available at:
 ```
 gcr.io/kaniko-project/executor:slim
-gcr.io/kaniko-project/executor:slim-v1.5.2
+gcr.io/kaniko-project/executor:v1.5.2-slim
 ```
 
 This release is the first to be signed by [cosign](https://github.com/sigstore/cosign)!
@@ -1064,13 +1064,13 @@ gcr.io/kaniko-project/executor:latest
 The debug images are available at:
 ```
 gcr.io/kaniko-project/executor:debug
-gcr.io/kaniko-project/executor:debug-v1.5.1 and
+gcr.io/kaniko-project/executor:v1.5.1-debug
 ```
 
 The slim executor images which don't contain any authentication binaries are available at:
 ```
 gcr.io/kaniko-project/executor:slim
-gcr.io/kaniko-project/executor:slim-v1.5.1
+gcr.io/kaniko-project/executor:v1.5.1-slim
 ```
 
 In this release, we have 1 new feature:
@@ -1103,13 +1103,13 @@ gcr.io/kaniko-project/executor:latest
 The debug images are available at:
 ```
 gcr.io/kaniko-project/executor:debug
-gcr.io/kaniko-project/executor:debug-v1.5.0 and
+gcr.io/kaniko-project/executor:v1.5.0-debug
 ```
 
 In this release, we have 2 slim executor images which don't contain any authentication binaries.
 
 1. `gcr.io/kaniko-project/executor:slim`  &
-2. `gcr.io/kaniko-project/executor:slim-v1.5.0`
+2. `gcr.io/kaniko-project/executor:v1.5.0-slim`
 
 
 ## New Features
