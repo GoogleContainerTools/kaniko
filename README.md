@@ -94,6 +94,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--oci-layout-path`](#flag---oci-layout-path)
       - [Flag `--push-retry`](#flag---push-retry)
       - [Flag `--registry-certificate`](#flag---registry-certificate)
+      - [Flag `--registry-client-cert`](#flag---registry-client-cert)
       - [Flag `--registry-mirror`](#flag---registry-mirror)
       - [Flag `--reproducible`](#flag---reproducible)
       - [Flag `--single-snapshot`](#flag---single-snapshot)
