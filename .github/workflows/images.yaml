@@ -64,11 +64,13 @@ jobs:
 
     # Setup auth if not a PR.
     - if: github.event_name != 'pull_request'
-      uses: google-github-actions/setup-gcloud@04141d8a7edfc8c679682f23e7bbbe05cbe32bb3 # v0.5.1
+      uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
       with:
-        service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
-        project_id: kaniko-project
-        export_default_credentials: true
+        credentials_json: '${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}'
+        export_environment_variables: true
+        create_credentials_file: true
+    - if: github.event_name != 'pull_request'
+      uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
     - if: github.event_name != 'pull_request'
       run: gcloud auth configure-docker
 
