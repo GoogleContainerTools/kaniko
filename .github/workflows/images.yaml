@@ -32,28 +32,28 @@ jobs:
 
         include:
         - image: executor
-          dockerfile: ./deploy/Dockerfile
+          target: kaniko-executor
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           image-name: gcr.io/kaniko-project/executor
           tag: ${{ github.sha }}
           release-tag: latest
 
         - image: executor-debug
-          dockerfile: ./deploy/Dockerfile_debug
+          target: kaniko-debug
           platforms: linux/amd64,linux/arm64,linux/s390x
           image-name: gcr.io/kaniko-project/executor
           tag: ${{ github.sha }}-debug
           release-tag: debug
 
         - image: executor-slim
-          dockerfile: ./deploy/Dockerfile_slim
+          target: kaniko-slim
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           image-name: gcr.io/kaniko-project/executor
           tag: ${{ github.sha }}-slim
           release-tag: slim
 
         - image: warmer
-          dockerfile: ./deploy/Dockerfile_warmer
+          target: kaniko-warmer
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           image-name: gcr.io/kaniko-project/warmer
           tag: ${{ github.sha }}
@@ -91,7 +91,7 @@ jobs:
       id: build-and-push
       with:
         context: .
-        file: ${{ matrix.dockerfile }}
+        file: ./deploy/Dockerfile
         platforms: ${{ steps.platforms.outputs.platforms }}
         push: ${{ github.event_name != 'pull_request' }} # Only push if not a PR.
         tags: ${{ matrix.image-name }}:${{ matrix.tag }}
@@ -99,6 +99,7 @@ jobs:
         # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#github-cache
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        target: ${{ matrix.target }}
 
     # Sign images if not a PR.
     - if: github.event_name != 'pull_request'
