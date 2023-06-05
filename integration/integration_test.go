@@ -153,10 +153,10 @@ func buildRequiredImages() error {
 		command []string
 	}{{
 		name:    "Building kaniko image",
-		command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", ".."},
+		command: []string{"docker", "build", "-t", ExecutorImage, "-f", "../deploy/Dockerfile", "--target", "kaniko-executor", ".."},
 	}, {
 		name:    "Building cache warmer image",
-		command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile_warmer", ".."},
+		command: []string{"docker", "build", "-t", WarmerImage, "-f", "../deploy/Dockerfile", "--target", "kaniko-warmer", ".."},
 	}, {
 		name:    "Building onbuild base image",
 		command: []string{"docker", "build", "-t", config.onbuildBaseImage, "-f", fmt.Sprintf("%s/Dockerfile_onbuild_base", dockerfilesPath), "."},
