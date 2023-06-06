@@ -10,8 +10,8 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Returns the STS short-term credentials for a given role name that is assigned to
-// the user.
+// Returns the STS short-term credentials for a given role name that is assigned
+// to the user.
 func (c *Client) GetRoleCredentials(ctx context.Context, params *GetRoleCredentialsInput, optFns ...func(*Options)) (*GetRoleCredentialsOutput, error) {
 	if params == nil {
 		params = &GetRoleCredentialsInput{}
@@ -30,9 +30,8 @@ func (c *Client) GetRoleCredentials(ctx context.Context, params *GetRoleCredenti
 type GetRoleCredentialsInput struct {
 
 	// The token issued by the CreateToken API call. For more information, see
-	// CreateToken
-	// (https://docs.aws.amazon.com/singlesignon/latest/OIDCAPIReference/API_CreateToken.html)
-	// in the AWS SSO OIDC API Reference Guide.
+	// CreateToken (https://docs.aws.amazon.com/singlesignon/latest/OIDCAPIReference/API_CreateToken.html)
+	// in the IAM Identity Center OIDC API Reference Guide.
 	//
 	// This member is required.
 	AccessToken *string
@@ -104,6 +103,9 @@ func (c *Client) addOperationGetRoleCredentialsMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetRoleCredentials(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

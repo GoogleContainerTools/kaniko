@@ -89,6 +89,7 @@ var partitionRegexp = struct {
 	AwsCn    *regexp.Regexp
 	AwsIso   *regexp.Regexp
 	AwsIsoB  *regexp.Regexp
+	AwsIsoE  *regexp.Regexp
 	AwsUsGov *regexp.Regexp
 }{
 
@@ -96,6 +97,7 @@ var partitionRegexp = struct {
 	AwsCn:    regexp.MustCompile("^cn\\-\\w+\\-\\d+$"),
 	AwsIso:   regexp.MustCompile("^us\\-iso\\-\\w+\\-\\d+$"),
 	AwsIsoB:  regexp.MustCompile("^us\\-isob\\-\\w+\\-\\d+$"),
+	AwsIsoE:  regexp.MustCompile("^eu\\-isoe\\-\\w+\\-\\d+$"),
 	AwsUsGov: regexp.MustCompile("^us\\-gov\\-\\w+\\-\\d+$"),
 }
 
@@ -154,6 +156,9 @@ var defaultPartitions = endpoints.Partitions{
 				Region: "ap-south-1",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
+				Region: "ap-south-2",
+			}: endpoints.Endpoint{},
+			endpoints.EndpointKey{
 				Region: "ap-southeast-1",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
@@ -161,6 +166,9 @@ var defaultPartitions = endpoints.Partitions{
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
 				Region: "ap-southeast-3",
+			}: endpoints.Endpoint{},
+			endpoints.EndpointKey{
+				Region: "ap-southeast-4",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
 				Region: "aws-global",
@@ -177,10 +185,16 @@ var defaultPartitions = endpoints.Partitions{
 				Region: "eu-central-1",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
+				Region: "eu-central-2",
+			}: endpoints.Endpoint{},
+			endpoints.EndpointKey{
 				Region: "eu-north-1",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
 				Region: "eu-south-1",
+			}: endpoints.Endpoint{},
+			endpoints.EndpointKey{
+				Region: "eu-south-2",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
 				Region: "eu-west-1",
@@ -190,6 +204,9 @@ var defaultPartitions = endpoints.Partitions{
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
 				Region: "eu-west-3",
+			}: endpoints.Endpoint{},
+			endpoints.EndpointKey{
+				Region: "me-central-1",
 			}: endpoints.Endpoint{},
 			endpoints.EndpointKey{
 				Region: "me-south-1",
@@ -368,6 +385,27 @@ var defaultPartitions = endpoints.Partitions{
 				Region: "us-isob-east-1",
 			}: endpoints.Endpoint{},
 		},
+	},
+	{
+		ID: "aws-iso-e",
+		Defaults: map[endpoints.DefaultKey]endpoints.Endpoint{
+			{
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname:          "sts-fips.{region}.cloud.adc-e.uk",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: 0,
+			}: {
+				Hostname:          "sts.{region}.cloud.adc-e.uk",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+		},
+		RegionRegex:    partitionRegexp.AwsIsoE,
+		IsRegionalized: true,
 	},
 	{
 		ID: "aws-us-gov",

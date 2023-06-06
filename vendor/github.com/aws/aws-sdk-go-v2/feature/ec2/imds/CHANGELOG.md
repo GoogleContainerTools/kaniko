@@ -1,3 +1,100 @@
+# v1.13.3 (2023-04-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.2 (2023-04-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.1 (2023-03-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.0 (2023-03-14)
+
+* **Feature**: Add flag to disable IMDSv1 fallback
+
+# v1.12.24 (2023-03-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.23 (2023-02-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.22 (2023-02-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.21 (2022-12-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.20 (2022-12-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.19 (2022-10-24)
+
+* **Bug Fix**: Fixes an issue that prevented logging of the API request or responses when the respective log modes were enabled.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.18 (2022-10-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.17 (2022-09-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.16 (2022-09-14)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.15 (2022-09-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.14 (2022-08-31)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.13 (2022-08-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.12 (2022-08-11)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.11 (2022-08-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.10 (2022-08-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.9 (2022-08-01)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.8 (2022-07-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.7 (2022-06-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.6 (2022-06-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.12.5 (2022-05-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.12.4 (2022-04-25)
 
 * **Dependency Update**: Updated to the latest SDK module versions

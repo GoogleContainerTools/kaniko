@@ -1,3 +1,96 @@
+# v1.3.34 (2023-04-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.33 (2023-04-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.32 (2023-03-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.31 (2023-03-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.30 (2023-02-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.29 (2023-02-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.28 (2022-12-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.27 (2022-12-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.26 (2022-10-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.25 (2022-10-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.24 (2022-09-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.23 (2022-09-14)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.22 (2022-09-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.21 (2022-08-31)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.20 (2022-08-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.19 (2022-08-11)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.18 (2022-08-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.17 (2022-08-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.16 (2022-08-01)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.15 (2022-07-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.14 (2022-06-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.13 (2022-06-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.12 (2022-05-17)
+
+* **Bug Fix**: Removes the fuzz testing files from the module, as they are invalid and not used.
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.3.11 (2022-04-25)
 
 * **Dependency Update**: Updated to the latest SDK module versions

@@ -1,3 +1,214 @@
+# v1.18.25 (2023-05-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.24 (2023-05-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.23 (2023-05-04)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.22 (2023-04-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.21 (2023-04-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.20 (2023-04-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.19 (2023-03-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.18 (2023-03-16)
+
+* **Bug Fix**: Allow RoleARN to be set as functional option on STS WebIdentityRoleOptions. Fixes aws/aws-sdk-go-v2#2015.
+
+# v1.18.17 (2023-03-14)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.16 (2023-03-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.15 (2023-02-22)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.14 (2023-02-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.13 (2023-02-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.12 (2023-02-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.11 (2023-02-01)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.10 (2023-01-25)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.9 (2023-01-23)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.8 (2023-01-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.7 (2022-12-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.6 (2022-12-19)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.5 (2022-12-15)
+
+* **Bug Fix**: Unify logic between shared config and in finding home directory
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.4 (2022-12-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.3 (2022-11-22)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.2 (2022-11-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.1 (2022-11-16)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.18.0 (2022-11-11)
+
+* **Announcement**: When using the SSOTokenProvider, a previous implementation incorrectly compensated for invalid SSOTokenProvider configurations in the shared profile. This has been fixed via PR #1903 and tracked in issue #1846
+* **Feature**: Adds token refresh support (via SSOTokenProvider) when using the SSOCredentialProvider
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.11 (2022-11-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.10 (2022-10-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.9 (2022-10-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.8 (2022-09-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.7 (2022-09-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.6 (2022-09-14)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.5 (2022-09-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.4 (2022-08-31)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.3 (2022-08-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.2 (2022-08-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.1 (2022-08-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.17.0 (2022-08-14)
+
+* **Feature**: Add alternative mechanism for determning the users `$HOME` or `%USERPROFILE%` location when the environment variables are not present.
+
+# v1.16.1 (2022-08-11)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.0 (2022-08-10)
+
+* **Feature**: Adds support for the following settings in the `~/.aws/credentials` file: `sso_account_id`, `sso_region`, `sso_role_name`, `sso_start_url`, and `ca_bundle`.
+
+# v1.15.17 (2022-08-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.16 (2022-08-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.15 (2022-08-01)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.14 (2022-07-11)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.13 (2022-07-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.12 (2022-06-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.11 (2022-06-16)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.10 (2022-06-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.9 (2022-05-26)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.8 (2022-05-25)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.7 (2022-05-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.6 (2022-05-16)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.15.5 (2022-05-09)
 
 * **Bug Fix**: Fixes a bug in LoadDefaultConfig to correctly assign ConfigSources so all config resolvers have access to the config sources. This fixes the feature/ec2/imds client not having configuration applied via config.LoadOptions such as EC2IMDSClientEnableState. PR [#1682](https://github.com/aws/aws-sdk-go-v2/pull/1682)

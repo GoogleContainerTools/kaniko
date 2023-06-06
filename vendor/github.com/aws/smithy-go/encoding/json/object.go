@@ -17,9 +17,7 @@ func newObject(w *bytes.Buffer, scratch *[]byte) *Object {
 }
 
 func (o *Object) writeKey(key string) {
-	o.w.WriteRune(quote)
-	o.w.Write([]byte(key))
-	o.w.WriteRune(quote)
+	escapeStringBytes(o.w, []byte(key))
 	o.w.WriteRune(colon)
 }
 
