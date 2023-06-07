@@ -94,6 +94,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--oci-layout-path`](#flag---oci-layout-path)
       - [Flag `--push-retry`](#flag---push-retry)
       - [Flag `--registry-certificate`](#flag---registry-certificate)
+      - [Flag `--registry-client-cert`](#flag---registry-client-cert)
       - [Flag `--registry-mirror`](#flag---registry-mirror)
       - [Flag `--reproducible`](#flag---reproducible)
       - [Flag `--single-snapshot`](#flag---single-snapshot)
@@ -113,6 +114,13 @@ _If you are interested in contributing to kaniko, see
   - [Security](#security)
     - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
   - [Kaniko Builds - Profiling](#kaniko-builds---profiling)
+  - [Creating Multi-arch Container Manifests Using Kaniko and Manifest-tool](#creating-multi-arch-container-manifests-using-kaniko-and-manifest-tool)
+    - [General Workflow](#general-workflow)
+    - [Limitations and Pitfalls](#limitations-and-pitfalls)
+    - [Example CI Pipeline (GitLab)](#example-ci-pipeline-gitlab)
+      - [Building the Separate Container Images](#building-the-separate-container-images)
+      - [Merging the Container Manifests](#merging-the-container-manifests)
+      - [On the Note of Adding Versioned Tags](#on-the-note-of-adding-versioned-tags)
   - [Comparison with Other Tools](#comparison-with-other-tools)
   - [Community](#community-1)
   - [Limitations](#limitations)
@@ -1135,6 +1143,163 @@ profiling,
 2. If you are using the kaniko `debug` image, you can copy the file in the
    `pre-stop` container lifecycle hook.
 
+## Creating Multi-arch Container Manifests Using Kaniko and Manifest-tool
+
+While Kaniko itself currently does not support creating multi-arch manifests
+(contributions welcome), one can use tools such as [manifest-tool](https://github.com/estesp/manifest-tool)
+to stitch multiple separate builds together into a single  container manifest.
+
+### General Workflow
+
+The general workflow for creating multi-arch manifests is as follows:
+
+1. Build separate container images using Kaniko on build hosts matching your
+target architecture and tag them with the appropriate ARCH tag.
+2. Push the separate images to your container registry.
+3. Manifest-tool identifies the separate manifests in your container registry,
+according to a given template.
+4. Manifest-tool pushes a combined manifest referencing the separate manifests.
+
+![Workflow Multi-arch](docs/images/multi-arch.drawio.svg)
+
+### Limitations and Pitfalls
+
+The following conditions must be met:
+
+1. You need access to build-machines running the desired architectures
+(running Kaniko in an emulator, e.g. QEMU should also be possible but goes
+beyond the scope of this documentation). This is something to keep in mind
+when using SaaS build tools such as github.com or gitlab.com, of which at the
+time of writing neither supports any non-x86_64 SaaS runners ([GitHub](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources),[GitLab](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-private-projects-x86-64)),
+so be prepared to bring your own machines ([GitHub](https://docs.github.com/en/actions/hosting-your-own-runners/about-self-hosted-runners),[GitLab](https://docs.gitlab.com/runner/register/).
+2. Kaniko needs to be able to run on the desired architectures. At the time of
+writing, the official Kaniko container supports [linux/amd64, linux/arm64,
+linux/s390x and linux/ppc64le (not on *-debug images)](https://github.com/GoogleContainerTools/kaniko/blob/main/.github/workflows/images.yaml).
+3. The container registry of your choice must be OCIv1 or Docker v2.2
+compatible.
+
+### Example CI Pipeline (GitLab)
+
+It is up to you to find an automation tool that suits your needs best.
+We recommend using a modern CI/CD system such as GitHub workflows or GitLab CI.
+As we (the authors) happen to use GitLab CI, the following examples are
+tailored to this specific platform but the underlying principles should apply
+anywhere else and the examples are kept simple enough, so that you should be
+able to follow along, even without any previous experiences with this specific
+platform. When in doubt, visit the [gitlab-ci.yml reference page](https://docs.gitlab.com/ee/ci/yaml/index.html)
+for a comprehensive overview of the GitLab CI keywords.
+
+#### Building the Separate Container Images
+
+gitlab-ci.yml:
+
+```yaml
+# define a job for building the containers
+build-container:
+  stage: container-build
+  # run parallel builds for the desired architectures
+  parallel:
+    matrix:
+      - ARCH: amd64
+      - ARCH: arm64
+  tags:
+    # run each build on a suitable, preconfigured runner (must match the target architecture)
+    - runner-${ARCH}
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    # build the container image for the current arch using kaniko
+    - >-
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      # push the image to the GitLab container registry, add the current arch as tag.
+      --destination "${CI_REGISTRY_IMAGE}:${ARCH}"
+```
+
+#### Merging the Container Manifests
+
+gitlab-ci.yml:
+
+```yaml
+# define a job for creating and pushing a merged manifest
+merge-manifests:
+  stage: container-build
+  # all containers must be build before merging them
+  # alternatively the job may be configured to run in a later stage
+  needs:
+    - container-build
+      artifacts: false
+  tags:
+    # may run on any architecture supported by manifest-tool image
+    - runner-xyz
+  image:
+      name: mplatform/manifest-tool:alpine
+  script:
+    - >-
+      manifest-tool
+      # authorize against your container registry
+      --username=${CI_REGISTRY_USER}
+      --password=${CI_REGISTRY_PASSWORD}
+      push from-args
+      # define the architectures you want to merge
+      --platforms linux/amd64,linux/arm64
+      # "ARCH" will be automatically replaced by manifest-tool
+      # with the appropriate arch from the platform definitions
+      --template ${CI_REGISTRY_IMAGE}:ARCH
+      # The name of the final, combined image which will be pushed to your registry
+      --target ${CI_REGISTRY_IMAGE}
+```
+
+#### On the Note of Adding Versioned Tags
+
+For simplicity's sake we deliberately refrained from using versioned
+tagged images (all builds will be tagged as "latest") in the
+previous examples, as we feel like this adds to much platform and workflow
+specific code.
+
+Nethertheless, for anyone interested in how we handle (dynamic) versioning in
+GitLab, here is a short rundown:
+
+- If you are only interested in building tagged releases, you can simply
+use the [GitLab predefined](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) `CI_COMMIT_TAG` variable when running a tag pipeline.
+- When you (like us) want to additionally build container images outside of
+releases, things get a bit messier. In our case, we added a additional job
+which runs before the build and merge jobs (don't forget to extend the `needs`
+section of the build and merge jobs accordingly), which will set the tag to
+`latest` when running on the default branch, to the commit hash when run on
+other branches and to the release tag when run on a tag pipeline.
+
+gitlab-ci.yml:
+
+```yaml
+container-get-tag:
+  stage: pre-container-build-stage
+  tags:
+    - runner-xyz
+  image: busybox
+  script:
+    # All other branches are tagged with the currently built commit SHA hash
+    - |
+      # If pipeline runs on the default branch: Set tag to "latest"
+      if test "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH"; then
+        tag="latest"
+      # If pipeline is a tag pipeline, set tag to the git commit tag
+      elif test -n "$CI_COMMIT_TAG"; then
+        tag="$CI_COMMIT_TAG"
+      # Else set the tag to the git commit sha
+      else
+        tag="$CI_COMMIT_SHA"
+      fi
+    - echo "tag=$tag" > build.env
+  # parse tag to the build and merge jobs.
+  # See: https://docs.gitlab.com/ee/ci/variables/#pass-an-environment-variable-to-another-job
+  artifacts:
+    reports:
+      dotenv: build.env
+```
+
 ## Comparison with Other Tools
 
 Similar tools include:
@@ -1152,7 +1317,8 @@ All of these tools build container images with different approaches.
 BuildKit (and `img`) can perform as a non-root user from within a container but
 requires seccomp and AppArmor to be disabled to create nested containers.
 `kaniko` does not actually create nested containers, so it does not require
-seccomp and AppArmor to be disabled.
+seccomp and AppArmor to be disabled. BuildKit supports "cross-building"
+multi-arch containers by leveraging QEMU.
 
 `orca-build` depends on `runc` to build images from Dockerfiles, which can not
 run inside a container (for similar reasons to `img` above). `kaniko` doesn't
