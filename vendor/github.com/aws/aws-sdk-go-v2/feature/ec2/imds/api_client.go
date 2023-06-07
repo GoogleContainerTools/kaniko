@@ -106,8 +106,10 @@ func New(options Options, optFns ...func(*Options)) *Client {
 // or adding custom middleware behavior.
 func NewFromConfig(cfg aws.Config, optFns ...func(*Options)) *Client {
 	opts := Options{
-		APIOptions: append([]func(*middleware.Stack) error{}, cfg.APIOptions...),
-		HTTPClient: cfg.HTTPClient,
+		APIOptions:    append([]func(*middleware.Stack) error{}, cfg.APIOptions...),
+		HTTPClient:    cfg.HTTPClient,
+		ClientLogMode: cfg.ClientLogMode,
+		Logger:        cfg.Logger,
 	}
 
 	if cfg.Retryer != nil {
@@ -171,6 +173,16 @@ type Options struct {
 
 	// The logger writer interface to write logging messages to.
 	Logger logging.Logger
+
+	// Configure IMDSv1 fallback behavior. By default, the client will attempt
+	// to fall back to IMDSv1 as needed for backwards compatibility. When set to [aws.FalseTernary]
+	// the client will return any errors encountered from attempting to fetch a token
+	// instead of silently using the insecure data flow of IMDSv1.
+	//
+	// See [configuring IMDS] for more information.
+	//
+	// [configuring IMDS]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html
+	EnableFallback aws.Ternary
 
 	// provides the caching of API tokens used for operation calls. If unset,
 	// the API token will not be retrieved for the operation.
