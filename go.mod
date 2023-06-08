@@ -34,7 +34,7 @@ require (
 	golang.org/x/sync v0.2.0
 )
 
-require github.com/containerd/containerd v1.7.1
+require github.com/containerd/containerd v1.7.2
 
 require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
-	github.com/containerd/continuity v0.3.0 // indirect
+	github.com/containerd/continuity v0.4.1 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
