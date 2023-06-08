@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This file makes internal an importable go package
+// for use with backreferences from submodules.
 package internal
-
-// Version is the current tagged release of the library.
-const Version = "1.19.3"

@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+// This file, and the {{.RootMod}} import, won't actually become part of
+// the resultant binary.
+//go:build modhack
+// +build modhack
 
-// Version is the current tagged release of the library.
-const Version = "1.19.3"
+package api
+
+// Necessary for safely adding multi-module repo. See: https://github.com/golang/go/wiki/Modules#is-it-possible-to-add-a-module-to-a-multi-module-repository
+import _ "google.golang.org/genproto/internal"
