@@ -62,7 +62,7 @@ func init() {
 	RootCmd.PersistentFlags().MarkDeprecated("whitelist-var-run", "Please use ignore-var-run instead.")
 }
 
-func valdiateFlags() {
+func validateFlags() {
 	checkNoDeprecatedFlags()
 
 	// Allow setting --registry-mirror using an environment variable.
@@ -85,7 +85,7 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 
-			valdiateFlags()
+			validateFlags()
 
 			// Command line flag takes precedence over the KANIKO_DIR environment variable.
 			dir := config.KanikoDir
