@@ -32,6 +32,14 @@ COPY . .
 
 #  dependencies https://github.com/golang/go/issues/48332
 
+# The versions of these tools and their transitive dependencies are controlled via go.mod.
+# To update the version of any tool installed here, run
+#
+#   go get <tool>@<commit-sha-or-tag>
+#   go mod vendor
+#
+# Then submit a PR with the changes to `go.mod`, `go.sum`, and `vendor`.
+
 # Get GCR credential helper
 RUN go install github.com/GoogleCloudPlatform/docker-credential-gcr
 
