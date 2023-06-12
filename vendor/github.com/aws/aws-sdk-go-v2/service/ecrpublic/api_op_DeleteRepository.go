@@ -12,8 +12,9 @@ import (
 )
 
 // Deletes a repository in a public registry. If the repository contains images,
-// you must either delete all images in the repository or use the force option
-// which deletes all images on your behalf before deleting the repository.
+// you must either manually delete all images in the repository or use the force
+// option. This option deletes all images on your behalf before deleting the
+// repository.
 func (c *Client) DeleteRepository(ctx context.Context, params *DeleteRepositoryInput, optFns ...func(*Options)) (*DeleteRepositoryOutput, error) {
 	if params == nil {
 		params = &DeleteRepositoryInput{}
@@ -36,12 +37,13 @@ type DeleteRepositoryInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// If a repository contains images, forces the deletion.
+	// The force option can be used to delete a repository that contains images. If
+	// the force option is not used, the repository must be empty prior to deletion.
 	Force bool
 
-	// The AWS account ID associated with the public registry that contains the
-	// repository to delete. If you do not specify a registry, the default public
-	// registry is assumed.
+	// The Amazon Web Services account ID that's associated with the public registry
+	// that contains the repository to delete. If you do not specify a registry, the
+	// default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -107,6 +109,9 @@ func (c *Client) addOperationDeleteRepositoryMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDeleteRepository(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

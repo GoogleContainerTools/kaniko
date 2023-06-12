@@ -35,26 +35,26 @@ type DescribeImageTagsInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// The maximum number of repository results returned by DescribeImageTags in
-	// paginated output. When this parameter is used, DescribeImageTags only returns
-	// maxResults results in a single page along with a nextToken response element. The
-	// remaining results of the initial request can be seen by sending another
-	// DescribeImageTags request with the returned nextToken value. This value can be
-	// between 1 and 1000. If this parameter is not used, then DescribeImageTags
-	// returns up to 100 results and a nextToken value, if applicable. This option
-	// cannot be used when you specify images with imageIds.
+	// The maximum number of repository results that's returned by DescribeImageTags
+	// in paginated output. When this parameter is used, DescribeImageTags only
+	// returns maxResults results in a single page along with a nextToken response
+	// element. You can see the remaining results of the initial request by sending
+	// another DescribeImageTags request with the returned nextToken value. This value
+	// can be between 1 and 1000. If this parameter isn't used, then DescribeImageTags
+	// returns up to 100 results and a nextToken value, if applicable. If you specify
+	// images with imageIds , you can't use this option.
 	MaxResults *int32
 
-	// The nextToken value returned from a previous paginated DescribeImageTags request
-	// where maxResults was used and the results exceeded the value of that parameter.
-	// Pagination continues from the end of the previous results that returned the
-	// nextToken value. This value is null when there are no more results to return.
-	// This option cannot be used when you specify images with imageIds.
+	// The nextToken value that's returned from a previous paginated DescribeImageTags
+	// request where maxResults was used and the results exceeded the value of that
+	// parameter. Pagination continues from the end of the previous results that
+	// returned the nextToken value. If there are no more results to return, this
+	// value is null . If you specify images with imageIds , you can't use this option.
 	NextToken *string
 
-	// The AWS account ID associated with the public registry that contains the
-	// repository in which to describe images. If you do not specify a registry, the
-	// default public registry is assumed.
+	// The Amazon Web Services account ID that's associated with the public registry
+	// that contains the repository where images are described. If you do not specify a
+	// registry, the default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -66,9 +66,9 @@ type DescribeImageTagsOutput struct {
 	ImageTagDetails []types.ImageTagDetail
 
 	// The nextToken value to include in a future DescribeImageTags request. When the
-	// results of a DescribeImageTags request exceed maxResults, this value can be used
-	// to retrieve the next page of results. This value is null when there are no more
-	// results to return.
+	// results of a DescribeImageTags request exceed maxResults , you can use this
+	// value to retrieve the next page of results. If there are no more results to
+	// return, this value is null .
 	NextToken *string
 
 	// Metadata pertaining to the operation's result.
@@ -128,6 +128,9 @@ func (c *Client) addOperationDescribeImageTagsMiddlewares(stack *middleware.Stac
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeImageTags(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -150,14 +153,14 @@ var _ DescribeImageTagsAPIClient = (*Client)(nil)
 
 // DescribeImageTagsPaginatorOptions is the paginator options for DescribeImageTags
 type DescribeImageTagsPaginatorOptions struct {
-	// The maximum number of repository results returned by DescribeImageTags in
-	// paginated output. When this parameter is used, DescribeImageTags only returns
-	// maxResults results in a single page along with a nextToken response element. The
-	// remaining results of the initial request can be seen by sending another
-	// DescribeImageTags request with the returned nextToken value. This value can be
-	// between 1 and 1000. If this parameter is not used, then DescribeImageTags
-	// returns up to 100 results and a nextToken value, if applicable. This option
-	// cannot be used when you specify images with imageIds.
+	// The maximum number of repository results that's returned by DescribeImageTags
+	// in paginated output. When this parameter is used, DescribeImageTags only
+	// returns maxResults results in a single page along with a nextToken response
+	// element. You can see the remaining results of the initial request by sending
+	// another DescribeImageTags request with the returned nextToken value. This value
+	// can be between 1 and 1000. If this parameter isn't used, then DescribeImageTags
+	// returns up to 100 results and a nextToken value, if applicable. If you specify
+	// images with imageIds , you can't use this option.
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token

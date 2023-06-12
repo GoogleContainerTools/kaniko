@@ -11,12 +11,12 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Creates or updates the image manifest and tags associated with an image. When an
-// image is pushed and all new image layers have been uploaded, the PutImage API is
-// called once to create or update the image manifest and the tags associated with
-// the image. This operation is used by the Amazon ECR proxy and is not generally
-// used by customers for pulling and pushing images. In most cases, you should use
-// the docker CLI to pull, tag, and push images.
+// Creates or updates the image manifest and tags that are associated with an
+// image. When an image is pushed and all new image layers have been uploaded, the
+// PutImage API is called once to create or update the image manifest and the tags
+// that are associated with the image. This operation is used by the Amazon ECR
+// proxy and is not generally used by customers for pulling and pushing images. In
+// most cases, you should use the docker CLI to pull, tag, and push images.
 func (c *Client) PutImage(ctx context.Context, params *PutImageInput, optFns ...func(*Options)) (*PutImageOutput, error) {
 	if params == nil {
 		params = &PutImageInput{}
@@ -34,22 +34,22 @@ func (c *Client) PutImage(ctx context.Context, params *PutImageInput, optFns ...
 
 type PutImageInput struct {
 
-	// The image manifest corresponding to the image to be uploaded.
+	// The image manifest that corresponds to the image to be uploaded.
 	//
 	// This member is required.
 	ImageManifest *string
 
-	// The name of the repository in which to put the image.
+	// The name of the repository where the image is put.
 	//
 	// This member is required.
 	RepositoryName *string
 
-	// The image digest of the image manifest corresponding to the image.
+	// The image digest of the image manifest that corresponds to the image.
 	ImageDigest *string
 
-	// The media type of the image manifest. If you push an image manifest that does
-	// not contain the mediaType field, you must specify the imageManifestMediaType in
-	// the request.
+	// The media type of the image manifest. If you push an image manifest that
+	// doesn't contain the mediaType field, you must specify the imageManifestMediaType
+	// in the request.
 	ImageManifestMediaType *string
 
 	// The tag to associate with the image. This parameter is required for images that
@@ -57,9 +57,9 @@ type PutImageInput struct {
 	// formats.
 	ImageTag *string
 
-	// The AWS account ID associated with the public registry that contains the
-	// repository in which to put the image. If you do not specify a registry, the
-	// default public registry is assumed.
+	// The Amazon Web Services account ID, or registry alias, that's associated with
+	// the public registry that contains the repository where the image is put. If you
+	// do not specify a registry, the default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -125,6 +125,9 @@ func (c *Client) addOperationPutImageMiddlewares(stack *middleware.Stack, option
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opPutImage(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

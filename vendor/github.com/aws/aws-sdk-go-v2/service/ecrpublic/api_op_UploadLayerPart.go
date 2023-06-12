@@ -12,10 +12,10 @@ import (
 
 // Uploads an image layer part to Amazon ECR. When an image is pushed, each new
 // image layer is uploaded in parts. The maximum size of each image layer part can
-// be 20971520 bytes (or about 20MB). The UploadLayerPart API is called once per
-// each new image layer part. This operation is used by the Amazon ECR proxy and is
-// not generally used by customers for pulling and pushing images. In most cases,
-// you should use the docker CLI to pull, tag, and push images.
+// be 20971520 bytes (about 20MB). The UploadLayerPart API is called once for each
+// new image layer part. This operation is used by the Amazon ECR proxy and is not
+// generally used by customers for pulling and pushing images. In most cases, you
+// should use the docker CLI to pull, tag, and push images.
 func (c *Client) UploadLayerPart(ctx context.Context, params *UploadLayerPartInput, optFns ...func(*Options)) (*UploadLayerPartOutput, error) {
 	if params == nil {
 		params = &UploadLayerPartInput{}
@@ -48,7 +48,7 @@ type UploadLayerPartInput struct {
 	// This member is required.
 	PartLastByte *int64
 
-	// The name of the repository to which you are uploading layer parts.
+	// The name of the repository that you're uploading layer parts to.
 	//
 	// This member is required.
 	RepositoryName *string
@@ -59,8 +59,9 @@ type UploadLayerPartInput struct {
 	// This member is required.
 	UploadId *string
 
-	// The AWS account ID associated with the registry to which you are uploading layer
-	// parts. If you do not specify a registry, the default public registry is assumed.
+	// The Amazon Web Services account ID, or registry alias, that's associated with
+	// the registry that you're uploading layer parts to. If you do not specify a
+	// registry, the default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -68,16 +69,16 @@ type UploadLayerPartInput struct {
 
 type UploadLayerPartOutput struct {
 
-	// The integer value of the last byte received in the request.
+	// The integer value of the last byte that's received in the request.
 	LastByteReceived *int64
 
-	// The registry ID associated with the request.
+	// The registry ID that's associated with the request.
 	RegistryId *string
 
-	// The repository name associated with the request.
+	// The repository name that's associated with the request.
 	RepositoryName *string
 
-	// The upload ID associated with the request.
+	// The upload ID that's associated with the request.
 	UploadId *string
 
 	// Metadata pertaining to the operation's result.
@@ -135,6 +136,9 @@ func (c *Client) addOperationUploadLayerPartMiddlewares(stack *middleware.Stack,
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opUploadLayerPart(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

@@ -40,8 +40,9 @@ type PutRepositoryCatalogDataInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// The AWS account ID associated with the public registry the repository is in. If
-	// you do not specify a registry, the default public registry is assumed.
+	// The Amazon Web Services account ID that's associated with the public registry
+	// the repository is in. If you do not specify a registry, the default public
+	// registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -107,6 +108,9 @@ func (c *Client) addOperationPutRepositoryCatalogDataMiddlewares(stack *middlewa
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opPutRepositoryCatalogData(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

@@ -1,0 +1,32 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    # Needed because we use go modules.
+    - go mod tidy
+builds:
+  - env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "-s -w -X github.com/GoogleCloudPlatform/docker-credential-gcr/config.Version={{.Version}}"
+    goarch:
+      - amd64
+      - arm64
+      - 386
+      - s390x
+    goos:
+      - linux
+      - windows
+      - darwin
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}-{{ .Version }}"
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ .Version }}"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
