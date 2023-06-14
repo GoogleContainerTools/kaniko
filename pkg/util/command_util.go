@@ -18,7 +18,6 @@ package util
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"os/user"
@@ -291,12 +290,8 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 }
 
 func IsSrcRemoteFileURL(rawurl string) bool {
-	_, err := url.ParseRequestURI(rawurl)
-	if err != nil {
-		return false
-	}
-	_, err = http.Get(rawurl) //nolint:noctx
-	return err == nil
+	u, err := url.ParseRequestURI(rawurl)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
 func UpdateConfigEnv(envVars []instructions.KeyValuePair, config *v1.Config, replacementEnvs []string) error {
