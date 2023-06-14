@@ -1,3 +1,145 @@
+# v1.16.1 (2023-04-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.0 (2023-04-11)
+
+* **Feature**: This release will allow using registry alias as registryId in BatchDeleteImage request.
+
+# v1.15.8 (2023-04-10)
+
+* No change notes available for this release.
+
+# v1.15.7 (2023-04-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.6 (2023-03-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.5 (2023-03-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.4 (2023-02-22)
+
+* **Bug Fix**: Prevent nil pointer dereference when retrieving error codes.
+
+# v1.15.3 (2023-02-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.2 (2023-02-15)
+
+* **Announcement**: When receiving an error response in restJson-based services, an incorrect error type may have been returned based on the content of the response. This has been fixed via PR #2012 tracked in issue #1910.
+* **Bug Fix**: Correct error type parsing for restJson services.
+
+# v1.15.1 (2023-02-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.0 (2023-01-09)
+
+* **Feature**: This release for Amazon ECR Public makes several change to bring the SDK into sync with the API.
+
+# v1.14.0 (2023-01-05)
+
+* **Feature**: Add `ErrorCodeOverride` field to all error structs (aws/smithy-go#401).
+
+# v1.13.22 (2022-12-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.21 (2022-12-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.20 (2022-11-30)
+
+* No change notes available for this release.
+
+# v1.13.19 (2022-10-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.18 (2022-10-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.17 (2022-09-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.16 (2022-09-14)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.15 (2022-09-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.14 (2022-08-31)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.13 (2022-08-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.12 (2022-08-11)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.11 (2022-08-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.10 (2022-08-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.9 (2022-08-01)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.8 (2022-07-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.7 (2022-06-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.6 (2022-06-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.5 (2022-05-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.4 (2022-04-25)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.3 (2022-03-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.2 (2022-03-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.1 (2022-03-23)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.0 (2022-03-08)
+
+* **Feature**: Updated `github.com/aws/smithy-go` to latest version
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.12.0 (2022-02-24)
 
 * **Feature**: API client updated

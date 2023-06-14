@@ -11,12 +11,11 @@ import (
 )
 
 // Notifies Amazon ECR that you intend to upload an image layer. When an image is
-// pushed, the InitiateLayerUpload API is called once per image layer that has not
-// already been uploaded. Whether or not an image layer has been uploaded is
-// determined by the BatchCheckLayerAvailability API action. This operation is used
-// by the Amazon ECR proxy and is not generally used by customers for pulling and
-// pushing images. In most cases, you should use the docker CLI to pull, tag, and
-// push images.
+// pushed, the InitiateLayerUpload API is called once for each image layer that
+// hasn't already been uploaded. Whether an image layer uploads is determined by
+// the BatchCheckLayerAvailability API action. This operation is used by the Amazon
+// ECR proxy and is not generally used by customers for pulling and pushing images.
+// In most cases, you should use the docker CLI to pull, tag, and push images.
 func (c *Client) InitiateLayerUpload(ctx context.Context, params *InitiateLayerUploadInput, optFns ...func(*Options)) (*InitiateLayerUploadOutput, error) {
 	if params == nil {
 		params = &InitiateLayerUploadInput{}
@@ -34,14 +33,14 @@ func (c *Client) InitiateLayerUpload(ctx context.Context, params *InitiateLayerU
 
 type InitiateLayerUploadInput struct {
 
-	// The name of the repository to which you intend to upload layers.
+	// The name of the repository that you want to upload layers to.
 	//
 	// This member is required.
 	RepositoryName *string
 
-	// The AWS account ID associated with the registry to which you intend to upload
-	// layers. If you do not specify a registry, the default public registry is
-	// assumed.
+	// The Amazon Web Services account ID, or registry alias, that's associated with
+	// the registry to which you intend to upload layers. If you do not specify a
+	// registry, the default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -111,6 +110,9 @@ func (c *Client) addOperationInitiateLayerUploadMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opInitiateLayerUpload(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

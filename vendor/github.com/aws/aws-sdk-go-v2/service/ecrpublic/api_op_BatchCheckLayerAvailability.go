@@ -11,12 +11,12 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Checks the availability of one or more image layers within a repository in a
-// public registry. When an image is pushed to a repository, each image layer is
-// checked to verify if it has been uploaded before. If it has been uploaded, then
-// the image layer is skipped. This operation is used by the Amazon ECR proxy and
-// is not generally used by customers for pulling and pushing images. In most
-// cases, you should use the docker CLI to pull, tag, and push images.
+// Checks the availability of one or more image layers that are within a
+// repository in a public registry. When an image is pushed to a repository, each
+// image layer is checked to verify if it has been uploaded before. If it has been
+// uploaded, then the image layer is skipped. This operation is used by the Amazon
+// ECR proxy and is not generally used by customers for pulling and pushing images.
+// In most cases, you should use the docker CLI to pull, tag, and push images.
 func (c *Client) BatchCheckLayerAvailability(ctx context.Context, params *BatchCheckLayerAvailabilityInput, optFns ...func(*Options)) (*BatchCheckLayerAvailabilityOutput, error) {
 	if params == nil {
 		params = &BatchCheckLayerAvailabilityInput{}
@@ -39,14 +39,14 @@ type BatchCheckLayerAvailabilityInput struct {
 	// This member is required.
 	LayerDigests []string
 
-	// The name of the repository that is associated with the image layers to check.
+	// The name of the repository that's associated with the image layers to check.
 	//
 	// This member is required.
 	RepositoryName *string
 
-	// The AWS account ID associated with the public registry that contains the image
-	// layers to check. If you do not specify a registry, the default public registry
-	// is assumed.
+	// The Amazon Web Services account ID, or registry alias, associated with the
+	// public registry that contains the image layers to check. If you do not specify a
+	// registry, the default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -57,8 +57,8 @@ type BatchCheckLayerAvailabilityOutput struct {
 	// Any failures associated with the call.
 	Failures []types.LayerFailure
 
-	// A list of image layer objects corresponding to the image layer references in the
-	// request.
+	// A list of image layer objects that correspond to the image layer references in
+	// the request.
 	Layers []types.Layer
 
 	// Metadata pertaining to the operation's result.
@@ -116,6 +116,9 @@ func (c *Client) addOperationBatchCheckLayerAvailabilityMiddlewares(stack *middl
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opBatchCheckLayerAvailability(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

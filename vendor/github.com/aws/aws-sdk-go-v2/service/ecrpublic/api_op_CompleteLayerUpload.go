@@ -10,11 +10,11 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Informs Amazon ECR that the image layer upload has completed for a specified
+// Informs Amazon ECR that the image layer upload is complete for a specified
 // public registry, repository name, and upload ID. You can optionally provide a
 // sha256 digest of the image layer for data validation purposes. When an image is
-// pushed, the CompleteLayerUpload API is called once per each new image layer to
-// verify that the upload has completed. This operation is used by the Amazon ECR
+// pushed, the CompleteLayerUpload API is called once for each new image layer to
+// verify that the upload is complete. This operation is used by the Amazon ECR
 // proxy and is not generally used by customers for pulling and pushing images. In
 // most cases, you should use the docker CLI to pull, tag, and push images.
 func (c *Client) CompleteLayerUpload(ctx context.Context, params *CompleteLayerUploadInput, optFns ...func(*Options)) (*CompleteLayerUploadOutput, error) {
@@ -51,8 +51,9 @@ type CompleteLayerUploadInput struct {
 	// This member is required.
 	UploadId *string
 
-	// The AWS account ID associated with the registry to which to upload layers. If
-	// you do not specify a registry, the default public registry is assumed.
+	// The Amazon Web Services account ID, or registry alias, associated with the
+	// registry where layers are uploaded. If you do not specify a registry, the
+	// default public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -63,13 +64,13 @@ type CompleteLayerUploadOutput struct {
 	// The sha256 digest of the image layer.
 	LayerDigest *string
 
-	// The public registry ID associated with the request.
+	// The public registry ID that's associated with the request.
 	RegistryId *string
 
-	// The repository name associated with the request.
+	// The repository name that's associated with the request.
 	RepositoryName *string
 
-	// The upload ID associated with the layer.
+	// The upload ID that's associated with the layer.
 	UploadId *string
 
 	// Metadata pertaining to the operation's result.
@@ -127,6 +128,9 @@ func (c *Client) addOperationCompleteLayerUploadMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCompleteLayerUpload(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

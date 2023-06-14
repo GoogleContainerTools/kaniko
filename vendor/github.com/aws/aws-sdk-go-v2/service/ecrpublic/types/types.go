@@ -10,9 +10,9 @@ import (
 // An authorization token data object that corresponds to a public registry.
 type AuthorizationData struct {
 
-	// A base64-encoded string that contains authorization data for a public Amazon ECR
-	// registry. When the string is decoded, it is presented in the format
-	// user:password for public registry authentication using docker login.
+	// A base64-encoded string that contains authorization data for a public Amazon
+	// ECR registry. When the string is decoded, it's presented in the format
+	// user:password for public registry authentication using docker login .
 	AuthorizationToken *string
 
 	// The Unix time in seconds and milliseconds when the authorization token expires.
@@ -22,28 +22,29 @@ type AuthorizationData struct {
 	noSmithyDocumentSerde
 }
 
-// An object representing an Amazon ECR image.
+// An object that represents an Amazon ECR image.
 type Image struct {
 
-	// An object containing the image tag and image digest associated with an image.
+	// An object that contains the image tag and image digest associated with an image.
 	ImageId *ImageIdentifier
 
-	// The image manifest associated with the image.
+	// The image manifest that's associated with the image.
 	ImageManifest *string
 
 	// The manifest media type of the image.
 	ImageManifestMediaType *string
 
-	// The AWS account ID associated with the registry containing the image.
+	// The Amazon Web Services account ID that's associated with the registry
+	// containing the image.
 	RegistryId *string
 
-	// The name of the repository associated with the image.
+	// The name of the repository that's associated with the image.
 	RepositoryName *string
 
 	noSmithyDocumentSerde
 }
 
-// An object that describes an image returned by a DescribeImages operation.
+// An object that describes an image that's returned by a DescribeImages operation.
 type ImageDetail struct {
 
 	// The artifact media type of the image.
@@ -55,41 +56,41 @@ type ImageDetail struct {
 	// The media type of the image manifest.
 	ImageManifestMediaType *string
 
-	// The date and time, expressed in standard JavaScript date format, at which the
-	// current image was pushed to the repository.
+	// The date and time, expressed in standard JavaScript date format, that the
+	// current image was pushed to the repository at.
 	ImagePushedAt *time.Time
 
 	// The size, in bytes, of the image in the repository. If the image is a manifest
-	// list, this will be the max size of all manifests in the list. Beginning with
-	// Docker version 1.9, the Docker client compresses image layers before pushing
-	// them to a V2 Docker registry. The output of the docker images command shows the
-	// uncompressed image size, so it may return a larger image size than the image
-	// sizes returned by DescribeImages.
+	// list, this is the max size of all manifests in the list. Beginning with Docker
+	// version 1.9, the Docker client compresses image layers before pushing them to a
+	// V2 Docker registry. The output of the docker images command shows the
+	// uncompressed image size, so it might return a larger image size than the image
+	// sizes that are returned by DescribeImages .
 	ImageSizeInBytes *int64
 
-	// The list of tags associated with this image.
+	// The list of tags that's associated with this image.
 	ImageTags []string
 
-	// The AWS account ID associated with the public registry to which this image
-	// belongs.
+	// The Amazon Web Services account ID that's associated with the public registry
+	// where this image belongs.
 	RegistryId *string
 
-	// The name of the repository to which this image belongs.
+	// The name of the repository where this image belongs.
 	RepositoryName *string
 
 	noSmithyDocumentSerde
 }
 
-// An object representing an Amazon ECR image failure.
+// An object that represents an Amazon ECR image failure.
 type ImageFailure struct {
 
-	// The code associated with the failure.
+	// The code that's associated with the failure.
 	FailureCode ImageFailureCode
 
 	// The reason for the failure.
 	FailureReason *string
 
-	// The image ID associated with the failure.
+	// The image ID that's associated with the failure.
 	ImageId *ImageIdentifier
 
 	noSmithyDocumentSerde
@@ -101,28 +102,28 @@ type ImageIdentifier struct {
 	// The sha256 digest of the image manifest.
 	ImageDigest *string
 
-	// The tag used for the image.
+	// The tag that's used for the image.
 	ImageTag *string
 
 	noSmithyDocumentSerde
 }
 
-// An object representing the image tag details for an image.
+// An object that represents the image tag details for an image.
 type ImageTagDetail struct {
 
-	// The time stamp indicating when the image tag was created.
+	// The time stamp that indicates when the image tag was created.
 	CreatedAt *time.Time
 
 	// An object that describes the details of an image.
 	ImageDetail *ReferencedImageDetail
 
-	// The tag associated with the image.
+	// The tag that's associated with the image.
 	ImageTag *string
 
 	noSmithyDocumentSerde
 }
 
-// An object representing an Amazon ECR image layer.
+// An object that represents an Amazon ECR image layer.
 type Layer struct {
 
 	// The availability status of the image layer.
@@ -136,29 +137,29 @@ type Layer struct {
 
 	// The media type of the layer, such as
 	// application/vnd.docker.image.rootfs.diff.tar.gzip or
-	// application/vnd.oci.image.layer.v1.tar+gzip.
+	// application/vnd.oci.image.layer.v1.tar+gzip .
 	MediaType *string
 
 	noSmithyDocumentSerde
 }
 
-// An object representing an Amazon ECR image layer failure.
+// An object that represents an Amazon ECR image layer failure.
 type LayerFailure struct {
 
-	// The failure code associated with the failure.
+	// The failure code that's associated with the failure.
 	FailureCode LayerFailureCode
 
 	// The reason for the failure.
 	FailureReason *string
 
-	// The layer digest associated with the failure.
+	// The layer digest that's associated with the failure.
 	LayerDigest *string
 
 	noSmithyDocumentSerde
 }
 
-// An object that describes the image tag details returned by a DescribeImageTags
-// action.
+// An object that describes the image tag details that are returned by a
+// DescribeImageTags action.
 type ReferencedImageDetail struct {
 
 	// The artifact media type of the image.
@@ -170,16 +171,16 @@ type ReferencedImageDetail struct {
 	// The media type of the image manifest.
 	ImageManifestMediaType *string
 
-	// The date and time, expressed in standard JavaScript date format, at which the
-	// current image tag was pushed to the repository.
+	// The date and time, expressed in standard JavaScript date format, which the
+	// current image tag was pushed to the repository at.
 	ImagePushedAt *time.Time
 
 	// The size, in bytes, of the image in the repository. If the image is a manifest
-	// list, this will be the max size of all manifests in the list. Beginning with
-	// Docker version 1.9, the Docker client compresses image layers before pushing
-	// them to a V2 Docker registry. The output of the docker images command shows the
-	// uncompressed image size, so it may return a larger image size than the image
-	// sizes returned by DescribeImages.
+	// list, this is the max size of all manifests in the list. Beginning with Docker
+	// version 1.9, the Docker client compresses image layers before pushing them to a
+	// V2 Docker registry. The output of the docker images command shows the
+	// uncompressed image size, so it might return a larger image size than the image
+	// sizes that are returned by DescribeImages .
 	ImageSizeInBytes *int64
 
 	noSmithyDocumentSerde
@@ -188,7 +189,7 @@ type ReferencedImageDetail struct {
 // The details of a public registry.
 type Registry struct {
 
-	// An array of objects representing the aliases for a public registry.
+	// An array of objects that represents the aliases for a public registry.
 	//
 	// This member is required.
 	Aliases []RegistryAlias
@@ -198,8 +199,8 @@ type Registry struct {
 	// This member is required.
 	RegistryArn *string
 
-	// The AWS account ID associated with the registry. If you do not specify a
-	// registry, the default public registry is assumed.
+	// The Amazon Web Services account ID that's associated with the registry. If you
+	// do not specify a registry, the default public registry is assumed.
 	//
 	// This member is required.
 	RegistryId *string
@@ -210,9 +211,9 @@ type Registry struct {
 	// This member is required.
 	RegistryUri *string
 
-	// Whether the account is verified. This indicates whether the account is an AWS
-	// Marketplace vendor. If an account is verified, each public repository will
-	// received a verified account badge on the Amazon ECR Public Gallery.
+	// Indicates whether the account is a verified Amazon Web Services Marketplace
+	// vendor. If an account is verified, each public repository receives a verified
+	// account badge on the Amazon ECR Public Gallery.
 	//
 	// This member is required.
 	Verified *bool
@@ -221,14 +222,13 @@ type Registry struct {
 }
 
 // An object representing the aliases for a public registry. A public registry is
-// given an alias upon creation but a custom alias can be set using the Amazon ECR
-// console. For more information, see Registries
-// (https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html) in the
-// Amazon Elastic Container Registry User Guide.
+// given an alias when it's created. However, a custom alias can be set using the
+// Amazon ECR console. For more information, see Registries (https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html)
+// in the Amazon Elastic Container Registry User Guide.
 type RegistryAlias struct {
 
-	// Whether or not the registry alias is the default alias for the registry. When
-	// the first public repository is created, your public registry is assigned a
+	// Indicates whether the registry alias is the default alias for the registry.
+	// When the first public repository is created, your public registry is assigned a
 	// default registry alias.
 	//
 	// This member is required.
@@ -239,10 +239,10 @@ type RegistryAlias struct {
 	// This member is required.
 	Name *string
 
-	// Whether or not the registry alias is the primary alias for the registry. If
+	// Indicates whether the registry alias is the primary alias for the registry. If
 	// true, the alias is the primary registry alias and is displayed in both the
 	// repository URL and the image URI used in the docker pull commands on the Amazon
-	// ECR Public Gallery. A registry alias that is not the primary registry alias can
+	// ECR Public Gallery. A registry alias that isn't the primary registry alias can
 	// be used in the repository URI in a docker pull command.
 	//
 	// This member is required.
@@ -273,14 +273,14 @@ type Repository struct {
 	// The date and time, in JavaScript date format, when the repository was created.
 	CreatedAt *time.Time
 
-	// The AWS account ID associated with the public registry that contains the
-	// repository.
+	// The Amazon Web Services account ID that's associated with the public registry
+	// that contains the repository.
 	RegistryId *string
 
 	// The Amazon Resource Name (ARN) that identifies the repository. The ARN contains
-	// the arn:aws:ecr namespace, followed by the region of the repository, AWS account
-	// ID of the repository owner, repository namespace, and repository name. For
-	// example, arn:aws:ecr:region:012345678910:repository/test.
+	// the arn:aws:ecr namespace, followed by the region of the repository, Amazon Web
+	// Services account ID of the repository owner, repository namespace, and
+	// repository name. For example, arn:aws:ecr:region:012345678910:repository/test .
 	RepositoryArn *string
 
 	// The name of the repository.
@@ -297,27 +297,28 @@ type Repository struct {
 // ECR Public Gallery.
 type RepositoryCatalogData struct {
 
-	// The longform description of the contents of the repository. This text appears in
-	// the repository details on the Amazon ECR Public Gallery.
+	// The longform description of the contents of the repository. This text appears
+	// in the repository details on the Amazon ECR Public Gallery.
 	AboutText *string
 
 	// The architecture tags that are associated with the repository. Only supported
 	// operating system tags appear publicly in the Amazon ECR Public Gallery. For more
-	// information, see RepositoryCatalogDataInput.
+	// information, see RepositoryCatalogDataInput .
 	Architectures []string
 
 	// The short description of the repository.
 	Description *string
 
-	// The URL containing the logo associated with the repository.
+	// The URL that contains the logo that's associated with the repository.
 	LogoUrl *string
 
-	// Whether or not the repository is certified by AWS Marketplace.
+	// Indicates whether the repository is certified by Amazon Web Services
+	// Marketplace.
 	MarketplaceCertified *bool
 
 	// The operating system tags that are associated with the repository. Only
 	// supported operating system tags appear publicly in the Amazon ECR Public
-	// Gallery. For more information, see RepositoryCatalogDataInput.
+	// Gallery. For more information, see RepositoryCatalogDataInput .
 	OperatingSystems []string
 
 	// The longform usage details of the contents of the repository. The usage text
@@ -327,56 +328,46 @@ type RepositoryCatalogData struct {
 	noSmithyDocumentSerde
 }
 
-// An object containing the catalog data for a repository. This data is publicly
-// visible in the Amazon ECR Public Gallery.
+// An object that contains the catalog data for a repository. This data is
+// publicly visible in the Amazon ECR Public Gallery.
 type RepositoryCatalogDataInput struct {
 
-	// A detailed description of the contents of the repository. It is publicly visible
+	// A detailed description of the contents of the repository. It's publicly visible
 	// in the Amazon ECR Public Gallery. The text must be in markdown format.
 	AboutText *string
 
 	// The system architecture that the images in the repository are compatible with.
-	// On the Amazon ECR Public Gallery, the following supported architectures will
-	// appear as badges on the repository and are used as search filters.
-	//
-	// * Linux
-	//
-	// *
-	// Windows
-	//
-	// If an unsupported tag is added to your repository catalog data, it will
-	// be associated with the repository and can be retrieved using the API but will
-	// not be discoverable in the Amazon ECR Public Gallery.
+	// On the Amazon ECR Public Gallery, the following supported architectures appear
+	// as badges on the repository and are used as search filters. If an unsupported
+	// tag is added to your repository catalog data, it's associated with the
+	// repository and can be retrieved using the API but isn't discoverable in the
+	// Amazon ECR Public Gallery.
+	//   - ARM
+	//   - ARM 64
+	//   - x86
+	//   - x86-64
 	Architectures []string
 
-	// A short description of the contents of the repository. This text appears in both
-	// the image details and also when searching for repositories on the Amazon ECR
-	// Public Gallery.
+	// A short description of the contents of the repository. This text appears in
+	// both the image details and also when searching for repositories on the Amazon
+	// ECR Public Gallery.
 	Description *string
 
-	// The base64-encoded repository logo payload. The repository logo is only publicly
-	// visible in the Amazon ECR Public Gallery for verified accounts.
+	// The base64-encoded repository logo payload. The repository logo is only
+	// publicly visible in the Amazon ECR Public Gallery for verified accounts.
 	LogoImageBlob []byte
 
 	// The operating systems that the images in the repository are compatible with. On
-	// the Amazon ECR Public Gallery, the following supported operating systems will
-	// appear as badges on the repository and are used as search filters.
-	//
-	// * ARM
-	//
-	// * ARM
-	// 64
-	//
-	// * x86
-	//
-	// * x86-64
-	//
-	// If an unsupported tag is added to your repository catalog
-	// data, it will be associated with the repository and can be retrieved using the
-	// API but will not be discoverable in the Amazon ECR Public Gallery.
+	// the Amazon ECR Public Gallery, the following supported operating systems appear
+	// as badges on the repository and are used as search filters. If an unsupported
+	// tag is added to your repository catalog data, it's associated with the
+	// repository and can be retrieved using the API but isn't discoverable in the
+	// Amazon ECR Public Gallery.
+	//   - Linux
+	//   - Windows
 	OperatingSystems []string
 
-	// Detailed information on how to use the contents of the repository. It is
+	// Detailed information about how to use the contents of the repository. It's
 	// publicly visible in the Amazon ECR Public Gallery. The usage text provides
 	// context, support information, and additional usage details for users of the
 	// repository. The text must be in markdown format.
@@ -386,9 +377,9 @@ type RepositoryCatalogDataInput struct {
 }
 
 // The metadata that you apply to a resource to help you categorize and organize
-// them. Each tag consists of a key and an optional value, both of which you
-// define. Tag keys can have a maximum character length of 128 characters, and tag
-// values can have a maximum length of 256 characters.
+// them. Each tag consists of a key and an optional value. You define both. Tag
+// keys can have a maximum character length of 128 characters, and tag values can
+// have a maximum length of 256 characters.
 type Tag struct {
 
 	// One part of a key-value pair that make up a tag. A key is a general label that

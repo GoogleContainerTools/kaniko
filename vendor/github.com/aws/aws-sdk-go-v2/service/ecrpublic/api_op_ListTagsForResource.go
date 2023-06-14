@@ -29,8 +29,8 @@ func (c *Client) ListTagsForResource(ctx context.Context, params *ListTagsForRes
 
 type ListTagsForResourceInput struct {
 
-	// The Amazon Resource Name (ARN) that identifies the resource for which to list
-	// the tags. Currently, the supported resource is an Amazon ECR Public repository.
+	// The Amazon Resource Name (ARN) that identifies the resource to list the tags
+	// for. Currently, the supported resource is an Amazon ECR Public repository.
 	//
 	// This member is required.
 	ResourceArn *string
@@ -98,6 +98,9 @@ func (c *Client) addOperationListTagsForResourceMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opListTagsForResource(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

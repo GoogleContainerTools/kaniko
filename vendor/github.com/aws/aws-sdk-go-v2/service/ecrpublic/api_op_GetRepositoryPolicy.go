@@ -33,9 +33,9 @@ type GetRepositoryPolicyInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// The AWS account ID associated with the public registry that contains the
-	// repository. If you do not specify a registry, the default public registry is
-	// assumed.
+	// The Amazon Web Services account ID that's associated with the public registry
+	// that contains the repository. If you do not specify a registry, the default
+	// public registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -43,14 +43,14 @@ type GetRepositoryPolicyInput struct {
 
 type GetRepositoryPolicyOutput struct {
 
-	// The repository policy text associated with the repository. The policy text will
-	// be in JSON format.
+	// The repository policy text that's associated with the repository. The policy
+	// text will be in JSON format.
 	PolicyText *string
 
-	// The registry ID associated with the request.
+	// The registry ID that's associated with the request.
 	RegistryId *string
 
-	// The repository name associated with the request.
+	// The repository name that's associated with the request.
 	RepositoryName *string
 
 	// Metadata pertaining to the operation's result.
@@ -108,6 +108,9 @@ func (c *Client) addOperationGetRepositoryPolicyMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetRepositoryPolicy(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

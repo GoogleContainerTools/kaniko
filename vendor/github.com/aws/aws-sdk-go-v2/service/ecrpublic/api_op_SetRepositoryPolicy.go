@@ -10,9 +10,8 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Applies a repository policy to the specified public repository to control access
-// permissions. For more information, see Amazon ECR Repository Policies
-// (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html)
+// Applies a repository policy to the specified public repository to control
+// access permissions. For more information, see Amazon ECR Repository Policies (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html)
 // in the Amazon Elastic Container Registry User Guide.
 func (c *Client) SetRepositoryPolicy(ctx context.Context, params *SetRepositoryPolicyInput, optFns ...func(*Options)) (*SetRepositoryPolicyOutput, error) {
 	if params == nil {
@@ -32,8 +31,7 @@ func (c *Client) SetRepositoryPolicy(ctx context.Context, params *SetRepositoryP
 type SetRepositoryPolicyInput struct {
 
 	// The JSON repository policy text to apply to the repository. For more
-	// information, see Amazon ECR Repository Policies
-	// (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policy-examples.html)
+	// information, see Amazon ECR Repository Policies (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policy-examples.html)
 	// in the Amazon Elastic Container Registry User Guide.
 	//
 	// This member is required.
@@ -44,14 +42,14 @@ type SetRepositoryPolicyInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// If the policy you are attempting to set on a repository policy would prevent you
+	// If the policy that you want to set on a repository policy would prevent you
 	// from setting another policy in the future, you must force the
-	// SetRepositoryPolicy operation. This is intended to prevent accidental repository
-	// lock outs.
+	// SetRepositoryPolicy operation. This prevents accidental repository lockouts.
 	Force bool
 
-	// The AWS account ID associated with the registry that contains the repository. If
-	// you do not specify a registry, the default public registry is assumed.
+	// The Amazon Web Services account ID that's associated with the registry that
+	// contains the repository. If you do not specify a registry, the default public
+	// registry is assumed.
 	RegistryId *string
 
 	noSmithyDocumentSerde
@@ -59,13 +57,13 @@ type SetRepositoryPolicyInput struct {
 
 type SetRepositoryPolicyOutput struct {
 
-	// The JSON repository policy text applied to the repository.
+	// The JSON repository policy text that's applied to the repository.
 	PolicyText *string
 
-	// The registry ID associated with the request.
+	// The registry ID that's associated with the request.
 	RegistryId *string
 
-	// The repository name associated with the request.
+	// The repository name that's associated with the request.
 	RepositoryName *string
 
 	// Metadata pertaining to the operation's result.
@@ -123,6 +121,9 @@ func (c *Client) addOperationSetRepositoryPolicyMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opSetRepositoryPolicy(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

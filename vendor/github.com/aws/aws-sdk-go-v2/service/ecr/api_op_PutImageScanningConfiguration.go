@@ -11,7 +11,10 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Updates the image scanning configuration for the specified repository.
+// The PutImageScanningConfiguration API is being deprecated, in favor of
+// specifying the image scanning configuration at the registry level. For more
+// information, see PutRegistryScanningConfiguration . Updates the image scanning
+// configuration for the specified repository.
 func (c *Client) PutImageScanningConfiguration(ctx context.Context, params *PutImageScanningConfigurationInput, optFns ...func(*Options)) (*PutImageScanningConfigurationOutput, error) {
 	if params == nil {
 		params = &PutImageScanningConfigurationInput{}
@@ -116,6 +119,9 @@ func (c *Client) addOperationPutImageScanningConfigurationMiddlewares(stack *mid
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opPutImageScanningConfiguration(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
