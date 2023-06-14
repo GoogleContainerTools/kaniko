@@ -1,3 +1,7 @@
+# v1.19.1 (2023-06-13)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.19.0 (2023-05-08)
 
 * **Feature**: Documentation updates for AWS Security Token Service.
