@@ -1,3 +1,9 @@
+# v1.34.0 (2023-06-13)
+
+* **Feature**: Integrate double encryption feature to SDKs.
+* **Bug Fix**: Fix HeadObject to return types.Nound when an object does not exist. Fixes [2084](https://github.com/aws/aws-sdk-go-v2/issues/2084)
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.33.1 (2023-05-04)
 
 * **Documentation**: Documentation updates for Amazon S3

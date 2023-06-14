@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -604,13 +603,8 @@ func objectExistsStateRetryable(ctx context.Context, input *HeadObjectInput, out
 	}
 
 	if err != nil {
-		var apiErr smithy.APIError
-		ok := errors.As(err, &apiErr)
-		if !ok {
-			return false, fmt.Errorf("expected err to be of type smithy.APIError, got %w", err)
-		}
-
-		if "NotFound" == apiErr.ErrorCode() {
+		var errorType *types.NotFound
+		if errors.As(err, &errorType) {
 			return true, nil
 		}
 	}
@@ -759,13 +753,8 @@ func (w *ObjectNotExistsWaiter) WaitForOutput(ctx context.Context, params *HeadO
 func objectNotExistsStateRetryable(ctx context.Context, input *HeadObjectInput, output *HeadObjectOutput, err error) (bool, error) {
 
 	if err != nil {
-		var apiErr smithy.APIError
-		ok := errors.As(err, &apiErr)
-		if !ok {
-			return false, fmt.Errorf("expected err to be of type smithy.APIError, got %w", err)
-		}
-
-		if "NotFound" == apiErr.ErrorCode() {
+		var errorType *types.NotFound
+		if errors.As(err, &errorType) {
 			return false, nil
 		}
 	}

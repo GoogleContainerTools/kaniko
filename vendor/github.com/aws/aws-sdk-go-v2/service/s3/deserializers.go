@@ -6827,6 +6827,9 @@ func awsRestxml_deserializeOpErrorHeadObject(response *smithyhttp.Response, meta
 	}
 	errorBody.Seek(0, io.SeekStart)
 	switch {
+	case strings.EqualFold("NotFound", errorCode):
+		return awsRestxml_deserializeErrorNotFound(response, errorBody)
+
 	default:
 		genericError := &smithy.GenericAPIError{
 			Code:    errorCode,
