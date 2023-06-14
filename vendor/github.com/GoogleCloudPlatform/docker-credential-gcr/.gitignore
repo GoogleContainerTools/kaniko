@@ -5,9 +5,5 @@ bazel*
 */test_config.json
 */test_credential_store.json
 **/testdata
-docker-credential-gcr
 .idea
 *.iml
-dist/
-*.ipr
-*.iws

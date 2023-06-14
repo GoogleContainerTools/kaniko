@@ -18,8 +18,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
-	"strings"
 
 	"golang.org/x/oauth2/google"
 )
@@ -34,21 +32,19 @@ const (
 	// performing the OAuth2 Authorization Code grant flow.
 	// See https://developers.google.com/identity/protocols/OAuth2InstalledApp
 	GCRCredHelperClientNotSoSecret = "HpVi8cnKx8AAkddzaNrSWmS8"
+
+	// From http://semver.org/
+	// MAJOR version when you make incompatible API changes,
+	// MINOR version when you add functionality in a backwards-compatible manner, and
+	// PATCH version when you make backwards-compatible bug fixes.
+
+	// MajorVersion is the credential helper's major version number.
+	MajorVersion = 2
+	// MinorVersion is the credential helper's minor version number.
+	MinorVersion = 0
+	// PatchVersion is the credential helper's patch version number.
+	PatchVersion = 4
 )
-
-// Version can be set via:
-// -ldflags="-X 'github.com/GoogleCloudPlatform/docker-credential-gcr/config.Version=$TAG'"
-var Version string
-
-func init() {
-	if Version == "" {
-		i, ok := debug.ReadBuildInfo()
-		if !ok {
-			return
-		}
-		Version = i.Main.Version
-	}
-}
 
 // DefaultGCRRegistries contains the list of default registries to authenticate for.
 var DefaultGCRRegistries = [...]string{
@@ -63,46 +59,21 @@ var DefaultGCRRegistries = [...]string{
 // Registry.  If the --include-artifact-registry flag is supplied then these
 // are added in addition to the GCR Registries.
 var DefaultARRegistries = [...]string{
-	"asia-docker.pkg.dev",
-	"asia-east1-docker.pkg.dev",
-	"asia-east2-docker.pkg.dev",
-	"asia-northeast1-docker.pkg.dev",
-	"asia-northeast2-docker.pkg.dev",
-	"asia-northeast3-docker.pkg.dev",
-	"asia-south1-docker.pkg.dev",
-	"asia-south2-docker.pkg.dev",
-	"asia-southeast1-docker.pkg.dev",
-	"asia-southeast2-docker.pkg.dev",
-	"australia-southeast1-docker.pkg.dev",
-	"australia-southeast2-docker.pkg.dev",
-	"europe-docker.pkg.dev",
-	"europe-central2-docker.pkg.dev",
-	"europe-north1-docker.pkg.dev",
-	"europe-southwest1-docker.pkg.dev",
-	"europe-west1-docker.pkg.dev",
-	"europe-west2-docker.pkg.dev",
-	"europe-west3-docker.pkg.dev",
-	"europe-west4-docker.pkg.dev",
-	"europe-west6-docker.pkg.dev",
-	"europe-west8-docker.pkg.dev",
-	"europe-west9-docker.pkg.dev",
-	"europe-west12-docker.pkg.dev",
-	"me-central1-docker.pkg.dev",
-	"me-west1-docker.pkg.dev",
-	"northamerica-northeast1-docker.pkg.dev",
-	"northamerica-northeast2-docker.pkg.dev",
-	"southamerica-east1-docker.pkg.dev",
-	"southamerica-west1-docker.pkg.dev",
-	"us-docker.pkg.dev",
-	"us-central1-docker.pkg.dev",
-	"us-east1-docker.pkg.dev",
-	"us-east4-docker.pkg.dev",
-	"us-east5-docker.pkg.dev",
-	"us-south1-docker.pkg.dev",
-	"us-west1-docker.pkg.dev",
-	"us-west2-docker.pkg.dev",
-	"us-west3-docker.pkg.dev",
-	"us-west4-docker.pkg.dev",
+	"northamerica-northeast1-docker.pkg.dev", "us-central1-docker.pkg.dev",
+	"us-east1-docker.pkg.dev", "us-east4-docker.pkg.dev",
+	"us-west2-docker.pkg.dev", "us-west1-docker.pkg.dev",
+	"us-west3-docker.pkg.dev", "us-west4-docker.pkg.dev",
+	"southamerica-east1-docker.pkg.dev", "europe-central2-docker.pkg.dev",
+	"europe-north1-docker.pkg.dev", "europe-west1-docker.pkg.dev",
+	"europe-west2-docker.pkg.dev", "europe-west3-docker.pkg.dev",
+	"europe-west4-docker.pkg.dev", "europe-west5-docker.pkg.dev",
+	"europe-west6-docker.pkg.dev", "asia-east1-docker.pkg.dev",
+	"asia-east2-docker.pkg.dev", "asia-northeast1-docker.pkg.dev",
+	"asia-northeast2-docker.pkg.dev", "asia-northeast3-docker.pkg.dev",
+	"asia-south1-docker.pkg.dev", "asia-south2-docker.pkg.dev",
+	"asia-southeast1-docker.pkg.dev", "asia-southeast2-docker.pkg.dev",
+	"australia-southeast1-docker.pkg.dev", "australia-southeast2-docker.pkg.dev",
+	"asia-docker.pkg.dev", "europe-docker.pkg.dev", "us-docker.pkg.dev",
 }
 
 // SupportedGCRTokenSources maps config keys to plain english explanations for
@@ -118,10 +89,10 @@ var SupportedGCRTokenSources = map[string]string{
 var GCROAuth2Endpoint = google.Endpoint
 
 // GCRScopes is/are the OAuth2 scope(s) to request during access_token creation.
-var GCRScopes = []string{"https://www.googleapis.com/auth/devstorage.read_write"}
+var GCRScopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
 
 // OAuthHTTPContext is the HTTP context to use when performing OAuth2 calls.
 var OAuthHTTPContext = context.Background()
 
 // GcrOAuth2Username is the Basic auth username accompanying Docker requests to GCR.
-var GcrOAuth2Username = fmt.Sprintf("_dcgcr_%s_token", strings.ReplaceAll(Version, ".", "_"))
+var GcrOAuth2Username = fmt.Sprintf("_dcgcr_%d_%d_%d_token", MajorVersion, MinorVersion, PatchVersion)

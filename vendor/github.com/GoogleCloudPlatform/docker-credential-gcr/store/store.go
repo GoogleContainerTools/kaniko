@@ -19,7 +19,6 @@ plain Docker credentials as well as GCR access and refresh tokens.
 package store
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +26,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"context"
 
 	"github.com/GoogleCloudPlatform/docker-credential-gcr/config"
 	"github.com/GoogleCloudPlatform/docker-credential-gcr/util"
@@ -173,7 +174,6 @@ func (s *credStore) createCredentialFile() (*os.File, error) {
 	}
 	// create the credential file, or truncate (clear) it if it exists
 	f, err := os.Create(s.credentialPath)
-	os.Chmod(s.credentialPath, 0600)
 	if err != nil {
 		return nil, authErr("failed to create credential file", err)
 	}

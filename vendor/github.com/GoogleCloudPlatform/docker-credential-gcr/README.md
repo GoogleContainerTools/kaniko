@@ -1,6 +1,6 @@
 <a href="https://gcr.io"><img src="https://avatars2.githubusercontent.com/u/21046548?s=400&v=4" height="120"/></a>
 
-# docker-credential-gcr [![Build Status](https://github.com/GoogleCloudPlatform/docker-credential-gcr/actions/workflows/test.yml/badge.svg)](https://travis-ci.org/GoogleCloudPlatform/docker-credential-gcr) [![Go Report Card](https://goreportcard.com/badge/GoogleCloudPlatform/docker-credential-gcr)](https://goreportcard.com/report/GoogleCloudPlatform/docker-credential-gcr)
+# docker-credential-gcr [![Build Status](https://travis-ci.org/GoogleCloudPlatform/docker-credential-gcr.svg?branch=master)](https://travis-ci.org/GoogleCloudPlatform/docker-credential-gcr) [![Go Report Card](https://goreportcard.com/badge/GoogleCloudPlatform/docker-credential-gcr)](https://goreportcard.com/report/GoogleCloudPlatform/docker-credential-gcr)
 
 ## Introduction
 
@@ -52,7 +52,7 @@ As of the 2.0 release, `docker-credential-gcr` no longer supports generalized [`
 
 ### Building from Source
 
-The program in this repository is written with the Go programming language and can be built with `go build`. These instructions assume you are using [**Go 1.13+**](https://golang.org/) or higher.
+The program in this repository is written with the Go programming language and built with `make`. These instructions assume that [**Go 1.11+**](https://golang.org/) and `make` are installed on a \*nix system.
 
 You can download the source code, compile the binary, and put it in your `$GOPATH` with `go get`.
 
@@ -62,17 +62,17 @@ go get -u github.com/GoogleCloudPlatform/docker-credential-gcr
 
 If `$GOPATH/bin` is in your system `$PATH`, this will also automatically install the compiled binary. You can confirm using `which docker-credential-gcr` and continue to the [section on Configuration and Usage](#configuration-and-usage).
 
-Alternatively, you can use `go build` to build the program. This creates a `docker-credential-gcr` executable.
+Alternatively, you can use `make` to build the program. The executable will be output to the `bin` directory inside the repository.
 
 ```shell
 cd $GOPATH/src/github.com/GoogleCloudPlatform/docker-credential-gcr
-go build
+make
 ```
 
 Then, you can put that binary in your `$PATH` to make it visible to `docker`. For example, if `/usr/bin` is present in your system path:
 
 ```shell
-sudo mv ./docker-credential-gcr /usr/bin/docker-credential-gcr
+sudo mv ./bin/docker-credential-gcr /usr/bin/docker-credential-gcr
 ```
 
 ## Configuration and Usage

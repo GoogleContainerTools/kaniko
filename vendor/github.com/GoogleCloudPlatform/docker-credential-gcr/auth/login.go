@@ -45,6 +45,9 @@ const redirectURIAuthCodeInTitleBar = "urn:ietf:wg:oauth:2.0:oob"
 // attempt to use In and Out to direct the user to the login portal and receive
 // the authorization_code in response.
 type GCRLoginAgent struct {
+	// Whether to execute OpenBrowser when authenticating the user.
+	AllowBrowser bool
+
 	// Read input from here; if nil, uses os.Stdin.
 	In io.Reader
 
@@ -80,35 +83,36 @@ func (a *GCRLoginAgent) PerformLogin() (*oauth2.Token, error) {
 	}
 
 	verifier, challenge, method, err := codeChallengeParams()
-	state, err := makeRandString(16)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to build random string: %v", err)
-	}
+
 	authCodeOpts := []oauth2.AuthCodeOption{
 		oauth2.AccessTypeOffline,
 		oauth2.SetAuthURLParam("code_challenge", challenge),
 		oauth2.SetAuthURLParam("code_challenge_method", method),
 	}
 
-	// Browser based auth is the only mechanism supported now.
-	// Attempt to receive the authorization code via redirect URL
-	ln, port, err := getListener()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to open local listener: %v", err)
+	if a.AllowBrowser {
+		// Attempt to receive the authorization code via redirect URL
+		if ln, port, err := getListener(); err == nil {
+			defer ln.Close()
+			// open a web browser and listen on the redirect URL port
+			conf.RedirectURL = fmt.Sprintf("http://localhost:%d", port)
+			url := conf.AuthCodeURL("state", authCodeOpts...)
+			if err := a.OpenBrowser(url); err == nil {
+				if code, err := handleCodeResponse(ln); err == nil {
+					return conf.Exchange(
+						config.OAuthHTTPContext,
+						code,
+						oauth2.SetAuthURLParam("code_verifier", verifier))
+				}
+			}
+		}
 	}
-	defer ln.Close()
 
-	// open a web browser and listen on the redirect URL port
-	conf.RedirectURL = fmt.Sprintf("http://localhost:%d", port)
-	url := conf.AuthCodeURL(state, authCodeOpts...)
-	err = a.OpenBrowser(url)
+	// If we can't or shouldn't automatically retrieve the code via browser,
+	// default to a command line prompt.
+	code, err := a.codeViaPrompt(conf, authCodeOpts)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to open browser: %v", err)
-	}
-
-	code, err := handleCodeResponse(ln, state)
-	if err != nil {
-		return nil, fmt.Errorf("Response was invalid: %v", err)
+		return nil, err
 	}
 
 	return conf.Exchange(
@@ -143,7 +147,7 @@ func getListener() (net.Listener, int, error) {
 	return ln, ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func handleCodeResponse(ln net.Listener, stateCheck string) (string, error) {
+func handleCodeResponse(ln net.Listener) (string, error) {
 	conn, err := ln.Accept()
 	if err != nil {
 		return "", err
@@ -158,7 +162,6 @@ func handleCodeResponse(ln net.Listener, stateCheck string) (string, error) {
 	}
 
 	code := req.URL.Query().Get("code")
-	state := req.URL.Query().Get("state")
 
 	resp := &http.Response{
 		StatusCode:    200,
@@ -175,14 +178,7 @@ func handleCodeResponse(ln net.Listener, stateCheck string) (string, error) {
 	// TODO i18n?
 	if code == "" {
 		err := fmt.Errorf("Code not present in response: %s", req.URL.String())
-		resp.Body = getResponseBody("ERROR: Authentication code not present in response.")
-		return "", err
-	}
-
-	if state != stateCheck {
-		err := fmt.Errorf("Invalid State")
-		resp.StatusCode = 400
-		resp.Body = getResponseBody("ERROR: State parameter is invalid.")
+		resp.Body = getResponseBody("ERROR: Authentication code not present in response, please retry with --no-browser.")
 		return "", err
 	}
 
@@ -203,10 +199,12 @@ func codeChallengeParams() (verifier, challenge, method string, err error) {
 	// A `code_verifier` is a high-entropy cryptographic random string using the unreserved characters
 	// [A-Z] / [a-z] / [0-9] / "-" / "." / "_" / "~"
 	// with a minimum length of 43 characters and a maximum length of 128 characters.
-	verifier, err = makeRandString(32)
+	b := make([]byte, 32)
+	_, err = rand.Read(b)
 	if err != nil {
 		return "", "", "", err
 	}
+	verifier = base64.RawURLEncoding.EncodeToString(b)
 
 	// https://tools.ietf.org/html/rfc7636#section-4.2
 	// If the client is capable of using "S256", it MUST use "S256":
@@ -215,13 +213,4 @@ func codeChallengeParams() (verifier, challenge, method string, err error) {
 	challenge = base64.RawURLEncoding.EncodeToString(sha[:])
 
 	return verifier, challenge, "S256", nil
-}
-
-func makeRandString(length int) (string, error) {
-	b := make([]byte, length)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
 }
