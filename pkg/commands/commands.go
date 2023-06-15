@@ -58,6 +58,10 @@ type DockerCommand interface {
 
 	// ShouldDetectDeletedFiles returns true if the command could delete files.
 	ShouldDetectDeletedFiles() bool
+
+	// True if need add ARGs and EVNs to composite cache string with resolved command
+	// need only for RUN instruction
+	IsArgsEnvsRequiredInCache() bool
 }
 
 func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRun bool, cacheCopy bool, cacheRun bool) (DockerCommand, error) {

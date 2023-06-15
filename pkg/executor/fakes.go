@@ -43,9 +43,10 @@ func (f fakeSnapShotter) TakeSnapshot(_ []string, _, _ bool) (string, error) {
 }
 
 type MockDockerCommand struct {
-	command      string
-	contextFiles []string
-	cacheCommand commands.DockerCommand
+	command             string
+	contextFiles        []string
+	cacheCommand        commands.DockerCommand
+	argToCompositeCache bool
 }
 
 func (m MockDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error { return nil }
@@ -76,9 +77,13 @@ func (m MockDockerCommand) ShouldCacheOutput() bool {
 func (m MockDockerCommand) ShouldDetectDeletedFiles() bool {
 	return false
 }
+func (m MockDockerCommand) IsArgsEnvsRequiredInCache() bool {
+	return m.argToCompositeCache
+}
 
 type MockCachedDockerCommand struct {
-	contextFiles []string
+	contextFiles        []string
+	argToCompositeCache bool
 }
 
 func (m MockCachedDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error {
@@ -110,6 +115,9 @@ func (m MockCachedDockerCommand) RequiresUnpackedFS() bool {
 }
 func (m MockCachedDockerCommand) ShouldCacheOutput() bool {
 	return false
+}
+func (m MockCachedDockerCommand) IsArgsEnvsRequiredInCache() bool {
+	return m.argToCompositeCache
 }
 
 type fakeLayerCache struct {

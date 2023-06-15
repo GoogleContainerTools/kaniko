@@ -270,9 +270,8 @@ func copyCmdFilesUsedFromContext(
 	config *v1.Config, buildArgs *dockerfile.BuildArgs, cmd *instructions.CopyCommand,
 	fileContext util.FileContext,
 ) ([]string, error) {
-	// We don't use the context if we're performing a copy --from.
 	if cmd.From != "" {
-		return nil, nil
+		fileContext = util.FileContext{Root: filepath.Join(kConfig.KanikoDir, cmd.From)}
 	}
 
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
