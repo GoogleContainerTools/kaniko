@@ -29,39 +29,6 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
-func Test_ParseStages_NoMultistageWithCacheCopy(t *testing.T) {
-	dockerfile := `
-	FROM scratch as first
-	COPY testfile /
-
-	FROM scratch as second
-	COPY --from=second testfile /
-	`
-	tmpfile, err := ioutil.TempFile("", "Dockerfile.test")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	opts := &config.KanikoOptions{
-		DockerfilePath:  tmpfile.Name(),
-		CacheCopyLayers: true,
-	}
-
-	_, _, err = ParseStages(opts)
-	if err == nil {
-		t.Fatal("expected ParseStages to fail on MultiStage build if CacheCopyLayers=true")
-	}
-}
-
 func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	dockerfile := `
 	ARG IMAGE="ubuntu:16.04"

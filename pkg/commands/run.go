@@ -44,6 +44,10 @@ var (
 	userLookup = util.LookupUser
 )
 
+func (r *RunCommand) IsArgsEnvsRequiredInCache() bool {
+	return true
+}
+
 func (r *RunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
 	return runCommandInExec(config, buildArgs, r.cmd)
 }
@@ -198,6 +202,10 @@ type CachingRunCommand struct {
 	extractedFiles []string
 	cmd            *instructions.RunCommand
 	extractFn      util.ExtractFunction
+}
+
+func (cr *CachingRunCommand) IsArgsEnvsRequiredInCache() bool {
+	return true
 }
 
 func (cr *CachingRunCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {

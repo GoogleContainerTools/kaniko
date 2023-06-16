@@ -654,14 +654,15 @@ func newStageContext(command string, args map[string]string, env []string) stage
 }
 
 func Test_stageBuilder_populateCompositeKey(t *testing.T) {
-	testCases := []struct {
+	type testcase struct {
 		description string
 		cmd1        stageContext
 		cmd2        stageContext
 		shdEqual    bool
-	}{
+	}
+	testCases := []testcase{
 		{
-			description: "cache key for same command with same build args",
+			description: "cache key for same command [RUN] with same build args",
 			cmd1: newStageContext(
 				"RUN echo $ARG > test",
 				map[string]string{"ARG": "foo"},
@@ -675,7 +676,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			shdEqual: true,
 		},
 		{
-			description: "cache key for same command with same env and args",
+			description: "cache key for same command [RUN] with same env and args",
 			cmd1: newStageContext(
 				"RUN echo $ENV > test",
 				map[string]string{"ARG": "foo"},
@@ -689,7 +690,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			shdEqual: true,
 		},
 		{
-			description: "cache key for same command with same env but different args",
+			description: "cache key for same command [RUN] with same env but different args",
 			cmd1: newStageContext(
 				"RUN echo $ENV > test",
 				map[string]string{"ARG": "foo"},
@@ -702,7 +703,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			),
 		},
 		{
-			description: "cache key for same command, different buildargs, args not used in command",
+			description: "cache key for same command [RUN], different buildargs, args not used in command",
 			cmd1: newStageContext(
 				"RUN echo const > test",
 				map[string]string{"ARG": "foo"},
@@ -715,7 +716,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			),
 		},
 		{
-			description: "cache key for same command, different buildargs, args used in script",
+			description: "cache key for same command [RUN], different buildargs, args used in script",
 			// test.sh
 			// #!/bin/sh
 			// echo ${ARG}
@@ -731,7 +732,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			),
 		},
 		{
-			description: "cache key for same command with a build arg values",
+			description: "cache key for same command [RUN] with a build arg values",
 			cmd1: newStageContext(
 				"RUN echo $ARG > test",
 				map[string]string{"ARG": "foo"},
@@ -744,7 +745,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			),
 		},
 		{
-			description: "cache key for same command with different env values",
+			description: "cache key for same command [RUN] with different env values",
 			cmd1: newStageContext(
 				"RUN echo $ENV > test",
 				map[string]string{"ARG": "foo"},
@@ -757,7 +758,7 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			),
 		},
 		{
-			description: "cache key for different command same context",
+			description: "cache key for different command [RUN] same context",
 			cmd1: newStageContext(
 				"RUN echo other > test",
 				map[string]string{"ARG": "foo"},
@@ -769,17 +770,105 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 				[]string{"ENV=1"},
 			),
 		},
+		func() testcase {
+			dir, files := tempDirAndFile(t)
+			file := files[0]
+			filePath := filepath.Join(dir, file)
+			return testcase{
+				description: "cache key for same command [COPY] with same args",
+				cmd1: newStageContext(
+					fmt.Sprintf("COPY %s /meow", filePath),
+					map[string]string{"ARG": "foo"},
+					[]string{"ENV=1"},
+				),
+				cmd2: newStageContext(
+					fmt.Sprintf("COPY %s /meow", filePath),
+					map[string]string{"ARG": "foo"},
+					[]string{"ENV=1"},
+				),
+				shdEqual: true,
+			}
+		}(),
+		func() testcase {
+			dir, files := tempDirAndFile(t)
+			file := files[0]
+			filePath := filepath.Join(dir, file)
+			return testcase{
+				description: "cache key for same command [COPY] with different args",
+				cmd1: newStageContext(
+					fmt.Sprintf("COPY %s /meow", filePath),
+					map[string]string{"ARG": "foo"},
+					[]string{"ENV=1"},
+				),
+				cmd2: newStageContext(
+					fmt.Sprintf("COPY %s /meow", filePath),
+					map[string]string{"ARG": "bar"},
+					[]string{"ENV=2"},
+				),
+				shdEqual: true,
+			}
+		}(),
+		{
+			description: "cache key for same command [WORKDIR] with same args",
+			cmd1: newStageContext(
+				"WORKDIR /",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"WORKDIR /",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			shdEqual: true,
+		},
+		{
+			description: "cache key for same command [WORKDIR] with different args",
+			cmd1: newStageContext(
+				"WORKDIR /",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"WORKDIR /",
+				map[string]string{"ARG": "bar"},
+				[]string{"ENV=2"},
+			),
+			shdEqual: true,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			sb := &stageBuilder{fileContext: util.FileContext{Root: "workspace"}}
 			ck := CompositeCache{}
 
-			ck1, err := sb.populateCompositeKey(tc.cmd1.command, []string{}, ck, tc.cmd1.args, tc.cmd1.env)
+			instructions1, err := dockerfile.ParseCommands([]string{tc.cmd1.command.String()})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fc1 := util.FileContext{Root: "workspace"}
+			dockerCommand1, err := commands.GetCommand(instructions1[0], fc1, false, true, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			instructions, err := dockerfile.ParseCommands([]string{tc.cmd2.command.String()})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fc2 := util.FileContext{Root: "workspace"}
+			dockerCommand2, err := commands.GetCommand(instructions[0], fc2, false, true, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			ck1, err := sb.populateCompositeKey(dockerCommand1, []string{}, ck, tc.cmd1.args, tc.cmd1.env)
 			if err != nil {
 				t.Errorf("Expected error to be nil but was %v", err)
 			}
-			ck2, err := sb.populateCompositeKey(tc.cmd2.command, []string{}, ck, tc.cmd2.args, tc.cmd2.env)
+			ck2, err := sb.populateCompositeKey(dockerCommand2, []string{}, ck, tc.cmd2.args, tc.cmd2.env)
 			if err != nil {
 				t.Errorf("Expected error to be nil but was %v", err)
 			}
@@ -1206,6 +1295,7 @@ RUN foobar
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{},
 				},
+				argToCompositeCache: true,
 			}
 
 			return testcase{
@@ -1243,6 +1333,7 @@ RUN foobar
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{},
 				},
+				argToCompositeCache: true,
 			}
 
 			return testcase{
@@ -1286,6 +1377,7 @@ RUN foobar
 				cacheCommand: MockCachedDockerCommand{
 					contextFiles: []string{},
 				},
+				argToCompositeCache: true,
 			}
 
 			return testcase{
@@ -1500,9 +1592,10 @@ func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
 		expectedCacheKey string
 	}{
 		{
-			description:      "multi-stage copy command",
+			description: "multi-stage copy command",
+			// dont use digest from previoust stage for COPY
 			command:          "COPY --from=0 foo.txt bar.txt",
-			expectedCacheKey: "COPY --from=0 foo.txt bar.txt-some-cache-key",
+			expectedCacheKey: "COPY --from=0 foo.txt bar.txt",
 		},
 		{
 			description:      "copy command",
@@ -1524,7 +1617,7 @@ func Test_stageBuild_populateCompositeKeyForCopyCommand(t *testing.T) {
 
 			for _, useCacheCommand := range []bool{false, true} {
 				t.Run(fmt.Sprintf("CacheCommand=%t", useCacheCommand), func(t *testing.T) {
-					var cmd fmt.Stringer = copyCommand
+					var cmd commands.DockerCommand = copyCommand
 					if useCacheCommand {
 						cmd = copyCommand.(*commands.CopyCommand).CacheCommand(nil)
 					}

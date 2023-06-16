@@ -59,6 +59,10 @@ func (r *RunMarkerCommand) ProvidesFilesToSnapshot() bool {
 	return true
 }
 
+func (r *RunMarkerCommand) IsArgsEnvsRequiredInCache() bool {
+	return true
+}
+
 // CacheCommand returns true since this command should be cached
 func (r *RunMarkerCommand) CacheCommand(img v1.Image) DockerCommand {
 
