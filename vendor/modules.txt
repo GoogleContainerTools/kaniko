@@ -849,7 +849,7 @@ go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
 # go.uber.org/goleak v1.2.1
 ## explicit; go 1.18
-# golang.org/x/crypto v0.9.0
+# golang.org/x/crypto v0.10.0
 ## explicit; go 1.17
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
@@ -875,7 +875,7 @@ golang.org/x/crypto/ssh/knownhosts
 # golang.org/x/mod v0.10.0
 ## explicit; go 1.17
 golang.org/x/mod/semver
-# golang.org/x/net v0.10.0
+# golang.org/x/net v0.11.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
@@ -887,7 +887,7 @@ golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.8.0
+# golang.org/x/oauth2 v0.9.0
 ## explicit; go 1.17
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
@@ -908,7 +908,7 @@ golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.9.0
+# golang.org/x/text v0.10.0
 ## explicit; go 1.17
 golang.org/x/text/runes
 golang.org/x/text/secure/bidirule
