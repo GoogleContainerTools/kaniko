@@ -36,7 +36,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.11.0
 	golang.org/x/oauth2 v0.9.0
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.3.0
 )
 
 require github.com/containerd/containerd v1.7.2
