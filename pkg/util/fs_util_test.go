@@ -1452,9 +1452,9 @@ func TestInitIgnoreList(t *testing.T) {
 	if _, err := mFile.WriteString(mountInfo); err != nil {
 		t.Fatal(err)
 	}
-	config.IgnoreListPath = mFile.Name()
+	config.MountInfoPath = mFile.Name()
 	defer func() {
-		config.IgnoreListPath = constants.IgnoreListPath
+		config.MountInfoPath = constants.MountInfoPath
 	}()
 
 	expected := []IgnoreListEntry{

@@ -20,7 +20,7 @@ const (
 	// RootDir is the path to the root directory
 	RootDir = "/"
 
-	IgnoreListPath = "/proc/self/mountinfo"
+	MountInfoPath = "/proc/self/mountinfo"
 
 	DefaultKanikoPath = "/kaniko"
 

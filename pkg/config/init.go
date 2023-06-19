@@ -44,9 +44,9 @@ var BuildContextDir = fmt.Sprintf("%s/buildcontext/", KanikoDir)
 // as tarballs in case they are needed later on
 var KanikoIntermediateStagesDir = fmt.Sprintf("%s/stages/", KanikoDir)
 
-var IgnoreListPath string
+var MountInfoPath string
 
 func init() {
 	RootDir = constants.RootDir
-	IgnoreListPath = constants.IgnoreListPath
+	MountInfoPath = constants.MountInfoPath
 }

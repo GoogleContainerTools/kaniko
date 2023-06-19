@@ -176,9 +176,9 @@ func setupMultistageTests(t *testing.T) (string, func()) {
 	if err := ioutil.WriteFile(mFile, []byte(mountInfo), 0644); err != nil {
 		t.Fatal(err)
 	}
-	config.IgnoreListPath = mFile
+	config.MountInfoPath = mFile
 	return testDir, func() {
 		config.RootDir = constants.RootDir
-		config.IgnoreListPath = constants.IgnoreListPath
+		config.MountInfoPath = constants.MountInfoPath
 	}
 }

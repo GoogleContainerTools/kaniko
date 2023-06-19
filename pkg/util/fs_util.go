@@ -1022,7 +1022,7 @@ func InitIgnoreList(detectFilesystem bool) error {
 	ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 
 	if detectFilesystem {
-		if err := DetectFilesystemIgnoreList(config.IgnoreListPath); err != nil {
+		if err := DetectFilesystemIgnoreList(config.MountInfoPath); err != nil {
 			return errors.Wrap(err, "checking filesystem mount paths for ignore list")
 		}
 	}
