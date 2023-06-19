@@ -579,7 +579,7 @@ type DefaultRetention struct {
 // Container for the objects to delete.
 type Delete struct {
 
-	// The objects to delete.
+	// The object to delete.
 	//
 	// This member is required.
 	Objects []ObjectIdentifier
@@ -721,7 +721,7 @@ type Encryption struct {
 	// If the encryption type is aws:kms , this optional value specifies the ID of the
 	// symmetric encryption customer managed key to use for encryption of job results.
 	// Amazon S3 only supports symmetric encryption KMS keys. For more information, see
-	// Asymmetric keys in Amazon Web Services KMS (https://docs.aws.amazon.com/kms/latest/developerguide/symmetric-asymmetric.html)
+	// Asymmetric keys in KMS (https://docs.aws.amazon.com/kms/latest/developerguide/symmetric-asymmetric.html)
 	// in the Amazon Web Services Key Management Service Developer Guide.
 	KMSKeyId *string
 
@@ -3034,9 +3034,8 @@ type SourceSelectionCriteria struct {
 // Specifies the use of SSE-KMS to encrypt delivered inventory reports.
 type SSEKMS struct {
 
-	// Specifies the ID of the Amazon Web Services Key Management Service (Amazon Web
-	// Services KMS) symmetric encryption customer managed key to use for encrypting
-	// inventory reports.
+	// Specifies the ID of the Key Management Service (KMS) symmetric encryption
+	// customer managed key to use for encrypting inventory reports.
 	//
 	// This member is required.
 	KeyId *string

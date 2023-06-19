@@ -225,7 +225,7 @@ type UploadPartInput struct {
 type UploadPartOutput struct {
 
 	// Indicates whether the multipart upload uses an S3 Bucket Key for server-side
-	// encryption with Amazon Web Services KMS (SSE-KMS).
+	// encryption with Key Management Service (KMS) keys (SSE-KMS).
 	BucketKeyEnabled bool
 
 	// The base64-encoded, 32-bit CRC32 checksum of the object. This will only be
@@ -273,13 +273,12 @@ type UploadPartOutput struct {
 	// integrity verification of the customer-provided encryption key.
 	SSECustomerKeyMD5 *string
 
-	// If present, specifies the ID of the Amazon Web Services Key Management Service
-	// (Amazon Web Services KMS) symmetric encryption customer managed key was used for
-	// the object.
+	// If present, specifies the ID of the Key Management Service (KMS) symmetric
+	// encryption customer managed key was used for the object.
 	SSEKMSKeyId *string
 
 	// The server-side encryption algorithm used when storing this object in Amazon S3
-	// (for example, AES256, aws:kms ).
+	// (for example, AES256 , aws:kms ).
 	ServerSideEncryption types.ServerSideEncryption
 
 	// Metadata pertaining to the operation's result.

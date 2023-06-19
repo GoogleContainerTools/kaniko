@@ -1070,8 +1070,9 @@ type ServerSideEncryption string
 
 // Enum values for ServerSideEncryption
 const (
-	ServerSideEncryptionAes256 ServerSideEncryption = "AES256"
-	ServerSideEncryptionAwsKms ServerSideEncryption = "aws:kms"
+	ServerSideEncryptionAes256     ServerSideEncryption = "AES256"
+	ServerSideEncryptionAwsKms     ServerSideEncryption = "aws:kms"
+	ServerSideEncryptionAwsKmsDsse ServerSideEncryption = "aws:kms:dsse"
 )
 
 // Values returns all known values for ServerSideEncryption. Note that this can be
@@ -1081,6 +1082,7 @@ func (ServerSideEncryption) Values() []ServerSideEncryption {
 	return []ServerSideEncryption{
 		"AES256",
 		"aws:kms",
+		"aws:kms:dsse",
 	}
 }
 

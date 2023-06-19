@@ -149,6 +149,10 @@ type ListObjectsOutput struct {
 	// Keys that begin with the indicated prefix.
 	Prefix *string
 
+	// If present, indicates that the requester was successfully charged for the
+	// request.
+	RequestCharged types.RequestCharged
+
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
 

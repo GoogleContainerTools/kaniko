@@ -84,6 +84,13 @@ type ListObjectVersionsInput struct {
 	// objects into a single result under CommonPrefixes.
 	Prefix *string
 
+	// Confirms that the requester knows that they will be charged for the request.
+	// Bucket owners need not specify this parameter in their requests. For information
+	// about downloading objects from Requester Pays buckets, see Downloading Objects
+	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// in the Amazon S3 User Guide.
+	RequestPayer types.RequestPayer
+
 	// Specifies the object version you want to start listing from.
 	VersionIdMarker *string
 
@@ -141,6 +148,10 @@ type ListObjectVersionsOutput struct {
 
 	// Selects objects that start with the value supplied by this parameter.
 	Prefix *string
+
+	// If present, indicates that the requester was successfully charged for the
+	// request.
+	RequestCharged types.RequestCharged
 
 	// Marks the last version of the key returned in a truncated response.
 	VersionIdMarker *string
