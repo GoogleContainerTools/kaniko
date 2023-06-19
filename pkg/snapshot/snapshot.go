@@ -224,7 +224,10 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	addedPaths := make(map[string]bool)
 
 	for _, path := range whiteouts {
-		if err := addParentDirectories(t, addedPaths, path); err != nil {
+		// We only add parent directories if no symlink in the parent paths
+		// are encountered. This is to ensure that the actual delete
+		// (whiteout) is not tinkered with (pointing suddenly to another file)
+		if err := addParentDirectories(t, addedPaths, path, true); err != nil {
 			return err
 		}
 		if err := t.Whiteout(path); err != nil {
@@ -233,7 +236,7 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	}
 
 	for _, path := range files {
-		if err := addParentDirectories(t, addedPaths, path); err != nil {
+		if err := addParentDirectories(t, addedPaths, path, false); err != nil {
 			return err
 		}
 		if _, pathAdded := addedPaths[path]; pathAdded {
@@ -247,8 +250,24 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	return nil
 }
 
-func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) error {
-	for _, parentPath := range util.ParentDirectories(path) {
+func addParentDirectories(
+	t util.Tar,
+	addedPaths map[string]bool,
+	path string,
+	noSymlinkChains bool) error {
+	parents := util.ParentDirectories(path)
+
+	containsLink, err := containsLink(parents)
+	if err != nil {
+		return err
+	}
+
+	if noSymlinkChains && containsLink {
+		return nil
+	}
+
+	for _, parentPath := range parents {
+
 		if _, pathAdded := addedPaths[parentPath]; pathAdded {
 			continue
 		}
@@ -258,6 +277,21 @@ func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) e
 		addedPaths[parentPath] = true
 	}
 	return nil
+}
+
+func containsLink(paths []string) (bool, error) {
+	for _, p := range paths {
+		lstat, err := os.Lstat(p)
+		if err != nil {
+			return false, err
+		}
+
+		isLink := lstat.Mode()&os.ModeSymlink != 0
+		if isLink {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // filesWithLinks returns the symlink and the target path if its exists.
