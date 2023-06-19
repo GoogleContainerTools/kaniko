@@ -17,7 +17,7 @@ set -e
 # Ignore these paths in the following tests.
 ignore="vendor\|out"
 BOILERPLATEDIR=./hack/boilerplate
-files=$(python ${BOILERPLATEDIR}/boilerplate.py --rootdir . --boilerplate-dir ${BOILERPLATEDIR})
+files=$(python3 ${BOILERPLATEDIR}/boilerplate.py --rootdir . --boilerplate-dir ${BOILERPLATEDIR})
 
 # Grep returns a non-zero exit code if we don't match anything, which is good in this case.
 set +e
