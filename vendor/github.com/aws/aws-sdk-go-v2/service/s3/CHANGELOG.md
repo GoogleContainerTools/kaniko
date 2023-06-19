@@ -1,3 +1,17 @@
+# v1.35.0 (2023-06-16)
+
+* **Feature**: This release adds SDK support for request-payer request header and request-charged response header in the "GetBucketAccelerateConfiguration", "ListMultipartUploads", "ListObjects", "ListObjectsV2" and "ListObjectVersions" S3 APIs.
+
+# v1.34.1 (2023-06-15)
+
+* No change notes available for this release.
+
+# v1.34.0 (2023-06-13)
+
+* **Feature**: Integrate double encryption feature to SDKs.
+* **Bug Fix**: Fix HeadObject to return types.Nound when an object does not exist. Fixes [2084](https://github.com/aws/aws-sdk-go-v2/issues/2084)
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.33.1 (2023-05-04)
 
 * **Documentation**: Documentation updates for Amazon S3

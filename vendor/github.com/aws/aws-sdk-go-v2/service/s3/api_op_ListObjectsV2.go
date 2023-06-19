@@ -182,6 +182,10 @@ type ListObjectsV2Output struct {
 	// Keys that begin with the indicated prefix.
 	Prefix *string
 
+	// If present, indicates that the requester was successfully charged for the
+	// request.
+	RequestCharged types.RequestCharged
+
 	// If StartAfter was sent with the request, it is included in the response.
 	StartAfter *string
 

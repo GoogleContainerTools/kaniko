@@ -2369,6 +2369,11 @@ func (m *awsRestxml_deserializeOpGetBucketAccelerateConfiguration) HandleDeseria
 	output := &GetBucketAccelerateConfigurationOutput{}
 	out.Result = output
 
+	err = awsRestxml_deserializeOpHttpBindingsGetBucketAccelerateConfigurationOutput(output, response)
+	if err != nil {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("failed to decode response with invalid Http bindings, %w", err)}
+	}
+
 	var buff [1024]byte
 	ringBuffer := smithyio.NewRingBuffer(buff[:])
 	body := io.TeeReader(response.Body, ringBuffer)
@@ -2440,6 +2445,18 @@ func awsRestxml_deserializeOpErrorGetBucketAccelerateConfiguration(response *smi
 	}
 }
 
+func awsRestxml_deserializeOpHttpBindingsGetBucketAccelerateConfigurationOutput(v *GetBucketAccelerateConfigurationOutput, response *smithyhttp.Response) error {
+	if v == nil {
+		return fmt.Errorf("unsupported deserialization for nil %T", v)
+	}
+
+	if headerValues := response.Header.Values("x-amz-request-charged"); len(headerValues) != 0 {
+		headerValues[0] = strings.TrimSpace(headerValues[0])
+		v.RequestCharged = types.RequestCharged(headerValues[0])
+	}
+
+	return nil
+}
 func awsRestxml_deserializeOpDocumentGetBucketAccelerateConfigurationOutput(v **GetBucketAccelerateConfigurationOutput, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -6827,6 +6844,9 @@ func awsRestxml_deserializeOpErrorHeadObject(response *smithyhttp.Response, meta
 	}
 	errorBody.Seek(0, io.SeekStart)
 	switch {
+	case strings.EqualFold("NotFound", errorCode):
+		return awsRestxml_deserializeErrorNotFound(response, errorBody)
+
 	default:
 		genericError := &smithy.GenericAPIError{
 			Code:    errorCode,
@@ -7947,6 +7967,11 @@ func (m *awsRestxml_deserializeOpListMultipartUploads) HandleDeserialize(ctx con
 	output := &ListMultipartUploadsOutput{}
 	out.Result = output
 
+	err = awsRestxml_deserializeOpHttpBindingsListMultipartUploadsOutput(output, response)
+	if err != nil {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("failed to decode response with invalid Http bindings, %w", err)}
+	}
+
 	var buff [1024]byte
 	ringBuffer := smithyio.NewRingBuffer(buff[:])
 	body := io.TeeReader(response.Body, ringBuffer)
@@ -8018,6 +8043,18 @@ func awsRestxml_deserializeOpErrorListMultipartUploads(response *smithyhttp.Resp
 	}
 }
 
+func awsRestxml_deserializeOpHttpBindingsListMultipartUploadsOutput(v *ListMultipartUploadsOutput, response *smithyhttp.Response) error {
+	if v == nil {
+		return fmt.Errorf("unsupported deserialization for nil %T", v)
+	}
+
+	if headerValues := response.Header.Values("x-amz-request-charged"); len(headerValues) != 0 {
+		headerValues[0] = strings.TrimSpace(headerValues[0])
+		v.RequestCharged = types.RequestCharged(headerValues[0])
+	}
+
+	return nil
+}
 func awsRestxml_deserializeOpDocumentListMultipartUploadsOutput(v **ListMultipartUploadsOutput, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -8229,6 +8266,11 @@ func (m *awsRestxml_deserializeOpListObjects) HandleDeserialize(ctx context.Cont
 	output := &ListObjectsOutput{}
 	out.Result = output
 
+	err = awsRestxml_deserializeOpHttpBindingsListObjectsOutput(output, response)
+	if err != nil {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("failed to decode response with invalid Http bindings, %w", err)}
+	}
+
 	var buff [1024]byte
 	ringBuffer := smithyio.NewRingBuffer(buff[:])
 	body := io.TeeReader(response.Body, ringBuffer)
@@ -8303,6 +8345,18 @@ func awsRestxml_deserializeOpErrorListObjects(response *smithyhttp.Response, met
 	}
 }
 
+func awsRestxml_deserializeOpHttpBindingsListObjectsOutput(v *ListObjectsOutput, response *smithyhttp.Response) error {
+	if v == nil {
+		return fmt.Errorf("unsupported deserialization for nil %T", v)
+	}
+
+	if headerValues := response.Header.Values("x-amz-request-charged"); len(headerValues) != 0 {
+		headerValues[0] = strings.TrimSpace(headerValues[0])
+		v.RequestCharged = types.RequestCharged(headerValues[0])
+	}
+
+	return nil
+}
 func awsRestxml_deserializeOpDocumentListObjectsOutput(v **ListObjectsOutput, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -8488,6 +8542,11 @@ func (m *awsRestxml_deserializeOpListObjectsV2) HandleDeserialize(ctx context.Co
 	output := &ListObjectsV2Output{}
 	out.Result = output
 
+	err = awsRestxml_deserializeOpHttpBindingsListObjectsV2Output(output, response)
+	if err != nil {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("failed to decode response with invalid Http bindings, %w", err)}
+	}
+
 	var buff [1024]byte
 	ringBuffer := smithyio.NewRingBuffer(buff[:])
 	body := io.TeeReader(response.Body, ringBuffer)
@@ -8562,6 +8621,18 @@ func awsRestxml_deserializeOpErrorListObjectsV2(response *smithyhttp.Response, m
 	}
 }
 
+func awsRestxml_deserializeOpHttpBindingsListObjectsV2Output(v *ListObjectsV2Output, response *smithyhttp.Response) error {
+	if v == nil {
+		return fmt.Errorf("unsupported deserialization for nil %T", v)
+	}
+
+	if headerValues := response.Header.Values("x-amz-request-charged"); len(headerValues) != 0 {
+		headerValues[0] = strings.TrimSpace(headerValues[0])
+		v.RequestCharged = types.RequestCharged(headerValues[0])
+	}
+
+	return nil
+}
 func awsRestxml_deserializeOpDocumentListObjectsV2Output(v **ListObjectsV2Output, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -8777,6 +8848,11 @@ func (m *awsRestxml_deserializeOpListObjectVersions) HandleDeserialize(ctx conte
 	output := &ListObjectVersionsOutput{}
 	out.Result = output
 
+	err = awsRestxml_deserializeOpHttpBindingsListObjectVersionsOutput(output, response)
+	if err != nil {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("failed to decode response with invalid Http bindings, %w", err)}
+	}
+
 	var buff [1024]byte
 	ringBuffer := smithyio.NewRingBuffer(buff[:])
 	body := io.TeeReader(response.Body, ringBuffer)
@@ -8848,6 +8924,18 @@ func awsRestxml_deserializeOpErrorListObjectVersions(response *smithyhttp.Respon
 	}
 }
 
+func awsRestxml_deserializeOpHttpBindingsListObjectVersionsOutput(v *ListObjectVersionsOutput, response *smithyhttp.Response) error {
+	if v == nil {
+		return fmt.Errorf("unsupported deserialization for nil %T", v)
+	}
+
+	if headerValues := response.Header.Values("x-amz-request-charged"); len(headerValues) != 0 {
+		headerValues[0] = strings.TrimSpace(headerValues[0])
+		v.RequestCharged = types.RequestCharged(headerValues[0])
+	}
+
+	return nil
+}
 func awsRestxml_deserializeOpDocumentListObjectVersionsOutput(v **ListObjectVersionsOutput, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)

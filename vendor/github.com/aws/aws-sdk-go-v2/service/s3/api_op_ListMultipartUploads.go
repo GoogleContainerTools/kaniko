@@ -112,6 +112,13 @@ type ListMultipartUploadsInput struct {
 	// folder in a file system.)
 	Prefix *string
 
+	// Confirms that the requester knows that they will be charged for the request.
+	// Bucket owners need not specify this parameter in their requests. For information
+	// about downloading objects from Requester Pays buckets, see Downloading Objects
+	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// in the Amazon S3 User Guide.
+	RequestPayer types.RequestPayer
+
 	// Together with key-marker, specifies the multipart upload after which listing
 	// should begin. If key-marker is not specified, the upload-id-marker parameter is
 	// ignored. Otherwise, any multipart uploads for a key equal to the key-marker
@@ -167,6 +174,10 @@ type ListMultipartUploadsOutput struct {
 	// When a prefix is provided in the request, this field contains the specified
 	// prefix. The result contains only keys starting with the specified prefix.
 	Prefix *string
+
+	// If present, indicates that the requester was successfully charged for the
+	// request.
+	RequestCharged types.RequestCharged
 
 	// Upload ID after which listing began.
 	UploadIdMarker *string

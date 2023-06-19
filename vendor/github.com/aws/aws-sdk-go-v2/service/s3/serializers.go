@@ -2065,6 +2065,11 @@ func awsRestxml_serializeOpHttpBindingsGetBucketAccelerateConfigurationInput(v *
 		encoder.SetHeader(locationName).String(*v.ExpectedBucketOwner)
 	}
 
+	if len(v.RequestPayer) > 0 {
+		locationName := "X-Amz-Request-Payer"
+		encoder.SetHeader(locationName).String(string(v.RequestPayer))
+	}
+
 	return nil
 }
 
@@ -4658,6 +4663,11 @@ func awsRestxml_serializeOpHttpBindingsListMultipartUploadsInput(v *ListMultipar
 		encoder.SetQuery("prefix").String(*v.Prefix)
 	}
 
+	if len(v.RequestPayer) > 0 {
+		locationName := "X-Amz-Request-Payer"
+		encoder.SetHeader(locationName).String(string(v.RequestPayer))
+	}
+
 	if v.UploadIdMarker != nil {
 		encoder.SetQuery("upload-id-marker").String(*v.UploadIdMarker)
 	}
@@ -4927,6 +4937,11 @@ func awsRestxml_serializeOpHttpBindingsListObjectVersionsInput(v *ListObjectVers
 
 	if v.Prefix != nil {
 		encoder.SetQuery("prefix").String(*v.Prefix)
+	}
+
+	if len(v.RequestPayer) > 0 {
+		locationName := "X-Amz-Request-Payer"
+		encoder.SetHeader(locationName).String(string(v.RequestPayer))
 	}
 
 	if v.VersionIdMarker != nil {
