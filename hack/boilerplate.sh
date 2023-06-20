@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,16 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
 
 # Ignore these paths in the following tests.
 ignore="vendor\|out"
 BOILERPLATEDIR=./hack/boilerplate
+files=$(python3 ${BOILERPLATEDIR}/boilerplate.py --rootdir . --boilerplate-dir ${BOILERPLATEDIR})
+
 # Grep returns a non-zero exit code if we don't match anything, which is good in this case.
 set +e
-files=$(python ${BOILERPLATEDIR}/boilerplate.py --rootdir . --boilerplate-dir ${BOILERPLATEDIR} | grep -v $ignore)
+relevant_files=$(echo "$files" | grep -v $ignore)
 set -e
-if [[ ! -z ${files} ]]; then
+
+if [[ ! -z ${relevant_files} ]]; then
 	echo "Boilerplate missing in:"
-    echo "${files}"
+    echo "${relevant_files}"
 	exit 1
 fi
