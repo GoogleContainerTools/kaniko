@@ -64,6 +64,8 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 		{"/dev/pts", false},
 		{"/sys", false},
 		{"/etc/mtab", false},
+		{"/.dockerenv", false},
+		{"/.dockerinit", false},
 		{"/tmp/apt-key-gpghome", true},
 	}
 	actualSkiplist := ignorelist
@@ -1491,6 +1493,14 @@ func TestInitIgnoreList(t *testing.T) {
 		},
 		{
 			Path:            "/etc/mtab",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/.dockerenv",
+			PrefixMatchOnly: false,
+		},
+		{
+			Path:            "/.dockerinit",
 			PrefixMatchOnly: false,
 		},
 		{
