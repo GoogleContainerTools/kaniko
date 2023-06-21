@@ -505,9 +505,12 @@ provide a kaniko cache warming image at `gcr.io/kaniko-project/warmer`:
 
 ```shell
 docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --image=<image to cache> --image=<another image to cache>
+docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --dockerfile=<path to dockerfile>
+docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --dockerfile=<path to dockerfile> --build-args version=1.19
 ```
 
-`--image` can be specified for any number of desired images. This command will
+`--image` can be specified for any number of desired images. `--dockerfile` can 
+be specified for the path of dockerfile for cache.These command will combined to 
 cache those images by digest in a local directory named `cache`. Once the cache
 is populated, caching is opted into with the same `--cache=true` flag as above.
 The location of the local cache is provided via the `--cache-dir` flag,

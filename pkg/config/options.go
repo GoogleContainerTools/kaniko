@@ -162,4 +162,6 @@ type WarmerOptions struct {
 	CustomPlatform string
 	Images         multiArg
 	Force          bool
+	DockerfilePath string
+	BuildArgs      multiArg
 }

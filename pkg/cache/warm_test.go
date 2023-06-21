@@ -18,6 +18,8 @@ package cache
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -110,5 +112,138 @@ func Test_Warmer_Warm_in_cache_expired(t *testing.T) {
 
 	if len(tarBuf.Bytes()) != 0 {
 		t.Errorf("expected nothing to be written")
+	}
+}
+
+func TestParseDockerfile_SingleStageDockerfile(t *testing.T) {
+	dockerfile := `FROM alpine:latest
+LABEL maintainer="alexezio"
+`
+	tmpfile, err := ioutil.TempFile("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := &config.WarmerOptions{DockerfilePath: tmpfile.Name()}
+	baseNames, err := ParseDockerfile(opts)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(baseNames) != 1 {
+		t.Fatalf("expected 1 base name, got %d", len(baseNames))
+	}
+	if baseNames[0] != "alpine:latest" {
+		t.Fatalf("expected 'alpine:latest', got '%s'", baseNames[0])
+	}
+}
+
+func TestParseDockerfile_MultiStageDockerfile(t *testing.T) {
+	dockerfile := `FROM golang:1.20 as BUILDER
+LABEL maintainer="alexezio"
+
+FROM alpine:latest as RUNNER
+LABEL maintainer="alexezio"
+`
+	tmpfile, err := ioutil.TempFile("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := &config.WarmerOptions{DockerfilePath: tmpfile.Name()}
+	baseNames, err := ParseDockerfile(opts)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(baseNames) != 2 {
+		t.Fatalf("expected 2 base name, got %d", len(baseNames))
+	}
+	if baseNames[0] != "golang:1.20" {
+		t.Fatalf("expected 'golang:1.20', got '%s'", baseNames[0])
+	}
+
+	if baseNames[1] != "alpine:latest" {
+		t.Fatalf("expected 'alpine:latest', got '%s'", baseNames[0])
+	}
+}
+
+func TestParseDockerfile_ArgsDockerfile(t *testing.T) {
+	dockerfile := `ARG version=latest
+FROM golang:${version}
+`
+	tmpfile, err := ioutil.TempFile("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := &config.WarmerOptions{DockerfilePath: tmpfile.Name(), BuildArgs: []string{"version=1.20"}}
+	baseNames, err := ParseDockerfile(opts)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(baseNames) != 1 {
+		t.Fatalf("expected 1 base name, got %d", len(baseNames))
+	}
+	if baseNames[0] != "golang:1.20" {
+		t.Fatalf("expected 'golang:1.20', got '%s'", baseNames[0])
+	}
+}
+
+func TestParseDockerfile_MissingsDockerfile(t *testing.T) {
+	opts := &config.WarmerOptions{DockerfilePath: "dummy-nowhere"}
+	baseNames, err := ParseDockerfile(opts)
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if len(baseNames) != 0 {
+		t.Fatalf("expected no base names, got %d", len(baseNames))
+	}
+}
+
+func TestParseDockerfile_InvalidsDockerfile(t *testing.T) {
+	dockerfile := "This is a invalid dockerfile"
+	tmpfile, err := ioutil.TempFile("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(dockerfile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+	opts := &config.WarmerOptions{DockerfilePath: tmpfile.Name()}
+	baseNames, err := ParseDockerfile(opts)
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+
+	if len(baseNames) != 0 {
+		t.Fatalf("expected no base names, got %d", len(baseNames))
 	}
 }
