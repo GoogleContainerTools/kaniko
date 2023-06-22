@@ -224,6 +224,14 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	addedPaths := make(map[string]bool)
 
 	for _, path := range whiteouts {
+		skipWhiteout, err := parentPathIncludesNonDirectory(path)
+		if err != nil {
+			return err
+		}
+		if skipWhiteout {
+			continue
+		}
+
 		if err := addParentDirectories(t, addedPaths, path); err != nil {
 			return err
 		}
@@ -245,6 +253,21 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 		addedPaths[path] = true
 	}
 	return nil
+}
+
+// Returns true if a parent of the given path has been replaced with anything other than a directory
+func parentPathIncludesNonDirectory(path string) (bool, error) {
+	for _, parentPath := range util.ParentDirectories(path) {
+		lstat, err := os.Lstat(parentPath)
+		if err != nil {
+			return false, err
+		}
+
+		if !lstat.IsDir() {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) error {

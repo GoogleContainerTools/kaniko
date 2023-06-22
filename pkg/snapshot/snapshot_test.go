@@ -189,6 +189,51 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 	}
 }
 
+func TestSnapshotFSReplaceDirWithLink(t *testing.T) {
+	testDir, snapshotter, cleanup, err := setUpTest(t)
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// replace non-empty directory "bar" with link to file "foo"
+	bar := filepath.Join(testDir, "bar")
+	err = os.RemoveAll(bar)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foo := filepath.Join(testDir, "foo")
+	err = os.Symlink(foo, bar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tarPath, err := snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+
+	actualFiles, err := listFilesInTar(tarPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Expect "bar", which used to be a non-empty directory but now is a symlink. We don't want whiteout files for
+	// the deleted files in bar, because without a parent directory for them the tar cannot be extracted.
+	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")
+	expectedFiles := []string{
+		filepath.Join(testDirWithoutLeadingSlash, "bar"),
+		filepath.Join(testDirWithoutLeadingSlash, "foo"),
+	}
+	for _, path := range util.ParentDirectoriesWithoutLeadingSlash(filepath.Join(testDir, "foo")) {
+		expectedFiles = append(expectedFiles, strings.TrimRight(path, "/")+"/")
+	}
+
+	sort.Strings(expectedFiles)
+	sort.Strings(actualFiles)
+	testutil.CheckErrorAndDeepEqual(t, false, nil, expectedFiles, actualFiles)
+}
+
 func TestSnapshotFiles(t *testing.T) {
 	testDir, snapshotter, cleanup, err := setUpTest(t)
 	testDirWithoutLeadingSlash := strings.TrimLeft(testDir, "/")

@@ -1,0 +1,5 @@
+# Not prefixed Dockerfile_test to exclude it from TestRun()
+FROM busybox
+
+RUN mkdir /a /b /c && echo a > /a/d
+RUN rm -r /a && ln -sf /b /a

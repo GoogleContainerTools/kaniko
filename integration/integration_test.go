@@ -17,10 +17,12 @@ limitations under the License.
 package integration
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -33,6 +35,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
 
@@ -549,6 +552,28 @@ func TestLayers(t *testing.T) {
 	}
 }
 
+func TestReplaceFolderWithFileOrLink(t *testing.T) {
+	dockerfiles := []string{"TestReplaceFolderWithFile", "TestReplaceFolderWithLink"}
+	for _, dockerfile := range dockerfiles {
+		t.Run(dockerfile, func(t *testing.T) {
+			buildImage(t, dockerfile, imageBuilder)
+			kanikoImage := GetKanikoImage(config.imageRepo, dockerfile)
+
+			kanikoFiles, err := getLastLayerFiles(kanikoImage)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Println(kanikoFiles)
+
+			for _, file := range kanikoFiles {
+				if strings.HasPrefix(file, "a/.wh.") {
+					t.Errorf("Last layer should not add whiteout files to deleted directory but found %s", file)
+				}
+			}
+		})
+	}
+}
+
 func buildImage(t *testing.T, dockerfile string, imageBuilder *DockerFileBuilder) {
 	t.Logf("Building image '%v'...", dockerfile)
 
@@ -866,6 +891,40 @@ func getImageDetails(image string) (*imageDetails, error) {
 		numLayers: len(layers),
 		digest:    digest.Hex,
 	}, nil
+}
+
+func getLastLayerFiles(image string) ([]string, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+	}
+
+	imgRef, err := remote.Image(ref)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get reference to image %s from daemon: %w", image, err)
+	}
+	layers, err := imgRef.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("Error getting layers for image %s: %w", image, err)
+	}
+	readCloser, err := layers[len(layers)-1].Uncompressed()
+	if err != nil {
+		return nil, err
+	}
+
+	tr := tar.NewReader(readCloser)
+	var files []string
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, hdr.Name)
+	}
+	return files, nil
 }
 
 func logBenchmarks(benchmark string) error {
