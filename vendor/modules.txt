@@ -739,7 +739,7 @@ github.com/opencontainers/runtime-spec/specs-go
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalkdir
-# github.com/otiai10/copy v1.11.0
+# github.com/otiai10/copy v1.12.0
 ## explicit; go 1.18
 github.com/otiai10/copy
 # github.com/pelletier/go-toml v1.9.5

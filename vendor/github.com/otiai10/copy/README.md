@@ -77,6 +77,15 @@ type Options struct {
 	// If zero, the internal default buffer of 32KB is used.
 	// See https://golang.org/pkg/io/#CopyBuffer for more information.
 	CopyBufferSize uint
+
+	// If you want to add some limitation on reading src file,
+	// you can wrap the src and provide new reader,
+	// such as `RateLimitReader` in the test case.
+	WrapReader func(src io.Reader) io.Reader
+
+	// If given, copy.Copy refers to this fs.FS instead of the OS filesystem.
+	// e.g., You can use embed.FS to copy files from embedded filesystem.
+	FS fs.FS
 }
 ```
 
