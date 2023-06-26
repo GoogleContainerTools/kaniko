@@ -2,6 +2,7 @@ package copy
 
 import (
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -17,6 +18,13 @@ type timespec struct {
 // Copy copies src to dest, doesn't matter if src is a directory or a file.
 func Copy(src, dest string, opts ...Options) error {
 	opt := assureOptions(src, dest, opts...)
+	if opt.FS != nil {
+		info, err := fs.Stat(opt.FS, src)
+		if err != nil {
+			return onError(src, dest, err, opt)
+		}
+		return switchboard(src, dest, info, opt)
+	}
 	info, err := os.Lstat(src)
 	if err != nil {
 		return onError(src, dest, err, opt)
@@ -65,14 +73,20 @@ func copyNextOrSkip(src, dest string, info os.FileInfo, opt Options) error {
 // with considering existence of parent directory
 // and file permission.
 func fcopy(src, dest string, info os.FileInfo, opt Options) (err error) {
-	s, err := os.Open(src)
+
+	var readcloser io.ReadCloser
+	if opt.FS != nil {
+		readcloser, err = opt.FS.Open(src)
+	} else {
+		readcloser, err = os.Open(src)
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return
 	}
-	defer fclose(s, &err)
+	defer fclose(readcloser, &err)
 
 	if err = os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
 		return
@@ -92,10 +106,10 @@ func fcopy(src, dest string, info os.FileInfo, opt Options) (err error) {
 
 	var buf []byte = nil
 	var w io.Writer = f
-	var r io.Reader = s
+	var r io.Reader = readcloser
 
 	if opt.WrapReader != nil {
-		r = opt.WrapReader(s)
+		r = opt.WrapReader(r)
 	}
 
 	if opt.CopyBufferSize != 0 {
@@ -145,7 +159,23 @@ func dcopy(srcdir, destdir string, info os.FileInfo, opt Options) (err error) {
 	}
 	defer chmodfunc(&err)
 
-	contents, err := ioutil.ReadDir(srcdir)
+	var contents []os.FileInfo
+	if opt.FS != nil {
+		entries, err := fs.ReadDir(opt.FS, srcdir)
+		if err != nil {
+			return err
+		}
+		for _, e := range entries {
+			info, err := e.Info()
+			if err != nil {
+				return err
+			}
+			contents = append(contents, info)
+		}
+	} else {
+		contents, err = ioutil.ReadDir(srcdir)
+	}
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -237,7 +267,7 @@ func lcopy(src, dest string) error {
 // fclose ANYHOW closes file,
 // with asiging error raised during Close,
 // BUT respecting the error already reported.
-func fclose(f *os.File, reported *error) {
+func fclose(f io.Closer, reported *error) {
 	if err := f.Close(); *reported == nil {
 		*reported = err
 	}

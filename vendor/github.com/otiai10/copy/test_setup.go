@@ -16,4 +16,5 @@ func setup(m *testing.M) {
 	os.Chmod("test/data/case07/dir_0555", 0o555)
 	os.Chmod("test/data/case07/file_0444", 0o444)
 	syscall.Mkfifo("test/data/case11/foo/bar", 0o555)
+	Copy("test/data/case18/assets", "test/data/case18/assets.backup")
 }
