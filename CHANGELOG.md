@@ -1,3 +1,33 @@
+# v1.12.1 Release 2023-06-29
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.12.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.12.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.12.1-slim
+```
+
+The warmer images are available at:
+```
+gcr.io/kaniko-project/warmer:v1.12.1
+gcr.io/kaniko-project/warmer:latest
+```
+
+Fixes:
+* fix: resolve issue where warmer CLI always validated optional arg -> breakage for majority of users [#2603](https://github.com/GoogleContainerTools/kaniko/pull/2603)
+
+
 # v1.12.0 Release 2023-06-28
 
 The executor images in this release are:
