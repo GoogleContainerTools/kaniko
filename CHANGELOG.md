@@ -1,3 +1,62 @@
+# v1.12.0 Release 2023-06-28
+
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.12.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.12.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.12.0-slim
+```
+
+* chore: add debug line to RedoHasher [#2591](https://github.com/GoogleContainerTools/kaniko/pull/2591)
+* chore(deps): bump docker/build-push-action from 4.0.0 to 4.1.0 [#2557](https://github.com/GoogleContainerTools/kaniko/pull/2557)
+* chore(deps): bump docker/build-push-action from 4.1.0 to 4.1.1 [#2580](https://github.com/GoogleContainerTools/kaniko/pull/2580)
+* chore(deps): bump docker/setup-buildx-action from 2.5.0 to 2.6.0 [#2555](https://github.com/GoogleContainerTools/kaniko/pull/2555)
+* chore(deps): bump docker/setup-buildx-action from 2.6.0 to 2.7.0 [#2579](https://github.com/GoogleContainerTools/kaniko/pull/2579)
+* chore(deps): bump docker/setup-qemu-action from 2.1.0 to 2.2.0 [#2556](https://github.com/GoogleContainerTools/kaniko/pull/2556)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.18.25 to 1.18.27 [#2581](https://github.com/GoogleContainerTools/kaniko/pull/2581)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.67 to 1.11.70 [#2597](https://github.com/GoogleContainerTools/kaniko/pull/2597)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.33.1 to 1.35.0 [#2582](https://github.com/GoogleContainerTools/kaniko/pull/2582)
+* chore(deps): bump github.com/otiai10/copy from 1.11.0 to 1.12.0 [#2598](https://github.com/GoogleContainerTools/kaniko/pull/2598)
+* chore(deps): bump golang.org/x/oauth2 from 0.8.0 to 0.9.0 [#2578](https://github.com/GoogleContainerTools/kaniko/pull/2578)
+* chore(deps): bump golang.org/x/sync from 0.2.0 to 0.3.0 [#2573](https://github.com/GoogleContainerTools/kaniko/pull/2573)
+* chore(deps): bump golang.org/x/sys from 0.8.0 to 0.9.0 [#2564](https://github.com/GoogleContainerTools/kaniko/pull/2564)
+* chore(deps): bump google.golang.org/api from 0.125.0 to 0
+* chore(deps): bump google.golang.org/api from 0.126.0 to 0.127.0 [#2565](https://github.com/GoogleContainerTools/kaniko/pull/2565)
+* chore(deps): bump google.golang.org/api from 0.127.0 to 0.128.0 [#2596](https://github.com/GoogleContainerTools/kaniko/pull/2596)
+* chore(deps): bump sigstore/cosign-installer from 3.0.5 to 3.1.0 [#2595](https://github.com/GoogleContainerTools/kaniko/pull/2595)
+* Don't write whiteout files to directories that were replaced with files or links [#2590](https://github.com/GoogleContainerTools/kaniko/pull/2590)
+* feat: cache dockerfile images through warmer [#2499](https://github.com/GoogleContainerTools/kaniko/pull/2499)
+* Fix fs_util tests failing on systems with /tmp mountpoint [#2583](https://github.com/GoogleContainerTools/kaniko/pull/2583)
+* Fix multistage caching with COPY --from [#2559](https://github.com/GoogleContainerTools/kaniko/pull/2559)
+* fix: hack/boilerplate.sh: fix error handling and use python3 [#2587](https://github.com/GoogleContainerTools/kaniko/pull/2587)
+* fix: hack/install_golint.sh: allow installation on linux/arm64 [#2585](https://github.com/GoogleContainerTools/kaniko/pull/2585)
+* fix: install tools using go.mod for versioning [#2562](https://github.com/GoogleContainerTools/kaniko/pull/2562)
+* fix: Refactors IsSrcRemoteFileURL to only validate the URL is valid [#2563](https://github.com/GoogleContainerTools/kaniko/pull/2563)
+* fix: update cache-ttl help text to be correct regarding unit of duration [#2568](https://github.com/GoogleContainerTools/kaniko/pull/2568)
+* fix: valdiateFlags typo fixed [#2554](https://github.com/GoogleContainerTools/kaniko/pull/2554)
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- alexezio
+- Andreas Fleig
+- Angus Williams
+- dependabot[bot]
+- Kraev Sergei
+- Liam Newman
+- Zigelboim Misha
+
+
 # v1.11.0 Release 2023-06-08
 
 The executor images in this release are:
