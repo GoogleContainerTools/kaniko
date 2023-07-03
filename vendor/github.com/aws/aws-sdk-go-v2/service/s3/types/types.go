@@ -1806,10 +1806,10 @@ type LoggingEnabled struct {
 // A metadata key-value pair to store with an object.
 type MetadataEntry struct {
 
-	// Name of the Object.
+	// Name of the object.
 	Name *string
 
-	// Value of the Object.
+	// Value of the object.
 	Value *string
 
 	noSmithyDocumentSerde
@@ -2070,6 +2070,13 @@ type Object struct {
 	// The owner of the object
 	Owner *Owner
 
+	// Specifies the restoration status of an object. Objects in certain storage
+	// classes must be restored before they can be retrieved. For more information
+	// about these storage classes and how to work with archived objects, see Working
+	// with archived objects (https://docs.aws.amazon.com/AmazonS3/latest/userguide/archived-objects.html)
+	// in the Amazon S3 User Guide.
+	RestoreStatus *RestoreStatus
+
 	// Size in bytes of the object
 	Size int64
 
@@ -2207,6 +2214,13 @@ type ObjectVersion struct {
 
 	// Specifies the owner of the object.
 	Owner *Owner
+
+	// Specifies the restoration status of an object. Objects in certain storage
+	// classes must be restored before they can be retrieved. For more information
+	// about these storage classes and how to work with archived objects, see Working
+	// with archived objects (https://docs.aws.amazon.com/AmazonS3/latest/userguide/archived-objects.html)
+	// in the Amazon S3 User Guide.
+	RestoreStatus *RestoreStatus
 
 	// Size in bytes of the object.
 	Size int64
@@ -2766,6 +2780,31 @@ type RestoreRequest struct {
 
 	// Type of restore request.
 	Type RestoreRequestType
+
+	noSmithyDocumentSerde
+}
+
+// Specifies the restoration status of an object. Objects in certain storage
+// classes must be restored before they can be retrieved. For more information
+// about these storage classes and how to work with archived objects, see Working
+// with archived objects (https://docs.aws.amazon.com/AmazonS3/latest/userguide/archived-objects.html)
+// in the Amazon S3 User Guide.
+type RestoreStatus struct {
+
+	// Specifies whether the object is currently being restored. If the object
+	// restoration is in progress, the header returns the value TRUE . For example:
+	// x-amz-optional-object-attributes: IsRestoreInProgress="true" If the object
+	// restoration has completed, the header returns the value FALSE . For example:
+	// x-amz-optional-object-attributes: IsRestoreInProgress="false",
+	// RestoreExpiryDate="2012-12-21T00:00:00.000Z" If the object hasn't been restored,
+	// there is no header response.
+	IsRestoreInProgress bool
+
+	// Indicates when the restored copy will expire. This value is populated only if
+	// the object has already been restored. For example:
+	// x-amz-optional-object-attributes: IsRestoreInProgress="false",
+	// RestoreExpiryDate="2012-12-21T00:00:00.000Z"
+	RestoreExpiryDate *time.Time
 
 	noSmithyDocumentSerde
 }
