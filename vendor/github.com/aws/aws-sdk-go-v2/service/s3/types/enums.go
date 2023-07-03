@@ -848,6 +848,22 @@ func (ObjectVersionStorageClass) Values() []ObjectVersionStorageClass {
 	}
 }
 
+type OptionalObjectAttributes string
+
+// Enum values for OptionalObjectAttributes
+const (
+	OptionalObjectAttributesRestoreStatus OptionalObjectAttributes = "RestoreStatus"
+)
+
+// Values returns all known values for OptionalObjectAttributes. Note that this
+// can be expanded in the future, and so it is only as up to date as the client.
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (OptionalObjectAttributes) Values() []OptionalObjectAttributes {
+	return []OptionalObjectAttributes{
+		"RestoreStatus",
+	}
+}
+
 type OwnerOverride string
 
 // Enum values for OwnerOverride

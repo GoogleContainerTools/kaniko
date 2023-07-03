@@ -18449,6 +18449,12 @@ func awsRestxml_deserializeDocumentObject(v **types.Object, decoder smithyxml.No
 				return err
 			}
 
+		case strings.EqualFold("RestoreStatus", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsRestxml_deserializeDocumentRestoreStatus(&sv.RestoreStatus, nodeDecoder); err != nil {
+				return err
+			}
+
 		case strings.EqualFold("Size", t.Name.Local):
 			val, err := decoder.Value()
 			if err != nil {
@@ -19057,6 +19063,12 @@ func awsRestxml_deserializeDocumentObjectVersion(v **types.ObjectVersion, decode
 		case strings.EqualFold("Owner", t.Name.Local):
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsRestxml_deserializeDocumentOwner(&sv.Owner, nodeDecoder); err != nil {
+				return err
+			}
+
+		case strings.EqualFold("RestoreStatus", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsRestxml_deserializeDocumentRestoreStatus(&sv.RestoreStatus, nodeDecoder); err != nil {
 				return err
 			}
 
@@ -20663,6 +20675,75 @@ func awsRestxml_deserializeDocumentReplicationTimeValue(v **types.ReplicationTim
 					return err
 				}
 				sv.Minutes = int32(i64)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsRestxml_deserializeDocumentRestoreStatus(v **types.RestoreStatus, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.RestoreStatus
+	if *v == nil {
+		sv = &types.RestoreStatus{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("IsRestoreInProgress", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv, err := strconv.ParseBool(string(val))
+				if err != nil {
+					return fmt.Errorf("expected IsRestoreInProgress to be of type *bool, got %T instead", val)
+				}
+				sv.IsRestoreInProgress = xtv
+			}
+
+		case strings.EqualFold("RestoreExpiryDate", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				t, err := smithytime.ParseDateTime(xtv)
+				if err != nil {
+					return err
+				}
+				sv.RestoreExpiryDate = ptr.Time(t)
 			}
 
 		default:
