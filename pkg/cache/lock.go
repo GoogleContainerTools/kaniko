@@ -47,17 +47,16 @@ func FLock(lockPath string) (filelock *FileLock) {
 	lockfile, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_EXCL|os.O_CREATE, 0666)
 	if err != nil {
 		return nil
-	} else {
-		fmt.Fprint(lockfile, strconv.FormatInt(time.Now().Unix(), 10))
-		defer lockfile.Close()
-		lock := &FileLock{
-			stopBeat:  make(chan bool),
-			lockPath:  lockPath,
-			heartbeat: defaultHeartbeat,
-		}
-		go lock.keepAlive()
-		return lock
 	}
+	fmt.Fprint(lockfile, strconv.FormatInt(time.Now().Unix(), 10))
+	defer lockfile.Close()
+	lock := &FileLock{
+		stopBeat:  make(chan bool),
+		lockPath:  lockPath,
+		heartbeat: defaultHeartbeat,
+	}
+	go lock.keepAlive()
+	return lock
 }
 
 const expireDura = time.Second * 5
