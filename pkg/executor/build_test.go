@@ -905,7 +905,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
@@ -935,7 +935,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
@@ -968,7 +968,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			filePath := filepath.Join(dir, file)
 			ch := NewCompositeCache("", "meow")
 
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
@@ -1014,7 +1014,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			tarContent := generateTar(t, dir, filename)
 
 			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
-			ch.AddPath(filepath, util.FileContext{})
+			ch.AddPath(filepath, util.FileContext{}, false)
 
 			hash, err := ch.Hash()
 			if err != nil {
@@ -1081,7 +1081,7 @@ func Test_stageBuilder_build(t *testing.T) {
 			destDir := t.TempDir()
 			filePath := filepath.Join(dir, filename)
 			ch := NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 
 			hash, err := ch.Hash()
 			if err != nil {
@@ -1147,7 +1147,7 @@ COPY %s foo.txt
 			}
 
 			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 
 			hash2, err := ch.Hash()
 			if err != nil {
@@ -1155,7 +1155,7 @@ COPY %s foo.txt
 			}
 			ch = NewCompositeCache("", fmt.Sprintf("COPY %s foo.txt", filename))
 			ch.AddKey(fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 
 			image := fakeImage{
 				ImageLayers: []v1.Layer{
@@ -1215,7 +1215,7 @@ COPY %s bar.txt
 			filePath := filepath.Join(dir, filename)
 
 			ch := NewCompositeCache("", fmt.Sprintf("COPY %s bar.txt", filename))
-			ch.AddPath(filePath, util.FileContext{})
+			ch.AddPath(filePath, util.FileContext{}, false)
 
 			// copy hash
 			_, err := ch.Hash()

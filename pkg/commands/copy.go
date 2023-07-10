@@ -152,6 +152,10 @@ func (c *CopyCommand) ShouldCacheOutput() bool {
 	return c.shdCache
 }
 
+func (c *CopyCommand) IsConsiderExcludedFilesInCache() bool {
+	return c.cmd.From != ""
+}
+
 // CacheCommand returns true since this command should be cached
 func (c *CopyCommand) CacheCommand(img v1.Image) DockerCommand {
 	return &CachingCopyCommand{
