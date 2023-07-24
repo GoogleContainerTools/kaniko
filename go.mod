@@ -19,7 +19,7 @@ require (
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/docker/docker v23.0.5+incompatible
 	github.com/go-git/go-billy/v5 v5.4.1
-	github.com/go-git/go-git/v5 v5.7.0
+	github.com/go-git/go-git/v5 v5.8.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-containerregistry v0.15.2

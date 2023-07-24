@@ -582,7 +582,9 @@ func (d *DotGit) hasIncomingObjects() bool {
 		directoryContents, err := d.fs.ReadDir(objectsPath)
 		if err == nil {
 			for _, file := range directoryContents {
-				if strings.HasPrefix(file.Name(), "incoming-") && file.IsDir() {
+				if file.IsDir() && (strings.HasPrefix(file.Name(), "tmp_objdir-incoming-") ||
+					// Before Git 2.35 incoming commits directory had another prefix
+					strings.HasPrefix(file.Name(), "incoming-")) {
 					d.incomingDirName = file.Name()
 				}
 			}

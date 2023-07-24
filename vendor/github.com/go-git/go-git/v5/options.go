@@ -62,6 +62,9 @@ type CloneOptions struct {
 	// within, using their default settings. This option is ignored if the
 	// cloned repository does not have a worktree.
 	RecurseSubmodules SubmoduleRescursivity
+	// ShallowSubmodules limit cloning submodules to the 1 level of depth.
+	// It matches the git command --shallow-submodules.
+	ShallowSubmodules bool
 	// Progress is where the human readable information sent by the server is
 	// stored, if nil nothing is stored and the capability (if supported)
 	// no-progress, is sent to the server to avoid send this information.
