@@ -73,6 +73,17 @@ func advertisedReferences(ctx context.Context, s *session, serviceName string) (
 		return nil, err
 	}
 
+	// Git 2.41+ returns a zero-id plus capabilities when an empty
+	// repository is being cloned. This skips the existing logic within
+	// advrefs_decode.decodeFirstHash, which expects a flush-pkt instead.
+	//
+	// This logic aligns with plumbing/transport/internal/common/common.go.
+	if ar.IsEmpty() &&
+		// Empty repositories are valid for git-receive-pack.
+		transport.ReceivePackServiceName != serviceName {
+		return nil, transport.ErrEmptyRemoteRepository
+	}
+
 	transport.FilterUnsupportedCapabilities(ar.Capabilities)
 	s.advRefs = ar
 

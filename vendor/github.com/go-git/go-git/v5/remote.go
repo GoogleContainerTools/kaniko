@@ -224,11 +224,13 @@ func (r *Remote) PushContext(ctx context.Context, o *PushOptions) (err error) {
 		return err
 	}
 
-	if err = rs.Error(); err != nil {
-		return err
+	if rs != nil {
+		if err = rs.Error(); err != nil {
+			return err
+		}
 	}
 
-	return r.updateRemoteReferenceStorage(req, rs)
+	return r.updateRemoteReferenceStorage(req)
 }
 
 func (r *Remote) useRefDeltas(ar *packp.AdvRefs) bool {
@@ -347,7 +349,6 @@ func (r *Remote) newReferenceUpdateRequest(
 
 func (r *Remote) updateRemoteReferenceStorage(
 	req *packp.ReferenceUpdateRequest,
-	result *packp.ReportStatus,
 ) error {
 
 	for _, spec := range r.c.Fetch {
@@ -445,7 +446,7 @@ func (r *Remote) fetch(ctx context.Context, o *FetchOptions) (sto storer.Referen
 		return nil, err
 	}
 
-	refs, err := calculateRefs(o.RefSpecs, remoteRefs, o.Tags)
+	refs, specToRefs, err := calculateRefs(o.RefSpecs, remoteRefs, o.Tags)
 	if err != nil {
 		return nil, err
 	}
@@ -457,9 +458,9 @@ func (r *Remote) fetch(ctx context.Context, o *FetchOptions) (sto storer.Referen
 		}
 	}
 
-	req.Wants, err = getWants(r.s, refs)
+	req.Wants, err = getWants(r.s, refs, o.Depth)
 	if len(req.Wants) > 0 {
-		req.Haves, err = getHaves(localRefs, remoteRefs, r.s)
+		req.Haves, err = getHaves(localRefs, remoteRefs, r.s, o.Depth)
 		if err != nil {
 			return nil, err
 		}
@@ -469,7 +470,7 @@ func (r *Remote) fetch(ctx context.Context, o *FetchOptions) (sto storer.Referen
 		}
 	}
 
-	updated, err := r.updateLocalReferenceStorage(o.RefSpecs, refs, remoteRefs, o.Tags, o.Force)
+	updated, err := r.updateLocalReferenceStorage(o.RefSpecs, refs, remoteRefs, specToRefs, o.Tags, o.Force)
 	if err != nil {
 		return nil, err
 	}
@@ -837,6 +838,7 @@ func getHavesFromRef(
 	remoteRefs map[plumbing.Hash]bool,
 	s storage.Storer,
 	haves map[plumbing.Hash]bool,
+	depth int,
 ) error {
 	h := ref.Hash()
 	if haves[h] {
@@ -862,7 +864,13 @@ func getHavesFromRef(
 	// commits from the history of each ref.
 	walker := object.NewCommitPreorderIter(commit, haves, nil)
 	toVisit := maxHavesToVisitPerRef
-	return walker.ForEach(func(c *object.Commit) error {
+	// But only need up to the requested depth
+	if depth > 0 && depth < maxHavesToVisitPerRef {
+		toVisit = depth
+	}
+	// It is safe to ignore any error here as we are just trying to find the references that we already have
+	// An example of a legitimate failure is we have a shallow clone and don't have the previous commit(s)
+	_ = walker.ForEach(func(c *object.Commit) error {
 		haves[c.Hash] = true
 		toVisit--
 		// If toVisit starts out at 0 (indicating there is no
@@ -873,12 +881,15 @@ func getHavesFromRef(
 		}
 		return nil
 	})
+
+	return nil
 }
 
 func getHaves(
 	localRefs []*plumbing.Reference,
 	remoteRefStorer storer.ReferenceStorer,
 	s storage.Storer,
+	depth int,
 ) ([]plumbing.Hash, error) {
 	haves := map[plumbing.Hash]bool{}
 
@@ -899,7 +910,7 @@ func getHaves(
 			continue
 		}
 
-		err = getHavesFromRef(ref, remoteRefs, s, haves)
+		err = getHavesFromRef(ref, remoteRefs, s, haves, depth)
 		if err != nil {
 			return nil, err
 		}
@@ -919,42 +930,41 @@ func calculateRefs(
 	spec []config.RefSpec,
 	remoteRefs storer.ReferenceStorer,
 	tagMode TagMode,
-) (memory.ReferenceStorage, error) {
+) (memory.ReferenceStorage, [][]*plumbing.Reference, error) {
 	if tagMode == AllTags {
 		spec = append(spec, refspecAllTags)
 	}
 
 	refs := make(memory.ReferenceStorage)
-	for _, s := range spec {
-		if err := doCalculateRefs(s, remoteRefs, refs); err != nil {
-			return nil, err
+	// list of references matched for each spec
+	specToRefs := make([][]*plumbing.Reference, len(spec))
+	for i := range spec {
+		var err error
+		specToRefs[i], err = doCalculateRefs(spec[i], remoteRefs, refs)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
-	return refs, nil
+	return refs, specToRefs, nil
 }
 
 func doCalculateRefs(
 	s config.RefSpec,
 	remoteRefs storer.ReferenceStorer,
 	refs memory.ReferenceStorage,
-) error {
-	iter, err := remoteRefs.IterReferences()
-	if err != nil {
-		return err
-	}
+) ([]*plumbing.Reference, error) {
+	var refList []*plumbing.Reference
 
 	if s.IsExactSHA1() {
 		ref := plumbing.NewHashReference(s.Dst(""), plumbing.NewHash(s.Src()))
-		return refs.SetReference(ref)
+
+		refList = append(refList, ref)
+		return refList, refs.SetReference(ref)
 	}
 
 	var matched bool
-	err = iter.ForEach(func(ref *plumbing.Reference) error {
-		if !s.Match(ref.Name()) {
-			return nil
-		}
-
+	onMatched := func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.SymbolicReference {
 			target, err := storer.ResolveReference(remoteRefs, ref.Name())
 			if err != nil {
@@ -969,28 +979,47 @@ func doCalculateRefs(
 		}
 
 		matched = true
-		if err := refs.SetReference(ref); err != nil {
-			return err
-		}
-
-		if !s.IsWildcard() {
-			return storer.ErrStop
-		}
-
-		return nil
-	})
-
-	if !matched && !s.IsWildcard() {
-		return NoMatchingRefSpecError{refSpec: s}
+		refList = append(refList, ref)
+		return refs.SetReference(ref)
 	}
 
-	return err
+	var ret error
+	if s.IsWildcard() {
+		iter, err := remoteRefs.IterReferences()
+		if err != nil {
+			return nil, err
+		}
+		ret = iter.ForEach(func(ref *plumbing.Reference) error {
+			if !s.Match(ref.Name()) {
+				return nil
+			}
+
+			return onMatched(ref)
+		})
+	} else {
+		var resolvedRef *plumbing.Reference
+		src := s.Src()
+		resolvedRef, ret = expand_ref(remoteRefs, plumbing.ReferenceName(src))
+		if ret == nil {
+			ret = onMatched(resolvedRef)
+		}
+	}
+
+	if !matched && !s.IsWildcard() {
+		return nil, NoMatchingRefSpecError{refSpec: s}
+	}
+
+	return refList, ret
 }
 
-func getWants(localStorer storage.Storer, refs memory.ReferenceStorage) ([]plumbing.Hash, error) {
+func getWants(localStorer storage.Storer, refs memory.ReferenceStorage, depth int) ([]plumbing.Hash, error) {
+	// If depth is anything other than 1 and the repo has shallow commits then just because we have the commit
+	// at the reference doesn't mean that we don't still need to fetch the parents
 	shallow := false
-	if s, _ := localStorer.Shallow(); len(s) > 0 {
-		shallow = true
+	if depth != 1 {
+		if s, _ := localStorer.Shallow(); len(s) > 0 {
+			shallow = true
+		}
 	}
 
 	wants := map[plumbing.Hash]bool{}
@@ -1144,27 +1173,28 @@ func buildSidebandIfSupported(l *capability.List, reader io.Reader, p sideband.P
 func (r *Remote) updateLocalReferenceStorage(
 	specs []config.RefSpec,
 	fetchedRefs, remoteRefs memory.ReferenceStorage,
+	specToRefs [][]*plumbing.Reference,
 	tagMode TagMode,
 	force bool,
 ) (updated bool, err error) {
 	isWildcard := true
 	forceNeeded := false
 
-	for _, spec := range specs {
+	for i, spec := range specs {
 		if !spec.IsWildcard() {
 			isWildcard = false
 		}
 
-		for _, ref := range fetchedRefs {
-			if !spec.Match(ref.Name()) && !spec.IsExactSHA1() {
-				continue
-			}
-
+		for _, ref := range specToRefs[i] {
 			if ref.Type() != plumbing.HashReference {
 				continue
 			}
 
 			localName := spec.Dst(ref.Name())
+			// If localName doesn't start with "refs/" then treat as a branch.
+			if !strings.HasPrefix(localName.String(), "refs/") {
+				localName = plumbing.NewBranchReferenceName(localName.String())
+			}
 			old, _ := storer.ResolveReference(r.s, localName)
 			new := plumbing.NewHashReference(localName, ref.Hash())
 
