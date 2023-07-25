@@ -17,6 +17,7 @@ limitations under the License.
 package remote
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -31,7 +32,8 @@ import (
 )
 
 var (
-	manifestCache = make(map[string]v1.Image)
+	manifestCache   = make(map[string]v1.Image)
+	remoteImageFunc = remote.Image
 )
 
 // RetrieveRemoteImage retrieves the manifest for the specified image from the specified registry
@@ -68,7 +70,7 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 			ref := setNewRegistry(ref, newReg)
 
 			logrus.Infof("Retrieving image %s from registry mirror %s", ref, registryMirror)
-			remoteImage, err := remote.Image(ref, remoteOptions(registryMirror, opts, customPlatform)...)
+			remoteImage, err := remoteImageFunc(ref, remoteOptions(registryMirror, opts, customPlatform)...)
 			if err != nil {
 				logrus.Warnf("Failed to retrieve image %s from registry mirror %s: %s. Will try with the next mirror, or fallback to the default registry.", ref, registryMirror, err)
 				continue
@@ -77,6 +79,10 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 			manifestCache[image] = remoteImage
 
 			return remoteImage, nil
+		}
+
+		if len(opts.RegistryMirrors) > 0 && opts.SkipDefaultRegistryFallback {
+			return nil, errors.New("image not found on any configured mirror(s)")
 		}
 	}
 
@@ -91,7 +97,7 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 
 	logrus.Infof("Retrieving image %s from registry %s", ref, registryName)
 
-	remoteImage, err := remote.Image(ref, remoteOptions(registryName, opts, customPlatform)...)
+	remoteImage, err := remoteImageFunc(ref, remoteOptions(registryName, opts, customPlatform)...)
 
 	if remoteImage != nil {
 		manifestCache[image] = remoteImage

@@ -395,6 +395,29 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	checkContainerDiffOutput(t, diff, expected)
 }
 
+func TestBuildSkipFallback(t *testing.T) {
+	repo := getGitRepo(false)
+	dockerfile := fmt.Sprintf("%s/%s/Dockerfile_registry_mirror", integrationPath, dockerfilesPath)
+
+	// Build with kaniko
+	kanikoImage := GetKanikoImage(config.imageRepo, "Dockerfile_registry_mirror")
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
+		"-f", dockerfile,
+		"-d", kanikoImage,
+		"--registry-mirror", "doesnotexist.example.com",
+		"--skip-default-registry-fallback",
+		"-c", fmt.Sprintf("git://%s", repo))
+
+	kanikoCmd := exec.Command("docker", dockerRunFlags...)
+
+	_, err := RunCommandWithoutTest(kanikoCmd)
+	if err == nil {
+		t.Errorf("Build should fail after using skip-default-registry-fallback and registry-mirror fail to pull")
+	}
+}
+
 // TestKanikoDir tests that a build that sets --kaniko-dir produces the same output as the equivalent docker build.
 func TestKanikoDir(t *testing.T) {
 	repo := getGitRepo(false)
