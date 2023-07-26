@@ -923,7 +923,7 @@ times for multiple registries.
 #### Flag `--label`
 
 Set this flag as `--label key=value` to set some metadata to the final image.
-This is equivalent as using the `LABEL` within the Dockerfile.
+This is equivalent to using the `LABEL` within the Dockerfile.
 
 #### Flag `--log-format`
 
@@ -1038,7 +1038,7 @@ kaniko will snapshot the filesystem.
 
 - If `--snapshot-mode=redo` is set, the file mtime, size, mode, owner uid and gid
   will be considered when snapshotting. This may be up to 50% faster than
-  "full", particularly if your project has a large number files.
+  "full", particularly if your project has a large number of files.
 
 - If `--snapshot-mode=time` is set, only file mtime will be considered when
   snapshotting (see [limitations related to mtime](#mtime-and-snapshotting)).
@@ -1229,7 +1229,7 @@ gitlab-ci.yml:
 # define a job for creating and pushing a merged manifest
 merge-manifests:
   stage: container-build
-  # all containers must be build before merging them
+  # all containers must be built before merging them
   # alternatively the job may be configured to run in a later stage
   needs:
     - container-build
@@ -1259,7 +1259,7 @@ merge-manifests:
 
 For simplicity's sake we deliberately refrained from using versioned
 tagged images (all builds will be tagged as "latest") in the
-previous examples, as we feel like this adds to much platform and workflow
+previous examples, as we feel like this adds too much platform and workflow
 specific code.
 
 Nethertheless, for anyone interested in how we handle (dynamic) versioning in
