@@ -925,7 +925,7 @@ times for multiple registries.
 #### Flag `--label`
 
 Set this flag as `--label key=value` to set some metadata to the final image.
-This is equivalent to using the `LABEL` within the Dockerfile.
+This is equivalent to using `LABEL` within the Dockerfile.
 
 #### Flag `--log-format`
 
@@ -1275,8 +1275,8 @@ merge-manifests:
 
 For simplicity's sake we deliberately refrained from using versioned
 tagged images (all builds will be tagged as "latest") in the
-previous examples, as we feel like this adds too much platform and workflow
-specific code.
+previous examples, as we feel like this adds too much platform- and 
+workflow-specific code.
 
 Nethertheless, for anyone interested in how we handle (dynamic) versioning in
 GitLab, here is a short rundown:
