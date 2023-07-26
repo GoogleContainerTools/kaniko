@@ -17,11 +17,13 @@ limitations under the License.
 package remote
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
@@ -106,5 +108,35 @@ func Test_RetrieveRemoteImage_manifestCache(t *testing.T) {
 
 	if image, err := RetrieveRemoteImage(nonExistingImageName, config.RegistryOptions{}, ""); image == nil || err != nil {
 		t.Fatal("Expected call to succeed because there is a manifest for this image in the cache.")
+	}
+}
+
+func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
+	image := "debian"
+	registryMirror := "some-registry"
+
+	opts := config.RegistryOptions{
+		RegistryMirrors:             []string{registryMirror},
+		SkipDefaultRegistryFallback: false,
+	}
+
+	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		if ref.Context().Registry.Name() == registryMirror {
+			return nil, errors.New("no image found")
+		}
+
+		return &mockImage{}, nil
+	}
+
+	if _, err := RetrieveRemoteImage(image, opts, ""); err != nil {
+		t.Fatal("Expected call to succeed because fallback to default registry")
+	}
+
+	opts.SkipDefaultRegistryFallback = true
+	//clean cached image
+	manifestCache = make(map[string]v1.Image)
+
+	if _, err := RetrieveRemoteImage(image, opts, ""); err == nil {
+		t.Fatal("Expected call to fail because fallback to default registry is skipped")
 	}
 }

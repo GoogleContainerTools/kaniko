@@ -96,6 +96,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--registry-certificate`](#flag---registry-certificate)
       - [Flag `--registry-client-cert`](#flag---registry-client-cert)
       - [Flag `--registry-mirror`](#flag---registry-mirror)
+      - [Flag `--skip-default-registry-fallback`](#flag---skip-default-registry-fallback)
       - [Flag `--reproducible`](#flag---reproducible)
       - [Flag `--single-snapshot`](#flag---single-snapshot)
       - [Flag `--skip-tls-verify`](#flag---skip-tls-verify)
@@ -991,6 +992,12 @@ are:
 - `127.0.0.1`
 - `192.168.0.1:5000`
 - `mycompany-docker-virtual.jfrog.io`
+
+#### Flag `--skip-default-registry-fallback`
+
+Set this flag if you want the build process to fail if none of the mirrors listed in flag [registry-mirror](#flag---registry-mirror) can pull some image. This should be used with mirrors that implements a whitelist or some image restrictions.
+
+If [registry-mirror](#flag---registry-mirror) is not set or is empty, this flag is ignored.
 
 #### Flag `--reproducible`
 
