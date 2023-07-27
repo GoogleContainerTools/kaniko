@@ -70,6 +70,14 @@ var defaultIgnoreList = []IgnoreListEntry{
 		PrefixMatchOnly: false,
 	},
 	{
+		Path:            "/.dockerenv",
+		PrefixMatchOnly: false,
+	},
+	{
+		Path:            "/.dockerinit",
+		PrefixMatchOnly: false,
+	},
+	{
 		// we ingore /tmp/apt-key-gpghome, since the apt keys are added temporarily in this directory.
 		// from the base image
 		Path:            "/tmp/apt-key-gpghome",
@@ -80,6 +88,10 @@ var defaultIgnoreList = []IgnoreListEntry{
 var ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 
 var volumes = []string{}
+
+// these paths should be always preserved in the image
+// adding them to ignore list will remove just nested paths
+var preservelist = []string{"/dev", "/proc", "/run", "/sys", "/var/run"}
 
 type FileContext struct {
 	Root          string
@@ -297,7 +309,7 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		return err
 	}
 
-	if CheckIgnoreList(abs) && !checkIgnoreListRoot(dest) {
+	if CheckIgnoreList(abs) && !checkIgnoreListRoot(dest) && !checkPreserveList(dest) {
 		logrus.Debugf("Not adding %s because it is ignored", path)
 		return nil
 	}
@@ -396,6 +408,16 @@ func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
 		}
 	}
 	return nil
+}
+
+// Check if path should be always preserved
+func checkPreserveList(path string) bool {
+	for _, p := range preservelist {
+		if path == p {
+			return true
+		}
+	}
+	return false
 }
 
 func IsInProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
@@ -941,9 +963,19 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	if err := otiai10Cpy.Copy(src, destFile); err != nil {
+	opt := otiai10Cpy.Options{
+		Skip: func(srcinfo os.FileInfo, src, dest string) (bool, error) {
+			if CheckIgnoreList(dest) && !checkPreserveList(dest) {
+				logrus.Debugf("Not copying %s, as it's ignored", dest)
+				return true, nil
+			}
+			return false, nil
+		},
+	}
+	if err := otiai10Cpy.Copy(src, destFile, opt); err != nil {
 		return errors.Wrap(err, "copying file")
 	}
+
 	if err := CopyOwnership(src, destDir, root); err != nil {
 		return errors.Wrap(err, "copying ownership")
 	}
