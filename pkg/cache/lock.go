@@ -92,8 +92,8 @@ func isDeadlock(lockPath string) (bool, error) {
 	return time.Now().After(expTime), nil
 }
 
-func ClearDeadlock(lockPath string) (cleared bool) {
-	expired, _ := isDeadlock(lockPath) // Ingore error and try again.
+func ClearDeadlock(lockPath string) bool {
+	expired, _ := isDeadlock(lockPath) // Ignore error and try again.
 	if expired {
 		removeLockPath := lockPath + "-remove"
 		fl := FLock(removeLockPath) // Add a remove-lock for remove operating.
