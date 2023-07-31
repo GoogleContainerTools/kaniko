@@ -204,7 +204,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 				extractedFiles: []string{"/foo.txt"},
 				contextFiles:   []string{"foo.txt"},
 			}
-			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+			c.extractFn = func(_ string, _ *tar.Header, _ string, _ io.Reader) error {
 				*tc.count++
 				return nil
 			}
@@ -217,7 +217,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 				desctiption: "with no image",
 				expectErr:   true,
 			}
-			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+			c.extractFn = func(_ string, _ *tar.Header, _ string, _ io.Reader) error {
 				return nil
 			}
 			tc.command = c
@@ -228,7 +228,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 				img: fakeImage{},
 			}
 
-			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+			c.extractFn = func(_ string, _ *tar.Header, _ string, _ io.Reader) error {
 				return nil
 			}
 
@@ -246,7 +246,7 @@ func Test_CachingRunCommand_ExecuteCommand(t *testing.T) {
 					},
 				},
 			}
-			c.extractFn = func(_ string, _ *tar.Header, _ io.Reader) error {
+			c.extractFn = func(_ string, _ *tar.Header, _ string, _ io.Reader) error {
 				return nil
 			}
 			tc := testCase{

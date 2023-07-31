@@ -810,7 +810,7 @@ func TestExtractFile(t *testing.T) {
 			defer os.RemoveAll(r)
 
 			for _, hdr := range tc.hdrs {
-				if err := ExtractFile(r, hdr, bytes.NewReader(tc.contents)); err != nil {
+				if err := ExtractFile(r, hdr, filepath.Clean(hdr.Name), bytes.NewReader(tc.contents)); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -1008,7 +1008,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 	}
 }
 
-func fakeExtract(dest string, hdr *tar.Header, tr io.Reader) error {
+func fakeExtract(_ string, _ *tar.Header, _ string, _ io.Reader) error {
 	return nil
 }
 

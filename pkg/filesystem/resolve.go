@@ -80,7 +80,7 @@ func ResolvePaths(paths []string, wl []util.IgnoreListEntry) (pathsToAdd []strin
 
 		// If the given path is a symlink and the target is part of the ignorelist
 		// ignore the target
-		if util.CheckProvidedIgnoreList(evaled, wl) {
+		if util.CheckCleanedPathAgainstProvidedIgnoreList(evaled, wl) {
 			logrus.Debugf("Path %s is ignored, ignoring it", evaled)
 			continue
 		}
