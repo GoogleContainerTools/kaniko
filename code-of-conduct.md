@@ -85,6 +85,21 @@ The identity of the reporter will be omitted from the details of the report
 supplied to the accused. In potentially harmful situations, such as ongoing
 harassment or threats to anyone's safety, we may take action without notice.
 
+## Enforcement
+
+<!-- TODO: Need a real CoC contact list. -->
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported by contacting the project team. All complaints will be reviewed and
+investigated and will result in a response that is deemed necessary and
+appropriate to the circumstances. The project team is obligated to maintain
+confidentiality with regard to the reporter of an incident. Further details of
+specific enforcement policies may be posted separately.
+
+Project maintainers who do not follow or enforce the Code of Conduct in good
+faith may face temporary or permanent repercussions as determined by other
+members of the project's leadership.
+
 ## Attribution
 
 This Code of Conduct is adapted from the Contributor Covenant, version 1.4,
