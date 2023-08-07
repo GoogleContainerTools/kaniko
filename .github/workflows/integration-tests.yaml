@@ -15,6 +15,7 @@ jobs:
     env:
       IMAGE_REPO: 'localhost:5000'
       REGISTRY: 'localhost:5000'
+      DOCKER_BUILDKIT: '0'
     strategy:
       fail-fast: false
       matrix:
