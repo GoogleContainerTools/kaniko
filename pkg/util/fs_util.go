@@ -60,7 +60,7 @@ type IgnoreListEntry struct {
 
 var defaultIgnoreList = []IgnoreListEntry{
 	{
-		Path:            filepath.Clean(config.KanikoDir),
+		Path:            config.KanikoDir,
 		PrefixMatchOnly: false,
 	},
 	{
@@ -86,7 +86,7 @@ type FileContext struct {
 	ExcludedFiles []string
 }
 
-type ExtractFunction func(string, *tar.Header, string, io.Reader) error
+type ExtractFunction func(string, *tar.Header, io.Reader) error
 
 type FSConfig struct {
 	includeWhiteout bool
@@ -100,17 +100,11 @@ func IgnoreList() []IgnoreListEntry {
 }
 
 func AddToIgnoreList(entry IgnoreListEntry) {
-	ignorelist = append(ignorelist, IgnoreListEntry{
-		Path:            filepath.Clean(entry.Path),
-		PrefixMatchOnly: entry.PrefixMatchOnly,
-	})
+	ignorelist = append(ignorelist, entry)
 }
 
 func AddToDefaultIgnoreList(entry IgnoreListEntry) {
-	defaultIgnoreList = append(defaultIgnoreList, IgnoreListEntry{
-		Path:            filepath.Clean(entry.Path),
-		PrefixMatchOnly: entry.PrefixMatchOnly,
-	})
+	defaultIgnoreList = append(defaultIgnoreList, entry)
 }
 
 func IncludeWhiteout() FSOpt {
@@ -181,8 +175,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				return nil, errors.Wrap(err, fmt.Sprintf("error reading tar %d", i))
 			}
 
-			cleanedName := filepath.Clean(hdr.Name)
-			path := filepath.Join(root, cleanedName)
+			path := filepath.Join(root, filepath.Clean(hdr.Name))
 			base := filepath.Base(path)
 			dir := filepath.Dir(path)
 
@@ -192,7 +185,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 				name := strings.TrimPrefix(base, archive.WhiteoutPrefix)
 				path := filepath.Join(dir, name)
 
-				if CheckCleanedPathAgainstIgnoreList(path) {
+				if CheckIgnoreList(path) {
 					logrus.Tracef("Not deleting %s, as it's ignored", path)
 					continue
 				}
@@ -212,11 +205,11 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 
 			}
 
-			if err := cfg.extractFunc(root, hdr, cleanedName, tr); err != nil {
+			if err := cfg.extractFunc(root, hdr, tr); err != nil {
 				return nil, err
 			}
 
-			extractedFiles = append(extractedFiles, filepath.Join(root, cleanedName))
+			extractedFiles = append(extractedFiles, filepath.Join(root, filepath.Clean(hdr.Name)))
 		}
 	}
 	return extractedFiles, nil
@@ -231,7 +224,7 @@ func DeleteFilesystem() error {
 			return nil //nolint:nilerr
 		}
 
-		if CheckCleanedPathAgainstIgnoreList(path) {
+		if CheckIgnoreList(path) {
 			if !isExist(path) {
 				logrus.Debugf("Path %s ignored, but not exists", path)
 				return nil
@@ -283,17 +276,16 @@ func UnTar(r io.Reader, dest string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		cleanedName := filepath.Clean(hdr.Name)
-		if err := ExtractFile(dest, hdr, cleanedName, tr); err != nil {
+		if err := ExtractFile(dest, hdr, tr); err != nil {
 			return nil, err
 		}
-		extractedFiles = append(extractedFiles, filepath.Join(dest, cleanedName))
+		extractedFiles = append(extractedFiles, filepath.Join(dest, filepath.Clean(hdr.Name)))
 	}
 	return extractedFiles, nil
 }
 
-func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader) error {
-	path := filepath.Join(dest, cleanedName)
+func ExtractFile(dest string, hdr *tar.Header, tr io.Reader) error {
+	path := filepath.Join(dest, filepath.Clean(hdr.Name))
 	base := filepath.Base(path)
 	dir := filepath.Dir(path)
 	mode := hdr.FileInfo().Mode()
@@ -305,7 +297,7 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 		return err
 	}
 
-	if CheckCleanedPathAgainstIgnoreList(abs) && !checkIgnoreListRoot(dest) {
+	if CheckIgnoreList(abs) && !checkIgnoreListRoot(dest) {
 		logrus.Debugf("Not adding %s because it is ignored", path)
 		return nil
 	}
@@ -366,7 +358,7 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 		if err != nil {
 			return err
 		}
-		if CheckCleanedPathAgainstIgnoreList(abs) {
+		if CheckIgnoreList(abs) {
 			logrus.Tracef("Skipping link from %s to %s because %s is ignored", hdr.Linkname, path, hdr.Linkname)
 			return nil
 		}
@@ -407,7 +399,6 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 }
 
 func IsInProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
-	path = filepath.Clean(path)
 	for _, entry := range wl {
 		if !entry.PrefixMatchOnly && path == entry.Path {
 			return true
@@ -421,9 +412,9 @@ func IsInIgnoreList(path string) bool {
 	return IsInProvidedIgnoreList(path, ignorelist)
 }
 
-func CheckCleanedPathAgainstProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
+func CheckProvidedIgnoreList(path string, wl []IgnoreListEntry) bool {
 	for _, wl := range ignorelist {
-		if hasCleanedFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
+		if HasFilepathPrefix(path, wl.Path, wl.PrefixMatchOnly) {
 			return true
 		}
 	}
@@ -432,11 +423,7 @@ func CheckCleanedPathAgainstProvidedIgnoreList(path string, wl []IgnoreListEntry
 }
 
 func CheckIgnoreList(path string) bool {
-	return CheckCleanedPathAgainstIgnoreList(filepath.Clean(path))
-}
-
-func CheckCleanedPathAgainstIgnoreList(path string) bool {
-	return CheckCleanedPathAgainstProvidedIgnoreList(path, ignorelist)
+	return CheckProvidedIgnoreList(path, ignorelist)
 }
 
 func checkIgnoreListRoot(root string) bool {
@@ -476,7 +463,7 @@ func DetectFilesystemIgnoreList(path string) error {
 		}
 		if lineArr[4] != config.RootDir {
 			logrus.Tracef("Adding ignore list entry %s from line: %s", lineArr[4], line)
-			AddToIgnoreList(IgnoreListEntry{
+			ignorelist = append(ignorelist, IgnoreListEntry{
 				Path:            lineArr[4],
 				PrefixMatchOnly: false,
 			})
@@ -493,13 +480,12 @@ func DetectFilesystemIgnoreList(path string) error {
 func RelativeFiles(fp string, root string) ([]string, error) {
 	var files []string
 	fullPath := filepath.Join(root, fp)
-	cleanedRoot := filepath.Clean(root)
 	logrus.Debugf("Getting files and contents at root %s for %s", root, fullPath)
 	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if CheckCleanedPathAgainstIgnoreList(path) && !hasCleanedFilepathPrefix(filepath.Clean(path), cleanedRoot, false) {
+		if CheckIgnoreList(path) && !HasFilepathPrefix(path, root, false) {
 			return nil
 		}
 		relPath, err := filepath.Rel(root, path)
@@ -605,7 +591,7 @@ func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid
 // AddVolumePath adds the given path to the volume ignorelist.
 func AddVolumePathToIgnoreList(path string) {
 	logrus.Infof("Adding volume %s to ignorelist", path)
-	AddToIgnoreList(IgnoreListEntry{
+	ignorelist = append(ignorelist, IgnoreListEntry{
 		Path:            path,
 		PrefixMatchOnly: true,
 	})
@@ -792,12 +778,11 @@ func (c FileContext) ExcludesFile(path string) bool {
 
 // HasFilepathPrefix checks if the given file path begins with prefix
 func HasFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
-	return hasCleanedFilepathPrefix(filepath.Clean(path), filepath.Clean(prefix), prefixMatchOnly)
-}
-
-func hasCleanedFilepathPrefix(path, prefix string, prefixMatchOnly bool) bool {
+	prefix = filepath.Clean(prefix)
 	prefixArray := strings.Split(prefix, "/")
+	path = filepath.Clean(path)
 	pathArray := strings.SplitN(path, "/", len(prefixArray)+1)
+
 	if len(pathArray) < len(prefixArray) {
 		return false
 	}
@@ -983,7 +968,7 @@ func CopyOwnership(src string, destDir string, root string) error {
 		}
 		destPath := filepath.Join(destDir, relPath)
 
-		if CheckCleanedPathAgainstIgnoreList(src) && CheckCleanedPathAgainstIgnoreList(destPath) {
+		if CheckIgnoreList(src) && CheckIgnoreList(destPath) {
 			if !isExist(destPath) {
 				logrus.Debugf("Path %s ignored, but not exists", destPath)
 				return nil
@@ -994,7 +979,7 @@ func CopyOwnership(src string, destDir string, root string) error {
 			logrus.Debugf("Not copying ownership for %s, as it's ignored", destPath)
 			return nil
 		}
-		if CheckIgnoreList(destDir) && CheckCleanedPathAgainstIgnoreList(path) {
+		if CheckIgnoreList(destDir) && CheckIgnoreList(path) {
 			if !isExist(path) {
 				logrus.Debugf("Path %s ignored, but not exists", path)
 				return nil
@@ -1133,7 +1118,7 @@ func GetFSInfoMap(dir string, existing map[string]os.FileInfo) (map[string]os.Fi
 	timer := timing.Start("Walking filesystem with Stat")
 	godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, ent *godirwalk.Dirent) error {
-			if CheckCleanedPathAgainstIgnoreList(path) {
+			if CheckIgnoreList(path) {
 				if IsDestDir(path) {
 					logrus.Tracef("Skipping paths under %s, as it is a ignored directory", path)
 					return filepath.SkipDir
