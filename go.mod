@@ -13,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.20.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.31
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.75
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.1
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20230522190001-adf1bafd791a
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/containerd/cgroups v1.1.0 // indirect
