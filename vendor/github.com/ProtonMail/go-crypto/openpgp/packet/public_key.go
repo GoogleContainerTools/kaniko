@@ -415,6 +415,10 @@ func (pk *PublicKey) parseEdDSA(r io.Reader) (err error) {
 		return
 	}
 
+	if len(pk.p.Bytes()) == 0 {
+		return errors.StructuralError("empty EdDSA public key")
+	}
+
 	pub := eddsa.NewPublicKey(c)
 
 	switch flag := pk.p.Bytes()[0]; flag {

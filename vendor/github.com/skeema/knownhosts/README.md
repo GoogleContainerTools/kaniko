@@ -13,11 +13,12 @@ Go provides excellent functionality for OpenSSH known_hosts files in its
 external package [golang.org/x/crypto/ssh/knownhosts](https://pkg.go.dev/golang.org/x/crypto/ssh/knownhosts). 
 However, that package is somewhat low-level, making it difficult to implement full known_hosts management similar to command-line `ssh`'s behavior for `StrictHostKeyChecking=no` configuration.
 
-This repo ([github.com/skeema/knownhosts](https://github.com/skeema/knownhosts)) is a thin wrapper package around [golang.org/x/crypto/ssh/knownhosts](https://pkg.go.dev/golang.org/x/crypto/ssh/knownhosts), adding functions which provide the following functionality:
+This repo ([github.com/skeema/knownhosts](https://github.com/skeema/knownhosts)) is a thin wrapper package around [golang.org/x/crypto/ssh/knownhosts](https://pkg.go.dev/golang.org/x/crypto/ssh/knownhosts), adding the following functionality:
 
 * Look up known_hosts public keys for any given host
-* Auto-populate ssh.ClientConfig.HostKeyAlgorithms easily based on known_hosts
+* Auto-populate ssh.ClientConfig.HostKeyAlgorithms easily based on known_hosts, providing a solution for [golang/go#29286](https://github.com/golang/go/issues/29286)
 * Write new known_hosts entries to an io.Writer
+* Properly format/normalize new known_hosts entries containing ipv6 addresses, providing a solution for [golang/go#53463](https://github.com/golang/go/issues/53463)
 * Determine if an ssh.HostKeyCallback's error corresponds to a host whose key has changed (indicating potential MitM attack) vs a host that just isn't known yet
 
 ## How host key lookup works
@@ -99,7 +100,7 @@ config := &ssh.ClientConfig{
 
 ## License
 
-**Source code copyright 2023 Skeema LLC and the Skeema authors**
+**Source code copyright 2023 Skeema LLC and the Skeema Knownhosts authors**
 
 ```text
 Licensed under the Apache License, Version 2.0 (the "License");

@@ -381,7 +381,7 @@ func encrypt(keyWriter io.Writer, dataWriter io.Writer, to []*Entity, signed *En
 		}
 
 		sig := to[i].PrimaryIdentity().SelfSignature
-		if sig.SEIPDv2 == false {
+		if !sig.SEIPDv2 {
 			aeadSupported = false
 		}
 

@@ -504,7 +504,7 @@ EachPacket:
 			// Else, ignoring the signature as it does not follow anything
 			// we would know to attach it to.
 		case *packet.PrivateKey:
-			if pkt.IsSubkey == false {
+			if !pkt.IsSubkey {
 				packets.Unread(p)
 				break EachPacket
 			}
@@ -513,7 +513,7 @@ EachPacket:
 				return nil, err
 			}
 		case *packet.PublicKey:
-			if pkt.IsSubkey == false {
+			if !pkt.IsSubkey {
 				packets.Unread(p)
 				break EachPacket
 			}
