@@ -904,7 +904,7 @@ func (sig *Signature) buildSubpackets(issuer PublicKey) (subpackets []outputSubp
 	if sig.IssuerKeyId != nil && sig.Version == 4 {
 		keyId := make([]byte, 8)
 		binary.BigEndian.PutUint64(keyId, *sig.IssuerKeyId)
-		subpackets = append(subpackets, outputSubpacket{true, issuerSubpacket, true, keyId})
+		subpackets = append(subpackets, outputSubpacket{true, issuerSubpacket, false, keyId})
 	}
 	if sig.IssuerFingerprint != nil {
 		contents := append([]uint8{uint8(issuer.Version)}, sig.IssuerFingerprint...)
