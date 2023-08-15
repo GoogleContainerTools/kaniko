@@ -1,3 +1,49 @@
+# v1.14.0 Release 2023-08-15
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.14.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.14.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.14.0-slim
+```
+
+* chore(deps): bump actions/setup-go from 4.0.1 to 4.1.0 [#2672](https://github.com/GoogleContainerTools/kaniko/pull/2672)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.18.29 to 1.18.31 [#2651](https://github.com/GoogleContainerTools/kaniko/pull/2651)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.18.31 to 1.18.33 [#2680](https://github.com/GoogleContainerTools/kaniko/pull/2680)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.73 to 1.11.75 [#2650](https://github.com/GoogleContainerTools/kaniko/pull/2650)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.75 to 1.11.77 [#2679](https://github.com/GoogleContainerTools/kaniko/pull/2679)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.37.0 to 1.37.1 [#2648](https://github.com/GoogleContainerTools/kaniko/pull/2648)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.38.0 to 1.38.2 [#2673](https://github.com/GoogleContainerTools/kaniko/pull/2673)
+* chore(deps): bump github.com/containerd/containerd from 1.7.2 to 1.7.3 [#2644](https://github.com/GoogleContainerTools/kaniko/pull/2644)
+* chore(deps): bump github.com/go-git/go-git/v5 from 5.8.0 to 5.8.1 [#2662](https://github.com/GoogleContainerTools/kaniko/pull/2662)
+* chore(deps): bump golang from 1.20 to 1.21 in /deploy [#2682](https://github.com/GoogleContainerTools/kaniko/pull/2682)
+* chore(deps): bump golang.org/x/net from 0.12.0 to 0.14.0 [#2663](https://github.com/GoogleContainerTools/kaniko/pull/2663)
+* chore(deps): bump golang.org/x/oauth2 from 0.10.0 to 0.11.0 [#2661](https://github.com/GoogleContainerTools/kaniko/pull/2661)
+* chore(deps): bump golang.org/x/sys from 0.10.0 to 0.11.0 [#2659](https://github.com/GoogleContainerTools/kaniko/pull/2659)
+* chore(deps): bump google.golang.org/api from 0.133.0 to 0.134.0 [#2645](https://github.com/GoogleContainerTools/kaniko/pull/2645)
+* chore(deps): bump google.golang.org/api from 0.134.0 to 0.136.0 [#2681](https://github.com/GoogleContainerTools/kaniko/pull/2681)
+* docs: add enforcement section to code-of-conduct.md [#2654](https://github.com/GoogleContainerTools/kaniko/pull/2654)
+* feat: added skip-push-permission flag [#2657](https://github.com/GoogleContainerTools/kaniko/pull/2657)
+* fix: resolve issue where CI env was failing due to dependency change [#2668](https://github.com/GoogleContainerTools/kaniko/pull/2668)
+* refactor: Avoid redundant calls to filepath.Clean [#2652](https://github.com/GoogleContainerTools/kaniko/pull/2652)
+
+Huge thank you for this release towards our contributors:
+- Aaron Lehmann
+- Aaron Prindle
+- dependabot[bot]
+- Julian
+
+
 # v1.13.0 Release 2023-07-26
 The executor images in this release are:
 ```
