@@ -100,6 +100,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--reproducible`](#flag---reproducible)
       - [Flag `--single-snapshot`](#flag---single-snapshot)
       - [Flag `--skip-tls-verify`](#flag---skip-tls-verify)
+      - [Flag `--skip-push-permission-check`](#flag---skip-push-permission-check)
       - [Flag `--skip-tls-verify-pull`](#flag---skip-tls-verify-pull)
       - [Flag `--skip-tls-verify-registry`](#flag---skip-tls-verify-registry)
       - [Flag `--skip-unused-stages`](#flag---skip-unused-stages)
@@ -1008,6 +1009,11 @@ reproducible.
 
 This flag takes a single snapshot of the filesystem at the end of the build, so
 only one layer will be appended to the base image.
+
+#### Flag `--skip-push-permission-check`
+
+Set this flag to skip push permission check. This can be useful to delay Kanikos first request for delayed 
+network-policies.
 
 #### Flag `--skip-tls-verify`
 

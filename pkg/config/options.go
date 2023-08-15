@@ -87,6 +87,7 @@ type KanikoOptions struct {
 	CacheRunLayers           bool
 	ForceBuildMetadata       bool
 	InitialFSUnpacked        bool
+	SkipPushPermissionCheck  bool
 }
 
 type KanikoGitOptions struct {

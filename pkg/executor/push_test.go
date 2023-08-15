@@ -350,6 +350,45 @@ func TestCheckPushPermissions(t *testing.T) {
 	}
 }
 
+func TestSkipPushPermission(t *testing.T) {
+	tests := []struct {
+		description                     string
+		cacheRepo                       string
+		checkPushPermsExpectedCallCount int
+		destinations                    []string
+		existingConfig                  bool
+		noPush                          bool
+		noPushCache                     bool
+		skipPushPermission              bool
+	}{
+		{description: "skip push permission enabled", destinations: []string{"test.io/skip"}, checkPushPermsExpectedCallCount: 0, skipPushPermission: true},
+		{description: "skip push permission disabled", destinations: []string{"test.io/push"}, checkPushPermsExpectedCallCount: 1, skipPushPermission: false},
+	}
+
+	checkRemotePushPermission = fakeCheckPushPermission
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			resetCalledCount()
+			fs = afero.NewMemMapFs()
+			opts := config.KanikoOptions{
+				CacheRepo:               test.cacheRepo,
+				Destinations:            test.destinations,
+				NoPush:                  test.noPush,
+				NoPushCache:             test.noPushCache,
+				SkipPushPermissionCheck: test.skipPushPermission,
+			}
+			if test.existingConfig {
+				afero.WriteFile(fs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
+				defer fs.Remove(util.DockerConfLocation())
+			}
+			CheckPushPermissions(&opts)
+			if checkPushPermsCallCount != test.checkPushPermsExpectedCallCount {
+				t.Errorf("expected check push permissions call count to be %d but it was %d", test.checkPushPermsExpectedCallCount, checkPushPermsCallCount)
+			}
+		})
+	}
+}
+
 func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
