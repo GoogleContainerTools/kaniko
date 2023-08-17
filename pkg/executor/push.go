@@ -53,11 +53,13 @@ type withUserAgent struct {
 
 // for testing
 var (
-	newRetry = transport.NewRetry
+	newRetry          = transport.NewRetry
+	DummyDestinations = []string{DummyDestination}
 )
 
 const (
 	UpstreamClientUaKey = "UPSTREAM_CLIENT_TYPE"
+	DummyDestination    = "docker.io/unset-repo/unset-image-name"
 )
 
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -143,11 +145,18 @@ func writeDigestFile(path string, digestByteArray []byte) error {
 	return ioutil.WriteFile(path, digestByteArray, 0644)
 }
 
-// DoPush is responsible for pushing image to the destinations specified in opts
+// DoPush is responsible for pushing image to the destinations specified in opts.
+// A dummy destination would be set when --no-push is set to true and --tar-path
+// is not empty with empty --destinations.
 func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	t := timing.Start("Total Push Time")
 	var digestByteArray []byte
 	var builder strings.Builder
+
+	if !opts.NoPush && len(opts.Destinations) == 0 {
+		return errors.New("must provide at least one destination to push")
+	}
+
 	if opts.DigestFile != "" || opts.ImageNameDigestFile != "" || opts.ImageNameTagDigestFile != "" {
 		var err error
 		digestByteArray, err = getDigest(image)
@@ -170,6 +179,12 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 		}
 		if err := path.AppendImage(image); err != nil {
 			return errors.Wrap(err, "appending image")
+		}
+	}
+
+	if opts.NoPush && len(opts.Destinations) == 0 {
+		if opts.TarPath != "" {
+			setDummyDestinations(opts)
 		}
 	}
 
@@ -207,10 +222,6 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 
 	if opts.TarPath != "" {
 		tagToImage := map[name.Tag]v1.Image{}
-
-		if len(destRefs) == 0 {
-			return errors.New("must provide at least one destination when tarPath is specified")
-		}
 
 		for _, destRef := range destRefs {
 			tagToImage[destRef] = image
@@ -361,4 +372,10 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 		cacheOpts.NoPush = true
 	}
 	return DoPush(empty, &cacheOpts)
+}
+
+// setDummyDestinations sets the dummy destinations required to generate new
+// tag names for tarPath in DoPush.
+func setDummyDestinations(opts *config.KanikoOptions) {
+	opts.Destinations = DummyDestinations
 }

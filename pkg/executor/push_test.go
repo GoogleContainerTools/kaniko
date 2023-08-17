@@ -222,6 +222,68 @@ func TestImageNameDigestFile(t *testing.T) {
 
 }
 
+func TestDoPushWithOpts(t *testing.T) {
+	tarPath := "image.tar"
+
+	for _, tc := range []struct {
+		name        string
+		opts        config.KanikoOptions
+		expectedErr bool
+	}{
+		{
+			name: "no push with tarPath without destinations",
+			opts: config.KanikoOptions{
+				NoPush:  true,
+				TarPath: tarPath,
+			},
+			expectedErr: false,
+		}, {
+			name: "no push with tarPath with destinations",
+			opts: config.KanikoOptions{
+				NoPush:       true,
+				TarPath:      tarPath,
+				Destinations: []string{"image"},
+			},
+			expectedErr: false,
+		}, {
+			name: "no push with tarPath with destinations empty",
+			opts: config.KanikoOptions{
+				NoPush:       true,
+				TarPath:      tarPath,
+				Destinations: []string{},
+			},
+			expectedErr: false,
+		}, {
+			name: "tarPath with destinations empty",
+			opts: config.KanikoOptions{
+				NoPush:       false,
+				TarPath:      tarPath,
+				Destinations: []string{},
+			},
+			expectedErr: true,
+		}} {
+		t.Run(tc.name, func(t *testing.T) {
+			image, err := random.Image(1024, 4)
+			if err != nil {
+				t.Fatalf("could not create image: %s", err)
+			}
+			defer os.Remove("image.tar")
+
+			err = DoPush(image, &tc.opts)
+			if err != nil {
+				if !tc.expectedErr {
+					t.Errorf("unexpected error with opts: could not push image: %s", err)
+				}
+			} else {
+				if tc.expectedErr {
+					t.Error("expected error with opts not found")
+				}
+			}
+
+		})
+	}
+}
+
 func TestImageNameTagDigestFile(t *testing.T) {
 	image, err := random.Image(1024, 4)
 	if err != nil {
