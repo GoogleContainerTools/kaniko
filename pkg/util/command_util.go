@@ -378,23 +378,55 @@ func getUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32,
 }
 
 func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
-	user, err := LookupUser(userStr)
+	userObj, err := LookupUser(userStr)
 	if err != nil {
 		return 0, 0, err
 	}
-	uid32, err := getUID(user.Uid)
+	uid32, err := getUID(userObj.Uid)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	gid, err := getGIDFromName(groupStr, fallbackToUID)
-	if err != nil {
-		if errors.Is(err, fallbackToUIDError) {
-			return uid32, uid32, nil
+	// Same dance with groups
+	var group *user.Group
+
+	if groupStr != "" {
+
+		group, err = user.LookupGroup(groupStr)
+
+		if err != nil {
+			// unknown group error could relate to a non existing group
+			var groupErr *user.UnknownGroupError
+			if errors.Is(err, groupErr) {
+				gid32, _ := getGID(groupStr, fallbackToUID)
+
+				return uid32, gid32, nil
+			}
+			group, err = user.LookupGroupId(groupStr)
+
+			if err != nil {
+				gid32, _ := getGID(groupStr, fallbackToUID)
+
+				return uid32, gid32, nil
+			}
 		}
-		return 0, 0, err
 	}
-	return uid32, gid, nil
+
+	gid := "0"
+	if fallbackToUID {
+		gid = userObj.Uid
+
+		if userObj.Gid != "" {
+			gid = userObj.Gid
+		}
+	}
+	if group != nil {
+		gid = group.Gid
+	}
+
+	gid32, err := getGID(gid, fallbackToUID)
+
+	return uid32, gid32, nil
 }
 
 // getGID tries to parse the gid or falls back to getGroupFromName if it's not an id
@@ -404,24 +436,6 @@ func getGID(groupStr string, fallbackToUID bool) (uint32, error) {
 		return 0, fallbackToUIDOrError(err, fallbackToUID)
 	}
 	return uint32(gid), nil
-}
-
-// getGIDFromName tries to parse the groupStr into an existing group.
-// if the group doesn't exist, fallback to getGID to parse non-existing valid GIDs.
-func getGIDFromName(groupStr string, fallbackToUID bool) (uint32, error) {
-	group, err := user.LookupGroup(groupStr)
-	if err != nil {
-		// unknown group error could relate to a non existing group
-		var groupErr *user.UnknownGroupError
-		if errors.Is(err, groupErr) {
-			return getGID(groupStr, fallbackToUID)
-		}
-		group, err = user.LookupGroupId(groupStr)
-		if err != nil {
-			return getGID(groupStr, fallbackToUID)
-		}
-	}
-	return getGID(group.Gid, fallbackToUID)
 }
 
 var fallbackToUIDError = new(fallbackToUIDErrorType)
