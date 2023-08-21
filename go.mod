@@ -3,7 +3,7 @@ module github.com/GoogleContainerTools/kaniko
 go 1.19
 
 require (
-	cloud.google.com/go/storage v1.31.0
+	cloud.google.com/go/storage v1.32.0
 	github.com/Azure/azure-storage-blob-go v0.14.0
 	// This docker-credential-gcr dependency version is actually the same as v2.1.8.
 	// See https://github.com/GoogleCloudPlatform/docker-credential-gcr/issues/128
