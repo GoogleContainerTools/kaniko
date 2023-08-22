@@ -190,7 +190,11 @@ func DestinationFilepath(src, dest, cwd string) (string, error) {
 	newDest := dest
 
 	if !filepath.IsAbs(newDest) {
-		newDest = filepath.Join(cwd, newDest)
+		sep := pathSeparator
+		if cwd == pathSeparator {
+			sep = ""
+		}
+		newDest = strings.Join([]string{cwd, newDest}, sep)
 		// join call clean on all results.
 		if strings.HasSuffix(dest, pathSeparator) || strings.HasSuffix(dest, ".") {
 			newDest += pathSeparator

@@ -158,8 +158,8 @@ var destinationFilepathTests = []struct {
 	},
 	{
 		src:              "context/foo",
-		cwd:              "/",
 		dest:             "foo",
+		cwd:              "/",
 		expectedFilepath: "/foo",
 	},
 	{
@@ -197,6 +197,18 @@ var destinationFilepathTests = []struct {
 		cwd:              "/test",
 		dest:             ".",
 		expectedFilepath: "/test/foo",
+	},
+	{
+		src:              "context/foo.yaml",
+		cwd:              "/test",
+		dest:             "bin/",
+		expectedFilepath: "/test/bin/foo.yaml",
+	},
+	{
+		src:              "foo.yaml",
+		cwd:              "/test",
+		dest:             "bin/",
+		expectedFilepath: "/test/bin/foo.yaml",
 	},
 }
 
