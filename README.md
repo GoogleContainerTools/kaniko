@@ -1068,12 +1068,11 @@ Set this flag to indicate which build stage is the target build stage.
 
 #### Flag `--use-new-run`
 
-Use the experimental RUN implementation for detecting changes without requiring
-Using this flag enables an  experimental implementation of the Run command which does not rely on snapshotting at all.
+Using this flag enables an experimental implementation of the Run command which does not rely on snapshotting at all.
 In this approach, in order to compute which files were changed, a marker file is created before executing the Run command.
 Then the entire filesystem is walked (takes ~1-3 seconds for 700Kfiles) to find all files whose ModTime is greater than the marker file.
 With this new run command implementation, the total build time is reduced seeing performance improvements in the range of ~75%.  This new run mode trades 
-off accuracy/correctness in some cases (potential for missed files in "snapshot") for improved performance by avoiding the full filesystem snapshots.
+off accuracy/correctness in some cases (potential for missed files in a "snapshot") for improved performance by avoiding the full filesystem snapshots.
 
 #### Flag `--verbosity`
 
