@@ -705,7 +705,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 			},
 			expected: expected{
 				userID:  1001,
-				groupID: uint32(currentUserGID),
+				groupID: expectedCurrentUser.groupID,
 			},
 		},
 		{
@@ -714,15 +714,13 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 				userGroupStr:  fmt.Sprintf("%d:%s", 1001, "hello-world-group"),
 				fallbackToUID: true,
 			},
-			expected: expected{
-				userID:  1001,
-				groupID: 1001,
-			},
+			wantErr: true,
 		},
 		{
-			testname: "uid and non existing group-name",
+			testname: "uid and non existing group-name without fallbackToUID",
 			args: args{
-				userGroupStr: fmt.Sprintf("%d:%s", 1001, "hello-world-group"),
+				userGroupStr:  fmt.Sprintf("%d:%s", 1001, "hello-world-group"),
+				fallbackToUID: false,
 			},
 			wantErr: true,
 		},
@@ -742,7 +740,10 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 				userGroupStr:  fmt.Sprintf("%d", currentUserUID),
 				fallbackToUID: false,
 			},
-			wantErr: true,
+			expected: expected{
+				userID:  expectedCurrentUser.userID,
+				groupID: 0,
+			},
 		},
 		{
 			testname: "only uid and fallback is true",
