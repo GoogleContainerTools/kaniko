@@ -1,3 +1,24 @@
+# Release (2023-08-21)
+
+## General Highlights
+* **Dependency Update**: Updated to the latest SDK module versions
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2`: v1.21.0
+  * **Feature**: Add support for polly SynthesizeSpeech GET request presigner
+* `github.com/aws/aws-sdk-go-v2/service/cloud9`: [v1.18.6](service/cloud9/CHANGELOG.md#v1186-2023-08-21)
+  * **Documentation**: Doc only update to add Ubuntu 22.04 as an Image ID option for Cloud9
+* `github.com/aws/aws-sdk-go-v2/service/ec2`: [v1.114.0](service/ec2/CHANGELOG.md#v11140-2023-08-21)
+  * **Feature**: The DeleteKeyPair API has been updated to return the keyPairId when an existing key pair is deleted.
+* `github.com/aws/aws-sdk-go-v2/service/finspace`: [v1.12.0](service/finspace/CHANGELOG.md#v1120-2023-08-21)
+  * **Feature**: Allow customers to manage outbound traffic from their Kx Environment when attaching a transit gateway by providing network acl entries. Allow the customer to choose how they want to update the databases on a cluster allowing updates to possibly be faster than usual.
+* `github.com/aws/aws-sdk-go-v2/service/polly`: [v1.30.0](service/polly/CHANGELOG.md#v1300-2023-08-21)
+  * **Feature**: Add support for polly SynthesizeSpeech GET request presigner
+* `github.com/aws/aws-sdk-go-v2/service/rds`: [v1.51.0](service/rds/CHANGELOG.md#v1510-2023-08-21)
+  * **Feature**: Adding support for RDS Aurora Global Database Unplanned Failover
+* `github.com/aws/aws-sdk-go-v2/service/route53domains`: [v1.17.3](service/route53domains/CHANGELOG.md#v1173-2023-08-21)
+  * **Documentation**: Fixed typos in description fields
+
 # Release (2023-08-18)
 
 ## General Highlights
