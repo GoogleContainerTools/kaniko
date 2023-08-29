@@ -1,3 +1,40 @@
+# v1.15.0 Release 2023-08-29
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.15.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.15.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.15.0-slim
+```
+
+* Ensure New Layers Match Image Media Type [#2700](https://github.com/GoogleContainerTools/kaniko/pull/2700)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.79 to 1.11.81 [#2702](https://github.com/GoogleContainerTools/kaniko/pull/2702)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.38.4 to 1.38.5 [#2706](https://github.com/GoogleContainerTools/kaniko/pull/2706)
+* chore(deps): bump google.golang.org/api from 0.136.0 to 0.138.0 [#2704](https://github.com/GoogleContainerTools/kaniko/pull/2704)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2 from 1.20.3 to 1.21.0 [#2703](https://github.com/GoogleContainerTools/kaniko/pull/2703)
+* docs: fix --use-new-run typo [#2698](https://github.com/GoogleContainerTools/kaniko/pull/2698)
+* docs: add more information regarding --use-new-run [#2687](https://github.com/GoogleContainerTools/kaniko/pull/2687)
+* chore(deps): bump cloud.google.com/go/storage from 1.31.0 to 1.32.0 [#2692](https://github.com/GoogleContainerTools/kaniko/pull/2692)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.77 to 1.11.79 [#2690](https://github.com/GoogleContainerTools/kaniko/pull/2690)
+* Fix: Change condition for the behaviour when --no-push=true without setting --destinations [#2676](https://github.com/GoogleContainerTools/kaniko/pull/2676)
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- JeromeJu
+- Logan Price
+
+
 # v1.14.0 Release 2023-08-15
 The executor images in this release are:
 ```
