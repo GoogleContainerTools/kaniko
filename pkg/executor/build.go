@@ -516,7 +516,16 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 		layerOpts = append(layerOpts, tarball.WithCompression("zstd"), tarball.WithMediaType(types.OCILayerZStd))
 
 	case config.GZip:
+
 		// layer already gzipped by default
+	default:
+		mt, err := s.image.MediaType()
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(string(mt), types.OCIVendorPrefix) {
+			layerOpts = append(layerOpts, tarball.WithMediaType(types.OCILayer))
+		}
 	}
 
 	layer, err := tarball.LayerFromFile(tarPath, layerOpts...)
@@ -684,7 +693,6 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		stageIdxToDigest[fmt.Sprintf("%d", sb.stage.Index)] = d.String()
 		logrus.Debugf("Mapping stage idx %v to digest %v", sb.stage.Index, d.String())
 

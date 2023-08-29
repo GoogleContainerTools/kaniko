@@ -40,6 +40,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
@@ -1700,5 +1701,149 @@ func Test_ResolveCrossStageInstructions(t *testing.T) {
 
 		expectedMap := map[string]string{"second": "1", "third": "2"}
 		testutil.CheckDeepEqual(t, expectedMap, stageToIdx)
+	}
+}
+
+type ociFakeImage struct {
+	*fakeImage
+}
+
+func (f ociFakeImage) MediaType() (types.MediaType, error) {
+	return types.OCIManifestSchema1, nil
+}
+
+func Test_stageBuilder_saveSnapshotToLayer(t *testing.T) {
+	dir, files := tempDirAndFile(t)
+	type fields struct {
+		stage            config.KanikoStage
+		image            v1.Image
+		cf               *v1.ConfigFile
+		baseImageDigest  string
+		finalCacheKey    string
+		opts             *config.KanikoOptions
+		fileContext      util.FileContext
+		cmds             []commands.DockerCommand
+		args             *dockerfile.BuildArgs
+		crossStageDeps   map[int][]string
+		digestToCacheKey map[string]string
+		stageIdxToDigest map[string]string
+		snapshotter      snapShotter
+		layerCache       cache.LayerCache
+		pushLayerToCache cachePusher
+	}
+	type args struct {
+		tarPath string
+	}
+	tests := []struct {
+		name              string
+		fields            fields
+		args              args
+		expectedMediaType types.MediaType
+		expectedDiff      v1.Hash
+		expectedDigest    v1.Hash
+		wantErr           bool
+	}{
+		{
+			name: "oci image",
+			fields: fields{
+				image: ociFakeImage{},
+				opts: &config.KanikoOptions{
+					ForceBuildMetadata: true,
+				},
+			},
+			args: args{
+				tarPath: filepath.Join(dir, files[0]),
+			},
+			expectedMediaType: types.OCILayer,
+			expectedDiff: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "404cdd7bc109c432f8cc2443b45bcfe95980f5107215c645236e577929ac3e52",
+			},
+			expectedDigest: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "1dc5887a31ec6b388646be46c5f0b2036f92f4cbba50d12163a8be4074565a91",
+			},
+		},
+		{
+			name: "docker image",
+			fields: fields{
+				image: fakeImage{},
+				opts: &config.KanikoOptions{
+					ForceBuildMetadata: true,
+				},
+			},
+			args: args{
+				tarPath: filepath.Join(dir, files[0]),
+			},
+			expectedMediaType: types.DockerLayer,
+			expectedDiff: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "404cdd7bc109c432f8cc2443b45bcfe95980f5107215c645236e577929ac3e52",
+			},
+			expectedDigest: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "1dc5887a31ec6b388646be46c5f0b2036f92f4cbba50d12163a8be4074565a91",
+			},
+		},
+		{
+			name: "oci image, zstd compression",
+			fields: fields{
+				image: fakeImage{},
+				opts: &config.KanikoOptions{
+					ForceBuildMetadata: true,
+					Compression:        config.ZStd,
+				},
+			},
+			args: args{
+				tarPath: filepath.Join(dir, files[0]),
+			},
+			expectedMediaType: types.OCILayerZStd,
+			expectedDiff: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "404cdd7bc109c432f8cc2443b45bcfe95980f5107215c645236e577929ac3e52",
+			},
+			expectedDigest: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "28369c11d9b68c9877781eaf4d8faffb4d0ada1900a1fb83ad452e58a072b45b",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &stageBuilder{
+				stage:            tt.fields.stage,
+				image:            tt.fields.image,
+				cf:               tt.fields.cf,
+				baseImageDigest:  tt.fields.baseImageDigest,
+				finalCacheKey:    tt.fields.finalCacheKey,
+				opts:             tt.fields.opts,
+				fileContext:      tt.fields.fileContext,
+				cmds:             tt.fields.cmds,
+				args:             tt.fields.args,
+				crossStageDeps:   tt.fields.crossStageDeps,
+				digestToCacheKey: tt.fields.digestToCacheKey,
+				stageIdxToDigest: tt.fields.stageIdxToDigest,
+				snapshotter:      tt.fields.snapshotter,
+				layerCache:       tt.fields.layerCache,
+				pushLayerToCache: tt.fields.pushLayerToCache,
+			}
+			got, err := s.saveSnapshotToLayer(tt.args.tarPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("stageBuilder.saveSnapshotToLayer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if mt, _ := got.MediaType(); mt != tt.expectedMediaType {
+				t.Errorf("expected mediatype %s, got %s", tt.expectedMediaType, mt)
+				return
+			}
+			if diff, _ := got.DiffID(); diff != tt.expectedDiff {
+				t.Errorf("expected diff %s, got %s", tt.expectedDiff, diff)
+				return
+			}
+			if digest, _ := got.Digest(); digest != tt.expectedDigest {
+				t.Errorf("expected digest %s, got %s", tt.expectedDigest, digest)
+				return
+			}
+		})
 	}
 }
