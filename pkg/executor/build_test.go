@@ -1224,7 +1224,7 @@ COPY %s bar.txt
 				t.Errorf("couldn't create hash %v", err)
 			}
 
-			ch.AddKey(fmt.Sprintf("RUN foobar"))
+			ch.AddKey("RUN foobar")
 
 			// run hash
 			runHash, err := ch.Hash()

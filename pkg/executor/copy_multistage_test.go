@@ -32,13 +32,13 @@ func TestCopyCommand_Multistage(t *testing.T) {
 	t.Run("copy a file across multistage", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
-		dockerFile := fmt.Sprintf(`
+		dockerFile := `
 FROM scratch as first
 COPY foo/bam.txt copied/
 ENV test test
 
 From scratch as second
-COPY --from=first copied/bam.txt output/bam.txt`)
+COPY --from=first copied/bam.txt output/bam.txt`
 		ioutil.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
@@ -60,13 +60,13 @@ COPY --from=first copied/bam.txt output/bam.txt`)
 	t.Run("copy a file across multistage into a directory", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
-		dockerFile := fmt.Sprintf(`
+		dockerFile := `
 FROM scratch as first
 COPY foo/bam.txt copied/
 ENV test test
 
 From scratch as second
-COPY --from=first copied/bam.txt output/`)
+COPY --from=first copied/bam.txt output/`
 		ioutil.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
@@ -85,13 +85,13 @@ COPY --from=first copied/bam.txt output/`)
 	t.Run("copy directory across multistage into a directory", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
-		dockerFile := fmt.Sprintf(`
+		dockerFile := `
 FROM scratch as first
 COPY foo copied
 ENV test test
 
 From scratch as second
-COPY --from=first copied another`)
+COPY --from=first copied another`
 		ioutil.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
