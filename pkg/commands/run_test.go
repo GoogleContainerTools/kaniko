@@ -20,7 +20,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -130,7 +129,7 @@ Meow meow meow meow
 meow meow meow meow
 `
 	for _, name := range fileNames {
-		if err := ioutil.WriteFile(filepath.Join(dir, name), []byte(content), 0777); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0777); err != nil {
 			return nil, err
 		}
 	}
@@ -153,7 +152,7 @@ meow meow meow meow
 		if err := tw.WriteHeader(hdr); err != nil {
 			log.Fatal(err)
 		}
-		body, err := ioutil.ReadFile(path)
+		body, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}

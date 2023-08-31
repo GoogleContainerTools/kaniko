@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -266,7 +265,7 @@ func fileIsCompressedTar(src string) (bool, archive.Compression) {
 		return false, -1
 	}
 	defer r.Close()
-	buf, err := ioutil.ReadAll(r)
+	buf, err := io.ReadAll(r)
 	if err != nil {
 		return false, -1
 	}

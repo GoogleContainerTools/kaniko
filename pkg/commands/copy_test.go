@@ -20,7 +20,6 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -295,7 +294,7 @@ func TestCopyExecuteCmd(t *testing.T) {
 				t.Error()
 			}
 			if fstat.IsDir() {
-				files, err := ioutil.ReadDir(dest)
+				files, err := os.ReadDir(dest)
 				if err != nil {
 					t.Error()
 				}
@@ -333,12 +332,12 @@ func Test_resolveIfSymlink(t *testing.T) {
 
 	tmpDir := t.TempDir()
 
-	baseDir, err := ioutil.TempDir(tmpDir, "not-linked")
+	baseDir, err := os.MkdirTemp(tmpDir, "not-linked")
 	if err != nil {
 		t.Error(err)
 	}
 
-	path, err := ioutil.TempFile(baseDir, "foo.txt")
+	path, err := os.CreateTemp(baseDir, "foo.txt")
 	if err != nil {
 		t.Error(err)
 	}
@@ -395,11 +394,11 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		}
 		file := filepath.Join(dir, "bam.txt")
 
-		if err := ioutil.WriteFile(file, []byte("meow"), 0777); err != nil {
+		if err := os.WriteFile(file, []byte("meow"), 0777); err != nil {
 			t.Fatal(err)
 		}
 		targetPath := filepath.Join(dir, "dam.txt")
-		if err := ioutil.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
+		if err := os.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Symlink("dam.txt", filepath.Join(dir, "sym.link")); err != nil {
@@ -412,7 +411,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	t.Run("copy dir to another dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
-		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		expected, err := os.ReadDir(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -436,13 +435,14 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		}
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with contents of srcDir
-		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		actual, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i, f := range actual {
+			fi, _ := expected[i].Info()
 			testutil.CheckDeepEqual(t, expected[i].Name(), f.Name())
-			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
+			testutil.CheckDeepEqual(t, fi.Mode(), fi.Mode())
 		}
 	})
 
@@ -465,7 +465,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with file bam.txt
-		files, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		files, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -521,7 +521,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with file bam.txt
-		files, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		files, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -550,14 +550,15 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with link sym.link
-		files, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		files, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		// bam.txt and sym.link should be present
 		testutil.CheckDeepEqual(t, 1, len(files))
 		testutil.CheckDeepEqual(t, files[0].Name(), "sym.link")
-		testutil.CheckDeepEqual(t, true, files[0].Mode()&os.ModeSymlink != 0)
+		fi, _ := files[0].Info()
+		testutil.CheckDeepEqual(t, true, fi.Mode()&os.ModeSymlink != 0)
 		linkName, err := os.Readlink(filepath.Join(testDir, "dest", "sym.link"))
 		if err != nil {
 			t.Fatal(err)
@@ -569,7 +570,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
 		doesNotExists := filepath.Join(testDir, "dead.txt")
-		if err := ioutil.WriteFile(doesNotExists, []byte("remove me"), 0777); err != nil {
+		if err := os.WriteFile(doesNotExists, []byte("remove me"), 0777); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Symlink("../dead.txt", filepath.Join(testDir, srcDir, "dead.link")); err != nil {
@@ -595,13 +596,14 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists with link dead.link
-		files, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		files, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		testutil.CheckDeepEqual(t, 1, len(files))
 		testutil.CheckDeepEqual(t, files[0].Name(), "dead.link")
-		testutil.CheckDeepEqual(t, true, files[0].Mode()&os.ModeSymlink != 0)
+		fi, _ := files[0].Info()
+		testutil.CheckDeepEqual(t, true, fi.Mode()&os.ModeSymlink != 0)
 		linkName, err := os.Readlink(filepath.Join(testDir, "dest", "dead.link"))
 		if err != nil {
 			t.Fatal(err)
@@ -649,7 +651,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	t.Run("copy dir with a symlink to a file outside of current src dir", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
-		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		expected, err := os.ReadDir(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -659,7 +661,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 			t.Fatal(err)
 		}
 		targetPath := filepath.Join(anotherSrc, "target.txt")
-		if err := ioutil.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
+		if err := os.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Symlink(targetPath, filepath.Join(testDir, srcDir, "zSym.link")); err != nil {
@@ -683,14 +685,16 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		testutil.CheckNoError(t, err)
 		// Check if "dest" dir exists contents of srcDir and an extra zSym.link created
 		// in this test
-		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		actual, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		testutil.CheckDeepEqual(t, 4, len(actual))
 		for i, f := range expected {
+			fi, _ := f.Info()
+			afi, _ := actual[i].Info()
 			testutil.CheckDeepEqual(t, f.Name(), actual[i].Name())
-			testutil.CheckDeepEqual(t, f.Mode(), actual[i].Mode())
+			testutil.CheckDeepEqual(t, fi.Mode(), afi.Mode())
 		}
 		linkName, err := os.Readlink(filepath.Join(testDir, "dest", "zSym.link"))
 		if err != nil {
@@ -739,7 +743,7 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	t.Run("copy src dir to a dest dir which is a symlink", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
-		expected, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		expected, err := os.ReadDir(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -769,13 +773,15 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err = cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "linkdest" dir exists with contents of srcDir
-		actual, err := ioutil.ReadDir(filepath.Join(testDir, "linkDest"))
+		actual, err := os.ReadDir(filepath.Join(testDir, "linkDest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i, f := range expected {
+			fi, _ := f.Info()
+			afi, _ := actual[i].Info()
 			testutil.CheckDeepEqual(t, f.Name(), actual[i].Name())
-			testutil.CheckDeepEqual(t, f.Mode(), actual[i].Mode())
+			testutil.CheckDeepEqual(t, fi.Mode(), afi.Mode())
 		}
 		// Check if linkDest -> dest
 		linkName, err := os.Readlink(filepath.Join(testDir, "linkDest"))
@@ -814,12 +820,12 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 		// Check if "linkDest" link is same.
-		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		actual, err := os.ReadDir(filepath.Join(testDir, "dest"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		testutil.CheckDeepEqual(t, "bam.txt", actual[0].Name())
-		c, err := ioutil.ReadFile(filepath.Join(testDir, "dest", "bam.txt"))
+		c, err := os.ReadFile(filepath.Join(testDir, "dest", "bam.txt"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -863,14 +869,14 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
 		testutil.CheckNoError(t, err)
 
-		actual, err := ioutil.ReadDir(filepath.Join(testDir))
+		actual, err := os.ReadDir(filepath.Join(testDir))
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		testutil.CheckDeepEqual(t, "bam.txt", actual[0].Name())
-
-		if stat, ok := actual[0].Sys().(*syscall.Stat_t); ok {
+		fi, _ := actual[0].Info()
+		if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
 			if int(stat.Uid) != uid {
 				t.Errorf("uid don't match, got %d, expected %d", stat.Uid, uid)
 			}

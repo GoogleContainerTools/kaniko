@@ -18,7 +18,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,7 +31,7 @@ func TestWithContext(t *testing.T) {
 
 	dir := filepath.Join(cwd, "dockerfiles-with-context")
 
-	testDirs, err := ioutil.ReadDir(dir)
+	testDirs, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

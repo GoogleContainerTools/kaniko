@@ -19,7 +19,6 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -144,7 +143,7 @@ func writeDigestFile(path string, digestByteArray []byte) error {
 		}
 		logrus.Tracef("Created directory %v", parentDir)
 	}
-	return ioutil.WriteFile(path, digestByteArray, 0644)
+	return os.WriteFile(path, digestByteArray, 0644)
 }
 
 // DoPush is responsible for pushing image to the destinations specified in opts.

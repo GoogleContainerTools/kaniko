@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/commands"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -157,7 +156,7 @@ func (f fakeLayer) Compressed() (io.ReadCloser, error) {
 	return nil, nil
 }
 func (f fakeLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(f.TarContent)), nil
+	return io.NopCloser(bytes.NewReader(f.TarContent)), nil
 }
 func (f fakeLayer) Size() (int64, error) {
 	return 0, nil

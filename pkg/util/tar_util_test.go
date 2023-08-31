@@ -22,7 +22,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -61,7 +60,7 @@ func Test_AddFileToTar(t *testing.T) {
 	testDir := t.TempDir()
 
 	path := filepath.Join(testDir, regularFiles[0])
-	if err := ioutil.WriteFile(path, []byte("hello"), os.ModePerm); err != nil {
+	if err := os.WriteFile(path, []byte("hello"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	// use a pre-determined time with non-zero microseconds to avoid flakiness

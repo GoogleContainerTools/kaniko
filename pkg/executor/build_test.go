@@ -20,7 +20,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -622,7 +621,7 @@ func Test_stageBuilder_optimize(t *testing.T) {
 			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc,
 				args: dockerfile.NewBuildArgs([]string{})}
 			ck := CompositeCache{}
-			file, err := ioutil.TempFile("", "foo")
+			file, err := os.CreateTemp("", "foo")
 			if err != nil {
 				t.Error(err)
 			}
@@ -1245,7 +1244,7 @@ FROM ubuntu:16.04
 COPY %s bar.txt
 RUN foobar
 `, filename)
-			f, _ := ioutil.TempFile("", "")
+			f, _ := os.CreateTemp("", "")
 			os.WriteFile(f.Name(), []byte(dockerFile), 0755)
 			opts := &config.KanikoOptions{
 				DockerfilePath: f.Name(),
@@ -1531,7 +1530,7 @@ func tempDirAndFile(t *testing.T) (string, []string) {
 	dir := t.TempDir()
 	for _, filename := range filenames {
 		filepath := filepath.Join(dir, filename)
-		err := ioutil.WriteFile(filepath, []byte(`meow`), 0777)
+		err := os.WriteFile(filepath, []byte(`meow`), 0777)
 		if err != nil {
 			t.Errorf("could not create temp file %v", err)
 		}
@@ -1560,7 +1559,7 @@ func generateTar(t *testing.T, dir string, fileNames ...string) []byte {
 			t.Errorf("could not write tar header %v", err)
 		}
 
-		content, err := ioutil.ReadFile(filePath)
+		content, err := os.ReadFile(filePath)
 		if err != nil {
 			t.Errorf("could not read tempfile %v", err)
 		}

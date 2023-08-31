@@ -18,7 +18,6 @@ package filesystem
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -67,7 +66,7 @@ func Test_ResolvePaths(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if err := ioutil.WriteFile(fTarget, []byte{}, 0777); err != nil {
+				if err := os.WriteFile(fTarget, []byte{}, 0777); err != nil {
 					t.Fatal(err)
 				}
 
@@ -143,7 +142,7 @@ func Test_ResolvePaths(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if err := ioutil.WriteFile(filepath.Join(target, "meow.txt"), []byte{}, 0777); err != nil {
+				if err := os.WriteFile(filepath.Join(target, "meow.txt"), []byte{}, 0777); err != nil {
 					t.Fatal(err)
 				}
 
@@ -192,7 +191,7 @@ func Test_resolveSymlinkAncestor(t *testing.T) {
 
 		targetPath := filepath.Join(targetDir, "bam.txt")
 
-		if err := ioutil.WriteFile(targetPath, []byte("meow"), 0777); err != nil {
+		if err := os.WriteFile(targetPath, []byte("meow"), 0777); err != nil {
 			t.Fatal(err)
 		}
 

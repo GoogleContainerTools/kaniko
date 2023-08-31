@@ -20,7 +20,6 @@ package commands
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -40,7 +39,7 @@ func (f fakeLayer) Compressed() (io.ReadCloser, error) {
 	return nil, nil
 }
 func (f fakeLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(f.TarContent)), nil
+	return io.NopCloser(bytes.NewReader(f.TarContent)), nil
 }
 func (f fakeLayer) Size() (int64, error) {
 	return 0, nil
