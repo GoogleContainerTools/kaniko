@@ -751,7 +751,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	return nil, err
 }
 
-// fileToSave returns all the files matching the given pattern in deps.
+// filesToSave returns all the files matching the given pattern in deps.
 // If a file is a symlink, it also returns the target file.
 func filesToSave(deps []string) ([]string, error) {
 	srcFiles := []string{}

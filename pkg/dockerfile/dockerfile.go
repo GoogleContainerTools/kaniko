@@ -102,7 +102,7 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	return stages, metaArgs, nil
 }
 
-// expandNestedArgs tries to resolve nested ARG value against the previously defined ARGs
+// expandNested tries to resolve nested ARG value against the previously defined ARGs
 func expandNested(metaArgs []instructions.ArgCommand, buildArgs []string) ([]instructions.ArgCommand, error) {
 	var prevArgs []string
 	for i, marg := range metaArgs {
