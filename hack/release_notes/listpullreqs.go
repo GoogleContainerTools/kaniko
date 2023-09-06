@@ -61,6 +61,8 @@ func printPullRequests() {
 	fmt.Println(fmt.Sprintf("Collecting pull request that were merged since the last release: %s (%s)", *releases[0].TagName, lastReleaseTime))
 
 	listSize := 1
+	seen := map[int]bool{}
+
 	for page := 0; listSize > 0; page++ {
 		pullRequests, _, _ := client.PullRequests.List(context.Background(), org, repo, &github.PullRequestListOptions{
 			State:     "closed",
@@ -75,8 +77,9 @@ func printPullRequests() {
 		for idx := range pullRequests {
 			pr := pullRequests[idx]
 			if pr.MergedAt != nil {
-				if pr.GetMergedAt().After(lastReleaseTime.Time) {
+				if _, ok := seen[*pr.Number]; !ok && pr.GetMergedAt().After(lastReleaseTime.Time) {
 					fmt.Printf("* %s [#%d](https://github.com/%s/%s/pull/%d)\n", pr.GetTitle(), *pr.Number, org, repo, *pr.Number)
+					seen[*pr.Number] = true
 				}
 			}
 		}
