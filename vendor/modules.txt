@@ -599,8 +599,8 @@ github.com/google/s2a-go/internal/v2/remotesigner
 github.com/google/s2a-go/internal/v2/tlsconfigstore
 github.com/google/s2a-go/retry
 github.com/google/s2a-go/stream
-# github.com/google/slowjam v1.0.1
-## explicit; go 1.19
+# github.com/google/slowjam v1.1.0
+## explicit; go 1.20
 github.com/google/slowjam/pkg/stacklog
 # github.com/google/subcommands v1.2.0
 ## explicit
