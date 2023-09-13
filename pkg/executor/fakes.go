@@ -145,6 +145,7 @@ func (f *fakeLayerCache) RetrieveLayer(key string) (v1.Image, error) {
 
 type fakeLayer struct {
 	TarContent []byte
+	mediaType  types.MediaType
 }
 
 func (f fakeLayer) Digest() (v1.Hash, error) {
@@ -163,7 +164,7 @@ func (f fakeLayer) Size() (int64, error) {
 	return 0, nil
 }
 func (f fakeLayer) MediaType() (types.MediaType, error) {
-	return "", nil
+	return f.mediaType, nil
 }
 
 type fakeImage struct {
@@ -202,4 +203,20 @@ func (f fakeImage) LayerByDigest(v1.Hash) (v1.Layer, error) {
 }
 func (f fakeImage) LayerByDiffID(v1.Hash) (v1.Layer, error) {
 	return fakeLayer{}, nil
+}
+
+type ociFakeImage struct {
+	*fakeImage
+}
+
+func (f ociFakeImage) MediaType() (types.MediaType, error) {
+	return types.OCIManifestSchema1, nil
+}
+
+type dockerFakeImage struct {
+	*fakeImage
+}
+
+func (f dockerFakeImage) MediaType() (types.MediaType, error) {
+	return types.DockerManifestSchema2, nil
 }
