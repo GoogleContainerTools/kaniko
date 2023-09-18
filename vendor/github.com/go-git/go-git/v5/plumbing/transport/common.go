@@ -227,11 +227,17 @@ func parseURL(endpoint string) (*Endpoint, error) {
 		pass, _ = u.User.Password()
 	}
 
+	host := u.Hostname()
+	if strings.Contains(host, ":") {
+		// IPv6 address
+		host = "[" + host + "]"
+	}
+
 	return &Endpoint{
 		Protocol: u.Scheme,
 		User:     user,
 		Password: pass,
-		Host:     u.Hostname(),
+		Host:     host,
 		Port:     getPort(u),
 		Path:     getPath(u),
 	}, nil
