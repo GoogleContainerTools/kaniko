@@ -498,10 +498,21 @@ type CommitOptions struct {
 	// commit will not be signed. The private key must be present and already
 	// decrypted.
 	SignKey *openpgp.Entity
+	// Amend will create a new commit object and replace the commit that HEAD currently
+	// points to. Cannot be used with All nor Parents.
+	Amend bool
 }
 
 // Validate validates the fields and sets the default values.
 func (o *CommitOptions) Validate(r *Repository) error {
+	if o.All && o.Amend {
+		return errors.New("all and amend cannot be used together")
+	}
+
+	if o.Amend && len(o.Parents) > 0 {
+		return errors.New("parents cannot be used with amend")
+	}
+
 	if o.Author == nil {
 		if err := o.loadConfigAuthorAndCommitter(r); err != nil {
 			return err
