@@ -39,7 +39,7 @@ require (
 	golang.org/x/sync v0.3.0
 )
 
-require github.com/containerd/containerd v1.7.5
+require github.com/containerd/containerd v1.7.6
 
 require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
@@ -160,6 +160,7 @@ require (
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go v61.3.0+incompatible // indirect
+	github.com/Microsoft/hcsshim v0.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.18.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.16.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
