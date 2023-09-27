@@ -17,7 +17,6 @@ limitations under the License.
 package cache
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -59,35 +58,11 @@ func WarmCache(opts *config.WarmerOptions) error {
 
 	errs := 0
 	for _, img := range images {
-		tarBuf := new(bytes.Buffer)
-		manifestBuf := new(bytes.Buffer)
-
-		cw := &Warmer{
-			Remote:         remote.RetrieveRemoteImage,
-			Local:          LocalSource,
-			TarWriter:      tarBuf,
-			ManifestWriter: manifestBuf,
-		}
-
-		digest, err := cw.Warm(img, opts)
+		err := warmToFile(cacheDir, img, opts)
 		if err != nil {
-			if !IsAlreadyCached(err) {
-				logrus.Warnf("Error while trying to warm image: %v %v", img, err)
-				errs++
-			}
-
-			continue
-		}
-
-		cachePath := path.Join(cacheDir, digest.String())
-
-		if err := writeBufsToFile(cachePath, tarBuf, manifestBuf); err != nil {
-			logrus.Warnf("Error while writing %v to cache: %v", img, err)
+			logrus.Warnf("Error while trying to warm image: %v %v", img, err)
 			errs++
-			continue
 		}
-
-		logrus.Debugf("Wrote %s to cache", img)
 	}
 
 	if len(images) == errs {
@@ -97,22 +72,53 @@ func WarmCache(opts *config.WarmerOptions) error {
 	return nil
 }
 
-func writeBufsToFile(cachePath string, tarBuf, manifestBuf *bytes.Buffer) error {
-	f, err := os.Create(cachePath)
+// Download image in temporary files then move files to final destination
+func warmToFile(cacheDir, img string, opts *config.WarmerOptions) error {
+	f, err := os.CreateTemp(cacheDir, "warmingImage.*")
 	if err != nil {
 		return err
 	}
+	// defer called in reverse order
+	defer os.Remove(f.Name())
 	defer f.Close()
 
-	if _, err := f.Write(tarBuf.Bytes()); err != nil {
-		return errors.Wrap(err, "Failed to save tar to file")
+	mtfsFile, err := os.CreateTemp(cacheDir, "warmingManifest.*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(mtfsFile.Name())
+	defer mtfsFile.Close()
+
+	cw := &Warmer{
+		Remote:         remote.RetrieveRemoteImage,
+		Local:          LocalSource,
+		TarWriter:      f,
+		ManifestWriter: mtfsFile,
 	}
 
-	mfstPath := cachePath + ".json"
-	if err := ioutil.WriteFile(mfstPath, manifestBuf.Bytes(), 0666); err != nil {
-		return errors.Wrap(err, "Failed to save manifest to file")
+	digest, err := cw.Warm(img, opts)
+	if err != nil {
+		if !IsAlreadyCached(err) {
+			logrus.Warnf("Error while trying to warm image: %v %v", img, err)
+		}
+
+		return err
 	}
 
+	finalCachePath := path.Join(cacheDir, digest.String())
+	finalMfstPath := finalCachePath + ".json"
+
+	err = os.Rename(f.Name(), finalCachePath)
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(mtfsFile.Name(), finalMfstPath)
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("Wrote %s to cache", img)
 	return nil
 }
 
