@@ -59,7 +59,7 @@ FROM debian:bullseye-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
 # use musl busybox since it's staticly compiled on all platforms
-FROM busybox:musl AS busybox
+FROM busybox:1.35.0-musl@sha256:b083c85bd4aff5d4936fa263572c8c7369b02145856a3edd4fff19d97a8e78d5 AS busybox
 
 FROM scratch AS kaniko-base-slim
 
