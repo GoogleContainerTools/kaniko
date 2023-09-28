@@ -301,7 +301,7 @@ echo -e 'FROM alpine \nRUN echo "created from standard input"' > Dockerfile | ta
         "volumeMounts": [
           {
             "name": "cabundle",
-            "mountPath": "/kaniko/ssl/certs/"
+            "mountPath": "/etc/ssl/certs/"
           },
           {
             "name": "docker-config",
