@@ -355,7 +355,7 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 		return -1, -1, err
 	}
 
-	uid32, gid32, err := getUIDAndGIDFromString(chown, true)
+	uid32, gid32, err := getUIDAndGIDFromString(chown)
 	if err != nil {
 		return -1, -1, err
 	}
@@ -364,20 +364,18 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 }
 
 // Extract user and group id from a string formatted 'user:group'.
-// If fallbackToUID is set, the gid is equal to uid if the group is not specified
-// otherwise gid is set to zero.
 // UserID and GroupID don't need to be present on the system.
-func getUIDAndGIDFromString(userGroupString string, fallbackToUID bool) (uint32, uint32, error) {
+func getUIDAndGIDFromString(userGroupString string) (uint32, uint32, error) {
 	userAndGroup := strings.Split(userGroupString, ":")
 	userStr := userAndGroup[0]
 	var groupStr string
 	if len(userAndGroup) > 1 {
 		groupStr = userAndGroup[1]
 	}
-	return getUIDAndGIDFunc(userStr, groupStr, fallbackToUID)
+	return getUIDAndGIDFunc(userStr, groupStr)
 }
 
-func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
+func getUIDAndGID(userStr string, groupStr string) (uint32, uint32, error) {
 	user, err := LookupUser(userStr)
 	if err != nil {
 		return 0, 0, err
@@ -398,11 +396,7 @@ func getUIDAndGID(userStr string, groupStr string, fallbackToUID bool) (uint32, 
 		return uid32, gid32, nil
 	}
 
-	if fallbackToUID {
-		return uid32, uid32, nil
-	}
-
-	return uid32, 0, nil
+	return uid32, uid32, nil
 }
 
 // getGID tries to parse the gid
