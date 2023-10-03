@@ -51,6 +51,21 @@ var copyTests = []struct {
 		sourcesAndDest: []string{"foo", "tempCopyExecuteTest"},
 		expectedDest:   []string{"tempCopyExecuteTest"},
 	},
+	{
+		name:           "copy f* into tempCopyExecuteTest",
+		sourcesAndDest: []string{"foo*", "tempCopyExecuteTest"},
+		expectedDest:   []string{"tempCopyExecuteTest"},
+	},
+	{
+		name:           "copy fo? into tempCopyExecuteTest",
+		sourcesAndDest: []string{"fo?", "tempCopyExecuteTest"},
+		expectedDest:   []string{"tempCopyExecuteTest"},
+	},
+	{
+		name:           "copy f[o][osp] into tempCopyExecuteTest",
+		sourcesAndDest: []string{"f[o][osp]", "tempCopyExecuteTest"},
+		expectedDest:   []string{"tempCopyExecuteTest"},
+	},
 }
 
 func setupTestTemp(t *testing.T) string {
