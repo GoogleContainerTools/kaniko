@@ -149,7 +149,7 @@ There are approximately [18 supported Dockerfile commands](https://docs.docker.c
 
 ### Source Context {#source-context}
 
-The source context can be provided as a local directory, which will be uploaded to a GCS bucket.  Like [skaffold](https://docs.google.com/document/d/1l2wAfAkOzENyj79m8De2SUKMq9Km_nyrfO9MlAX9sTM/edit#heading=h.cxx11j5pl834), we could potentially parse the Dockerfile for dependencies and upload only the files we need to save time. Other possible source contexts include Git repositories or pre-packaged tarball contexts.
+The source context can be provided as a local directory, which will be uploaded to a GCS bucket.  Like [skaffold](https://github.com/GoogleContainerTools/skaffold), we could potentially parse the Dockerfile for dependencies and upload only the files we need to save time. Other possible source contexts include Git repositories or pre-packaged tarball contexts.
 
 
 ### Permissions in the Kubernetes cluster {#permissions-in-the-kubernetes-cluster}
