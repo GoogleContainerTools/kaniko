@@ -791,7 +791,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			if opts.Cleanup {
-				if err = util.DeleteFilesystem(); err != nil {
+				if err = util.CleanupFilesystem(); err != nil {
 					return nil, err
 				}
 			}
