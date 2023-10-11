@@ -54,7 +54,7 @@ sed 's/|/\n/g' $TEMP_CHANGELOG > $TEMP_CHANGELOG_FIXED
 # Prepend to CHANGELOG.md
 cat $TEMP_CHANGELOG_FIXED CHANGELOG.md > TEMP && mv TEMP CHANGELOG.md
 
-echo "Prepended the following to release information to CHANGELOG.md"
+echo "Prepended the following release information to CHANGELOG.md"
 echo ""
 cat  $TEMP_CHANGELOG_FIXED
 
@@ -71,3 +71,6 @@ sed -i.bak \
     -e "s|VERSION_MINOR ?=.*|VERSION_MINOR ?= $VERSION_MINOR|" \
     -e "s|VERSION_BUILD ?=.*|VERSION_BUILD ?= $VERSION_BUILD|" \
     ./Makefile
+
+# Cleanup
+rm ./Makefile.bak
