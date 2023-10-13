@@ -309,6 +309,10 @@ func TestCopyExecuteCmd(t *testing.T) {
 			if err != nil {
 				t.Error()
 			}
+			if fstat == nil {
+				t.Error()
+				return // Unrecoverable, will segfault in the next line
+			}
 			if fstat.IsDir() {
 				files, err := ioutil.ReadDir(dest)
 				if err != nil {
