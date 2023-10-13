@@ -1019,9 +1019,9 @@ func createParentDirectory(path string, uid int, gid int) error {
 	baseDir := filepath.Dir(path)
 	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Tracef("BaseDir %s for file %s does not exist. Creating.", baseDir, path)
-		dirs := []string{}
 
 		dir := baseDir
+		dirs := []string{baseDir}
 		for {
 			if dir == "/" || dir == "." || dir == "" {
 				break
@@ -1029,7 +1029,6 @@ func createParentDirectory(path string, uid int, gid int) error {
 			dir = filepath.Dir(dir)
 			dirs = append(dirs, dir)
 		}
-		dirs = append(dirs, baseDir)
 
 		for i := len(dirs) - 1; i >= 0; i-- {
 			dir := dirs[i]

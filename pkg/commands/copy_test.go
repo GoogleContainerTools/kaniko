@@ -66,6 +66,11 @@ var copyTests = []struct {
 		sourcesAndDest: []string{"f[o][osp]", "tempCopyExecuteTest"},
 		expectedDest:   []string{"tempCopyExecuteTest"},
 	},
+	{
+		name:           "Copy into several to-be-created directories",
+		sourcesAndDest: []string{"f[o][osp]", "tempCopyExecuteTest/foo/bar"},
+		expectedDest:   []string{"bar"},
+	},
 }
 
 func setupTestTemp(t *testing.T) string {
