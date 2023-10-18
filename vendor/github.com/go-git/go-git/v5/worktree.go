@@ -368,7 +368,7 @@ func (w *Worktree) resetIndex(t *object.Tree, dirs []string) error {
 }
 
 func (w *Worktree) resetWorktree(t *object.Tree) error {
-	changes, err := w.diffStagingWithWorktree(true)
+	changes, err := w.diffStagingWithWorktree(true, false)
 	if err != nil {
 		return err
 	}
@@ -420,7 +420,7 @@ func (w *Worktree) checkoutChange(ch merkletrie.Change, t *object.Tree, idx *ind
 }
 
 func (w *Worktree) containsUnstagedChanges() (bool, error) {
-	ch, err := w.diffStagingWithWorktree(false)
+	ch, err := w.diffStagingWithWorktree(false, true)
 	if err != nil {
 		return false, err
 	}

@@ -147,9 +147,9 @@ const (
 	securityCapabilityXattr = "security.capability"
 )
 
-// writeSecurityXattrToTarHeader writes security.capability
+// writeSecurityXattrToTarFile writes security.capability
 // xattrs from a tar header to filesystem
-func writeSecurityXattrToToFile(path string, hdr *tar.Header) error {
+func writeSecurityXattrToTarFile(path string, hdr *tar.Header) error {
 	if hdr.Xattrs == nil {
 		return nil
 	}

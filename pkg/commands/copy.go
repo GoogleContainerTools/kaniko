@@ -58,6 +58,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		return errors.Wrap(err, "getting user group from chown")
 	}
 
+	// sources from the Copy command are resolved with wildcards {*?[}
 	srcs, dest, err := util.ResolveEnvAndWildcards(c.cmd.SourcesAndDest, c.fileContext, replacementEnvs)
 	if err != nil {
 		return errors.Wrap(err, "resolving src")

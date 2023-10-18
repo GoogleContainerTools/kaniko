@@ -501,29 +501,16 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 		return nil, nil
 	}
 
-	var layerOpts []tarball.LayerOption
-
-	if s.opts.CompressedCaching == true {
-		layerOpts = append(layerOpts, tarball.WithCompressedCaching)
+	layerOpts := s.getLayerOptionFromOpts()
+	imageMediaType, err := s.image.MediaType()
+	if err != nil {
+		return nil, err
 	}
-
-	if s.opts.CompressionLevel > 0 {
-		layerOpts = append(layerOpts, tarball.WithCompressionLevel(s.opts.CompressionLevel))
-	}
-
-	switch s.opts.Compression {
-	case config.ZStd:
-		layerOpts = append(layerOpts, tarball.WithCompression("zstd"), tarball.WithMediaType(types.OCILayerZStd))
-
-	case config.GZip:
-
-		// layer already gzipped by default
-	default:
-		mt, err := s.image.MediaType()
-		if err != nil {
-			return nil, err
-		}
-		if strings.Contains(string(mt), types.OCIVendorPrefix) {
+	// Only appending MediaType for OCI images as the default is docker
+	if extractMediaTypeVendor(imageMediaType) == types.OCIVendorPrefix {
+		if s.opts.Compression == config.ZStd {
+			layerOpts = append(layerOpts, tarball.WithCompression("zstd"), tarball.WithMediaType(types.OCILayerZStd))
+		} else {
 			layerOpts = append(layerOpts, tarball.WithMediaType(types.OCILayer))
 		}
 	}
@@ -535,8 +522,101 @@ func (s *stageBuilder) saveSnapshotToLayer(tarPath string) (v1.Layer, error) {
 
 	return layer, nil
 }
+
+func (s *stageBuilder) getLayerOptionFromOpts() []tarball.LayerOption {
+	var layerOpts []tarball.LayerOption
+
+	if s.opts.CompressedCaching {
+		layerOpts = append(layerOpts, tarball.WithCompressedCaching)
+	}
+
+	if s.opts.CompressionLevel > 0 {
+		layerOpts = append(layerOpts, tarball.WithCompressionLevel(s.opts.CompressionLevel))
+	}
+	return layerOpts
+}
+
+func extractMediaTypeVendor(mt types.MediaType) string {
+	if strings.Contains(string(mt), types.OCIVendorPrefix) {
+		return types.OCIVendorPrefix
+	}
+	return types.DockerVendorPrefix
+}
+
+// https://github.com/opencontainers/image-spec/blob/main/media-types.md#compatibility-matrix
+func convertMediaType(mt types.MediaType) types.MediaType {
+	switch mt {
+	case types.DockerManifestSchema1, types.DockerManifestSchema2:
+		return types.OCIManifestSchema1
+	case types.DockerManifestList:
+		return types.OCIImageIndex
+	case types.DockerLayer:
+		return types.OCILayer
+	case types.DockerConfigJSON:
+		return types.OCIConfigJSON
+	case types.DockerForeignLayer:
+		return types.OCIUncompressedRestrictedLayer
+	case types.DockerUncompressedLayer:
+		return types.OCIUncompressedLayer
+	case types.OCIImageIndex:
+		return types.DockerManifestList
+	case types.OCIManifestSchema1:
+		return types.DockerManifestSchema2
+	case types.OCIConfigJSON:
+		return types.DockerConfigJSON
+	case types.OCILayer, types.OCILayerZStd:
+		return types.DockerLayer
+	case types.OCIRestrictedLayer:
+		return types.DockerForeignLayer
+	case types.OCIUncompressedLayer:
+		return types.DockerUncompressedLayer
+	case types.OCIContentDescriptor, types.OCIUncompressedRestrictedLayer, types.DockerManifestSchema1Signed, types.DockerPluginConfig:
+		return ""
+	default:
+		return ""
+	}
+}
+
+func (s *stageBuilder) convertLayerMediaType(layer v1.Layer) (v1.Layer, error) {
+	layerMediaType, err := layer.MediaType()
+	if err != nil {
+		return nil, err
+	}
+	imageMediaType, err := s.image.MediaType()
+	if err != nil {
+		return nil, err
+	}
+	if extractMediaTypeVendor(layerMediaType) != extractMediaTypeVendor(imageMediaType) {
+		layerOpts := s.getLayerOptionFromOpts()
+		targetMediaType := convertMediaType(layerMediaType)
+
+		if extractMediaTypeVendor(imageMediaType) == types.OCIVendorPrefix {
+			if s.opts.Compression == config.ZStd {
+				targetMediaType = types.OCILayerZStd
+				layerOpts = append(layerOpts, tarball.WithCompression("zstd"))
+			}
+		}
+
+		layerOpts = append(layerOpts, tarball.WithMediaType(targetMediaType))
+
+		if targetMediaType != "" {
+			return tarball.LayerFromOpener(layer.Uncompressed, layerOpts...)
+		}
+		return nil, fmt.Errorf(
+			"layer with media type %v cannot be converted to a media type that matches %v",
+			layerMediaType,
+			imageMediaType,
+		)
+	}
+	return layer, nil
+}
+
 func (s *stageBuilder) saveLayerToImage(layer v1.Layer, createdBy string) error {
 	var err error
+	layer, err = s.convertLayerMediaType(layer)
+	if err != nil {
+		return err
+	}
 	s.image, err = mutate.Append(s.image,
 		mutate.Addendum{
 			Layer: layer,
@@ -751,7 +831,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	return nil, err
 }
 
-// fileToSave returns all the files matching the given pattern in deps.
+// filesToSave returns all the files matching the given pattern in deps.
 // If a file is a symlink, it also returns the target file.
 func filesToSave(deps []string) ([]string, error) {
 	srcFiles := []string{}

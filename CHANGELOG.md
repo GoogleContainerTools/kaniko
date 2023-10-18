@@ -1,3 +1,58 @@
+# v1.16.0 Release 2023-09-22
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.16.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.16.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.16.0-slim
+```
+
+* fix: make it so release.sh script doesn't output duplicate change PRs [#2735](https://github.com/GoogleContainerTools/kaniko/pull/2735)
+* chore: update function names to be correct and representative of functionality [#2720](https://github.com/GoogleContainerTools/kaniko/pull/2720)
+* chore(deps): bump github.com/go-git/go-git/v5 from 5.8.1 to 5.9.0 [#2749](https://github.com/GoogleContainerTools/kaniko/pull/2749)
+* chore(deps): bump google.golang.org/api from 0.140.0 to 0.141.0 [#2748](https://github.com/GoogleContainerTools/kaniko/pull/2748)
+* chore(deps): bump github.com/containerd/containerd from 1.7.5 to 1.7.6 [#2750](https://github.com/GoogleContainerTools/kaniko/pull/2750)
+* fix: ensure images layers correspond with the image media type [#2719](https://github.com/GoogleContainerTools/kaniko/pull/2719)
+* chore(deps): bump github.com/google/slowjam from 1.0.1 to 1.1.0 [#2745](https://github.com/GoogleContainerTools/kaniko/pull/2745)
+* chore(deps): bump docker/setup-buildx-action from 2.10.0 to 3.0.0 [#2743](https://github.com/GoogleContainerTools/kaniko/pull/2743)
+* chore(deps): bump github.com/go-git/go-billy/v5 from 5.4.1 to 5.5.0 [#2746](https://github.com/GoogleContainerTools/kaniko/pull/2746)
+* chore(deps): bump google.golang.org/api from 0.138.0 to 0.140.0 [#2747](https://github.com/GoogleContainerTools/kaniko/pull/2747)
+* chore(deps): bump docker/setup-qemu-action from 2.2.0 to 3.0.0 [#2744](https://github.com/GoogleContainerTools/kaniko/pull/2744)
+* chore(deps): bump docker/build-push-action from 4.2.1 to 5.0.0 [#2742](https://github.com/GoogleContainerTools/kaniko/pull/2742)
+* chore(deps): bump google.golang.org/api from 0.138.0 to 0.139.0 [#2741](https://github.com/GoogleContainerTools/kaniko/pull/2741)
+* chore(deps): bump cloud.google.com/go/storage from 1.32.0 to 1.33.0 [#2740](https://github.com/GoogleContainerTools/kaniko/pull/2740)
+* chore(deps): bump docker/build-push-action from 4.1.1 to 4.2.1 [#2739](https://github.com/GoogleContainerTools/kaniko/pull/2739)
+* chore(deps): bump golang.org/x/oauth2 from 0.11.0 to 0.12.0 [#2732](https://github.com/GoogleContainerTools/kaniko/pull/2732)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.81 to 1.11.83 [#2733](https://github.com/GoogleContainerTools/kaniko/pull/2733)
+* chore(deps): bump golang.org/x/net from 0.14.0 to 0.15.0 [#2734](https://github.com/GoogleContainerTools/kaniko/pull/2734)
+* chore(deps): bump github.com/containerd/containerd from 1.7.3 to 1.7.5 [#2723](https://github.com/GoogleContainerTools/kaniko/pull/2723)
+* chore(deps): bump sigstore/cosign-installer from 3.1.1 to 3.1.2 [#2727](https://github.com/GoogleContainerTools/kaniko/pull/2727)
+* chore(deps): bump docker/setup-buildx-action from 2.9.1 to 2.10.0 [#2726](https://github.com/GoogleContainerTools/kaniko/pull/2726)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.18.37 to 1.18.38 [#2724](https://github.com/GoogleContainerTools/kaniko/pull/2724)
+* chore(deps): bump golang.org/x/sys from 0.11.0 to 0.12.0 [#2722](https://github.com/GoogleContainerTools/kaniko/pull/2722)
+* chore: unnecessary use of fmt.Sprintf [#2717](https://github.com/GoogleContainerTools/kaniko/pull/2717)
+* fix function name on comment [#2707](https://github.com/GoogleContainerTools/kaniko/pull/2707)
+* Avoid returning the UID when resolving the GIDs. [#2689](https://github.com/GoogleContainerTools/kaniko/pull/2689)
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- Diego Gonzalez
+- geekvest
+- guangwu
+- Logan Price
+
+
 # v1.15.0 Release 2023-08-29
 The executor images in this release are:
 ```

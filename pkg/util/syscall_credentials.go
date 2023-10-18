@@ -19,6 +19,7 @@ package util
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -26,7 +27,7 @@ import (
 )
 
 func SyscallCredentials(userStr string) (*syscall.Credential, error) {
-	uid, gid, err := getUIDAndGIDFromString(userStr, true)
+	uid, gid, err := getUIDAndGIDFromString(userStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "get uid/gid")
 	}
@@ -52,6 +53,12 @@ func SyscallCredentials(userStr string) (*syscall.Credential, error) {
 		}
 
 		groups = append(groups, uint32(i))
+	}
+
+	if !(len(strings.Split(userStr, ":")) > 1) {
+		if u.Gid != "" {
+			gid, _ = getGID(u.Gid)
+		}
 	}
 
 	return &syscall.Credential{

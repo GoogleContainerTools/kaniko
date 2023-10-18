@@ -1223,7 +1223,7 @@ COPY %s bar.txt
 				t.Errorf("couldn't create hash %v", err)
 			}
 
-			ch.AddKey(fmt.Sprintf("RUN foobar"))
+			ch.AddKey("RUN foobar")
 
 			// run hash
 			runHash, err := ch.Hash()
@@ -1703,14 +1703,6 @@ func Test_ResolveCrossStageInstructions(t *testing.T) {
 	}
 }
 
-type ociFakeImage struct {
-	*fakeImage
-}
-
-func (f ociFakeImage) MediaType() (types.MediaType, error) {
-	return types.OCIManifestSchema1, nil
-}
-
 func Test_stageBuilder_saveSnapshotToLayer(t *testing.T) {
 	dir, files := tempDirAndFile(t)
 	type fields struct {
@@ -1787,7 +1779,7 @@ func Test_stageBuilder_saveSnapshotToLayer(t *testing.T) {
 		{
 			name: "oci image, zstd compression",
 			fields: fields{
-				image: fakeImage{},
+				image: ociFakeImage{},
 				opts: &config.KanikoOptions{
 					ForceBuildMetadata: true,
 					Compression:        config.ZStd,
@@ -1842,6 +1834,147 @@ func Test_stageBuilder_saveSnapshotToLayer(t *testing.T) {
 			if digest, _ := got.Digest(); digest != tt.expectedDigest {
 				t.Errorf("expected digest %s, got %s", tt.expectedDigest, digest)
 				return
+			}
+		})
+	}
+}
+
+func Test_stageBuilder_convertLayerMediaType(t *testing.T) {
+	type fields struct {
+		stage            config.KanikoStage
+		image            v1.Image
+		cf               *v1.ConfigFile
+		baseImageDigest  string
+		finalCacheKey    string
+		opts             *config.KanikoOptions
+		fileContext      util.FileContext
+		cmds             []commands.DockerCommand
+		args             *dockerfile.BuildArgs
+		crossStageDeps   map[int][]string
+		digestToCacheKey map[string]string
+		stageIdxToDigest map[string]string
+		snapshotter      snapShotter
+		layerCache       cache.LayerCache
+		pushLayerToCache cachePusher
+	}
+	type args struct {
+		layer v1.Layer
+	}
+	tests := []struct {
+		name              string
+		fields            fields
+		args              args
+		expectedMediaType types.MediaType
+		wantErr           bool
+	}{
+		{
+			name: "docker image w/ docker layer",
+			fields: fields{
+				image: fakeImage{},
+			},
+			args: args{
+				layer: fakeLayer{
+					mediaType: types.DockerLayer,
+				},
+			},
+			expectedMediaType: types.DockerLayer,
+		},
+		{
+			name: "oci image w/ oci layer",
+			fields: fields{
+				image: ociFakeImage{},
+			},
+			args: args{
+				layer: fakeLayer{
+					mediaType: types.OCILayer,
+				},
+			},
+			expectedMediaType: types.OCILayer,
+		},
+		{
+			name: "oci image w/ convertable docker layer",
+			fields: fields{
+				image: ociFakeImage{},
+				opts:  &config.KanikoOptions{},
+			},
+			args: args{
+				layer: fakeLayer{
+					mediaType: types.DockerLayer,
+				},
+			},
+			expectedMediaType: types.OCILayer,
+		},
+		{
+			name: "oci image w/ convertable docker layer and zstd compression",
+			fields: fields{
+				image: ociFakeImage{},
+				opts: &config.KanikoOptions{
+					Compression: config.ZStd,
+				},
+			},
+			args: args{
+				layer: fakeLayer{
+					mediaType: types.DockerLayer,
+				},
+			},
+			expectedMediaType: types.OCILayerZStd,
+		},
+		{
+			name: "docker image and oci zstd layer",
+			fields: fields{
+				image: dockerFakeImage{},
+				opts:  &config.KanikoOptions{},
+			},
+			args: args{
+				layer: fakeLayer{
+					mediaType: types.OCILayerZStd,
+				},
+			},
+			expectedMediaType: types.DockerLayer,
+		},
+		{
+			name: "docker image w/ uncovertable oci image",
+			fields: fields{
+				image: dockerFakeImage{},
+				opts:  &config.KanikoOptions{},
+			},
+			args: args{
+				layer: fakeLayer{
+					mediaType: types.OCIUncompressedRestrictedLayer,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &stageBuilder{
+				stage:            tt.fields.stage,
+				image:            tt.fields.image,
+				cf:               tt.fields.cf,
+				baseImageDigest:  tt.fields.baseImageDigest,
+				finalCacheKey:    tt.fields.finalCacheKey,
+				opts:             tt.fields.opts,
+				fileContext:      tt.fields.fileContext,
+				cmds:             tt.fields.cmds,
+				args:             tt.fields.args,
+				crossStageDeps:   tt.fields.crossStageDeps,
+				digestToCacheKey: tt.fields.digestToCacheKey,
+				stageIdxToDigest: tt.fields.stageIdxToDigest,
+				snapshotter:      tt.fields.snapshotter,
+				layerCache:       tt.fields.layerCache,
+				pushLayerToCache: tt.fields.pushLayerToCache,
+			}
+			got, err := s.convertLayerMediaType(tt.args.layer)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("stageBuilder.convertLayerMediaType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				mt, _ := got.MediaType()
+				if mt != tt.expectedMediaType {
+					t.Errorf("stageBuilder.convertLayerMediaType() = %v, want %v", mt, tt.expectedMediaType)
+				}
 			}
 		})
 	}

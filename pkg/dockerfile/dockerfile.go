@@ -59,7 +59,7 @@ func ParseStages(opts *config.KanikoOptions) ([]instructions.Stage, []instructio
 		return nil, nil, errors.Wrap(err, "parsing dockerfile")
 	}
 
-	metaArgs, err = expandNested(metaArgs, opts.BuildArgs)
+	metaArgs, err = expandNestedArgs(metaArgs, opts.BuildArgs)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "expanding meta ARGs")
 	}
@@ -104,7 +104,7 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 }
 
 // expandNestedArgs tries to resolve nested ARG value against the previously defined ARGs
-func expandNested(metaArgs []instructions.ArgCommand, buildArgs []string) ([]instructions.ArgCommand, error) {
+func expandNestedArgs(metaArgs []instructions.ArgCommand, buildArgs []string) ([]instructions.ArgCommand, error) {
 	var prevArgs []string
 	for i, marg := range metaArgs {
 		for j, arg := range marg.Args {

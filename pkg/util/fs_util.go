@@ -344,7 +344,7 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 			return err
 		}
 
-		if err = writeSecurityXattrToToFile(path, hdr); err != nil {
+		if err = writeSecurityXattrToTarFile(path, hdr); err != nil {
 			return err
 		}
 

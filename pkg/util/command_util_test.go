@@ -526,7 +526,7 @@ func TestGetUserGroup(t *testing.T) {
 		description  string
 		chown        string
 		env          []string
-		mockIDGetter func(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error)
+		mockIDGetter func(userStr string, groupStr string) (uint32, uint32, error)
 		// needed, in case uid is a valid number, but group is a name
 		mockGroupIDGetter func(groupStr string) (*user.Group, error)
 		expectedU         int64
@@ -537,7 +537,7 @@ func TestGetUserGroup(t *testing.T) {
 			description: "non empty chown",
 			chown:       "some:some",
 			env:         []string{},
-			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+			mockIDGetter: func(string, string) (uint32, uint32, error) {
 				return 100, 1000, nil
 			},
 			expectedU: 100,
@@ -547,7 +547,7 @@ func TestGetUserGroup(t *testing.T) {
 			description: "non empty chown with env replacement",
 			chown:       "some:$foo",
 			env:         []string{"foo=key"},
-			mockIDGetter: func(userStr string, groupStr string, fallbackToUID bool) (uint32, uint32, error) {
+			mockIDGetter: func(userStr string, groupStr string) (uint32, uint32, error) {
 				if userStr == "some" && groupStr == "key" {
 					return 10, 100, nil
 				}
@@ -558,7 +558,7 @@ func TestGetUserGroup(t *testing.T) {
 		},
 		{
 			description: "empty chown string",
-			mockIDGetter: func(string, string, bool) (uint32, uint32, error) {
+			mockIDGetter: func(string, string) (uint32, uint32, error) {
 				return 0, 0, fmt.Errorf("should not be called")
 			},
 			expectedU: -1,
@@ -638,8 +638,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 	currentUser := testutil.GetCurrentUser(t)
 
 	type args struct {
-		userGroupStr  string
-		fallbackToUID bool
+		userGroupStr string
 	}
 
 	type expected struct {
@@ -705,18 +704,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 			},
 			expected: expected{
 				userID:  1001,
-				groupID: uint32(currentUserGID),
-			},
-		},
-		{
-			testname: "uid and non existing group-name with fallbackToUID",
-			args: args{
-				userGroupStr:  fmt.Sprintf("%d:%s", 1001, "hello-world-group"),
-				fallbackToUID: true,
-			},
-			expected: expected{
-				userID:  1001,
-				groupID: 1001,
+				groupID: expectedCurrentUser.groupID,
 			},
 		},
 		{
@@ -737,18 +725,9 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 			},
 		},
 		{
-			testname: "only uid and fallback is false",
+			testname: "only uid",
 			args: args{
-				userGroupStr:  fmt.Sprintf("%d", currentUserUID),
-				fallbackToUID: false,
-			},
-			wantErr: true,
-		},
-		{
-			testname: "only uid and fallback is true",
-			args: args{
-				userGroupStr:  fmt.Sprintf("%d", currentUserUID),
-				fallbackToUID: true,
+				userGroupStr: fmt.Sprintf("%d", currentUserUID),
 			},
 			expected: expected{
 				userID:  expectedCurrentUser.userID,
@@ -764,7 +743,7 @@ func Test_GetUIDAndGIDFromString(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		uid, gid, err := getUIDAndGIDFromString(tt.args.userGroupStr, tt.args.fallbackToUID)
+		uid, gid, err := getUIDAndGIDFromString(tt.args.userGroupStr)
 		testutil.CheckError(t, tt.wantErr, err)
 		if uid != tt.expected.userID || gid != tt.expected.groupID {
 			t.Errorf("%v failed. Could not correctly decode %s to uid/gid %d:%d. Result: %d:%d",
