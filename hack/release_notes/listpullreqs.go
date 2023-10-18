@@ -58,7 +58,6 @@ func printPullRequests() {
 
 	releases, _, _ := client.Repositories.ListReleases(context.Background(), org, repo, &github.ListOptions{})
 	lastReleaseTime := *releases[0].PublishedAt
-	fmt.Println(fmt.Sprintf("Collecting pull request that were merged since the last release: %s (%s)", *releases[0].TagName, lastReleaseTime))
 
 	listSize := 1
 	seen := map[int]bool{}
