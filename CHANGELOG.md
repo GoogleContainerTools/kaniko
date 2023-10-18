@@ -1,3 +1,56 @@
+# v1.17.0 Release 2023-10-18
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.17.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.17.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.17.0-slim
+```
+
+* docs: fix readme sample typo [#2792](https://github.com/GoogleContainerTools/kaniko/pull/2792)
+* fix: remove log line from listpullreqs.go and additional release.sh fixes [#2790](https://github.com/GoogleContainerTools/kaniko/pull/2790)
+* chore(deps): bump golang.org/x/sync from 0.3.0 to 0.4.0 [#2798](https://github.com/GoogleContainerTools/kaniko/pull/2798)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.87 to 1.11.91 [#2805](https://github.com/GoogleContainerTools/kaniko/pull/2805)
+* chore(deps): bump github.com/containerd/containerd from 1.7.6 to 1.7.7 [#2797](https://github.com/GoogleContainerTools/kaniko/pull/2797)
+* chore(deps): bump github.com/google/go-cmp from 0.5.9 to 0.6.0 [#2796](https://github.com/GoogleContainerTools/kaniko/pull/2796)
+* chore(deps): bump golang.org/x/net from 0.16.0 to 0.17.0 [#2791](https://github.com/GoogleContainerTools/kaniko/pull/2791)
+* fix: resolve issue with integration tests where lack of disk space caused k3s issues [#2804](https://github.com/GoogleContainerTools/kaniko/pull/2804)
+* test: add test cases and docString for regex in COPY command [#2773](https://github.com/GoogleContainerTools/kaniko/pull/2773)
+* feat: add automated way of cutting releases w/ generation of CHANGELOG.md {{PULL_REQUESTS}} Makefile changes [#2786](https://github.com/GoogleContainerTools/kaniko/pull/2786)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.40.0 to 1.40.1 [#2780](https://github.com/GoogleContainerTools/kaniko/pull/2780)
+* docs: Update designdoc.md with correct link to skaffold repository [#2775](https://github.com/GoogleContainerTools/kaniko/pull/2775)
+* chore(deps): bump google.golang.org/api from 0.143.0 to 0.145.0 [#2778](https://github.com/GoogleContainerTools/kaniko/pull/2778)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.18.42 to 1.18.44 [#2777](https://github.com/GoogleContainerTools/kaniko/pull/2777)
+* chore(deps): bump golang.org/x/oauth2 from 0.12.0 to 0.13.0 [#2781](https://github.com/GoogleContainerTools/kaniko/pull/2781)
+* refactor: Remove fallbackToUID bool option from Kaniko code [#2767](https://github.com/GoogleContainerTools/kaniko/pull/2767)
+* chore(deps): bump github.com/otiai10/copy from 1.12.0 to 1.14.0 [#2772](https://github.com/GoogleContainerTools/kaniko/pull/2772)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.86 to 1.11.87 [#2770](https://github.com/GoogleContainerTools/kaniko/pull/2770)
+* chore(deps): bump google.golang.org/api from 0.142.0 to 0.143.0 [#2769](https://github.com/GoogleContainerTools/kaniko/pull/2769)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.39.0 to 1.40.0 [#2771](https://github.com/GoogleContainerTools/kaniko/pull/2771)
+* chore(deps): bump github.com/spf13/afero from 1.9.5 to 1.10.0 [#2758](https://github.com/GoogleContainerTools/kaniko/pull/2758)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.83 to 1.11.86 [#2757](https://github.com/GoogleContainerTools/kaniko/pull/2757)
+* chore(deps): bump google.golang.org/api from 0.141.0 to 0.142.0 [#2756](https://github.com/GoogleContainerTools/kaniko/pull/2756)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- JeromeJu
+- Vishal Khot
+- vivekkoya
+- zhangzhiqiangcs
+
+
 # v1.16.0 Release 2023-09-22
 The executor images in this release are:
 ```
