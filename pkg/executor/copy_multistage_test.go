@@ -37,6 +37,7 @@ COPY foo/bam.txt copied/
 ENV test test
 
 From scratch as second
+COPY --from=first copied/bam.txt output/bam.txt`
 		os.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
@@ -52,7 +53,6 @@ From scratch as second
 		}
 		testutil.CheckDeepEqual(t, 1, len(files))
 		testutil.CheckDeepEqual(t, files[0].Name(), "bam.txt")
-
 	})
 
 	t.Run("copy a file across multistage into a directory", func(t *testing.T) {
@@ -64,8 +64,7 @@ COPY foo/bam.txt copied/
 ENV test test
 
 From scratch as second
-
-		os.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
+COPY --from=first copied/bam.txt output/`
 		os.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
@@ -81,6 +80,7 @@ From scratch as second
 		testutil.CheckDeepEqual(t, 1, len(files))
 		testutil.CheckDeepEqual(t, files[0].Name(), "bam.txt")
 	})
+
 	t.Run("copy directory across multistage into a directory", func(t *testing.T) {
 		testDir, fn := setupMultistageTests(t)
 		defer fn()
@@ -90,6 +90,7 @@ COPY foo copied
 ENV test test
 
 From scratch as second
+COPY --from=first copied another`
 		os.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
