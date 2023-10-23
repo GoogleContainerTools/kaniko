@@ -663,13 +663,13 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 	var copiedFiles []string
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
-		fi, err := os.Lstat(fullPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "copying dir")
-		}
 		if context.ExcludesFile(fullPath) {
 			logrus.Debugf("%s found in .dockerignore, ignoring", src)
 			continue
+		}
+		fi, err := os.Lstat(fullPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "copying dir")
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
