@@ -19,7 +19,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -94,7 +94,7 @@ func newResult(t *testing.T, f string) result {
 	if err != nil {
 		t.Errorf("could not read benchmark file %s", f)
 	}
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 	if err := json.Unmarshal(byteValue, &current); err != nil {
 		t.Errorf("could not unmarshal benchmark file")
 	}
@@ -160,7 +160,7 @@ func runInGcloud(dir string, num int) (string, error) {
 	}
 
 	// grab gcs and to temp dir and return
-	tmpDir, err := ioutil.TempDir("", fmt.Sprintf("%d", num))
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("%d", num))
 	if err != nil {
 		return "", err
 	}
