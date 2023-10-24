@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -109,7 +108,7 @@ func writeBufsToFile(cachePath string, tarBuf, manifestBuf *bytes.Buffer) error 
 	}
 
 	mfstPath := cachePath + ".json"
-	if err := ioutil.WriteFile(mfstPath, manifestBuf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile(mfstPath, manifestBuf.Bytes(), 0666); err != nil {
 		return errors.Wrap(err, "Failed to save manifest to file")
 	}
 
@@ -186,9 +185,9 @@ func ParseDockerfile(opts *config.WarmerOptions) ([]string, error) {
 		if e != nil {
 			return nil, e
 		}
-		d, err = ioutil.ReadAll(response.Body)
+		d, err = io.ReadAll(response.Body)
 	} else {
-		d, err = ioutil.ReadFile(opts.DockerfilePath)
+		d, err = os.ReadFile(opts.DockerfilePath)
 	}
 
 	if err != nil {
