@@ -18,7 +18,6 @@ package testutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -35,7 +34,7 @@ func SetupFiles(path string, files map[string]string) error {
 		if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path, []byte(c), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(c), 0644); err != nil {
 			return err
 		}
 	}

@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -52,7 +51,7 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		t.Fatalf("Error creating tempdir: %s", err)
 	}
-	if err := ioutil.WriteFile(path, []byte(fileContents), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(fileContents), 0644); err != nil {
 		t.Fatalf("Error writing file contents to %s: %s", path, err)
 	}
 
@@ -492,7 +491,7 @@ func fileExists(p string) checker {
 
 func fileMatches(p string, c []byte) checker {
 	return func(root string, t *testing.T) {
-		actual, err := ioutil.ReadFile(filepath.Join(root, p))
+		actual, err := os.ReadFile(filepath.Join(root, p))
 		if err != nil {
 			t.Fatalf("error reading file: %s", p)
 		}
@@ -840,7 +839,7 @@ func TestCopySymlink(t *testing.T) {
 		linkTarget: "/abs/dest",
 		dest:       "overwrite_me",
 		beforeLink: func(r string) error {
-			return ioutil.WriteFile(filepath.Join(r, "overwrite_me"), nil, 0644)
+			return os.WriteFile(filepath.Join(r, "overwrite_me"), nil, 0644)
 		},
 	}}
 
@@ -851,7 +850,7 @@ func TestCopySymlink(t *testing.T) {
 			r := t.TempDir()
 			os.MkdirAll(filepath.Join(r, filepath.Dir(tc.linkTarget)), 0777)
 			tc.linkTarget = filepath.Join(r, tc.linkTarget)
-			ioutil.WriteFile(tc.linkTarget, nil, 0644)
+			os.WriteFile(tc.linkTarget, nil, 0644)
 
 			if tc.beforeLink != nil {
 				if err := tc.beforeLink(r); err != nil {
@@ -980,7 +979,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 	tempFile := filepath.Join(tempDir, "foo")
 	expected := "bar"
 
-	if err := ioutil.WriteFile(
+	if err := os.WriteFile(
 		tempFile,
 		[]byte(expected),
 		0755,
@@ -998,7 +997,7 @@ func Test_CopyFile_skips_self(t *testing.T) {
 	}
 
 	// Ensure file has expected contents
-	actualData, err := ioutil.ReadFile(tempFile)
+	actualData, err := os.ReadFile(tempFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1130,7 +1129,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 	root := t.TempDir()
 	// Write a whiteout path
 	d1 := []byte("Hello World\n")
-	if err := ioutil.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1185,7 +1184,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 
 	f(layerFiles, tw)
 
-	rc := ioutil.NopCloser(buf)
+	rc := io.NopCloser(buf)
 	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
 
 	secondLayerFiles := []string{
@@ -1200,7 +1199,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 	mockLayer2 := mockv1.NewMockLayer(ctrl)
 	mockLayer2.EXPECT().MediaType().Return(types.OCILayer, nil)
 
-	rc = ioutil.NopCloser(buf)
+	rc = io.NopCloser(buf)
 	mockLayer2.EXPECT().Uncompressed().Return(rc, nil)
 
 	layers := []v1.Layer{
@@ -1292,7 +1291,7 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 
 	f(layerFiles, tw)
 
-	rc := ioutil.NopCloser(buf)
+	rc := io.NopCloser(buf)
 	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
 
 	layers := []v1.Layer{
@@ -1346,7 +1345,7 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 
 	f(layerFiles, tw)
 
-	rc = ioutil.NopCloser(buf)
+	rc = io.NopCloser(buf)
 	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
 
 	layers = []v1.Layer{
@@ -1413,7 +1412,7 @@ func Test_GetFSFromLayers(t *testing.T) {
 	mockLayer := mockv1.NewMockLayer(ctrl)
 	mockLayer.EXPECT().MediaType().Return(types.OCILayer, nil)
 
-	rc := ioutil.NopCloser(buf)
+	rc := io.NopCloser(buf)
 	mockLayer.EXPECT().Uncompressed().Return(rc, nil)
 
 	layers := []v1.Layer{
@@ -1463,7 +1462,7 @@ func TestInitIgnoreList(t *testing.T) {
 	mountInfo := `36 35 98:0 /kaniko /test/kaniko rw,noatime master:1 - ext3 /dev/root rw,errors=continue
 36 35 98:0 /proc /test/proc rw,noatime master:1 - ext3 /dev/root rw,errors=continue
 `
-	mFile, err := ioutil.TempFile("", "mountinfo")
+	mFile, err := os.CreateTemp("", "mountinfo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1520,7 +1519,7 @@ func Test_setFileTimes(t *testing.T) {
 
 	p := filepath.Join(testDir, "foo.txt")
 
-	if err := ioutil.WriteFile(p, []byte("meow"), 0777); err != nil {
+	if err := os.WriteFile(p, []byte("meow"), 0777); err != nil {
 		t.Fatal(err)
 	}
 

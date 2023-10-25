@@ -19,7 +19,6 @@ package snapshot
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -63,7 +62,7 @@ func (s *Snapshotter) Key() (string, error) {
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBuildMetadata bool) (string, error) {
-	f, err := ioutil.TempFile(config.KanikoDir, "")
+	f, err := os.CreateTemp(config.KanikoDir, "")
 	if err != nil {
 		return "", err
 	}
@@ -122,7 +121,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 // TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files.
 func (s *Snapshotter) TakeSnapshotFS() (string, error) {
-	f, err := ioutil.TempFile(s.getSnashotPathPrefix(), "")
+	f, err := os.CreateTemp(s.getSnashotPathPrefix(), "")
 	if err != nil {
 		return "", err
 	}

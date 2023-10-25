@@ -20,7 +20,6 @@ package proc
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -201,7 +200,7 @@ func readFile(file string) []byte {
 		return nil
 	}
 
-	b, _ := ioutil.ReadFile(file)
+	b, _ := os.ReadFile(file)
 	return b
 }
 

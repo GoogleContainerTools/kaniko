@@ -19,7 +19,7 @@ package executor
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -134,7 +134,7 @@ func TestHeaderAdded(t *testing.T) {
 			resp, err := rt.RoundTrip(req)
 			testutil.CheckError(t, false, err)
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			testutil.CheckErrorAndDeepEqual(t, false, err, test.expected, string(body))
 		})
 	}
@@ -146,7 +146,7 @@ type mockRoundTripper struct {
 
 func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := r.UserAgent()
-	return &http.Response{Body: ioutil.NopCloser(bytes.NewBufferString(ua))}, nil
+	return &http.Response{Body: io.NopCloser(bytes.NewBufferString(ua))}, nil
 }
 
 func TestOCILayoutPath(t *testing.T) {
@@ -216,7 +216,7 @@ func TestImageNameDigestFile(t *testing.T) {
 
 	want := []byte("gcr.io/foo/bar@" + digest.String() + "\nindex.docker.io/bob/image@" + digest.String() + "\n")
 
-	got, err := ioutil.ReadFile("tmpFile")
+	got, err := os.ReadFile("tmpFile")
 
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 
@@ -309,7 +309,7 @@ func TestImageNameTagDigestFile(t *testing.T) {
 
 	want := []byte("gcr.io/foo/bar:123@" + digest.String() + "\nindex.docker.io/bob/image:latest@" + digest.String() + "\n")
 
-	got, err := ioutil.ReadFile("tmpFile")
+	got, err := os.ReadFile("tmpFile")
 
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 }
