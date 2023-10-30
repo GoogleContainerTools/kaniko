@@ -39,7 +39,7 @@ require (
 	golang.org/x/sync v0.4.0
 )
 
-require github.com/containerd/containerd v1.7.7
+require github.com/containerd/containerd v1.7.8
 
 require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
