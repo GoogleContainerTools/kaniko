@@ -614,7 +614,7 @@ func (r *Remote) addOrUpdateReferences(
 	req *packp.ReferenceUpdateRequest,
 	forceWithLease *ForceWithLease,
 ) error {
-	// If it is not a wilcard refspec we can directly search for the reference
+	// If it is not a wildcard refspec we can directly search for the reference
 	// in the references dictionary.
 	if !rs.IsWildcard() {
 		ref, ok := refsDict[rs.Src()]
@@ -693,7 +693,7 @@ func (r *Remote) addCommit(rs config.RefSpec,
 	remoteRef, err := remoteRefs.Reference(cmd.Name)
 	if err == nil {
 		if remoteRef.Type() != plumbing.HashReference {
-			//TODO: check actual git behavior here
+			// TODO: check actual git behavior here
 			return nil
 		}
 
@@ -735,7 +735,7 @@ func (r *Remote) addReferenceIfRefSpecMatches(rs config.RefSpec,
 	remoteRef, err := remoteRefs.Reference(cmd.Name)
 	if err == nil {
 		if remoteRef.Type() != plumbing.HashReference {
-			//TODO: check actual git behavior here
+			// TODO: check actual git behavior here
 			return nil
 		}
 

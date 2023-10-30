@@ -22,6 +22,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/internal/path_util"
 	"github.com/go-git/go-git/v5/internal/revision"
+	"github.com/go-git/go-git/v5/internal/url"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/cache"
 	formatcfg "github.com/go-git/go-git/v5/plumbing/format/config"
@@ -62,6 +63,7 @@ var (
 	ErrUnableToResolveCommit     = errors.New("unable to resolve commit")
 	ErrPackedObjectsNotSupported = errors.New("packed objects not supported")
 	ErrSHA256NotSupported        = errors.New("go-git was not compiled with SHA256 support")
+	ErrAlternatePathNotSupported = errors.New("alternate path must use the file scheme")
 )
 
 // Repository represents a git repository
@@ -235,9 +237,19 @@ func CloneContext(
 // if the repository will have worktree (non-bare) or not (bare), if the path
 // is not empty ErrRepositoryAlreadyExists is returned.
 func PlainInit(path string, isBare bool) (*Repository, error) {
+	return PlainInitWithOptions(path, &PlainInitOptions{
+		Bare: isBare,
+	})
+}
+
+func PlainInitWithOptions(path string, opts *PlainInitOptions) (*Repository, error) {
+	if opts == nil {
+		opts = &PlainInitOptions{}
+	}
+
 	var wt, dot billy.Filesystem
 
-	if isBare {
+	if opts.Bare {
 		dot = osfs.New(path)
 	} else {
 		wt = osfs.New(path)
@@ -246,16 +258,7 @@ func PlainInit(path string, isBare bool) (*Repository, error) {
 
 	s := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
 
-	return Init(s, wt)
-}
-
-func PlainInitWithOptions(path string, opts *PlainInitOptions) (*Repository, error) {
-	wt := osfs.New(path)
-	dot, _ := wt.Chroot(GitDirName)
-
-	s := filesystem.NewStorage(dot, cache.NewObjectLRUDefault())
-
-	r, err := Init(s, wt)
+	r, err := InitWithOptions(s, wt, opts.InitOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +268,7 @@ func PlainInitWithOptions(path string, opts *PlainInitOptions) (*Repository, err
 		return nil, err
 	}
 
-	if opts != nil {
+	if opts.ObjectFormat != "" {
 		if opts.ObjectFormat == formatcfg.SHA256 && hash.CryptoType != crypto.SHA256 {
 			return nil, ErrSHA256NotSupported
 		}
@@ -884,6 +887,30 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 
 	if _, err := r.CreateRemote(c); err != nil {
 		return err
+	}
+
+	// When the repository to clone is on the local machine,
+	// instead of using hard links, automatically setup .git/objects/info/alternates
+	// to share the objects with the source repository
+	if o.Shared {
+		if !url.IsLocalEndpoint(o.URL) {
+			return ErrAlternatePathNotSupported
+		}
+		altpath := o.URL
+		remoteRepo, err := PlainOpen(o.URL)
+		if err != nil {
+			return fmt.Errorf("failed to open remote repository: %w", err)
+		}
+		conf, err := remoteRepo.Config()
+		if err != nil {
+			return fmt.Errorf("failed to read remote repository configuration: %w", err)
+		}
+		if !conf.Core.IsBare {
+			altpath = path.Join(altpath, GitDirName)
+		}
+		if err := r.Storer.AddAlternate(altpath); err != nil {
+			return fmt.Errorf("failed to add alternate file to git objects dir: %w", err)
+		}
 	}
 
 	ref, err := r.fetchAndUpdateReferences(ctx, &FetchOptions{
