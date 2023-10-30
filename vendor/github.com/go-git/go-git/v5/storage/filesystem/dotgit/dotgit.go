@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -38,6 +40,7 @@ const (
 	remotesPath    = "remotes"
 	logsPath       = "logs"
 	worktreesPath  = "worktrees"
+	alternatesPath = "alternates"
 
 	tmpPackedRefsPrefix = "._packed-refs"
 
@@ -1105,10 +1108,38 @@ func (d *DotGit) Module(name string) (billy.Filesystem, error) {
 	return d.fs.Chroot(d.fs.Join(modulePath, name))
 }
 
+func (d *DotGit) AddAlternate(remote string) error {
+	altpath := d.fs.Join(objectsPath, infoPath, alternatesPath)
+
+	f, err := d.fs.OpenFile(altpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	if err != nil {
+		return fmt.Errorf("cannot open file: %w", err)
+	}
+	defer f.Close()
+
+	// locking in windows throws an error, based on comments
+	// https://github.com/go-git/go-git/pull/860#issuecomment-1751823044
+	// do not lock on windows platform.
+	if runtime.GOOS != "windows" {
+		if err = f.Lock(); err != nil {
+			return fmt.Errorf("cannot lock file: %w", err)
+		}
+		defer f.Unlock()
+	}
+
+	line := path.Join(remote, objectsPath) + "\n"
+	_, err = io.WriteString(f, line)
+	if err != nil {
+		return fmt.Errorf("error writing 'alternates' file: %w", err)
+	}
+
+	return nil
+}
+
 // Alternates returns DotGit(s) based off paths in objects/info/alternates if
 // available. This can be used to checks if it's a shared repository.
 func (d *DotGit) Alternates() ([]*DotGit, error) {
-	altpath := d.fs.Join("objects", "info", "alternates")
+	altpath := d.fs.Join(objectsPath, infoPath, alternatesPath)
 	f, err := d.fs.Open(altpath)
 	if err != nil {
 		return nil, err

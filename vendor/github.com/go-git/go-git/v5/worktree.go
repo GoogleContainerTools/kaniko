@@ -78,6 +78,7 @@ func (w *Worktree) PullContext(ctx context.Context, o *PullOptions) error {
 		Force:           o.Force,
 		InsecureSkipTLS: o.InsecureSkipTLS,
 		CABundle:        o.CABundle,
+		ProxyOptions:    o.ProxyOptions,
 	})
 
 	updated := true

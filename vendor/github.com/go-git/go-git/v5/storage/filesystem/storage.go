@@ -74,3 +74,7 @@ func (s *Storage) Filesystem() billy.Filesystem {
 func (s *Storage) Init() error {
 	return s.dir.Initialize()
 }
+
+func (s *Storage) AddAlternate(remote string) error {
+	return s.dir.AddAlternate(remote)
+}

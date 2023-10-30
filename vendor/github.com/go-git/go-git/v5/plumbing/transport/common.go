@@ -108,7 +108,7 @@ type Endpoint struct {
 	// Host is the host.
 	Host string
 	// Port is the port to connect, if 0 the default port for the given protocol
-	// wil be used.
+	// will be used.
 	Port int
 	// Path is the repository path.
 	Path string
