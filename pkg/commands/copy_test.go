@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -458,6 +459,60 @@ func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 		for i, f := range actual {
 			testutil.CheckDeepEqual(t, expected[i].Name(), f.Name())
 			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
+		}
+	})
+
+	t.Run("copy dir to another dir - with ignored files", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+		ignoredFile := "bam.txt"
+		srcFiles, err := ioutil.ReadDir(filepath.Join(testDir, srcDir))
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := map[string]fs.FileInfo{}
+		for _, sf := range srcFiles {
+			if sf.Name() == ignoredFile {
+				continue
+			}
+			expected[sf.Name()] = sf
+		}
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir}, DestPath: "dest"},
+			},
+			fileContext: util.FileContext{
+				Root:          testDir,
+				ExcludedFiles: []string{filepath.Join(srcDir, ignoredFile)}},
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{},
+			WorkingDir: testDir,
+		}
+
+		err = cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckNoError(t, err)
+		// Check if "dest" dir exists with contents of srcDir
+		actual, err := ioutil.ReadDir(filepath.Join(testDir, "dest"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(actual) != len(expected) {
+			t.Errorf("%v files are expected to be copied, but got %v", len(expected), len(actual))
+		}
+		for _, f := range actual {
+			if f.Name() == ignoredFile {
+				t.Errorf("file %v is expected to be ignored, but copied", f.Name())
+			}
+			testutil.CheckDeepEqual(t, expected[f.Name()].Name(), f.Name())
+			testutil.CheckDeepEqual(t, expected[f.Name()].Mode(), f.Mode())
 		}
 	})
 
