@@ -226,7 +226,7 @@ specify the location of your build context:
 | Source             | Prefix                                                                | Example                                                                       |
 | ------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Local Directory    | dir://[path to a directory in the kaniko container]                   | `dir:///workspace`                                                            |
-| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar://path/to/context.tar.gz`                                                |
+| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar:///path/to/context.tar.gz`                                                |
 | Standard Input     | tar://[stdin]                                                         | `tar://stdin`                                                                 |
 | GCS Bucket         | gs://[bucket name]/[path to .tar.gz]                                  | `gs://kaniko-bucket/path/to/context.tar.gz`                                   |
 | S3 Bucket          | s3://[bucket name]/[path to .tar.gz]                                  | `s3://kaniko-bucket/path/to/context.tar.gz`                                   |
