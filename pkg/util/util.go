@@ -20,6 +20,7 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
@@ -195,6 +196,26 @@ func Retry(operation retryFunc, retryCount int, initialDelayMilliseconds int) er
 	}
 
 	return err
+}
+
+// Retry retries an operation with a return value
+func RetryWithResult[T any](operation func() (T, error), retryCount int, initialDelayMilliseconds int)  (result T, err error) {
+	result, err = operation()
+	if err == nil {
+		return result, nil
+	}
+	for i := 0; i < retryCount; i++ {
+		sleepDuration := time.Millisecond * time.Duration(int(math.Pow(2, float64(i)))*initialDelayMilliseconds)
+		logrus.Warnf("Retrying operation after %s due to %v", sleepDuration, err)
+		time.Sleep(sleepDuration)
+
+		result, err = operation()
+		if err == nil {
+			return result, nil
+		}
+	}
+
+	return result, fmt.Errorf("unable to complete operation after %d attempts, last error: %v", retryCount, err)
 }
 
 func Lgetxattr(path string, attr string) ([]byte, error) {
