@@ -65,7 +65,7 @@ func TestRetry(t *testing.T) {
 	}
 }
 
-func makeRetryFuncWithResult(numFailures int) (func() (int, error)) {
+func makeRetryFuncWithResult(numFailures int) func() (int, error) {
 	i := -1
 
 	return func() (int, error) {
@@ -82,23 +82,23 @@ func TestRetryWithResult(t *testing.T) {
 	result, err := RetryWithResult(makeRetryFuncWithResult(0), 0, 10)
 	if err != nil || result != 0 {
 		t.Fatalf("Got result %d and error: %v", result, err)
-	} 
-	result, err = RetryWithResult(makeRetryFuncWithResult(0), 3, 10);
+	}
+	result, err = RetryWithResult(makeRetryFuncWithResult(0), 3, 10)
 	if err != nil || result != 0 {
 		t.Fatalf("Got result %d and error: %v", result, err)
-	} 
+	}
 
 	// test with a function that returns an error twice
 	result, err = RetryWithResult(makeRetryFuncWithResult(2), 0, 10)
 	if err == nil || result != 0 {
 		t.Fatalf("Got result %d and error: %v", result, err)
-	} 
+	}
 	result, err = RetryWithResult(makeRetryFuncWithResult(2), 1, 10)
 	if err == nil || result != 1 {
 		t.Fatalf("Got result %d and error: %v", result, err)
-	} 
+	}
 	result, err = RetryWithResult(makeRetryFuncWithResult(2), 2, 10)
 	if err != nil || result != 2 {
 		t.Fatalf("Got result %d and error: %v", result, err)
-	} 
+	}
 }

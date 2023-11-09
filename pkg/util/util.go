@@ -199,7 +199,7 @@ func Retry(operation retryFunc, retryCount int, initialDelayMilliseconds int) er
 }
 
 // Retry retries an operation with a return value
-func RetryWithResult[T any](operation func() (T, error), retryCount int, initialDelayMilliseconds int)  (result T, err error) {
+func RetryWithResult[T any](operation func() (T, error), retryCount int, initialDelayMilliseconds int) (result T, err error) {
 	result, err = operation()
 	if err == nil {
 		return result, nil
@@ -215,7 +215,7 @@ func RetryWithResult[T any](operation func() (T, error), retryCount int, initial
 		}
 	}
 
-	return result, fmt.Errorf("unable to complete operation after %d attempts, last error: %v", retryCount, err)
+	return result, fmt.Errorf("unable to complete operation after %d attempts, last error: %w", retryCount, err)
 }
 
 func Lgetxattr(path string, attr string) ([]byte, error) {
