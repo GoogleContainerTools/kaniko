@@ -212,6 +212,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipTLSVerifyPull, "skip-tls-verify-pull", "", false, "Pull from insecure registry ignoring TLS verify")
 	RootCmd.PersistentFlags().IntVar(&opts.PushRetry, "push-retry", 0, "Number of retries for the push operation")
 	RootCmd.PersistentFlags().IntVar(&opts.ImageFSExtractRetry, "image-fs-extract-retry", 0, "Number of retries for image FS extraction")
+	RootCmd.PersistentFlags().IntVar(&opts.ImageDownloadRetry, "image-download-retry", 0, "Number of retries for downloading the remote image")
 	RootCmd.PersistentFlags().StringVarP(&opts.KanikoDir, "kaniko-dir", "", constants.DefaultKanikoPath, "Path to the kaniko directory, this takes precedence over the KANIKO_DIR environment variable.")
 	RootCmd.PersistentFlags().StringVarP(&opts.TarPath, "tar-path", "", "", "Path to save the image in as a tarball instead of pushing")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SingleSnapshot, "single-snapshot", "", false, "Take a single snapshot at the end of the build.")
