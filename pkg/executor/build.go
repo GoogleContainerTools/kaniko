@@ -101,7 +101,7 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 		return nil, err
 	}
 
-	err = util.InitIgnoreList(true)
+	err = util.InitIgnoreList()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize ignore list")
 	}
