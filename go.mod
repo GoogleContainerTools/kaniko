@@ -10,7 +10,7 @@ require (
 	// To update run: go get github.com/GoogleCloudPlatform/docker-credential-gcr@<commit-sha>
 	// The version string is a side-effect of Go module version numbering rules. Functionality is otherwise unchanged.
 	github.com/GoogleCloudPlatform/docker-credential-gcr v1.5.1-0.20230328182921-62afb2723512
-	github.com/aws/aws-sdk-go-v2 v1.22.1
+	github.com/aws/aws-sdk-go-v2 v1.22.2
 	github.com/aws/aws-sdk-go-v2/config v1.22.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.13.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.42.0
