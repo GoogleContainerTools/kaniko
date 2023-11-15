@@ -27,6 +27,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
+const image string = "debian"
+
 // mockImage mocks the v1.Image interface
 type mockImage struct {
 }
@@ -80,7 +82,6 @@ func (m *mockImage) Size() (int64, error) {
 }
 
 func Test_normalizeReference(t *testing.T) {
-	image := "debian"
 	expected := "index.docker.io/library/debian:latest"
 
 	ref, err := name.ParseReference(image)
@@ -113,7 +114,6 @@ func Test_RetrieveRemoteImage_manifestCache(t *testing.T) {
 }
 
 func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
-	image := "debian"
 	registryMirror := "some-registry"
 
 	opts := config.RegistryOptions{
@@ -143,8 +143,6 @@ func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
 }
 
 func Test_RetryRetrieveRemoteImageSucceeds(t *testing.T) {
-	image := "debian"
-
 	opts := config.RegistryOptions{
 		ImageDownloadRetry: 2,
 	}
@@ -166,8 +164,6 @@ func Test_RetryRetrieveRemoteImageSucceeds(t *testing.T) {
 }
 
 func Test_NoRetryRetrieveRemoteImageFails(t *testing.T) {
-	image := "debian"
-
 	opts := config.RegistryOptions{
 		ImageDownloadRetry: 0,
 	}
