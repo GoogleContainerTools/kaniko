@@ -1502,7 +1502,7 @@ func TestInitIgnoreList(t *testing.T) {
 	original := append([]IgnoreListEntry{}, ignorelist...)
 	defer func() { ignorelist = original }()
 
-	err = InitIgnoreList(true)
+	err = InitIgnoreList()
 	if err != nil {
 		t.Fatal(err)
 	}
