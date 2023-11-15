@@ -28,7 +28,7 @@ import (
 )
 
 // mockImage mocks the v1.Image interface
-type mockImage struct{
+type mockImage struct {
 }
 
 func (m *mockImage) ConfigFile() (*v1.ConfigFile, error) {
@@ -150,8 +150,8 @@ func Test_RetryRetrieveRemoteImageSucceeds(t *testing.T) {
 	}
 	attempts := 0
 	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
-		if attempts < 2{
-			attempts ++
+		if attempts < 2 {
+			attempts++
 			return nil, errors.New("no image found")
 		}
 		return &mockImage{}, nil
@@ -173,8 +173,8 @@ func Test_NoRetryRetrieveRemoteImageFails(t *testing.T) {
 	}
 	attempts := 0
 	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
-		if attempts < 1 {	
-			attempts ++
+		if attempts < 1 {
+			attempts++
 			return nil, errors.New("no image found")
 		}
 		return &mockImage{}, nil
