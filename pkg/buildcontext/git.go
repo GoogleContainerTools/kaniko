@@ -65,6 +65,7 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 		Progress:          os.Stdout,
 		SingleBranch:      g.opts.GitSingleBranch,
 		RecurseSubmodules: getRecurseSubmodules(g.opts.GitRecurseSubmodules),
+		InsecureSkipTLS:   g.opts.InsecureSkipTLS,
 	}
 	var fetchRef string
 	var checkoutRef string
