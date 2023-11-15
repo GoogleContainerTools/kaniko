@@ -28,7 +28,8 @@ import (
 )
 
 // mockImage mocks the v1.Image interface
-type mockImage struct{}
+type mockImage struct{
+}
 
 func (m *mockImage) ConfigFile() (*v1.ConfigFile, error) {
 	return nil, nil
@@ -138,5 +139,51 @@ func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
 
 	if _, err := RetrieveRemoteImage(image, opts, ""); err == nil {
 		t.Fatal("Expected call to fail because fallback to default registry is skipped")
+	}
+}
+
+func Test_RetryRetrieveRemoteImageSucceeds(t *testing.T) {
+	image := "debian"
+
+	opts := config.RegistryOptions{
+		ImageDownloadRetry: 2,
+	}
+	attempts := 0
+	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		if attempts < 2{
+			attempts ++
+			return nil, errors.New("no image found")
+		}
+		return &mockImage{}, nil
+	}
+
+	// Clean cached image
+	manifestCache = make(map[string]v1.Image)
+
+	if _, err := RetrieveRemoteImage(image, opts, ""); err != nil {
+		t.Fatal("Expected call to succeed because of retry")
+	}
+}
+
+func Test_NoRetryRetrieveRemoteImageFails(t *testing.T) {
+	image := "debian"
+
+	opts := config.RegistryOptions{
+		ImageDownloadRetry: 0,
+	}
+	attempts := 0
+	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		if attempts < 1 {	
+			attempts ++
+			return nil, errors.New("no image found")
+		}
+		return &mockImage{}, nil
+	}
+
+	// Clean cached image
+	manifestCache = make(map[string]v1.Image)
+
+	if _, err := RetrieveRemoteImage(image, opts, ""); err == nil {
+		t.Fatal("Expected call to fail because there is no retry")
 	}
 }
