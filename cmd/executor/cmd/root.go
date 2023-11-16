@@ -454,7 +454,7 @@ func exit(err error) {
 
 // exits with the given error and exit code
 func exitWithCode(err error, exitCode int) {
-	fmt.Println(err)
+	fmt.Fprintln(os.Stderr, err)
 	os.Exit(exitCode)
 }
 
