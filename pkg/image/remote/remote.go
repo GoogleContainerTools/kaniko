@@ -70,8 +70,13 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 			ref := setNewRegistry(ref, newReg)
 
 			logrus.Infof("Retrieving image %s from registry mirror %s", ref, registryMirror)
-			remoteImage, err := remoteImageFunc(ref, remoteOptions(registryMirror, opts, customPlatform)...)
-			if err != nil {
+			retryFunc := func() (v1.Image, error) {
+				return remoteImageFunc(ref, remoteOptions(registryMirror, opts, customPlatform)...)
+			}
+
+			var remoteImage v1.Image
+			var err error
+			if remoteImage, err = util.RetryWithResult(retryFunc, opts.ImageDownloadRetry, 1000); err != nil {
 				logrus.Warnf("Failed to retrieve image %s from registry mirror %s: %s. Will try with the next mirror, or fallback to the default registry.", ref, registryMirror, err)
 				continue
 			}
@@ -97,9 +102,12 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 
 	logrus.Infof("Retrieving image %s from registry %s", ref, registryName)
 
-	remoteImage, err := remoteImageFunc(ref, remoteOptions(registryName, opts, customPlatform)...)
+	retryFunc := func() (v1.Image, error) {
+		return remoteImageFunc(ref, remoteOptions(registryName, opts, customPlatform)...)
+	}
 
-	if remoteImage != nil {
+	var remoteImage v1.Image
+	if remoteImage, err = util.RetryWithResult(retryFunc, opts.ImageDownloadRetry, 1000); remoteImage != nil {
 		manifestCache[image] = remoteImage
 	}
 
