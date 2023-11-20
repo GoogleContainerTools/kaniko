@@ -1097,7 +1097,9 @@ image filesystem. Defaults to `0`.
 
 #### Flag `--image-download-retry`
 
-Set this flag to the number of retries that should happen when downloading the remote image. Defaults to `0`.
+Set this flag to the number of retries that should happen when downloading the 
+remote image.  Consecutive retries occur with exponential backoff and an initial
+delay of 1 second. Defaults to 0`.
 
 ### Debug Image
 
