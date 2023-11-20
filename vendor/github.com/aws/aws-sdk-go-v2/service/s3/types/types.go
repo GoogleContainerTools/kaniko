@@ -16,7 +16,7 @@ type AbortIncompleteMultipartUpload struct {
 
 	// Specifies the number of days after which Amazon S3 aborts an incomplete
 	// multipart upload.
-	DaysAfterInitiation int32
+	DaysAfterInitiation *int32
 
 	noSmithyDocumentSerde
 }
@@ -305,7 +305,7 @@ type CompletedPart struct {
 
 	// Part number that identifies the part. This is a positive integer between 1 and
 	// 10,000.
-	PartNumber int32
+	PartNumber *int32
 
 	noSmithyDocumentSerde
 }
@@ -466,7 +466,7 @@ type CORSRule struct {
 
 	// The time in seconds that your browser is to cache the preflight response for
 	// the specified resource.
-	MaxAgeSeconds int32
+	MaxAgeSeconds *int32
 
 	noSmithyDocumentSerde
 }
@@ -488,7 +488,7 @@ type CSVInput struct {
 	// Specifies that CSV field values may contain quoted record delimiters and such
 	// records should be allowed. Default value is FALSE. Setting this value to TRUE
 	// may lower performance.
-	AllowQuotedRecordDelimiter bool
+	AllowQuotedRecordDelimiter *bool
 
 	// A single character used to indicate that a row should be ignored when the
 	// character is present at the start of that row. You can specify any character to
@@ -563,7 +563,7 @@ type DefaultRetention struct {
 
 	// The number of days that you want to specify for the default retention period.
 	// Must be used with Mode .
-	Days int32
+	Days *int32
 
 	// The default Object Lock retention mode you want to apply to new objects placed
 	// in the specified bucket. Must be used with either Days or Years .
@@ -571,7 +571,7 @@ type DefaultRetention struct {
 
 	// The number of years that you want to specify for the default retention period.
 	// Must be used with Mode .
-	Years int32
+	Years *int32
 
 	noSmithyDocumentSerde
 }
@@ -586,7 +586,7 @@ type Delete struct {
 
 	// Element to enable quiet mode for the request. When you add this element, you
 	// must set its value to true.
-	Quiet bool
+	Quiet *bool
 
 	noSmithyDocumentSerde
 }
@@ -598,7 +598,7 @@ type DeletedObject struct {
 	// (true) or was not (false) a delete marker before deletion. In a simple DELETE,
 	// this header indicates whether (true) or not (false) the current version of the
 	// object is a delete marker.
-	DeleteMarker bool
+	DeleteMarker *bool
 
 	// The version ID of the delete marker created as a result of the DELETE
 	// operation. If you delete a specific object version, the value returned by this
@@ -619,7 +619,7 @@ type DeleteMarkerEntry struct {
 
 	// Specifies whether the object is (true) or is not (false) the latest version of
 	// an object.
-	IsLatest bool
+	IsLatest *bool
 
 	// The object key.
 	Key *string
@@ -1240,10 +1240,10 @@ type GetObjectAttributesParts struct {
 	// Indicates whether the returned list of parts is truncated. A value of true
 	// indicates that the list was truncated. A list can be truncated if the number of
 	// parts exceeds the limit returned in the MaxParts element.
-	IsTruncated bool
+	IsTruncated *bool
 
 	// The maximum number of parts allowed in the response.
-	MaxParts int32
+	MaxParts *int32
 
 	// When a list is truncated, this element specifies the last part in the list, as
 	// well as the value to use for the PartNumberMarker request parameter in a
@@ -1258,7 +1258,7 @@ type GetObjectAttributesParts struct {
 	Parts []ObjectPart
 
 	// The total number of parts.
-	TotalPartsCount int32
+	TotalPartsCount *int32
 
 	noSmithyDocumentSerde
 }
@@ -1463,7 +1463,7 @@ type InventoryConfiguration struct {
 	// inventory list is generated. If set to False , no inventory list is generated.
 	//
 	// This member is required.
-	IsEnabled bool
+	IsEnabled *bool
 
 	// Specifies the schedule for generating inventory results.
 	//
@@ -1617,13 +1617,13 @@ type LifecycleExpiration struct {
 
 	// Indicates the lifetime, in days, of the objects that are subject to the rule.
 	// The value must be a non-zero positive integer.
-	Days int32
+	Days *int32
 
 	// Indicates whether Amazon S3 will remove a delete marker with no noncurrent
 	// versions. If set to true, the delete marker will be expired; if set to false the
 	// policy takes no action. This cannot be specified with Days or Date in a
 	// Lifecycle Expiration Policy.
-	ExpiredObjectDeleteMarker bool
+	ExpiredObjectDeleteMarker *bool
 
 	noSmithyDocumentSerde
 }
@@ -1693,10 +1693,10 @@ type LifecycleRule struct {
 type LifecycleRuleAndOperator struct {
 
 	// Minimum object size to which the rule applies.
-	ObjectSizeGreaterThan int64
+	ObjectSizeGreaterThan *int64
 
 	// Maximum object size to which the rule applies.
-	ObjectSizeLessThan int64
+	ObjectSizeLessThan *int64
 
 	// Prefix identifying one or more objects to which the rule applies.
 	Prefix *string
@@ -1964,14 +1964,14 @@ type NoncurrentVersionExpiration struct {
 	// For more information about noncurrent versions, see Lifecycle configuration
 	// elements (https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html)
 	// in the Amazon S3 User Guide.
-	NewerNoncurrentVersions int32
+	NewerNoncurrentVersions *int32
 
 	// Specifies the number of days an object is noncurrent before Amazon S3 can
 	// perform the associated action. The value must be a non-zero positive integer.
 	// For information about the noncurrent days calculations, see How Amazon S3
 	// Calculates When an Object Became Noncurrent (https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html#non-current-days-calculations)
 	// in the Amazon S3 User Guide.
-	NoncurrentDays int32
+	NoncurrentDays *int32
 
 	noSmithyDocumentSerde
 }
@@ -1990,14 +1990,14 @@ type NoncurrentVersionTransition struct {
 	// For more information about noncurrent versions, see Lifecycle configuration
 	// elements (https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html)
 	// in the Amazon S3 User Guide.
-	NewerNoncurrentVersions int32
+	NewerNoncurrentVersions *int32
 
 	// Specifies the number of days an object is noncurrent before Amazon S3 can
 	// perform the associated action. For information about the noncurrent days
 	// calculations, see How Amazon S3 Calculates How Long an Object Has Been
 	// Noncurrent (https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html#non-current-days-calculations)
 	// in the Amazon S3 User Guide.
-	NoncurrentDays int32
+	NoncurrentDays *int32
 
 	// The class of storage used to store the object.
 	StorageClass TransitionStorageClass
@@ -2079,7 +2079,7 @@ type Object struct {
 	RestoreStatus *RestoreStatus
 
 	// Size in bytes of the object
-	Size int64
+	Size *int64
 
 	// The class of storage used to store the object.
 	StorageClass ObjectStorageClass
@@ -2186,10 +2186,10 @@ type ObjectPart struct {
 
 	// The part number identifying the part. This value is a positive integer between
 	// 1 and 10,000.
-	PartNumber int32
+	PartNumber *int32
 
 	// The size of the uploaded part in bytes.
-	Size int64
+	Size *int64
 
 	noSmithyDocumentSerde
 }
@@ -2205,7 +2205,7 @@ type ObjectVersion struct {
 
 	// Specifies whether the object is (true) or is not (false) the latest version of
 	// an object.
-	IsLatest bool
+	IsLatest *bool
 
 	// The object key.
 	Key *string
@@ -2224,7 +2224,7 @@ type ObjectVersion struct {
 	RestoreStatus *RestoreStatus
 
 	// Size in bytes of the object.
-	Size int64
+	Size *int64
 
 	// The class of storage used to store the object.
 	StorageClass ObjectVersionStorageClass
@@ -2353,10 +2353,10 @@ type Part struct {
 
 	// Part number identifying the part. This is a positive integer between 1 and
 	// 10,000.
-	PartNumber int32
+	PartNumber *int32
 
 	// Size in bytes of the uploaded part data.
-	Size int64
+	Size *int64
 
 	noSmithyDocumentSerde
 }
@@ -2366,7 +2366,7 @@ type PolicyStatus struct {
 
 	// The policy status for this bucket. TRUE indicates that this bucket is public.
 	// FALSE indicates that the bucket is not public.
-	IsPublic bool
+	IsPublic *bool
 
 	noSmithyDocumentSerde
 }
@@ -2375,13 +2375,13 @@ type PolicyStatus struct {
 type Progress struct {
 
 	// The current number of uncompressed object bytes processed.
-	BytesProcessed int64
+	BytesProcessed *int64
 
 	// The current number of bytes of records payload data returned.
-	BytesReturned int64
+	BytesReturned *int64
 
 	// The current number of object bytes scanned.
-	BytesScanned int64
+	BytesScanned *int64
 
 	noSmithyDocumentSerde
 }
@@ -2410,20 +2410,20 @@ type PublicAccessBlockConfiguration struct {
 	//   - PUT Object calls fail if the request includes a public ACL.
 	//   - PUT Bucket calls fail if the request includes a public ACL.
 	// Enabling this setting doesn't affect existing policies or ACLs.
-	BlockPublicAcls bool
+	BlockPublicAcls *bool
 
 	// Specifies whether Amazon S3 should block public bucket policies for this
 	// bucket. Setting this element to TRUE causes Amazon S3 to reject calls to PUT
 	// Bucket policy if the specified bucket policy allows public access. Enabling this
 	// setting doesn't affect existing bucket policies.
-	BlockPublicPolicy bool
+	BlockPublicPolicy *bool
 
 	// Specifies whether Amazon S3 should ignore public ACLs for this bucket and
 	// objects in this bucket. Setting this element to TRUE causes Amazon S3 to ignore
 	// all public ACLs on this bucket and objects in this bucket. Enabling this setting
 	// doesn't affect the persistence of any existing ACLs and doesn't prevent new
 	// public ACLs from being set.
-	IgnorePublicAcls bool
+	IgnorePublicAcls *bool
 
 	// Specifies whether Amazon S3 should restrict public bucket policies for this
 	// bucket. Setting this element to TRUE restricts access to this bucket to only
@@ -2432,7 +2432,7 @@ type PublicAccessBlockConfiguration struct {
 	// stored bucket policies, except that public and cross-account access within any
 	// public bucket policy, including non-public delegation to specific accounts, is
 	// blocked.
-	RestrictPublicBuckets bool
+	RestrictPublicBuckets *bool
 
 	noSmithyDocumentSerde
 }
@@ -2622,7 +2622,7 @@ type ReplicationRule struct {
 	// rule with the highest priority. The higher the number, the higher the priority.
 	// For more information, see Replication (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication.html)
 	// in the Amazon S3 User Guide.
-	Priority int32
+	Priority *int32
 
 	// A container that describes additional filters for identifying the source
 	// objects that you want to replicate. You can choose to enable or disable the
@@ -2729,7 +2729,7 @@ type ReplicationTime struct {
 type ReplicationTimeValue struct {
 
 	// Contains an integer specifying time in minutes. Valid value: 15
-	Minutes int32
+	Minutes *int32
 
 	noSmithyDocumentSerde
 }
@@ -2750,7 +2750,7 @@ type RequestProgress struct {
 
 	// Specifies whether periodic QueryProgress frames should be sent. Valid values:
 	// TRUE, FALSE. Default value: FALSE.
-	Enabled bool
+	Enabled *bool
 
 	noSmithyDocumentSerde
 }
@@ -2761,7 +2761,7 @@ type RestoreRequest struct {
 	// Lifetime of the active copy in days. Do not use with restores that specify
 	// OutputLocation . The Days element is required for regular restores, and must not
 	// be provided for select requests.
-	Days int32
+	Days *int32
 
 	// The optional description for the job.
 	Description *string
@@ -2799,7 +2799,7 @@ type RestoreStatus struct {
 	// x-amz-optional-object-attributes: IsRestoreInProgress="false",
 	// RestoreExpiryDate="2012-12-21T00:00:00.000Z" If the object hasn't been restored,
 	// there is no header response.
-	IsRestoreInProgress bool
+	IsRestoreInProgress *bool
 
 	// Indicates when the restored copy will expire. This value is populated only if
 	// the object has already been restored. For example:
@@ -2886,13 +2886,13 @@ type ScanRange struct {
 	// non-negative integers. The default value is one less than the size of the object
 	// being queried. If only the End parameter is supplied, it is interpreted to mean
 	// scan the last N bytes of the file. For example, 50 means scan the last 50 bytes.
-	End int64
+	End *int64
 
 	// Specifies the start of the byte range. This parameter is optional. Valid
 	// values: non-negative integers. The default value is 0. If only start is
 	// supplied, it means scan from that point to the end of the file. For example, 50
 	// means scan from byte 50 until the end of the file.
-	Start int64
+	Start *int64
 
 	noSmithyDocumentSerde
 }
@@ -3042,7 +3042,7 @@ type ServerSideEncryptionRule struct {
 	// to use an S3 Bucket Key. By default, S3 Bucket Key is not enabled. For more
 	// information, see Amazon S3 Bucket Keys (https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-key.html)
 	// in the Amazon S3 User Guide.
-	BucketKeyEnabled bool
+	BucketKeyEnabled *bool
 
 	noSmithyDocumentSerde
 }
@@ -3106,13 +3106,13 @@ type SSES3 struct {
 type Stats struct {
 
 	// The total number of uncompressed object bytes processed.
-	BytesProcessed int64
+	BytesProcessed *int64
 
 	// The total number of bytes of records payload data returned.
-	BytesReturned int64
+	BytesReturned *int64
 
 	// The total number of object bytes scanned.
-	BytesScanned int64
+	BytesScanned *int64
 
 	noSmithyDocumentSerde
 }
@@ -3215,7 +3215,7 @@ type Tiering struct {
 	// days).
 	//
 	// This member is required.
-	Days int32
+	Days *int32
 
 	noSmithyDocumentSerde
 }
@@ -3262,7 +3262,7 @@ type Transition struct {
 
 	// Indicates the number of days after creation when objects are transitioned to
 	// the specified storage class. The value must be a positive integer.
-	Days int32
+	Days *int32
 
 	// The storage class to which you want the object to transition.
 	StorageClass TransitionStorageClass
