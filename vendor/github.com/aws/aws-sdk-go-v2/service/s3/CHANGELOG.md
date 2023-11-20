@@ -1,3 +1,12 @@
+# v1.43.0 (2023-11-17)
+
+* **Feature**: **BREAKING CHANGE** Correct nullability of a large number of S3 structure fields. See https://github.com/aws/aws-sdk-go-v2/issues/2162.
+* **Feature**: Removes all default 0 values for numbers and false values for booleans
+
+# v1.42.2 (2023-11-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.42.1 (2023-11-09)
 
 * **Dependency Update**: Updated to the latest SDK module versions
