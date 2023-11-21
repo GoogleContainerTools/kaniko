@@ -81,6 +81,13 @@ var ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 
 var volumes = []string{}
 
+// skipKanikoDir opts to skip the '/kaniko' dir for otiai10.copy which should be ignored in root
+var skipKanikoDir = otiai10Cpy.Options{
+	Skip: func(info os.FileInfo, src, dest string) (bool, error) {
+		return strings.HasSuffix(src, "/kaniko"), nil
+	},
+}
+
 type FileContext struct {
 	Root          string
 	ExcludedFiles []string
@@ -956,7 +963,7 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		}
 		return os.Symlink(link, destFile)
 	}
-	if err := otiai10Cpy.Copy(src, destFile); err != nil {
+	if err := otiai10Cpy.Copy(src, destFile, skipKanikoDir); err != nil {
 		return errors.Wrap(err, "copying file")
 	}
 	if err := CopyOwnership(src, destDir, root); err != nil {
