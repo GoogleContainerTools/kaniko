@@ -14,10 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Test the warmer in boxed memory conditions.
+# Attempt to run the warmer inside a container limited to 16MB of RAM. Use gcr.io/kaniko-project/warmer:latest image."
+# Example: ./boxed_warm_in_docker.sh --image debian:trixie-slim
+# 
 set -e
 
-#--entrypoint=/kaniko/warmer \
+rc=0
 docker run \
 	--memory=16m --memory-swappiness=0 \
         gcr.io/kaniko-project/warmer:latest \
-	"$@" || echo "Error RC=$?"
+	"$@" || rc=$?
+	
+>&2 echo "RC=$rc"
+exit $rc
+
