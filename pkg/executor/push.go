@@ -73,7 +73,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // for testing
 var (
-	fs                        = afero.NewOsFs()
+	newOsFs                   = afero.NewOsFs()
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
@@ -300,7 +300,7 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	if dir == "" {
 		return nil
 	}
-	f, err := fs.Create(filepath.Join(dir, "images"))
+	f, err := newOsFs.Create(filepath.Join(dir, "images"))
 	if err != nil {
 		return err
 	}
