@@ -112,7 +112,8 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--ignore-var-run`](#flag---ignore-var-run)
       - [Flag `--ignore-path`](#flag---ignore-path)
       - [Flag `--image-fs-extract-retry`](#flag---image-fs-extract-retry)
-    - [Debug Image](#debug-image)
+      - [Flag `--image-download-retry`](#flag---image-download-retry)    
+  - [Debug Image](#debug-image)
   - [Security](#security)
     - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
   - [Kaniko Builds - Profiling](#kaniko-builds---profiling)
@@ -226,7 +227,7 @@ specify the location of your build context:
 | Source             | Prefix                                                                | Example                                                                       |
 | ------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Local Directory    | dir://[path to a directory in the kaniko container]                   | `dir:///workspace`                                                            |
-| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar://path/to/context.tar.gz`                                                |
+| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar:///path/to/context.tar.gz`                                                |
 | Standard Input     | tar://[stdin]                                                         | `tar://stdin`                                                                 |
 | GCS Bucket         | gs://[bucket name]/[path to .tar.gz]                                  | `gs://kaniko-bucket/path/to/context.tar.gz`                                   |
 | S3 Bucket          | s3://[bucket name]/[path to .tar.gz]                                  | `s3://kaniko-bucket/path/to/context.tar.gz`                                   |
@@ -1093,6 +1094,12 @@ snapshot. Set it multiple times for multiple ignore paths.
 
 Set this flag to the number of retries that should happen for the extracting an
 image filesystem. Defaults to `0`.
+
+#### Flag `--image-download-retry`
+
+Set this flag to the number of retries that should happen when downloading the 
+remote image.  Consecutive retries occur with exponential backoff and an initial
+delay of 1 second. Defaults to 0`.
 
 ### Debug Image
 

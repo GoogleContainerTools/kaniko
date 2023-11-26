@@ -14,7 +14,7 @@
 
 # Bump these on release
 VERSION_MAJOR ?= 1
-VERSION_MINOR ?= 17
+VERSION_MINOR ?= 18
 VERSION_BUILD ?= 0
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
@@ -55,8 +55,8 @@ out/warmer: $(GO_FILES)
 
 .PHONY: install-container-diff
 install-container-diff:
-	@ curl -LO https://github.com/GoogleContainerTools/container-diff/releases/download/v0.17.0/container-diff-linux-amd64 && \
-		chmod +x container-diff-linux-amd64 && sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
+	@ curl -LO https://github.com/GoogleContainerTools/container-diff/releases/download/v0.17.0/container-diff-$(GOOS)-amd64 && \
+		chmod +x container-diff-$(GOOS)-amd64 && sudo mv container-diff-$(GOOS)-amd64 /usr/local/bin/container-diff
 
 .PHONY: k3s-setup
 k3s-setup:

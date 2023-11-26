@@ -1,3 +1,42 @@
+# v1.18.0 Release 2023-11-07
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.18.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.18.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.18.0-slim
+```
+
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.92 to 1.13.1 [#2829](https://github.com/GoogleContainerTools/kaniko/pull/2829)
+* chore(deps): bump google.golang.org/api from 0.148.0 to 0.149.0 [#2831](https://github.com/GoogleContainerTools/kaniko/pull/2831)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.40.2 to 1.42.0 [#2828](https://github.com/GoogleContainerTools/kaniko/pull/2828)
+* chore(deps): bump golang.org/x/sync from 0.4.0 to 0.5.0 [#2827](https://github.com/GoogleContainerTools/kaniko/pull/2827)
+* fix: fix COPY command error due to missing but ignored files [#2812](https://github.com/GoogleContainerTools/kaniko/pull/2812)
+* snapshotter: use syncfs system call [#2816](https://github.com/GoogleContainerTools/kaniko/pull/2816)
+* Fix missing slash [#2658](https://github.com/GoogleContainerTools/kaniko/pull/2658)
+* chore(deps): bump github.com/containerd/containerd from 1.7.7 to 1.7.8 [#2819](https://github.com/GoogleContainerTools/kaniko/pull/2819)
+* chore(deps): bump github.com/go-git/go-git/v5 from 5.9.0 to 5.10.0 [#2818](https://github.com/GoogleContainerTools/kaniko/pull/2818)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.11.91 to 1.11.92 [#2814](https://github.com/GoogleContainerTools/kaniko/pull/2814)
+* chore(deps): bump google.golang.org/api from 0.145.0 to 0.148.0 [#2810](https://github.com/GoogleContainerTools/kaniko/pull/2810)
+
+
+Huge thank you for this release towards our contributors: 
+- dependabot[bot]
+- Paolo Di Tommaso
+- Quan Zhang
+- zhouhaibing089
+
+
 # v1.17.0 Release 2023-10-18
 The executor images in this release are:
 ```

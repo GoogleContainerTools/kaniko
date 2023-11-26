@@ -17,6 +17,7 @@ limitations under the License.
 package executor
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -135,6 +136,17 @@ func getDigest(image v1.Image) ([]byte, error) {
 }
 
 func writeDigestFile(path string, digestByteArray []byte) error {
+	if strings.HasPrefix(path, "https://") {
+		// Do a HTTP PUT to the URL; this could be a pre-signed URL to S3 or GCS or Azure
+		req, err := http.NewRequest("PUT", path, bytes.NewReader(digestByteArray)) //nolint:noctx
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "text/plain")
+		_, err = http.DefaultClient.Do(req)
+		return err
+	}
+
 	parentDir := filepath.Dir(path)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(parentDir, 0700); err != nil {

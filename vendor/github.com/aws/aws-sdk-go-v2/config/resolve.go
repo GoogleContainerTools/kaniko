@@ -27,7 +27,6 @@ func resolveDefaultAWSConfig(ctx context.Context, cfg *aws.Config, cfgs configs)
 	}
 
 	*cfg = aws.Config{
-		Credentials:   aws.AnonymousCredentials{},
 		Logger:        logging.NewStandardLogger(os.Stderr),
 		ConfigSources: sources,
 	}
@@ -103,6 +102,29 @@ func resolveRegion(ctx context.Context, cfg *aws.Config, configs configs) error 
 	}
 
 	cfg.Region = v
+	return nil
+}
+
+func resolveBaseEndpoint(ctx context.Context, cfg *aws.Config, configs configs) error {
+	var downcastCfgSources []interface{}
+	for _, cs := range configs {
+		downcastCfgSources = append(downcastCfgSources, interface{}(cs))
+	}
+
+	if val, found, err := GetIgnoreConfiguredEndpoints(ctx, downcastCfgSources); found && val && err == nil {
+		cfg.BaseEndpoint = nil
+		return nil
+	}
+
+	v, found, err := getBaseEndpoint(ctx, configs)
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return nil
+	}
+	cfg.BaseEndpoint = aws.String(v)
 	return nil
 }
 

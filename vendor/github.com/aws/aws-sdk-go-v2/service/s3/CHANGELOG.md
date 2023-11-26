@@ -1,3 +1,26 @@
+# v1.43.0 (2023-11-17)
+
+* **Feature**: **BREAKING CHANGE** Correct nullability of a large number of S3 structure fields. See https://github.com/aws/aws-sdk-go-v2/issues/2162.
+* **Feature**: Removes all default 0 values for numbers and false values for booleans
+
+# v1.42.2 (2023-11-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.42.1 (2023-11-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.42.0 (2023-11-01)
+
+* **Feature**: Adds support for configured endpoints via environment variables and the AWS shared configuration file.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.41.0 (2023-10-31)
+
+* **Feature**: **BREAKING CHANGE**: Bump minimum go version to 1.19 per the revised [go version support policy](https://aws.amazon.com/blogs/developer/aws-sdk-for-go-aligns-with-go-release-policy-on-supported-runtimes/).
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.40.2 (2023-10-12)
 
 * **Dependency Update**: Updated to the latest SDK module versions

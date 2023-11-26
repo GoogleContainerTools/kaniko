@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -473,6 +474,34 @@ func TestWriteDigestFile(t *testing.T) {
 		err := writeDigestFile(tmpDir+"/df", []byte("test"))
 		if err != nil {
 			t.Errorf("expected file to be written successfully, but got error: %v", err)
+		}
+	})
+
+	t.Run("https PUT OK", func(t *testing.T) {
+		var uploadedContent []byte
+
+		// Start a test server that checks the PUT request.
+		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPut {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			uploadedContent, _ = io.ReadAll(r.Body)
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer server.Close()
+
+		// Temporarily replace the default client with the test server client to avoid TLS verification errors.
+		oldClient := http.DefaultClient
+		defer func() { http.DefaultClient = oldClient }()
+		http.DefaultClient = server.Client()
+
+		err := writeDigestFile(server.URL+"/df?sig=1234", []byte("test"))
+		if err != nil {
+			t.Fatalf("expected file to be written successfully, but got error: %v", err)
+		}
+		if string(uploadedContent) != "test" {
+			t.Errorf("expected uploaded content to be 'test', but got '%s'", uploadedContent)
 		}
 	})
 }

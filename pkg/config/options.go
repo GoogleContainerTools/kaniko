@@ -43,6 +43,7 @@ type RegistryOptions struct {
 	InsecurePull                 bool
 	SkipTLSVerifyPull            bool
 	PushRetry                    int
+	ImageDownloadRetry           int
 }
 
 // KanikoOptions are options that are set by command line arguments

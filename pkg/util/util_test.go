@@ -64,3 +64,41 @@ func TestRetry(t *testing.T) {
 		t.Fatalf("Not expecting error: %v", err)
 	}
 }
+
+func makeRetryFuncWithResult(numFailures int) func() (int, error) {
+	i := -1
+
+	return func() (int, error) {
+		i++
+		if i < numFailures {
+			return i, fmt.Errorf("Failing with i=%v", i)
+		}
+		return i, nil
+	}
+}
+
+func TestRetryWithResult(t *testing.T) {
+	// test with a function that does not return an error
+	result, err := RetryWithResult(makeRetryFuncWithResult(0), 0, 10)
+	if err != nil || result != 0 {
+		t.Fatalf("Got result %d and error: %v", result, err)
+	}
+	result, err = RetryWithResult(makeRetryFuncWithResult(0), 3, 10)
+	if err != nil || result != 0 {
+		t.Fatalf("Got result %d and error: %v", result, err)
+	}
+
+	// test with a function that returns an error twice
+	result, err = RetryWithResult(makeRetryFuncWithResult(2), 0, 10)
+	if err == nil || result != 0 {
+		t.Fatalf("Got result %d and error: %v", result, err)
+	}
+	result, err = RetryWithResult(makeRetryFuncWithResult(2), 1, 10)
+	if err == nil || result != 1 {
+		t.Fatalf("Got result %d and error: %v", result, err)
+	}
+	result, err = RetryWithResult(makeRetryFuncWithResult(2), 2, 10)
+	if err != nil || result != 2 {
+		t.Fatalf("Got result %d and error: %v", result, err)
+	}
+}
