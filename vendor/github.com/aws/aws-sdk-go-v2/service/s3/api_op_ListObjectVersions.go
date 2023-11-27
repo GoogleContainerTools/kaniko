@@ -19,9 +19,8 @@ import (
 // perform the s3:ListBucketVersions action. Be aware of the name difference. A
 // 200 OK response can contain valid or invalid XML. Make sure to design your
 // application to parse the contents of the response and handle it appropriately.
-// To use this operation, you must have READ access to the bucket. This action is
-// not supported by Amazon S3 on Outposts. The following operations are related to
-// ListObjectVersions :
+// To use this operation, you must have READ access to the bucket. The following
+// operations are related to ListObjectVersions :
 //   - ListObjectsV2 (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html)
 //   - GetObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
 //   - PutObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html)

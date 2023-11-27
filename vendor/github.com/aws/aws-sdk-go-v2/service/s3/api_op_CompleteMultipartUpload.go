@@ -160,8 +160,9 @@ type CompleteMultipartUploadInput struct {
 	RequestPayer types.RequestPayer
 
 	// The server-side encryption (SSE) algorithm used to encrypt the object. This
-	// parameter is needed only when the object was created using a checksum algorithm.
-	// For more information, see Protecting data using SSE-C keys (https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html)
+	// parameter is required only when the object was created using a checksum
+	// algorithm or if your bucket policy requires the use of SSE-C. For more
+	// information, see Protecting data using SSE-C keys (https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys.html#ssec-require-condition-key)
 	// in the Amazon S3 User Guide.
 	SSECustomerAlgorithm *string
 

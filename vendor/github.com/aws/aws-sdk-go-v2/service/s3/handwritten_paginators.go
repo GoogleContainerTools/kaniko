@@ -44,7 +44,9 @@ func NewListObjectVersionsPaginator(client ListObjectVersionsAPIClient, params *
 	}
 
 	options := ListObjectVersionsPaginatorOptions{}
-	options.Limit = aws.ToInt32(params.MaxKeys)
+	if params.MaxKeys != nil {
+		options.Limit = aws.ToInt32(params.MaxKeys)
+	}
 
 	for _, fn := range optFns {
 		fn(&options)
@@ -79,7 +81,9 @@ func (p *ListObjectVersionsPaginator) NextPage(ctx context.Context, optFns ...fu
 	if p.options.Limit > 0 {
 		limit = p.options.Limit
 	}
-	params.MaxKeys = aws.Int32(limit)
+	if limit > 0 {
+		params.MaxKeys = aws.Int32(limit)
+	}
 
 	result, err := p.client.ListObjectVersions(ctx, &params, optFns...)
 	if err != nil {
@@ -143,7 +147,9 @@ func NewListMultipartUploadsPaginator(client ListMultipartUploadsAPIClient, para
 	}
 
 	options := ListMultipartUploadsPaginatorOptions{}
-	options.Limit = aws.ToInt32(params.MaxUploads)
+	if params.MaxUploads != nil {
+		options.Limit = aws.ToInt32(params.MaxUploads)
+	}
 
 	for _, fn := range optFns {
 		fn(&options)
@@ -178,7 +184,9 @@ func (p *ListMultipartUploadsPaginator) NextPage(ctx context.Context, optFns ...
 	if p.options.Limit > 0 {
 		limit = p.options.Limit
 	}
-	params.MaxUploads = aws.Int32(limit)
+	if limit > 0 {
+		params.MaxUploads = aws.Int32(limit)
+	}
 
 	result, err := p.client.ListMultipartUploads(ctx, &params, optFns...)
 	if err != nil {
