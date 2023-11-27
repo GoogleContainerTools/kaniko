@@ -90,8 +90,8 @@ github.com/GoogleCloudPlatform/docker-credential-gcr v1.5.1-0.20230328182921-62a
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
-github.com/Microsoft/hcsshim v0.11.1 h1:hJ3s7GbWlGK4YVV92sO88BQSyF4ZLVy7/awqOlPxFbA=
-github.com/Microsoft/hcsshim v0.11.1/go.mod h1:nFJmaO4Zr5Y7eADdFOpYswDDlNVbvcIJJNJLECr5JQg=
+github.com/Microsoft/hcsshim v0.11.4 h1:68vKo2VN8DE9AdN4tnkWnmdhqdbpUFM8OF3Airm7fz8=
+github.com/Microsoft/hcsshim v0.11.4/go.mod h1:smjE4dvqPX9Zldna+t5FG3rnoHhaB7QYxPRqGcpAD9w=
 github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 h1:kkhsdkhsCvIsutKu5zLMgWtgh9YxGCNAw8Ad8hjwfYg=
 github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371/go.mod h1:EjAoLdwvbIOoOQr3ihjnSoLZRtE8azugULFRteWMNc0=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
@@ -200,8 +200,8 @@ github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u9
 github.com/containerd/cgroups v1.1.0 h1:v8rEWFl6EoqHB+swVNjVoCJE8o3jX7e8nqBGPLaDFBM=
 github.com/containerd/cgroups v1.1.0/go.mod h1:6ppBcbh/NOOUU+dMKrykgaBnK9lCIBxHqJDGwsa1mIw=
 github.com/containerd/console v1.0.3/go.mod h1:7LqA/THxQ86k76b8c/EMSiaJ3h1eZkMkXar0TQ1gf3U=
-github.com/containerd/containerd v1.7.8 h1:RkwgOW3AVUT3H/dyT0W03Dc8AzlpMG65lX48KftOFSM=
-github.com/containerd/containerd v1.7.8/go.mod h1:L/Hn9qylJtUFT7cPeM0Sr3fATj+WjHwRQ0lyrYk3OPY=
+github.com/containerd/containerd v1.7.9 h1:KOhK01szQbM80YfW1H6RZKh85PHGqY/9OcEZ35Je8sc=
+github.com/containerd/containerd v1.7.9/go.mod h1:0/W44LWEYfSHoxBtsHIiNU/duEkgpMokemafHVCpq9Y=
 github.com/containerd/continuity v0.4.2 h1:v3y/4Yz5jwnvqPKJJ+7Wf93fyWoCB3F5EclWG023MDM=
 github.com/containerd/continuity v0.4.2/go.mod h1:F6PTNCKepoxEaXLQp3wDAjygEnImnZ/7o4JzpodfroQ=
 github.com/containerd/fifo v1.1.0 h1:4I2mbh5stb1u6ycIABlBw9zgtlK8viPI9QkQNRQEEmY=
