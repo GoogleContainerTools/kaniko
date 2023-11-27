@@ -238,6 +238,7 @@ type GetObjectInput struct {
 
 func (in *GetObjectInput) bindEndpointParams(p *EndpointParameters) {
 	p.Bucket = in.Bucket
+	p.Key = in.Key
 
 }
 

@@ -303,6 +303,20 @@ type EndpointParameters struct {
 	// Parameter is required.
 	UseObjectLambdaEndpoint *bool
 
+	// The S3 Key used to send the request. This is an optional parameter that will be
+	// set automatically for operations that are scoped to an S3 Key.
+	//
+	// Parameter is
+	// required.
+	Key *string
+
+	// The S3 Prefix used to send the request. This is an optional parameter that will
+	// be set automatically for operations that are scoped to an S3 Prefix.
+	//
+	// Parameter
+	// is required.
+	Prefix *string
+
 	// Internal parameter to disable Access Point Buckets
 	//
 	// Parameter is required.
