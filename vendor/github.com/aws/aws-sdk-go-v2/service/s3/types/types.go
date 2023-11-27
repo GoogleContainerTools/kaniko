@@ -624,7 +624,7 @@ type DeleteMarkerEntry struct {
 	// The object key.
 	Key *string
 
-	// Date and time the object was last modified.
+	// Date and time when the object was last modified.
 	LastModified *time.Time
 
 	// The account that created the delete marker.>
@@ -1801,6 +1801,9 @@ type LoggingEnabled struct {
 	// in the Amazon S3 User Guide.
 	TargetGrants []TargetGrant
 
+	// Amazon S3 key format for log objects.
+	TargetObjectKeyFormat *TargetObjectKeyFormat
+
 	noSmithyDocumentSerde
 }
 
@@ -1959,10 +1962,10 @@ type MultipartUpload struct {
 // the object's lifetime.
 type NoncurrentVersionExpiration struct {
 
-	// Specifies how many noncurrent versions Amazon S3 will retain. If there are this
-	// many more recent noncurrent versions, Amazon S3 will take the associated action.
-	// For more information about noncurrent versions, see Lifecycle configuration
-	// elements (https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html)
+	// Specifies how many newer noncurrent versions must exist before Amazon S3 can
+	// perform the associated action on a given version. If there are this many more
+	// recent noncurrent versions, Amazon S3 will take the associated action. For more
+	// information about noncurrent versions, see Lifecycle configuration elements (https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html)
 	// in the Amazon S3 User Guide.
 	NewerNoncurrentVersions *int32
 
@@ -1985,10 +1988,10 @@ type NoncurrentVersionExpiration struct {
 // specific period in the object's lifetime.
 type NoncurrentVersionTransition struct {
 
-	// Specifies how many noncurrent versions Amazon S3 will retain. If there are this
-	// many more recent noncurrent versions, Amazon S3 will take the associated action.
-	// For more information about noncurrent versions, see Lifecycle configuration
-	// elements (https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html)
+	// Specifies how many newer noncurrent versions must exist before Amazon S3 can
+	// perform the associated action on a given version. If there are this many more
+	// recent noncurrent versions, Amazon S3 will take the associated action. For more
+	// information about noncurrent versions, see Lifecycle configuration elements (https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html)
 	// in the Amazon S3 User Guide.
 	NewerNoncurrentVersions *int32
 
@@ -2210,7 +2213,7 @@ type ObjectVersion struct {
 	// The object key.
 	Key *string
 
-	// Date and time the object was last modified.
+	// Date and time when the object was last modified.
 	LastModified *time.Time
 
 	// Specifies the owner of the object.
@@ -2357,6 +2360,19 @@ type Part struct {
 
 	// Size in bytes of the uploaded part data.
 	Size *int64
+
+	noSmithyDocumentSerde
+}
+
+// Amazon S3 keys for log objects are partitioned in the following format:
+// [DestinationPrefix][SourceAccountId]/[SourceRegion]/[SourceBucket]/[YYYY]/[MM]/[DD]/[YYYY]-[MM]-[DD]-[hh]-[mm]-[ss]-[UniqueString]
+// PartitionedPrefix defaults to EventTime delivery when server access logs are
+// delivered.
+type PartitionedPrefix struct {
+
+	// Specifies the partition date source for the partitioned prefix.
+	// PartitionDateSource can be EventTime or DeliveryTime.
+	PartitionDateSource PartitionDateSource
 
 	noSmithyDocumentSerde
 }
@@ -3047,6 +3063,12 @@ type ServerSideEncryptionRule struct {
 	noSmithyDocumentSerde
 }
 
+// To use simple format for S3 keys for log objects, set SimplePrefix to an empty
+// object. [DestinationPrefix][YYYY]-[MM]-[DD]-[hh]-[mm]-[ss]-[UniqueString]
+type SimplePrefix struct {
+	noSmithyDocumentSerde
+}
+
 // A container that describes additional filters for identifying the source
 // objects that you want to replicate. You can choose to enable or disable the
 // replication of these objects. Currently, Amazon S3 supports only the filter that
@@ -3192,6 +3214,20 @@ type TargetGrant struct {
 
 	// Logging permissions assigned to the grantee for the bucket.
 	Permission BucketLogsPermission
+
+	noSmithyDocumentSerde
+}
+
+// Amazon S3 key format for log objects. Only one format, PartitionedPrefix or
+// SimplePrefix, is allowed.
+type TargetObjectKeyFormat struct {
+
+	// Partitioned S3 key for log objects.
+	PartitionedPrefix *PartitionedPrefix
+
+	// To use the simple format for S3 keys for log objects. To specify SimplePrefix
+	// format, set SimplePrefix to {}.
+	SimplePrefix *SimplePrefix
 
 	noSmithyDocumentSerde
 }

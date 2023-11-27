@@ -287,7 +287,8 @@ type PutObjectInput struct {
 	// encryption. The value of this header is a base64-encoded UTF-8 string holding
 	// JSON with the encryption context key-value pairs. This value is stored as object
 	// metadata and automatically gets passed on to Amazon Web Services KMS for future
-	// GetObject or CopyObject operations on this object.
+	// GetObject or CopyObject operations on this object. This value must be
+	// explicitly added during CopyObject operations.
 	SSEKMSEncryptionContext *string
 
 	// If x-amz-server-side-encryption has a valid value of aws:kms or aws:kms:dsse ,

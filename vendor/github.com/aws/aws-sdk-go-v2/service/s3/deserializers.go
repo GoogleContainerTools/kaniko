@@ -17420,6 +17420,12 @@ func awsRestxml_deserializeDocumentLoggingEnabled(v **types.LoggingEnabled, deco
 				return err
 			}
 
+		case strings.EqualFold("TargetObjectKeyFormat", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsRestxml_deserializeDocumentTargetObjectKeyFormat(&sv.TargetObjectKeyFormat, nodeDecoder); err != nil {
+				return err
+			}
+
 		case strings.EqualFold("TargetPrefix", t.Name.Local):
 			val, err := decoder.Value()
 			if err != nil {
@@ -19570,6 +19576,55 @@ func awsRestxml_deserializeDocumentPart(v **types.Part, decoder smithyxml.NodeDe
 	return nil
 }
 
+func awsRestxml_deserializeDocumentPartitionedPrefix(v **types.PartitionedPrefix, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.PartitionedPrefix
+	if *v == nil {
+		sv = &types.PartitionedPrefix{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("PartitionDateSource", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.PartitionDateSource = types.PartitionDateSource(xtv)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
 func awsRestxml_deserializeDocumentParts(v *[]types.Part, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -21148,6 +21203,42 @@ func awsRestxml_deserializeDocumentServerSideEncryptionRulesUnwrapped(v *[]types
 	*v = sv
 	return nil
 }
+func awsRestxml_deserializeDocumentSimplePrefix(v **types.SimplePrefix, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.SimplePrefix
+	if *v == nil {
+		sv = &types.SimplePrefix{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
 func awsRestxml_deserializeDocumentSourceSelectionCriteria(v **types.SourceSelectionCriteria, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -21680,6 +21771,54 @@ func awsRestxml_deserializeDocumentTargetGrantsUnwrapped(v *[]types.TargetGrant,
 	*v = sv
 	return nil
 }
+func awsRestxml_deserializeDocumentTargetObjectKeyFormat(v **types.TargetObjectKeyFormat, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.TargetObjectKeyFormat
+	if *v == nil {
+		sv = &types.TargetObjectKeyFormat{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("PartitionedPrefix", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsRestxml_deserializeDocumentPartitionedPrefix(&sv.PartitionedPrefix, nodeDecoder); err != nil {
+				return err
+			}
+
+		case strings.EqualFold("SimplePrefix", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsRestxml_deserializeDocumentSimplePrefix(&sv.SimplePrefix, nodeDecoder); err != nil {
+				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
 func awsRestxml_deserializeDocumentTiering(v **types.Tiering, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)

@@ -10519,6 +10519,19 @@ func awsRestxml_serializeDocumentLoggingEnabled(v *types.LoggingEnabled, value s
 			return err
 		}
 	}
+	if v.TargetObjectKeyFormat != nil {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "TargetObjectKeyFormat",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		if err := awsRestxml_serializeDocumentTargetObjectKeyFormat(v.TargetObjectKeyFormat, el); err != nil {
+			return err
+		}
+	}
 	if v.TargetPrefix != nil {
 		rootAttr := []smithyxml.Attr{}
 		root := smithyxml.StartElement{
@@ -11130,6 +11143,22 @@ func awsRestxml_serializeDocumentOwnershipControlsRules(v []types.OwnershipContr
 
 func awsRestxml_serializeDocumentParquetInput(v *types.ParquetInput, value smithyxml.Value) error {
 	defer value.Close()
+	return nil
+}
+
+func awsRestxml_serializeDocumentPartitionedPrefix(v *types.PartitionedPrefix, value smithyxml.Value) error {
+	defer value.Close()
+	if len(v.PartitionDateSource) > 0 {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "PartitionDateSource",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		el.String(string(v.PartitionDateSource))
+	}
 	return nil
 }
 
@@ -12093,6 +12122,11 @@ func awsRestxml_serializeDocumentServerSideEncryptionRules(v []types.ServerSideE
 	return nil
 }
 
+func awsRestxml_serializeDocumentSimplePrefix(v *types.SimplePrefix, value smithyxml.Value) error {
+	defer value.Close()
+	return nil
+}
+
 func awsRestxml_serializeDocumentSourceSelectionCriteria(v *types.SourceSelectionCriteria, value smithyxml.Value) error {
 	defer value.Close()
 	if v.ReplicaModifications != nil {
@@ -12326,6 +12360,37 @@ func awsRestxml_serializeDocumentTargetGrants(v []types.TargetGrant, value smith
 	for i := range v {
 		am := array.Member()
 		if err := awsRestxml_serializeDocumentTargetGrant(&v[i], am); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func awsRestxml_serializeDocumentTargetObjectKeyFormat(v *types.TargetObjectKeyFormat, value smithyxml.Value) error {
+	defer value.Close()
+	if v.PartitionedPrefix != nil {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "PartitionedPrefix",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		if err := awsRestxml_serializeDocumentPartitionedPrefix(v.PartitionedPrefix, el); err != nil {
+			return err
+		}
+	}
+	if v.SimplePrefix != nil {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "SimplePrefix",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		if err := awsRestxml_serializeDocumentSimplePrefix(v.SimplePrefix, el); err != nil {
 			return err
 		}
 	}
