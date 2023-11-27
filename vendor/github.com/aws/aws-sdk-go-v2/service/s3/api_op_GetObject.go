@@ -73,6 +73,8 @@ import (
 //   - If the current version of the object is a delete marker, Amazon S3 behaves
 //     as if the object was deleted and includes x-amz-delete-marker: true in the
 //     response.
+//   - If the specified version is a delete marker, the response returns a 405
+//     (Method Not Allowed) error and the Last-Modified: timestamp response header.
 //
 // For more information about versioning, see PutBucketVersioning (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketVersioning.html)
 // . Overriding Response Header Values There are times when you want to override
@@ -319,7 +321,7 @@ type GetObjectOutput struct {
 	// The date and time at which the object is no longer cacheable.
 	Expires *time.Time
 
-	// Creation date of the object.
+	// Date and time when the object was last modified.
 	LastModified *time.Time
 
 	// A map of metadata to store with the object in S3.
