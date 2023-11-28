@@ -21,8 +21,9 @@ import (
 //   - The DefaultRetention settings require both a mode and a period.
 //   - The DefaultRetention period can be either Days or Years but you must select
 //     one. You cannot specify Days and Years at the same time.
-//   - You can only enable Object Lock for new buckets. If you want to turn on
-//     Object Lock for an existing bucket, contact Amazon Web Services Support.
+//   - You can enable Object Lock for new or existing buckets. For more
+//     information, see Configuring Object Lock (https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-configure.html)
+//     .
 func (c *Client) PutObjectLockConfiguration(ctx context.Context, params *PutObjectLockConfigurationInput, optFns ...func(*Options)) (*PutObjectLockConfigurationOutput, error) {
 	if params == nil {
 		params = &PutObjectLockConfigurationInput{}

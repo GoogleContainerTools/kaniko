@@ -126,6 +126,7 @@ type ListPartsInput struct {
 
 func (in *ListPartsInput) bindEndpointParams(p *EndpointParameters) {
 	p.Bucket = in.Bucket
+	p.Key = in.Key
 
 }
 

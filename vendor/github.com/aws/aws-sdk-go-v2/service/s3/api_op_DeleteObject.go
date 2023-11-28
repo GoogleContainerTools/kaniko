@@ -106,6 +106,7 @@ type DeleteObjectInput struct {
 
 func (in *DeleteObjectInput) bindEndpointParams(p *EndpointParameters) {
 	p.Bucket = in.Bucket
+	p.Key = in.Key
 
 }
 

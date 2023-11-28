@@ -183,6 +183,7 @@ type CompleteMultipartUploadInput struct {
 
 func (in *CompleteMultipartUploadInput) bindEndpointParams(p *EndpointParameters) {
 	p.Bucket = in.Bucket
+	p.Key = in.Key
 
 }
 

@@ -134,6 +134,7 @@ type ListMultipartUploadsInput struct {
 
 func (in *ListMultipartUploadsInput) bindEndpointParams(p *EndpointParameters) {
 	p.Bucket = in.Bucket
+	p.Prefix = in.Prefix
 
 }
 
