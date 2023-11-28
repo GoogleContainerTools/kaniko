@@ -17,7 +17,6 @@ limitations under the License.
 package executor
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -71,7 +70,7 @@ func Test_CompositeCache_AddPath_dir(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	content := `meow meow meow`
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "foo.txt"), []byte(content), 0777); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "foo.txt"), []byte(content), 0777); err != nil {
 		t.Errorf("got error writing temp file %v", err)
 	}
 
@@ -98,7 +97,7 @@ func Test_CompositeCache_AddPath_dir(t *testing.T) {
 	}
 }
 func Test_CompositeCache_AddPath_file(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("/tmp", "foo.txt")
+	tmpfile, err := os.CreateTemp("/tmp", "foo.txt")
 	if err != nil {
 		t.Errorf("got error setting up test %v", err)
 	}
@@ -146,7 +145,7 @@ func createFilesystemStructure(root string, directories, files []string) error {
 
 	for _, fileName := range files {
 		filePath := path.Join(root, fileName)
-		err := ioutil.WriteFile(filePath, []byte(fileName), 0644)
+		err := os.WriteFile(filePath, []byte(fileName), 0644)
 		if err != nil {
 			return err
 		}
@@ -158,7 +157,7 @@ func createFilesystemStructure(root string, directories, files []string) error {
 func setIgnoreContext(t *testing.T, content string) (util.FileContext, error) {
 	var fileContext util.FileContext
 	dockerIgnoreDir := t.TempDir()
-	err := ioutil.WriteFile(dockerIgnoreDir+".dockerignore", []byte(content), 0644)
+	err := os.WriteFile(dockerIgnoreDir+".dockerignore", []byte(content), 0644)
 	if err != nil {
 		return fileContext, err
 	}
@@ -288,7 +287,7 @@ func Test_CompositeKey_AddPath_WithExtraFile_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 			extraPath := path.Join(testDir2, test.extraFile)
-			err = ioutil.WriteFile(extraPath, []byte(test.extraFile), 0644)
+			err = os.WriteFile(extraPath, []byte(test.extraFile), 0644)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
@@ -431,7 +430,7 @@ func Test_CompositeKey_AddPath_WithExtraFilIgnored_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 			extraPath := path.Join(testDir2, test.extraFile)
-			err = ioutil.WriteFile(extraPath, []byte(test.extraFile), 0644)
+			err = os.WriteFile(extraPath, []byte(test.extraFile), 0644)
 			if err != nil {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}

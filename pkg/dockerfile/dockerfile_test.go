@@ -18,7 +18,6 @@ package dockerfile
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -45,7 +44,7 @@ func Test_ParseStages_ArgValueWithQuotes(t *testing.T) {
 	FROM scratch
 	COPY --from=second /hi2 /hi3
 	`
-	tmpfile, err := ioutil.TempFile("", "Dockerfile.test")
+	tmpfile, err := os.CreateTemp("", "Dockerfile.test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -81,9 +80,9 @@ func TestWriteImageOutputs(t *testing.T) {
 `, d, d),
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
-			fs = afero.NewMemMapFs()
+			newOsFs = afero.NewMemMapFs()
 			if c.want == "" {
-				fs = afero.NewReadOnlyFs(fs) // No files should be written.
+				newOsFs = afero.NewReadOnlyFs(newOsFs) // No files should be written.
 			}
 
 			os.Setenv("BUILDER_OUTPUT", c.env)
@@ -95,7 +94,7 @@ func TestWriteImageOutputs(t *testing.T) {
 				return
 			}
 
-			b, err := afero.ReadFile(fs, filepath.Join(c.env, "images"))
+			b, err := afero.ReadFile(newOsFs, filepath.Join(c.env, "images"))
 			if err != nil {
 				t.Fatalf("ReadFile: %v", err)
 			}
@@ -136,7 +135,7 @@ func TestHeaderAdded(t *testing.T) {
 			resp, err := rt.RoundTrip(req)
 			testutil.CheckError(t, false, err)
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			testutil.CheckErrorAndDeepEqual(t, false, err, test.expected, string(body))
 		})
 	}
@@ -148,7 +147,7 @@ type mockRoundTripper struct {
 
 func (m *mockRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := r.UserAgent()
-	return &http.Response{Body: ioutil.NopCloser(bytes.NewBufferString(ua))}, nil
+	return &http.Response{Body: io.NopCloser(bytes.NewBufferString(ua))}, nil
 }
 
 func TestOCILayoutPath(t *testing.T) {
@@ -218,7 +217,7 @@ func TestImageNameDigestFile(t *testing.T) {
 
 	want := []byte("gcr.io/foo/bar@" + digest.String() + "\nindex.docker.io/bob/image@" + digest.String() + "\n")
 
-	got, err := ioutil.ReadFile("tmpFile")
+	got, err := os.ReadFile("tmpFile")
 
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 
@@ -311,7 +310,7 @@ func TestImageNameTagDigestFile(t *testing.T) {
 
 	want := []byte("gcr.io/foo/bar:123@" + digest.String() + "\nindex.docker.io/bob/image:latest@" + digest.String() + "\n")
 
-	got, err := ioutil.ReadFile("tmpFile")
+	got, err := os.ReadFile("tmpFile")
 
 	testutil.CheckErrorAndDeepEqual(t, false, err, want, got)
 }
@@ -395,7 +394,7 @@ func TestCheckPushPermissions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			resetCalledCount()
-			fs = afero.NewMemMapFs()
+			newOsFs = afero.NewMemMapFs()
 			opts := config.KanikoOptions{
 				CacheRepo:    test.cacheRepo,
 				Destinations: test.destinations,
@@ -403,8 +402,8 @@ func TestCheckPushPermissions(t *testing.T) {
 				NoPushCache:  test.noPushCache,
 			}
 			if test.existingConfig {
-				afero.WriteFile(fs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
-				defer fs.Remove(util.DockerConfLocation())
+				afero.WriteFile(newOsFs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
+				defer newOsFs.Remove(util.DockerConfLocation())
 			}
 			CheckPushPermissions(&opts)
 			if checkPushPermsCallCount != test.checkPushPermsExpectedCallCount {
@@ -433,7 +432,7 @@ func TestSkipPushPermission(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			resetCalledCount()
-			fs = afero.NewMemMapFs()
+			newOsFs = afero.NewMemMapFs()
 			opts := config.KanikoOptions{
 				CacheRepo:               test.cacheRepo,
 				Destinations:            test.destinations,
@@ -442,8 +441,8 @@ func TestSkipPushPermission(t *testing.T) {
 				SkipPushPermissionCheck: test.skipPushPermission,
 			}
 			if test.existingConfig {
-				afero.WriteFile(fs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
-				defer fs.Remove(util.DockerConfLocation())
+				afero.WriteFile(newOsFs, util.DockerConfLocation(), []byte(""), os.FileMode(0644))
+				defer newOsFs.Remove(util.DockerConfLocation())
 			}
 			CheckPushPermissions(&opts)
 			if checkPushPermsCallCount != test.checkPushPermsExpectedCallCount {

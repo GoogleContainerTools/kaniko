@@ -18,7 +18,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,10 +31,19 @@ func TestWithContext(t *testing.T) {
 	}
 
 	dir := filepath.Join(cwd, "dockerfiles-with-context")
-
-	testDirs, err := ioutil.ReadDir(dir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	testDirs := make([]fs.FileInfo, 0, len(entries))
+
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			t.Fatal(err)
+		}
+		testDirs = append(testDirs, info)
 	}
 
 	builder := NewDockerFileBuilder()

@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
@@ -176,7 +175,7 @@ func SHA256(r io.Reader) (string, error) {
 
 // GetInputFrom returns Reader content
 func GetInputFrom(r io.Reader) ([]byte, error) {
-	output, err := ioutil.ReadAll(r)
+	output, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

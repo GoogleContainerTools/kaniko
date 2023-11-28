@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -145,7 +144,7 @@ func TestBuildWithLocalTar(t *testing.T) {
 }
 
 func getSHAFromFilePath(f string) (string, error) {
-	data, err := ioutil.ReadFile(f)
+	data, err := os.ReadFile(f)
 	if err != nil {
 		return "", err
 	}

@@ -19,7 +19,6 @@ package integration
 import (
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -35,7 +34,7 @@ func CreateIntegrationTarball() (string, error) {
 	if err != nil {
 		return "nil", fmt.Errorf("Failed find path to integration dir: %w", err)
 	}
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", fmt.Errorf("Failed to create temporary directory to hold tarball: %w", err)
 	}

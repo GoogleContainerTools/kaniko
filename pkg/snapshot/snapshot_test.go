@@ -19,7 +19,6 @@ package snapshot
 import (
 	"archive/tar"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -88,7 +87,7 @@ func TestSnapshotFSFileChange(t *testing.T) {
 		if hdr.Typeflag == tar.TypeDir {
 			continue
 		}
-		contents, _ := ioutil.ReadAll(tr)
+		contents, _ := io.ReadAll(tr)
 		if string(contents) != snapshotFiles[hdr.Name] {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}
@@ -176,7 +175,7 @@ func TestSnapshotFSChangePermissions(t *testing.T) {
 		if hdr.Typeflag == tar.TypeDir {
 			continue
 		}
-		contents, _ := ioutil.ReadAll(tr)
+		contents, _ := io.ReadAll(tr)
 		if string(contents) != snapshotFiles[hdr.Name] {
 			t.Fatalf("Contents of %s incorrect, expected: %s, actual: %s", hdr.Name, snapshotFiles[hdr.Name], string(contents))
 		}

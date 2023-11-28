@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -459,7 +458,7 @@ func buildKanikoImage(
 	shdUpload bool,
 ) (string, error) {
 	benchmarkEnv := "BENCHMARK_FILE=false"
-	benchmarkDir, err := ioutil.TempDir("", "")
+	benchmarkDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}

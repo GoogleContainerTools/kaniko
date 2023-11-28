@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -74,7 +73,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // for testing
 var (
-	fs                        = afero.NewOsFs()
+	newOsFs                   = afero.NewOsFs()
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
@@ -156,7 +155,7 @@ func writeDigestFile(path string, digestByteArray []byte) error {
 		}
 		logrus.Tracef("Created directory %v", parentDir)
 	}
-	return ioutil.WriteFile(path, digestByteArray, 0644)
+	return os.WriteFile(path, digestByteArray, 0644)
 }
 
 // DoPush is responsible for pushing image to the destinations specified in opts.
@@ -301,7 +300,7 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	if dir == "" {
 		return nil
 	}
-	f, err := fs.Create(filepath.Join(dir, "images"))
+	f, err := newOsFs.Create(filepath.Join(dir, "images"))
 	if err != nil {
 		return err
 	}

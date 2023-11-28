@@ -20,9 +20,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"os"
 	"strings"
 
-	"io/ioutil"
 	"net/http"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -43,7 +43,7 @@ func (p *X509CertPool) value() *x509.CertPool {
 }
 
 func (p *X509CertPool) append(path string) error {
-	pem, err := ioutil.ReadFile(path)
+	pem, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

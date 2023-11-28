@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"os"
@@ -763,7 +762,7 @@ func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
 		return nil, nil
 	}
 	logrus.Infof("Using dockerignore file: %v", path)
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing .dockerignore")
 	}
