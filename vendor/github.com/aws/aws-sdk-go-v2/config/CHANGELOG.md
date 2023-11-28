@@ -1,3 +1,15 @@
+# v1.25.8 (2023-11-28.3)
+
+* **Bug Fix**: Correct resolution of S3Express auth disable toggle.
+
+# v1.25.7 (2023-11-28.2)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.25.6 (2023-11-28)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.25.5 (2023-11-21)
 
 * **Dependency Update**: Updated to the latest SDK module versions
