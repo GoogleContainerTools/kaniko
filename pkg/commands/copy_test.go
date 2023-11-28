@@ -67,6 +67,11 @@ var copyTests = []struct {
 		sourcesAndDest: []string{"f[o][osp]", "tempCopyExecuteTest"},
 		expectedDest:   []string{"tempCopyExecuteTest"},
 	},
+	{
+		name:           "Copy into several to-be-created directories",
+		sourcesAndDest: []string{"f[o][osp]", "tempCopyExecuteTest/foo/bar"},
+		expectedDest:   []string{"bar"},
+	},
 }
 
 func setupTestTemp(t *testing.T) string {
@@ -309,6 +314,10 @@ func TestCopyExecuteCmd(t *testing.T) {
 			fstat, err := fi.Stat()
 			if err != nil {
 				t.Error()
+			}
+			if fstat == nil {
+				t.Error()
+				return // Unrecoverable, will segfault in the next line
 			}
 			if fstat.IsDir() {
 				files, err := ioutil.ReadDir(dest)

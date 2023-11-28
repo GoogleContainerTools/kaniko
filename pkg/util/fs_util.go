@@ -578,7 +578,7 @@ func resetFileOwnershipIfNotMatching(path string, newUID, newGID uint32) error {
 // CreateFile creates a file at path and copies over contents from the reader
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
-	if err := createParentDirectory(path); err != nil {
+	if err := createParentDirectory(path, int(uid), int(gid)); err != nil {
 		return errors.Wrap(err, "creating parent dir")
 	}
 
@@ -707,7 +707,7 @@ func CopySymlink(src, dest string, context FileContext) (bool, error) {
 			return false, err
 		}
 	}
-	if err := createParentDirectory(dest); err != nil {
+	if err := createParentDirectory(dest, DoNotChangeUID, DoNotChangeGID); err != nil {
 		return false, err
 	}
 	link, err := os.Readlink(src)
@@ -951,7 +951,7 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		if err != nil {
 			return errors.Wrap(err, "copying file or symlink")
 		}
-		if err := createParentDirectory(destFile); err != nil {
+		if err := createParentDirectory(destFile, DoNotChangeUID, DoNotChangeGID); err != nil {
 			return err
 		}
 		return os.Symlink(link, destFile)
@@ -1015,12 +1015,40 @@ func CopyOwnership(src string, destDir string, root string) error {
 	})
 }
 
-func createParentDirectory(path string) error {
+func createParentDirectory(path string, uid int, gid int) error {
 	baseDir := filepath.Dir(path)
 	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Tracef("BaseDir %s for file %s does not exist. Creating.", baseDir, path)
-		if err := os.MkdirAll(baseDir, 0755); err != nil {
-			return err
+
+		dir := baseDir
+		dirs := []string{baseDir}
+		for {
+			if dir == "/" || dir == "." || dir == "" {
+				break
+			}
+			dir = filepath.Dir(dir)
+			dirs = append(dirs, dir)
+		}
+
+		for i := len(dirs) - 1; i >= 0; i-- {
+			dir := dirs[i]
+
+			if _, err := os.Lstat(dir); os.IsNotExist(err) {
+				os.Mkdir(dir, 0755)
+				if uid != DoNotChangeUID {
+					if gid != DoNotChangeGID {
+						os.Chown(dir, uid, gid)
+					} else {
+						return errors.New(fmt.Sprintf("UID=%d but GID=-1, i.e. it is not set for %s", uid, dir))
+					}
+				} else {
+					if gid != DoNotChangeGID {
+						return errors.New(fmt.Sprintf("GID=%d but UID=-1, i.e. it is not set for %s", gid, dir))
+					}
+				}
+			} else if err != nil {
+				return err
+			}
 		}
 	} else if IsSymlink(info) {
 		logrus.Infof("Destination cannot be a symlink %v", baseDir)

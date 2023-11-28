@@ -1,0 +1,16 @@
+FROM alpine@sha256:5ce5f501c457015c4b91f91a15ac69157d9b06f1a75cf9107bf2b62e0843983a
+# Create dev user and group, with id 1001
+RUN yes | adduser -u 1001 dev
+
+ADD --chown=dev:dev context/foo /path/to/foo
+ADD --chown=dev:dev context/qux /path/to/qux
+ADD --chown=1001:1001 context/foo /path2/to/foo
+ADD --chown=1001:1001 context/qux /path2/to/qux
+
+USER dev
+
+# `mkdir` fails when `dev` does not own all of `/path{,2}/to{,/qux}`
+RUN mkdir /path/to/new_dir
+RUN mkdir /path/to/qux/new_dir
+RUN mkdir /path2/to/new_dir
+RUN mkdir /path2/to/qux/new_dir
