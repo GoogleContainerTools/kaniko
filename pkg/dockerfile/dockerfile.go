@@ -19,8 +19,9 @@ package dockerfile
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,9 +45,9 @@ func ParseStages(opts *config.KanikoOptions) ([]instructions.Stage, []instructio
 		if e != nil {
 			return nil, nil, e
 		}
-		d, err = ioutil.ReadAll(response.Body)
+		d, err = io.ReadAll(response.Body)
 	} else {
-		d, err = ioutil.ReadFile(opts.DockerfilePath)
+		d, err = os.ReadFile(opts.DockerfilePath)
 	}
 
 	if err != nil {

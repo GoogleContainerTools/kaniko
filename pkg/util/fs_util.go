@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"os"
@@ -143,7 +142,7 @@ func GetFSFromImage(root string, img v1.Image, extract ExtractFunction) ([]strin
 func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, error) {
 	volumes = []string{}
 	cfg := new(FSConfig)
-	if err := InitIgnoreList(true); err != nil {
+	if err := InitIgnoreList(); err != nil {
 		return nil, errors.Wrap(err, "initializing filesystem ignore list")
 	}
 	logrus.Debugf("Ignore list: %v", ignorelist)
@@ -578,7 +577,7 @@ func resetFileOwnershipIfNotMatching(path string, newUID, newGID uint32) error {
 // CreateFile creates a file at path and copies over contents from the reader
 func CreateFile(path string, reader io.Reader, perm os.FileMode, uid uint32, gid uint32) error {
 	// Create directory path if it doesn't exist
-	if err := createParentDirectory(path); err != nil {
+	if err := createParentDirectory(path, int(uid), int(gid)); err != nil {
 		return errors.Wrap(err, "creating parent dir")
 	}
 
@@ -663,13 +662,13 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 	var copiedFiles []string
 	for _, file := range files {
 		fullPath := filepath.Join(src, file)
-		fi, err := os.Lstat(fullPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "copying dir")
-		}
 		if context.ExcludesFile(fullPath) {
 			logrus.Debugf("%s found in .dockerignore, ignoring", src)
 			continue
+		}
+		fi, err := os.Lstat(fullPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "copying dir")
 		}
 		destPath := filepath.Join(dest, file)
 		if fi.IsDir() {
@@ -707,7 +706,7 @@ func CopySymlink(src, dest string, context FileContext) (bool, error) {
 			return false, err
 		}
 	}
-	if err := createParentDirectory(dest); err != nil {
+	if err := createParentDirectory(dest, DoNotChangeUID, DoNotChangeGID); err != nil {
 		return false, err
 	}
 	link, err := os.Readlink(src)
@@ -763,7 +762,7 @@ func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
 		return nil, nil
 	}
 	logrus.Infof("Using dockerignore file: %v", path)
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing .dockerignore")
 	}
@@ -951,7 +950,7 @@ func CopyFileOrSymlink(src string, destDir string, root string) error {
 		if err != nil {
 			return errors.Wrap(err, "copying file or symlink")
 		}
-		if err := createParentDirectory(destFile); err != nil {
+		if err := createParentDirectory(destFile, DoNotChangeUID, DoNotChangeGID); err != nil {
 			return err
 		}
 		return os.Symlink(link, destFile)
@@ -1015,12 +1014,40 @@ func CopyOwnership(src string, destDir string, root string) error {
 	})
 }
 
-func createParentDirectory(path string) error {
+func createParentDirectory(path string, uid int, gid int) error {
 	baseDir := filepath.Dir(path)
 	if info, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Tracef("BaseDir %s for file %s does not exist. Creating.", baseDir, path)
-		if err := os.MkdirAll(baseDir, 0755); err != nil {
-			return err
+
+		dir := baseDir
+		dirs := []string{baseDir}
+		for {
+			if dir == "/" || dir == "." || dir == "" {
+				break
+			}
+			dir = filepath.Dir(dir)
+			dirs = append(dirs, dir)
+		}
+
+		for i := len(dirs) - 1; i >= 0; i-- {
+			dir := dirs[i]
+
+			if _, err := os.Lstat(dir); os.IsNotExist(err) {
+				os.Mkdir(dir, 0755)
+				if uid != DoNotChangeUID {
+					if gid != DoNotChangeGID {
+						os.Chown(dir, uid, gid)
+					} else {
+						return errors.New(fmt.Sprintf("UID=%d but GID=-1, i.e. it is not set for %s", uid, dir))
+					}
+				} else {
+					if gid != DoNotChangeGID {
+						return errors.New(fmt.Sprintf("GID=%d but UID=-1, i.e. it is not set for %s", gid, dir))
+					}
+				}
+			} else if err != nil {
+				return err
+			}
 		}
 	} else if IsSymlink(info) {
 		logrus.Infof("Destination cannot be a symlink %v", baseDir)
@@ -1032,14 +1059,12 @@ func createParentDirectory(path string) error {
 // InitIgnoreList will initialize the ignore list using:
 // - defaultIgnoreList
 // - mounted paths via DetectFilesystemIgnoreList()
-func InitIgnoreList(detectFilesystem bool) error {
+func InitIgnoreList() error {
 	logrus.Trace("Initializing ignore list")
 	ignorelist = append([]IgnoreListEntry{}, defaultIgnoreList...)
 
-	if detectFilesystem {
-		if err := DetectFilesystemIgnoreList(config.MountInfoPath); err != nil {
-			return errors.Wrap(err, "checking filesystem mount paths for ignore list")
-		}
+	if err := DetectFilesystemIgnoreList(config.MountInfoPath); err != nil {
+		return errors.Wrap(err, "checking filesystem mount paths for ignore list")
 	}
 
 	return nil

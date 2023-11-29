@@ -1,6 +1,20 @@
 # Changes
 
 
+## [1.1.3](https://github.com/googleapis/google-cloud-go/compare/iam/v1.1.2...iam/v1.1.3) (2023-10-12)
+
+
+### Bug Fixes
+
+* **iam:** Update golang.org/x/net to v0.17.0 ([174da47](https://github.com/googleapis/google-cloud-go/commit/174da47254fefb12921bbfc65b7829a453af6f5d))
+
+## [1.1.2](https://github.com/googleapis/google-cloud-go/compare/iam/v1.1.1...iam/v1.1.2) (2023-08-08)
+
+
+### Documentation
+
+* **iam:** Minor formatting ([b4349cc](https://github.com/googleapis/google-cloud-go/commit/b4349cc507870ff8629bbc07de578b63bb889626))
+
 ## [1.1.1](https://github.com/googleapis/google-cloud-go/compare/iam/v1.1.0...iam/v1.1.1) (2023-06-20)
 
 

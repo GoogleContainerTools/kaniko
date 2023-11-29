@@ -19,9 +19,9 @@ package snapshot
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"syscall"
 
@@ -31,6 +31,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 // For testing
@@ -63,7 +64,7 @@ func (s *Snapshotter) Key() (string, error) {
 // TakeSnapshot takes a snapshot of the specified files, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files. Return contents of the tarball, and whether or not any files were changed
 func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBuildMetadata bool) (string, error) {
-	f, err := ioutil.TempFile(config.KanikoDir, "")
+	f, err := os.CreateTemp(config.KanikoDir, "")
 	if err != nil {
 		return "", err
 	}
@@ -122,7 +123,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 // TakeSnapshotFS takes a snapshot of the filesystem, avoiding directories in the ignorelist, and creates
 // a tarball of the changed files.
 func (s *Snapshotter) TakeSnapshotFS() (string, error) {
-	f, err := ioutil.TempFile(s.getSnashotPathPrefix(), "")
+	f, err := os.CreateTemp(s.getSnashotPathPrefix(), "")
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +156,20 @@ func (s *Snapshotter) scanFullFilesystem() ([]string, []string, error) {
 	// for example the hashing function that determines if files are equal uses the mtime of the files,
 	// which can lag if sync is not called. Unfortunately there can still be lag if too much data needs
 	// to be flushed or the disk does its own caching/buffering.
-	syscall.Sync()
+	if runtime.GOOS == "linux" {
+		dir, err := os.Open(s.directory)
+		if err != nil {
+			return nil, nil, err
+		}
+		defer dir.Close()
+		_, _, errno := syscall.Syscall(unix.SYS_SYNCFS, dir.Fd(), 0, 0)
+		if errno != 0 {
+			return nil, nil, errno
+		}
+	} else {
+		// fallback to full page cache sync
+		syscall.Sync()
+	}
 
 	s.l.Snapshot()
 

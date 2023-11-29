@@ -1,3 +1,51 @@
+# v1.45.0 (2023-11-27)
+
+* **Feature**: Adding new params - Key and Prefix, to S3 API operations for supporting S3 Access Grants. Note - These updates will not change any of the existing S3 API functionality.
+
+# v1.44.0 (2023-11-21)
+
+* **Feature**: Add support for automatic date based partitioning in S3 Server Access Logs.
+* **Bug Fix**: Don't send MaxKeys/MaxUploads=0 when unspecified in ListObjectVersions and ListMultipartUploads paginators.
+
+# v1.43.1 (2023-11-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.43.0 (2023-11-17)
+
+* **Feature**: **BREAKING CHANGE** Correct nullability of a large number of S3 structure fields. See https://github.com/aws/aws-sdk-go-v2/issues/2162.
+* **Feature**: Removes all default 0 values for numbers and false values for booleans
+
+# v1.42.2 (2023-11-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.42.1 (2023-11-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.42.0 (2023-11-01)
+
+* **Feature**: Adds support for configured endpoints via environment variables and the AWS shared configuration file.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.41.0 (2023-10-31)
+
+* **Feature**: **BREAKING CHANGE**: Bump minimum go version to 1.19 per the revised [go version support policy](https://aws.amazon.com/blogs/developer/aws-sdk-for-go-aligns-with-go-release-policy-on-supported-runtimes/).
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.40.2 (2023-10-12)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.40.1 (2023-10-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.40.0 (2023-09-26)
+
+* **Feature**: This release adds a new field COMPLETED to the ReplicationStatus Enum. You can now use this field to validate the replication status of S3 objects using the AWS SDK.
+
 # v1.39.0 (2023-09-20)
 
 * **Feature**: Fix an issue where the SDK can fail to unmarshall response due to NumberFormatException

@@ -63,9 +63,9 @@ type Config struct {
 	}
 
 	User struct {
-		// Name is the personal name of the author and the commiter of a commit.
+		// Name is the personal name of the author and the committer of a commit.
 		Name string
-		// Email is the email of the author and the commiter of a commit.
+		// Email is the email of the author and the committer of a commit.
 		Email string
 	}
 
@@ -77,9 +77,9 @@ type Config struct {
 	}
 
 	Committer struct {
-		// Name is the personal name of the commiter of a commit.
+		// Name is the personal name of the committer of a commit.
 		Name string
-		// Email is the email of the  the commiter of a commit.
+		// Email is the email of the committer of a commit.
 		Email string
 	}
 
@@ -157,8 +157,8 @@ func ReadConfig(r io.Reader) (*Config, error) {
 }
 
 // LoadConfig loads a config file from a given scope. The returned Config,
-// contains exclusively information fom the given scope. If couldn't find a
-// config file to the given scope, a empty one is returned.
+// contains exclusively information from the given scope. If it couldn't find a
+// config file to the given scope, an empty one is returned.
 func LoadConfig(scope Scope) (*Config, error) {
 	if scope == LocalScope {
 		return nil, fmt.Errorf("LocalScope should be read from the a ConfigStorer")

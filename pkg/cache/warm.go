@@ -19,7 +19,6 @@ package cache
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -115,7 +114,7 @@ func warmToFile(cacheDir, img string, opts *config.WarmerOptions) error {
 
 	err = os.Rename(mtfsFile.Name(), finalMfstPath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to rename manifest file")
 	}
 
 	logrus.Debugf("Wrote %s to cache", img)
@@ -192,9 +191,9 @@ func ParseDockerfile(opts *config.WarmerOptions) ([]string, error) {
 		if e != nil {
 			return nil, e
 		}
-		d, err = ioutil.ReadAll(response.Body)
+		d, err = io.ReadAll(response.Body)
 	} else {
-		d, err = ioutil.ReadFile(opts.DockerfilePath)
+		d, err = os.ReadFile(opts.DockerfilePath)
 	}
 
 	if err != nil {

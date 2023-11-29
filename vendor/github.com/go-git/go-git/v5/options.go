@@ -78,6 +78,15 @@ type CloneOptions struct {
 	CABundle []byte
 	// ProxyOptions provides info required for connecting to a proxy.
 	ProxyOptions transport.ProxyOptions
+	// When the repository to clone is on the local machine, instead of
+	// using hard links, automatically setup .git/objects/info/alternates
+	// to share the objects with the source repository.
+	// The resulting repository starts out without any object of its own.
+	// NOTE: this is a possibly dangerous operation; do not use it unless
+	// you understand what it does.
+	//
+	// [Reference]: https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---shared
+	Shared bool
 }
 
 // Validate validates the fields and sets the default values.
@@ -737,6 +746,9 @@ type PlainOpenOptions struct {
 func (o *PlainOpenOptions) Validate() error { return nil }
 
 type PlainInitOptions struct {
+	InitOptions
+	// Determines if the repository will have a worktree (non-bare) or not (bare).
+	Bare         bool
 	ObjectFormat formatcfg.ObjectFormat
 }
 

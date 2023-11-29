@@ -17,9 +17,9 @@ limitations under the License.
 package executor
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -73,7 +73,7 @@ func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // for testing
 var (
-	fs                        = afero.NewOsFs()
+	newOsFs                   = afero.NewOsFs()
 	checkRemotePushPermission = remote.CheckPushPermission
 )
 
@@ -136,6 +136,17 @@ func getDigest(image v1.Image) ([]byte, error) {
 }
 
 func writeDigestFile(path string, digestByteArray []byte) error {
+	if strings.HasPrefix(path, "https://") {
+		// Do a HTTP PUT to the URL; this could be a pre-signed URL to S3 or GCS or Azure
+		req, err := http.NewRequest("PUT", path, bytes.NewReader(digestByteArray)) //nolint:noctx
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "text/plain")
+		_, err = http.DefaultClient.Do(req)
+		return err
+	}
+
 	parentDir := filepath.Dir(path)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(parentDir, 0700); err != nil {
@@ -144,7 +155,7 @@ func writeDigestFile(path string, digestByteArray []byte) error {
 		}
 		logrus.Tracef("Created directory %v", parentDir)
 	}
-	return ioutil.WriteFile(path, digestByteArray, 0644)
+	return os.WriteFile(path, digestByteArray, 0644)
 }
 
 // DoPush is responsible for pushing image to the destinations specified in opts.
@@ -289,7 +300,7 @@ func writeImageOutputs(image v1.Image, destRefs []name.Tag) error {
 	if dir == "" {
 		return nil
 	}
-	f, err := fs.Create(filepath.Join(dir, "images"))
+	f, err := newOsFs.Create(filepath.Join(dir, "images"))
 	if err != nil {
 		return err
 	}

@@ -28,6 +28,10 @@ const (
 	// the shared config file, not the credentials file.
 	ssoSectionPrefix = `sso-session `
 
+	// Prefix for services section. It is referenced in profile via the services
+	// parameter to configure clients for service-specific parameters.
+	servicesPrefix = `services`
+
 	// string equivalent for boolean
 	endpointDiscoveryDisabled = `false`
 	endpointDiscoveryEnabled  = `true`
@@ -75,6 +79,8 @@ const (
 
 	ec2MetadataServiceEndpointKey = "ec2_metadata_service_endpoint"
 
+	ec2MetadataV1DisabledKey = "ec2_metadata_v1_disabled"
+
 	// Use DualStack Endpoint Resolution
 	useDualStackEndpoint = "use_dualstack_endpoint"
 
@@ -97,6 +103,12 @@ const (
 	caBundleKey = "ca_bundle"
 
 	sdkAppID = "sdk_ua_app_id"
+
+	ignoreConfiguredEndpoints = "ignore_configured_endpoint_urls"
+
+	endpointURL = "endpoint_url"
+
+	s3DisableExpressSessionAuthKey = "s3_disable_express_session_auth"
 )
 
 // defaultSharedConfigProfile allows for swapping the default profile for testing
@@ -148,6 +160,24 @@ func (s *SSOSession) setFromIniSection(section ini.Section) {
 	updateString(&s.Name, section, ssoSessionNameKey)
 	updateString(&s.SSORegion, section, ssoRegionKey)
 	updateString(&s.SSOStartURL, section, ssoStartURLKey)
+}
+
+// Services contains values configured in the services section
+// of the AWS configuration file.
+type Services struct {
+	// Services section values
+	// {"serviceId": {"key": "value"}}
+	// e.g. {"s3": {"endpoint_url": "example.com"}}
+	ServiceValues map[string]map[string]string
+}
+
+func (s *Services) setFromIniSection(section ini.Section) {
+	if s.ServiceValues == nil {
+		s.ServiceValues = make(map[string]map[string]string)
+	}
+	for _, service := range section.List() {
+		s.ServiceValues[service] = section.Map(service)
+	}
 }
 
 // SharedConfig represents the configuration fields of the SDK config files.
@@ -220,6 +250,12 @@ type SharedConfig struct {
 	// ec2_metadata_service_endpoint=http://fd00:ec2::254
 	EC2IMDSEndpoint string
 
+	// Specifies that IMDS clients should not fallback to IMDSv1 if token
+	// requests fail.
+	//
+	// ec2_metadata_v1_disabled=true
+	EC2IMDSv1Disabled *bool
+
 	// Specifies if the S3 service should disable support for Multi-Region
 	// access-points
 	//
@@ -272,6 +308,23 @@ type SharedConfig struct {
 
 	// aws sdk app ID that can be added to user agent header string
 	AppID string
+
+	// Flag used to disable configured endpoints.
+	IgnoreConfiguredEndpoints *bool
+
+	// Value to contain configured endpoints to be propagated to
+	// corresponding endpoint resolution field.
+	BaseEndpoint string
+
+	// Value to contain services section content.
+	Services Services
+
+	// Whether S3Express auth is disabled.
+	//
+	// This will NOT prevent requests from being made to S3Express buckets, it
+	// will only bypass the modified endpoint routing and signing behaviors
+	// associated with the feature.
+	S3DisableExpressAuth *bool
 }
 
 func (c SharedConfig) getDefaultsMode(ctx context.Context) (value aws.DefaultsMode, ok bool, err error) {
@@ -361,6 +414,16 @@ func (c SharedConfig) GetEC2IMDSEndpoint() (string, bool, error) {
 	return c.EC2IMDSEndpoint, true, nil
 }
 
+// GetEC2IMDSV1FallbackDisabled implements an EC2IMDSV1FallbackDisabled option
+// resolver interface.
+func (c SharedConfig) GetEC2IMDSV1FallbackDisabled() (bool, bool) {
+	if c.EC2IMDSv1Disabled == nil {
+		return false, false
+	}
+
+	return *c.EC2IMDSv1Disabled, true
+}
+
 // GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
 // used for requests.
 func (c SharedConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpointState, found bool, err error) {
@@ -381,6 +444,16 @@ func (c SharedConfig) GetUseFIPSEndpoint(ctx context.Context) (value aws.FIPSEnd
 	return c.UseFIPSEndpoint, true, nil
 }
 
+// GetS3DisableExpressAuth returns the configured value for
+// [SharedConfig.S3DisableExpressAuth].
+func (c SharedConfig) GetS3DisableExpressAuth() (value, ok bool) {
+	if c.S3DisableExpressAuth == nil {
+		return false, false
+	}
+
+	return *c.S3DisableExpressAuth, true
+}
+
 // GetCustomCABundle returns the custom CA bundle's PEM bytes if the file was
 func (c SharedConfig) getCustomCABundle(context.Context) (io.Reader, bool, error) {
 	if len(c.CustomCABundle) == 0 {
@@ -397,6 +470,40 @@ func (c SharedConfig) getCustomCABundle(context.Context) (io.Reader, bool, error
 // getAppID returns the sdk app ID if set in shared config profile
 func (c SharedConfig) getAppID(context.Context) (string, bool, error) {
 	return c.AppID, len(c.AppID) > 0, nil
+}
+
+// GetIgnoreConfiguredEndpoints is used in knowing when to disable configured
+// endpoints feature.
+func (c SharedConfig) GetIgnoreConfiguredEndpoints(context.Context) (bool, bool, error) {
+	if c.IgnoreConfiguredEndpoints == nil {
+		return false, false, nil
+	}
+
+	return *c.IgnoreConfiguredEndpoints, true, nil
+}
+
+func (c SharedConfig) getBaseEndpoint(context.Context) (string, bool, error) {
+	return c.BaseEndpoint, len(c.BaseEndpoint) > 0, nil
+}
+
+// GetServiceBaseEndpoint is used to retrieve a normalized SDK ID for use
+// with configured endpoints.
+func (c SharedConfig) GetServiceBaseEndpoint(ctx context.Context, sdkID string) (string, bool, error) {
+	if service, ok := c.Services.ServiceValues[normalizeShared(sdkID)]; ok {
+		if endpt, ok := service[endpointURL]; ok {
+			return endpt, true, nil
+		}
+	}
+	return "", false, nil
+}
+
+func normalizeShared(sdkID string) string {
+	lower := strings.ToLower(sdkID)
+	return strings.ReplaceAll(lower, " ", "_")
+}
+
+func (c SharedConfig) getServicesObject(context.Context) (map[string]map[string]string, bool, error) {
+	return c.Services.ServiceValues, c.Services.ServiceValues != nil, nil
 }
 
 // loadSharedConfigIgnoreNotExist is an alias for loadSharedConfig with the
@@ -548,6 +655,7 @@ func LoadSharedConfigProfile(ctx context.Context, profile string, optFns ...func
 
 	cfg := SharedConfig{}
 	profiles := map[string]struct{}{}
+
 	if err = cfg.setFromIniSections(profiles, profile, configSections, option.Logger); err != nil {
 		return SharedConfig{}, err
 	}
@@ -576,6 +684,7 @@ func processConfigSections(ctx context.Context, sections *ini.Sections, logger l
 			skipSections[newName] = struct{}{}
 
 		case strings.HasPrefix(section, ssoSectionPrefix):
+		case strings.HasPrefix(section, servicesPrefix):
 		case strings.EqualFold(section, "default"):
 		default:
 			// drop this section, as invalid profile name
@@ -735,6 +844,7 @@ func mergeSections(dst *ini.Sections, src ini.Sections) error {
 			s3DisableMultiRegionAccessPointsKey,
 			ec2MetadataServiceEndpointModeKey,
 			ec2MetadataServiceEndpointKey,
+			ec2MetadataV1DisabledKey,
 			useDualStackEndpoint,
 			useFIPSEndpointKey,
 			defaultsModeKey,
@@ -884,6 +994,17 @@ func (c *SharedConfig) setFromIniSections(profiles map[string]struct{}, profile 
 		c.SSOSession = &ssoSession
 	}
 
+	for _, sectionName := range sections.List() {
+		if strings.HasPrefix(sectionName, servicesPrefix) {
+			section, ok := sections.GetSection(sectionName)
+			if ok {
+				var svcs Services
+				svcs.setFromIniSection(section)
+				c.Services = svcs
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -952,11 +1073,13 @@ func (c *SharedConfig) setFromIniSection(profile string, section ini.Section) er
 	updateEndpointDiscoveryType(&c.EnableEndpointDiscovery, section, enableEndpointDiscoveryKey)
 	updateBoolPtr(&c.S3UseARNRegion, section, s3UseARNRegionKey)
 	updateBoolPtr(&c.S3DisableMultiRegionAccessPoints, section, s3DisableMultiRegionAccessPointsKey)
+	updateBoolPtr(&c.S3DisableExpressAuth, section, s3DisableExpressSessionAuthKey)
 
 	if err := updateEC2MetadataServiceEndpointMode(&c.EC2IMDSEndpointMode, section, ec2MetadataServiceEndpointModeKey); err != nil {
 		return fmt.Errorf("failed to load %s from shared config, %v", ec2MetadataServiceEndpointModeKey, err)
 	}
 	updateString(&c.EC2IMDSEndpoint, section, ec2MetadataServiceEndpointKey)
+	updateBoolPtr(&c.EC2IMDSv1Disabled, section, ec2MetadataV1DisabledKey)
 
 	updateUseDualStackEndpoint(&c.UseDualStackEndpoint, section, useDualStackEndpoint)
 	updateUseFIPSEndpoint(&c.UseFIPSEndpoint, section, useFIPSEndpointKey)
@@ -976,6 +1099,10 @@ func (c *SharedConfig) setFromIniSection(profile string, section ini.Section) er
 
 	// user agent app ID added to request User-Agent header
 	updateString(&c.AppID, section, sdkAppID)
+
+	updateBoolPtr(&c.IgnoreConfiguredEndpoints, section, ignoreConfiguredEndpoints)
+
+	updateString(&c.BaseEndpoint, section, endpointURL)
 
 	// Shared Credentials
 	creds := aws.Credentials{

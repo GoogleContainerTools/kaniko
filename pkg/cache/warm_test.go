@@ -18,7 +18,6 @@ package cache
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -119,7 +118,7 @@ func TestParseDockerfile_SingleStageDockerfile(t *testing.T) {
 	dockerfile := `FROM alpine:latest
 LABEL maintainer="alexezio"
 `
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +151,7 @@ LABEL maintainer="alexezio"
 FROM alpine:latest as RUNNER
 LABEL maintainer="alexezio"
 `
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +185,7 @@ func TestParseDockerfile_ArgsDockerfile(t *testing.T) {
 	dockerfile := `ARG version=latest
 FROM golang:${version}
 `
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +224,7 @@ func TestParseDockerfile_MissingsDockerfile(t *testing.T) {
 
 func TestParseDockerfile_InvalidsDockerfile(t *testing.T) {
 	dockerfile := "This is a invalid dockerfile"
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}

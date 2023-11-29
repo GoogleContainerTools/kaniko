@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"time"
 
@@ -28,6 +29,10 @@ const (
 
 var (
 	ErrTimeoutExceeded = errors.New("timeout exceeded")
+	// stdErrSkipPattern is used for skipping lines from a command's stderr output.
+	// Any line matching this pattern will be skipped from further
+	// processing and not be returned to calling code.
+	stdErrSkipPattern = regexp.MustCompile("^remote:( =*){0,1}$")
 )
 
 // Commander creates Command instances. This is the main entry point for
@@ -149,10 +154,17 @@ func (c *client) listenFirstError(r io.Reader) chan string {
 	errLine := make(chan string, 1)
 	go func() {
 		s := bufio.NewScanner(r)
-		if s.Scan() {
-			errLine <- s.Text()
-		} else {
-			close(errLine)
+		for {
+			if s.Scan() {
+				line := s.Text()
+				if !stdErrSkipPattern.MatchString(line) {
+					errLine <- line
+					break
+				}
+			} else {
+				close(errLine)
+				break
+			}
 		}
 
 		_, _ = io.Copy(io.Discard, r)
@@ -393,6 +405,7 @@ var (
 	gitProtocolNoSuchErr       = "ERR no such repository"
 	gitProtocolAccessDeniedErr = "ERR access denied"
 	gogsAccessDeniedErr        = "Gogs: Repository does not exist or you do not have access"
+	gitlabRepoNotFoundErr      = "remote: ERROR: The project you were looking for could not be found"
 )
 
 func isRepoNotFoundError(s string) bool {
@@ -421,6 +434,10 @@ func isRepoNotFoundError(s string) bool {
 	}
 
 	if strings.HasPrefix(s, gogsAccessDeniedErr) {
+		return true
+	}
+
+	if strings.HasPrefix(s, gitlabRepoNotFoundErr) {
 		return true
 	}
 

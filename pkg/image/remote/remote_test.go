@@ -27,8 +27,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
+const image string = "debian"
+
 // mockImage mocks the v1.Image interface
-type mockImage struct{}
+type mockImage struct {
+}
 
 func (m *mockImage) ConfigFile() (*v1.ConfigFile, error) {
 	return nil, nil
@@ -79,7 +82,6 @@ func (m *mockImage) Size() (int64, error) {
 }
 
 func Test_normalizeReference(t *testing.T) {
-	image := "debian"
 	expected := "index.docker.io/library/debian:latest"
 
 	ref, err := name.ParseReference(image)
@@ -112,7 +114,6 @@ func Test_RetrieveRemoteImage_manifestCache(t *testing.T) {
 }
 
 func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
-	image := "debian"
 	registryMirror := "some-registry"
 
 	opts := config.RegistryOptions{
@@ -138,5 +139,47 @@ func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
 
 	if _, err := RetrieveRemoteImage(image, opts, ""); err == nil {
 		t.Fatal("Expected call to fail because fallback to default registry is skipped")
+	}
+}
+
+func Test_RetryRetrieveRemoteImageSucceeds(t *testing.T) {
+	opts := config.RegistryOptions{
+		ImageDownloadRetry: 2,
+	}
+	attempts := 0
+	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		if attempts < 2 {
+			attempts++
+			return nil, errors.New("no image found")
+		}
+		return &mockImage{}, nil
+	}
+
+	// Clean cached image
+	manifestCache = make(map[string]v1.Image)
+
+	if _, err := RetrieveRemoteImage(image, opts, ""); err != nil {
+		t.Fatal("Expected call to succeed because of retry")
+	}
+}
+
+func Test_NoRetryRetrieveRemoteImageFails(t *testing.T) {
+	opts := config.RegistryOptions{
+		ImageDownloadRetry: 0,
+	}
+	attempts := 0
+	remoteImageFunc = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		if attempts < 1 {
+			attempts++
+			return nil, errors.New("no image found")
+		}
+		return &mockImage{}, nil
+	}
+
+	// Clean cached image
+	manifestCache = make(map[string]v1.Image)
+
+	if _, err := RetrieveRemoteImage(image, opts, ""); err == nil {
+		t.Fatal("Expected call to fail because there is no retry")
 	}
 }

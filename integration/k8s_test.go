@@ -18,7 +18,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -41,9 +41,18 @@ func TestK8s(t *testing.T) {
 
 	dir := filepath.Join(cwd, "dockerfiles-with-context")
 
-	testDirs, err := ioutil.ReadDir(dir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
+	}
+	testDirs := make([]fs.FileInfo, 0, len(entries))
+
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			t.Fatal(err)
+		}
+		testDirs = append(testDirs, info)
 	}
 
 	builder := NewDockerFileBuilder()
@@ -64,7 +73,7 @@ func TestK8s(t *testing.T) {
 			dockerImage := GetDockerImage(config.imageRepo, name)
 			kanikoImage := GetKanikoImage(config.imageRepo, name)
 
-			tmpfile, err := ioutil.TempFile("", "k8s-job-*.yaml")
+			tmpfile, err := os.CreateTemp("", "k8s-job-*.yaml")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -77,7 +86,7 @@ func TestK8s(t *testing.T) {
 
 			t.Logf("Testing K8s based Kaniko building of dockerfile %s and push to %s \n",
 				testDir, kanikoImage)
-			content, err := ioutil.ReadFile(tmpfile.Name())
+			content, err := os.ReadFile(tmpfile.Name())
 			if err != nil {
 				log.Fatal(err)
 			}

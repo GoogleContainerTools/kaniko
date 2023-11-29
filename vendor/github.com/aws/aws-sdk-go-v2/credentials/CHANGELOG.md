@@ -1,3 +1,61 @@
+# v1.16.6 (2023-11-28.2)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.5 (2023-11-28)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.4 (2023-11-21)
+
+* **Bug Fix**: Don't expect error responses to have a JSON payload in the endpointcreds provider.
+
+# v1.16.3 (2023-11-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.2 (2023-11-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.1 (2023-11-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.16.0 (2023-11-14)
+
+* **Feature**: Add support for dynamic auth token from file and EKS container host in absolute/relative URIs in the HTTP credential provider.
+
+# v1.15.2 (2023-11-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.1 (2023-11-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.0 (2023-11-01)
+
+* **Feature**: Adds support for configured endpoints via environment variables and the AWS shared configuration file.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.14.0 (2023-10-31)
+
+* **Feature**: **BREAKING CHANGE**: Bump minimum go version to 1.19 per the revised [go version support policy](https://aws.amazon.com/blogs/developer/aws-sdk-for-go-aligns-with-go-release-policy-on-supported-runtimes/).
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.43 (2023-10-12)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.42 (2023-10-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.13.41 (2023-10-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.13.40 (2023-09-22)
 
 * **Dependency Update**: Updated to the latest SDK module versions

@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -101,7 +100,7 @@ func TestDockerConfLocationWithFileLocation(t *testing.T) {
 	if err := os.Unsetenv(DockerConfigEnvKey); err != nil {
 		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
 	}
-	file, err := ioutil.TempFile("", "docker.conf")
+	file, err := os.CreateTemp("", "docker.conf")
 	if err != nil {
 		t.Fatalf("could not create temp file: %s", err)
 	}

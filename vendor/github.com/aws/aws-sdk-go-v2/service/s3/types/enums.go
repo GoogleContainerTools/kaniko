@@ -888,6 +888,24 @@ func (OwnerOverride) Values() []OwnerOverride {
 	}
 }
 
+type PartitionDateSource string
+
+// Enum values for PartitionDateSource
+const (
+	PartitionDateSourceEventTime    PartitionDateSource = "EventTime"
+	PartitionDateSourceDeliveryTime PartitionDateSource = "DeliveryTime"
+)
+
+// Values returns all known values for PartitionDateSource. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
+func (PartitionDateSource) Values() []PartitionDateSource {
+	return []PartitionDateSource{
+		"EventTime",
+		"DeliveryTime",
+	}
+}
+
 type Payer string
 
 // Enum values for Payer
@@ -1006,10 +1024,11 @@ type ReplicationStatus string
 
 // Enum values for ReplicationStatus
 const (
-	ReplicationStatusComplete ReplicationStatus = "COMPLETE"
-	ReplicationStatusPending  ReplicationStatus = "PENDING"
-	ReplicationStatusFailed   ReplicationStatus = "FAILED"
-	ReplicationStatusReplica  ReplicationStatus = "REPLICA"
+	ReplicationStatusComplete  ReplicationStatus = "COMPLETE"
+	ReplicationStatusPending   ReplicationStatus = "PENDING"
+	ReplicationStatusFailed    ReplicationStatus = "FAILED"
+	ReplicationStatusReplica   ReplicationStatus = "REPLICA"
+	ReplicationStatusCompleted ReplicationStatus = "COMPLETED"
 )
 
 // Values returns all known values for ReplicationStatus. Note that this can be
@@ -1021,6 +1040,7 @@ func (ReplicationStatus) Values() []ReplicationStatus {
 		"PENDING",
 		"FAILED",
 		"REPLICA",
+		"COMPLETED",
 	}
 }
 

@@ -1,0 +1,24 @@
+# {{VERSION}} Release {{DATE}}
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:{{VERSION}}
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:{{VERSION}}-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:{{VERSION}}-slim
+```
+
+{{PULL_REQUESTS}}
+
+Huge thank you for this release towards our contributors: 
+{{CONTRIBUTORS}}
+
