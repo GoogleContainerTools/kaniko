@@ -146,7 +146,7 @@ ENV test test
 
 From scratch as second
 COPY --from=first / output/`
-		ioutil.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
+		os.WriteFile(filepath.Join(testDir, "workspace", "Dockerfile"), []byte(dockerFile), 0755)
 		opts := &config.KanikoOptions{
 			DockerfilePath: filepath.Join(testDir, "workspace", "Dockerfile"),
 			SrcContext:     filepath.Join(testDir, "workspace"),
@@ -155,13 +155,13 @@ COPY --from=first / output/`
 		_, err := DoBuild(opts)
 		testutil.CheckNoError(t, err)
 
-		filesUnderRoot, err := ioutil.ReadDir(filepath.Join(testDir, "output/"))
+		filesUnderRoot, err := os.ReadDir(filepath.Join(testDir, "output/"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		testutil.CheckDeepEqual(t, 3, len(filesUnderRoot))
 
-		files, err := ioutil.ReadDir(filepath.Join(testDir, "output/workspace/foo"))
+		files, err := os.ReadDir(filepath.Join(testDir, "output/workspace/foo"))
 		if err != nil {
 			t.Fatal(err)
 		}
