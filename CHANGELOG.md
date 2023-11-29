@@ -1,3 +1,64 @@
+# v1.19.0 Release 2023-11-29
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.19.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.19.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.19.0-slim
+```
+
+* fix: resolve issue with copy_multistage_test.go and broken ioutil import [#2879](https://github.com/GoogleContainerTools/kaniko/pull/2879)
+* Fix warmer memory leak. [#2763](https://github.com/GoogleContainerTools/kaniko/pull/2763)
+* Skip the /kaniko directory when copying root [#2863](https://github.com/GoogleContainerTools/kaniko/pull/2863)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.25.5 to 1.25.8 [#2875](https://github.com/GoogleContainerTools/kaniko/pull/2875)
+* fix: Remove references to deprecated io/ioutil pkg [#2867](https://github.com/GoogleContainerTools/kaniko/pull/2867)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.14.0 to 1.14.3 [#2874](https://github.com/GoogleContainerTools/kaniko/pull/2874)
+* Create intermediate directories in COPY with correct uid and gid [#2795](https://github.com/GoogleContainerTools/kaniko/pull/2795)
+* chore(deps): bump google-github-actions/auth from 1.1.1 to 1.2.0 [#2868](https://github.com/GoogleContainerTools/kaniko/pull/2868)
+* chore(deps): bump golang.org/x/oauth2 from 0.13.0 to 0.14.0 [#2871](https://github.com/GoogleContainerTools/kaniko/pull/2871)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.43.0 to 1.44.0 [#2872](https://github.com/GoogleContainerTools/kaniko/pull/2872)
+* chore(deps): bump github.com/containerd/containerd from 1.7.8 to 1.7.9 [#2873](https://github.com/GoogleContainerTools/kaniko/pull/2873)
+* impl: add a retry with result function (#2837) [#2853](https://github.com/GoogleContainerTools/kaniko/pull/2853)
+* chore(deps): bump docker/build-push-action from 5.0.0 to 5.1.0 [#2857](https://github.com/GoogleContainerTools/kaniko/pull/2857)
+* chore(deps): bump golang.org/x/net from 0.17.0 to 0.18.0 [#2859](https://github.com/GoogleContainerTools/kaniko/pull/2859)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.13.1 to 1.14.0 [#2861](https://github.com/GoogleContainerTools/kaniko/pull/2861)
+* chore(deps): bump google.golang.org/api from 0.150.0 to 0.151.0 [#2862](https://github.com/GoogleContainerTools/kaniko/pull/2862)
+* fix: makefile container-diff on darwin [#2842](https://github.com/GoogleContainerTools/kaniko/pull/2842)
+* Print error to stderr instead of stdout before exiting [#2823](https://github.com/GoogleContainerTools/kaniko/pull/2823)
+* refactor: rm bool param detectFilesystem in `InitIgnoreList` [#2843](https://github.com/GoogleContainerTools/kaniko/pull/2843)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.22.0 to 1.24.0 [#2851](https://github.com/GoogleContainerTools/kaniko/pull/2851)
+* chore(deps): bump google.golang.org/api from 0.149.0 to 0.150.0 [#2845](https://github.com/GoogleContainerTools/kaniko/pull/2845)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2 from 1.22.1 to 1.22.2 [#2846](https://github.com/GoogleContainerTools/kaniko/pull/2846)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.42.0 to 1.42.1 [#2847](https://github.com/GoogleContainerTools/kaniko/pull/2847)
+* chore(deps): bump golang.org/x/sys from 0.13.0 to 0.14.0 [#2848](https://github.com/GoogleContainerTools/kaniko/pull/2848)
+* chore(deps): bump sigstore/cosign-installer from 3.1.2 to 3.2.0 [#2849](https://github.com/GoogleContainerTools/kaniko/pull/2849)
+* feat: support https URLs for digest-file [#2811](https://github.com/GoogleContainerTools/kaniko/pull/2811)
+* impl: add a retry with result function [#2837](https://github.com/GoogleContainerTools/kaniko/pull/2837)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- Adrià Garriga-Alonso
+- Anna Levenberg
+- Anoop S
+- dependabot[bot]
+- JeromeJu
+- Lio李歐
+- Manish Giri
+- Maxime BOSSARD
+- tal66
+
+
 # v1.18.0 Release 2023-11-07
 The executor images in this release are:
 ```
