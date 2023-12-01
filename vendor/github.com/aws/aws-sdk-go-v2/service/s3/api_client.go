@@ -50,8 +50,6 @@ func New(options Options, optFns ...func(*Options)) *Client {
 
 	setResolvedDefaultsMode(&options)
 
-	resolveRetryer(&options)
-
 	resolveHTTPClient(&options)
 
 	resolveHTTPSignerV4(&options)
@@ -66,9 +64,13 @@ func New(options Options, optFns ...func(*Options)) *Client {
 		fn(&options)
 	}
 
+	resolveRetryer(&options)
+
 	resolveCredentialProvider(&options)
 
 	ignoreAnonymousAuth(&options)
+
+	resolveExpressCredentials(&options)
 
 	finalizeServiceEndpointAuthResolver(&options)
 
@@ -78,7 +80,18 @@ func New(options Options, optFns ...func(*Options)) *Client {
 		options: options,
 	}
 
+	finalizeExpressCredentials(&options, client)
+
 	return client
+}
+
+// Options returns a copy of the client configuration.
+//
+// Callers SHOULD NOT perform mutations on any inner structures within client
+// config. Config overrides should instead be made on a per-operation basis through
+// functional options.
+func (c *Client) Options() Options {
+	return c.options.Copy()
 }
 
 func (c *Client) invokeOperation(ctx context.Context, opID string, params interface{}, optFns []func(*Options), stackFns ...func(*middleware.Stack, Options) error) (result interface{}, metadata middleware.Metadata, err error) {
@@ -177,6 +190,11 @@ func resolveAuthSchemes(options *Options) {
 				Logger:     options.Logger,
 				LogSigning: options.ClientLogMode.IsSigning(),
 			}),
+			internalauth.NewHTTPAuthScheme("com.amazonaws.s3#sigv4express", &s3cust.ExpressSigner{
+				Signer:     options.HTTPSignerV4,
+				Logger:     options.Logger,
+				LogSigning: options.ClientLogMode.IsSigning(),
+			}),
 			internalauth.NewHTTPAuthScheme("aws.auth#sigv4a", &v4a.SignerAdapter{
 				Signer:     options.httpSignerV4a,
 				Logger:     options.Logger,
@@ -257,6 +275,7 @@ func NewFromConfig(cfg aws.Config, optFns ...func(*Options)) *Client {
 	resolveAWSEndpointResolver(cfg, &opts)
 	resolveUseARNRegion(cfg, &opts)
 	resolveDisableMultiRegionAccessPoints(cfg, &opts)
+	resolveDisableExpressAuth(cfg, &opts)
 	resolveUseDualStackEndpoint(cfg, &opts)
 	resolveUseFIPSEndpoint(cfg, &opts)
 	resolveBaseEndpoint(cfg, &opts)
@@ -721,7 +740,7 @@ func (m *presignContextPolyfillMiddleware) HandleFinalize(ctx context.Context, i
 
 	schemeID := rscheme.Scheme.SchemeID()
 	ctx = s3cust.SetSignerVersion(ctx, schemeID)
-	if schemeID == "aws.auth#sigv4" {
+	if schemeID == "aws.auth#sigv4" || schemeID == "com.amazonaws.s3#sigv4express" {
 		if sn, ok := smithyhttp.GetSigV4SigningName(&rscheme.SignerProperties); ok {
 			ctx = awsmiddleware.SetSigningName(ctx, sn)
 		}
@@ -765,9 +784,10 @@ func (c presignConverter) convertToPresignMiddleware(stack *middleware.Stack, op
 		return err
 	}
 
-	// add multi-region access point presigner
+	// extended s3 presigning
 	signermv := s3cust.NewPresignHTTPRequestMiddleware(s3cust.PresignHTTPRequestMiddlewareOptions{
 		CredentialsProvider: options.Credentials,
+		ExpressCredentials:  options.ExpressCredentials,
 		V4Presigner:         c.Presigner,
 		V4aPresigner:        c.presignerV4a,
 		LogSigning:          options.ClientLogMode.IsSigning(),

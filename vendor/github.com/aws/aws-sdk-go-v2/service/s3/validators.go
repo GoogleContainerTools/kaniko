@@ -110,6 +110,26 @@ func (m *validateOpCreateMultipartUpload) HandleInitialize(ctx context.Context, 
 	return next.HandleInitialize(ctx, in)
 }
 
+type validateOpCreateSession struct {
+}
+
+func (*validateOpCreateSession) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpCreateSession) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*CreateSessionInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpCreateSessionInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
 type validateOpDeleteBucketAnalyticsConfiguration struct {
 }
 
@@ -1868,6 +1888,10 @@ func addOpCreateBucketValidationMiddleware(stack *middleware.Stack) error {
 
 func addOpCreateMultipartUploadValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpCreateMultipartUpload{}, middleware.After)
+}
+
+func addOpCreateSessionValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpCreateSession{}, middleware.After)
 }
 
 func addOpDeleteBucketAnalyticsConfigurationValidationMiddleware(stack *middleware.Stack) error {
@@ -3923,6 +3947,21 @@ func validateOpCreateMultipartUploadInput(v *CreateMultipartUploadInput) error {
 	}
 	if v.Key == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("Key"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOpCreateSessionInput(v *CreateSessionInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "CreateSessionInput"}
+	if v.Bucket == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Bucket"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
