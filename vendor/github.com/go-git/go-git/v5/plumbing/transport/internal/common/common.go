@@ -203,9 +203,22 @@ func (s *session) AdvertisedReferencesContext(ctx context.Context) (*packp.AdvRe
 }
 
 func (s *session) handleAdvRefDecodeError(err error) error {
+	var errLine *pktline.ErrorLine
+	if errors.As(err, &errLine) {
+		if isRepoNotFoundError(errLine.Text) {
+			return transport.ErrRepositoryNotFound
+		}
+
+		return errLine
+	}
+
 	// If repository is not found, we get empty stdout and server writes an
 	// error to stderr.
-	if err == packp.ErrEmptyInput {
+	if errors.Is(err, packp.ErrEmptyInput) {
+		// TODO:(v6): handle this error in a better way.
+		// Instead of checking the stderr output for a specific error message,
+		// define an ExitError and embed the stderr output and exit (if one
+		// exists) in the error struct. Just like exec.ExitError.
 		s.finished = true
 		if err := s.checkNotFoundError(); err != nil {
 			return err
@@ -245,6 +258,12 @@ func (s *session) handleAdvRefDecodeError(err error) error {
 // returned with the packfile content. The reader must be closed after reading.
 func (s *session) UploadPack(ctx context.Context, req *packp.UploadPackRequest) (*packp.UploadPackResponse, error) {
 	if req.IsEmpty() {
+		// XXX: IsEmpty means haves are a subset of wants, in that case we have
+		// everything we asked for. Close the connection and return nil.
+		if err := s.finish(); err != nil {
+			return nil, err
+		}
+		// TODO:(v6) return nil here
 		return nil, transport.ErrEmptyUploadPackRequest
 	}
 
@@ -393,59 +412,43 @@ func (s *session) checkNotFoundError() error {
 			return transport.ErrRepositoryNotFound
 		}
 
+		// TODO:(v6): return server error just as it is without a prefix
 		return fmt.Errorf("unknown error: %s", line)
 	}
 }
 
-var (
-	githubRepoNotFoundErr      = "ERROR: Repository not found."
-	bitbucketRepoNotFoundErr   = "conq: repository does not exist."
+const (
+	githubRepoNotFoundErr      = "Repository not found."
+	bitbucketRepoNotFoundErr   = "repository does not exist."
 	localRepoNotFoundErr       = "does not appear to be a git repository"
-	gitProtocolNotFoundErr     = "ERR \n  Repository not found."
-	gitProtocolNoSuchErr       = "ERR no such repository"
-	gitProtocolAccessDeniedErr = "ERR access denied"
-	gogsAccessDeniedErr        = "Gogs: Repository does not exist or you do not have access"
-	gitlabRepoNotFoundErr      = "remote: ERROR: The project you were looking for could not be found"
+	gitProtocolNotFoundErr     = "Repository not found."
+	gitProtocolNoSuchErr       = "no such repository"
+	gitProtocolAccessDeniedErr = "access denied"
+	gogsAccessDeniedErr        = "Repository does not exist or you do not have access"
+	gitlabRepoNotFoundErr      = "The project you were looking for could not be found"
 )
 
 func isRepoNotFoundError(s string) bool {
-	if strings.HasPrefix(s, githubRepoNotFoundErr) {
-		return true
-	}
-
-	if strings.HasPrefix(s, bitbucketRepoNotFoundErr) {
-		return true
-	}
-
-	if strings.HasSuffix(s, localRepoNotFoundErr) {
-		return true
-	}
-
-	if strings.HasPrefix(s, gitProtocolNotFoundErr) {
-		return true
-	}
-
-	if strings.HasPrefix(s, gitProtocolNoSuchErr) {
-		return true
-	}
-
-	if strings.HasPrefix(s, gitProtocolAccessDeniedErr) {
-		return true
-	}
-
-	if strings.HasPrefix(s, gogsAccessDeniedErr) {
-		return true
-	}
-
-	if strings.HasPrefix(s, gitlabRepoNotFoundErr) {
-		return true
+	for _, err := range []string{
+		githubRepoNotFoundErr,
+		bitbucketRepoNotFoundErr,
+		localRepoNotFoundErr,
+		gitProtocolNotFoundErr,
+		gitProtocolNoSuchErr,
+		gitProtocolAccessDeniedErr,
+		gogsAccessDeniedErr,
+		gitlabRepoNotFoundErr,
+	} {
+		if strings.Contains(s, err) {
+			return true
+		}
 	}
 
 	return false
 }
 
 // uploadPack implements the git-upload-pack protocol.
-func uploadPack(w io.WriteCloser, r io.Reader, req *packp.UploadPackRequest) error {
+func uploadPack(w io.WriteCloser, _ io.Reader, req *packp.UploadPackRequest) error {
 	// TODO support multi_ack mode
 	// TODO support multi_ack_detailed mode
 	// TODO support acks for common objects
