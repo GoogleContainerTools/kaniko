@@ -109,10 +109,10 @@ compatibility status with go-git.
 
 ## Server admin
 
-| Feature              | Sub-feature | Status | Notes | Examples |
-| -------------------- | ----------- | ------ | ----- | -------- |
-| `daemon`             |             | ❌     |       |          |
-| `update-server-info` |             | ❌     |       |          |
+| Feature              | Sub-feature | Status | Notes | Examples                                  |
+| -------------------- | ----------- | ------ | ----- | ----------------------------------------- |
+| `daemon`             |             | ❌     |       |                                           |
+| `update-server-info` |             | ✅     |       | [cli](./cli/go-git/update_server_info.go) |
 
 ## Advanced
 

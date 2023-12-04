@@ -552,6 +552,10 @@ func (r *Remote) fetchPack(ctx context.Context, o *FetchOptions, s transport.Upl
 
 	reader, err := s.UploadPack(ctx, req)
 	if err != nil {
+		if errors.Is(err, transport.ErrEmptyUploadPackRequest) {
+			// XXX: no packfile provided, everything is up-to-date.
+			return nil
+		}
 		return err
 	}
 
@@ -1198,9 +1202,9 @@ func (r *Remote) updateLocalReferenceStorage(
 			old, _ := storer.ResolveReference(r.s, localName)
 			new := plumbing.NewHashReference(localName, ref.Hash())
 
-			// If the ref exists locally as a branch and force is not specified,
-			// only update if the new ref is an ancestor of the old
-			if old != nil && old.Name().IsBranch() && !force && !spec.IsForceUpdate() {
+			// If the ref exists locally as a non-tag and force is not
+			// specified, only update if the new ref is an ancestor of the old
+			if old != nil && !old.Name().IsTag() && !force && !spec.IsForceUpdate() {
 				ff, err := isFastForward(r.s, old.Hash(), new.Hash())
 				if err != nil {
 					return updated, err
@@ -1387,7 +1391,7 @@ func pushHashes(
 	allDelete bool,
 ) (*packp.ReportStatus, error) {
 
-	rd, wr := ioutil.Pipe()
+	rd, wr := io.Pipe()
 
 	config, err := s.Config()
 	if err != nil {
