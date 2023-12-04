@@ -828,6 +828,67 @@ func awsRestxml_serializeOpHttpBindingsCreateMultipartUploadInput(v *CreateMulti
 	return nil
 }
 
+type awsRestxml_serializeOpCreateSession struct {
+}
+
+func (*awsRestxml_serializeOpCreateSession) ID() string {
+	return "OperationSerializer"
+}
+
+func (m *awsRestxml_serializeOpCreateSession) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	request, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
+	}
+
+	input, ok := in.Parameters.(*CreateSessionInput)
+	_ = input
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown input parameters type %T", in.Parameters)}
+	}
+
+	opPath, opQuery := httpbinding.SplitURI("/?session")
+	request.URL.Path = smithyhttp.JoinPath(request.URL.Path, opPath)
+	request.URL.RawQuery = smithyhttp.JoinRawQuery(request.URL.RawQuery, opQuery)
+	request.Method = "GET"
+	var restEncoder *httpbinding.Encoder
+	if request.URL.RawPath == "" {
+		restEncoder, err = httpbinding.NewEncoder(request.URL.Path, request.URL.RawQuery, request.Header)
+	} else {
+		request.URL.RawPath = smithyhttp.JoinPath(request.URL.RawPath, opPath)
+		restEncoder, err = httpbinding.NewEncoderWithRawPath(request.URL.Path, request.URL.RawPath, request.URL.RawQuery, request.Header)
+	}
+
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if err := awsRestxml_serializeOpHttpBindingsCreateSessionInput(input, restEncoder); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request.Request, err = restEncoder.Encode(request.Request); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	in.Request = request
+
+	return next.HandleSerialize(ctx, in)
+}
+func awsRestxml_serializeOpHttpBindingsCreateSessionInput(v *CreateSessionInput, encoder *httpbinding.Encoder) error {
+	if v == nil {
+		return fmt.Errorf("unsupported serialization of nil %T", v)
+	}
+
+	if len(v.SessionMode) > 0 {
+		locationName := "X-Amz-Create-Session-Mode"
+		encoder.SetHeader(locationName).String(string(v.SessionMode))
+	}
+
+	return nil
+}
+
 type awsRestxml_serializeOpDeleteBucket struct {
 }
 
@@ -4445,7 +4506,7 @@ func (m *awsRestxml_serializeOpListBuckets) HandleSerialize(ctx context.Context,
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown input parameters type %T", in.Parameters)}
 	}
 
-	opPath, opQuery := httpbinding.SplitURI("/")
+	opPath, opQuery := httpbinding.SplitURI("/?x-id=ListBuckets")
 	request.URL.Path = smithyhttp.JoinPath(request.URL.Path, opPath)
 	request.URL.RawQuery = smithyhttp.JoinRawQuery(request.URL.RawQuery, opQuery)
 	request.Method = "GET"
@@ -4471,6 +4532,70 @@ func (m *awsRestxml_serializeOpListBuckets) HandleSerialize(ctx context.Context,
 func awsRestxml_serializeOpHttpBindingsListBucketsInput(v *ListBucketsInput, encoder *httpbinding.Encoder) error {
 	if v == nil {
 		return fmt.Errorf("unsupported serialization of nil %T", v)
+	}
+
+	return nil
+}
+
+type awsRestxml_serializeOpListDirectoryBuckets struct {
+}
+
+func (*awsRestxml_serializeOpListDirectoryBuckets) ID() string {
+	return "OperationSerializer"
+}
+
+func (m *awsRestxml_serializeOpListDirectoryBuckets) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	request, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
+	}
+
+	input, ok := in.Parameters.(*ListDirectoryBucketsInput)
+	_ = input
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown input parameters type %T", in.Parameters)}
+	}
+
+	opPath, opQuery := httpbinding.SplitURI("/?x-id=ListDirectoryBuckets")
+	request.URL.Path = smithyhttp.JoinPath(request.URL.Path, opPath)
+	request.URL.RawQuery = smithyhttp.JoinRawQuery(request.URL.RawQuery, opQuery)
+	request.Method = "GET"
+	var restEncoder *httpbinding.Encoder
+	if request.URL.RawPath == "" {
+		restEncoder, err = httpbinding.NewEncoder(request.URL.Path, request.URL.RawQuery, request.Header)
+	} else {
+		request.URL.RawPath = smithyhttp.JoinPath(request.URL.RawPath, opPath)
+		restEncoder, err = httpbinding.NewEncoderWithRawPath(request.URL.Path, request.URL.RawPath, request.URL.RawQuery, request.Header)
+	}
+
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if err := awsRestxml_serializeOpHttpBindingsListDirectoryBucketsInput(input, restEncoder); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request.Request, err = restEncoder.Encode(request.Request); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	in.Request = request
+
+	return next.HandleSerialize(ctx, in)
+}
+func awsRestxml_serializeOpHttpBindingsListDirectoryBucketsInput(v *ListDirectoryBucketsInput, encoder *httpbinding.Encoder) error {
+	if v == nil {
+		return fmt.Errorf("unsupported serialization of nil %T", v)
+	}
+
+	if v.ContinuationToken != nil {
+		encoder.SetQuery("continuation-token").String(*v.ContinuationToken)
+	}
+
+	if v.MaxDirectoryBuckets != nil {
+		encoder.SetQuery("max-directory-buckets").Integer(*v.MaxDirectoryBuckets)
 	}
 
 	return nil
@@ -8765,6 +8890,33 @@ func awsRestxml_serializeDocumentAnalyticsS3BucketDestination(v *types.Analytics
 	return nil
 }
 
+func awsRestxml_serializeDocumentBucketInfo(v *types.BucketInfo, value smithyxml.Value) error {
+	defer value.Close()
+	if len(v.DataRedundancy) > 0 {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "DataRedundancy",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		el.String(string(v.DataRedundancy))
+	}
+	if len(v.Type) > 0 {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "Type",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		el.String(string(v.Type))
+	}
+	return nil
+}
+
 func awsRestxml_serializeDocumentBucketLifecycleConfiguration(v *types.BucketLifecycleConfiguration, value smithyxml.Value) error {
 	defer value.Close()
 	if v.Rules != nil {
@@ -9046,6 +9198,32 @@ func awsRestxml_serializeDocumentCORSRules(v []types.CORSRule, value smithyxml.V
 
 func awsRestxml_serializeDocumentCreateBucketConfiguration(v *types.CreateBucketConfiguration, value smithyxml.Value) error {
 	defer value.Close()
+	if v.Bucket != nil {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "Bucket",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		if err := awsRestxml_serializeDocumentBucketInfo(v.Bucket, el); err != nil {
+			return err
+		}
+	}
+	if v.Location != nil {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "Location",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		if err := awsRestxml_serializeDocumentLocationInfo(v.Location, el); err != nil {
+			return err
+		}
+	}
 	if len(v.LocationConstraint) > 0 {
 		rootAttr := []smithyxml.Attr{}
 		root := smithyxml.StartElement{
@@ -10489,6 +10667,33 @@ func awsRestxml_serializeDocumentLifecycleRules(v []types.LifecycleRule, value s
 		if err := awsRestxml_serializeDocumentLifecycleRule(&v[i], am); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func awsRestxml_serializeDocumentLocationInfo(v *types.LocationInfo, value smithyxml.Value) error {
+	defer value.Close()
+	if v.Name != nil {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "Name",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		el.String(*v.Name)
+	}
+	if len(v.Type) > 0 {
+		rootAttr := []smithyxml.Attr{}
+		root := smithyxml.StartElement{
+			Name: smithyxml.Name{
+				Local: "Type",
+			},
+			Attr: rootAttr,
+		}
+		el := value.MemberElement(root)
+		el.String(string(v.Type))
 	}
 	return nil
 }

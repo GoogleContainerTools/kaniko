@@ -18,9 +18,10 @@ import (
 	"time"
 )
 
-// Passes transformed objects to a GetObject operation when using Object Lambda
-// access points. For information about Object Lambda access points, see
-// Transforming objects with Object Lambda access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/transforming-objects.html)
+// This operation is not supported by directory buckets. Passes transformed
+// objects to a GetObject operation when using Object Lambda access points. For
+// information about Object Lambda access points, see Transforming objects with
+// Object Lambda access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/transforming-objects.html)
 // in the Amazon S3 User Guide. This operation supports metadata that can be
 // returned by GetObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
 // , in addition to RequestRoute , RequestToken , StatusCode , ErrorCode , and
@@ -220,7 +221,7 @@ type WriteGetObjectResponseInput struct {
 	ReplicationStatus types.ReplicationStatus
 
 	// If present, indicates that the requester was successfully charged for the
-	// request.
+	// request. This functionality is not supported for directory buckets.
 	RequestCharged types.RequestCharged
 
 	// Provides information about object restoration operation and expiration time of
@@ -347,6 +348,9 @@ func (c *Client) addOperationWriteGetObjectResponseMiddlewares(stack *middleware
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addPutBucketContextMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addEndpointPrefix_opWriteGetObjectResponseMiddleware(stack); err != nil {

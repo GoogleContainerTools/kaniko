@@ -13,8 +13,11 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/internal/awsutil"
+	internalcontext "github.com/aws/aws-sdk-go-v2/internal/context"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	smithymiddleware "github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // MaxUploadParts is the maximum allowed number of parts in a multi-part upload
@@ -308,6 +311,9 @@ func (u Uploader) Upload(ctx context.Context, input *s3.PutObjectInput, opts ...
 	clientOptions = append(clientOptions, func(o *s3.Options) {
 		o.APIOptions = append(o.APIOptions,
 			middleware.AddSDKAgentKey(middleware.FeatureMetadata, userAgentKey),
+			func(s *smithymiddleware.Stack) error {
+				return s.Finalize.Insert(&setS3ExpressDefaultChecksum{}, "ResolveEndpointV2", smithymiddleware.After)
+			},
 		)
 	})
 	clientOptions = append(clientOptions, i.cfg.ClientOptions...)
@@ -807,4 +813,43 @@ func (u *multiuploader) complete() *s3.CompleteMultipartUploadOutput {
 type readerAtSeeker interface {
 	io.ReaderAt
 	io.ReadSeeker
+}
+
+// setS3ExpressDefaultChecksum defaults to CRC32 for S3Express buckets,
+// which is required when uploading to those through transfer manager.
+type setS3ExpressDefaultChecksum struct{}
+
+func (*setS3ExpressDefaultChecksum) ID() string {
+	return "setS3ExpressDefaultChecksum"
+}
+
+func (*setS3ExpressDefaultChecksum) HandleFinalize(
+	ctx context.Context, in smithymiddleware.FinalizeInput, next smithymiddleware.FinalizeHandler,
+) (
+	out smithymiddleware.FinalizeOutput, metadata smithymiddleware.Metadata, err error,
+) {
+	const checksumHeader = "x-amz-checksum-algorithm"
+
+	if internalcontext.GetS3Backend(ctx) != internalcontext.S3BackendS3Express {
+		return next.HandleFinalize(ctx, in)
+	}
+
+	// If this is CreateMultipartUpload we need to ensure the checksum
+	// algorithm header is present. Otherwise everything is driven off the
+	// context setting and we can let it flow from there.
+	if middleware.GetOperationName(ctx) == "CreateMultipartUpload" {
+		r, ok := in.Request.(*smithyhttp.Request)
+		if !ok {
+			return out, metadata, fmt.Errorf("unknown transport type %T", in.Request)
+		}
+
+		if internalcontext.GetChecksumInputAlgorithm(ctx) == "" {
+			r.Header.Set(checksumHeader, "CRC32")
+		}
+		return next.HandleFinalize(ctx, in)
+	} else if internalcontext.GetChecksumInputAlgorithm(ctx) == "" {
+		ctx = internalcontext.SetChecksumInputAlgorithm(ctx, string(types.ChecksumAlgorithmCrc32))
+	}
+
+	return next.HandleFinalize(ctx, in)
 }

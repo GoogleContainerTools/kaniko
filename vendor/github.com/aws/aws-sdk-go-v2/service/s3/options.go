@@ -9,6 +9,7 @@ import (
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	internalauthsmithy "github.com/aws/aws-sdk-go-v2/internal/auth/smithy"
 	"github.com/aws/aws-sdk-go-v2/internal/v4a"
+	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
 	smithyauth "github.com/aws/smithy-go/auth"
 	"github.com/aws/smithy-go/logging"
 	"github.com/aws/smithy-go/middleware"
@@ -52,6 +53,10 @@ type Options struct {
 	// Allows you to disable S3 Multi-Region access points feature.
 	DisableMultiRegionAccessPoints bool
 
+	// Disables this client's usage of Session Auth for S3Express buckets and reverts
+	// to using conventional SigV4 for those.
+	DisableS3ExpressSessionAuth *bool
+
 	// The endpoint options to be used when attempting to resolve an endpoint.
 	EndpointOptions EndpointResolverOptions
 
@@ -67,6 +72,9 @@ type Options struct {
 	// Resolves the endpoint used for a particular service operation. This should be
 	// used over the deprecated EndpointResolver.
 	EndpointResolverV2 EndpointResolverV2
+
+	// The credentials provider for S3Express requests.
+	ExpressCredentials ExpressCredentialsProvider
 
 	// Signature Version 4 (SigV4) Signer
 	HTTPSignerV4 HTTPSignerV4
@@ -163,6 +171,9 @@ func (o Options) Copy() Options {
 func (o Options) GetIdentityResolver(schemeID string) smithyauth.IdentityResolver {
 	if schemeID == "aws.auth#sigv4" {
 		return getSigV4IdentityResolver(o)
+	}
+	if schemeID == "com.amazonaws.s3#sigv4express" {
+		return getExpressIdentityResolver(o)
 	}
 	if schemeID == "aws.auth#sigv4a" {
 		return getSigV4AIdentityResolver(o)
@@ -295,4 +306,11 @@ func ignoreAnonymousAuth(options *Options) {
 	if _, ok := options.Credentials.(aws.AnonymousCredentials); ok {
 		options.Credentials = nil
 	}
+}
+
+func getExpressIdentityResolver(o Options) smithyauth.IdentityResolver {
+	if o.ExpressCredentials != nil {
+		return &s3cust.ExpressIdentityResolver{Provider: o.ExpressCredentials}
+	}
+	return nil
 }

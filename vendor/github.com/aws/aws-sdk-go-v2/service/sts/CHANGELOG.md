@@ -1,3 +1,13 @@
+# v1.26.1 (2023-11-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.0 (2023-11-29)
+
+* **Feature**: Expose Options() accessor on service clients.
+* **Documentation**: Documentation updates for AWS Security Token Service.
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.25.6 (2023-11-28.2)
 
 * **Dependency Update**: Updated to the latest SDK module versions
