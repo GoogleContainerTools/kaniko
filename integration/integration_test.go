@@ -653,13 +653,13 @@ func TestWarmerTwice(t *testing.T) {
 		"-i", "debian:trixie-slim")
 	warmCmd := exec.Command("docker", dockerRunFlags...)
 
-	out, err := RunCommandWithoutTest(warmCmd, t)
+	out, err := RunCommandWithoutTest(warmCmd)
 	if err != nil {
 		log.Fatal("Unable to perform first warming: ", err)
 	}
 	log.Printf("First warm output: %s", out)
 
-	out, err = RunCommandWithoutTest(warmCmd, t)
+	out, err = RunCommandWithoutTest(warmCmd)
 	if err != nil {
 		log.Fatal("Unable to perform second warming: ", err)
 	}
