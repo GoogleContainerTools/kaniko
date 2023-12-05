@@ -641,9 +641,10 @@ func TestWarmerTwice(t *testing.T) {
 	// Start a sleeping warmer container
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
-	dockerRunFlags = append(dockerRunFlags, WarmerImage,
+	dockerRunFlags = append(dockerRunFlags,
 		"--entrypoint=/bin/sh",
 		"--memory=16m", "--memory-swappiness=0",
+		WarmerImage,
 		"-c", 
 		"/kaniko/warmer -i debian:trixie-slim ; /kaniko/warmer -i debian:trixie-slim")
 	warmTwiceCmd := exec.Command("docker", dockerRunFlags...)
