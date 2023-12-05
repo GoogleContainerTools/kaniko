@@ -640,8 +640,8 @@ func TestCache(t *testing.T) {
 // Attempt to warm an image two times : first time should populate the cache, second time should find the image in the cache.
 func TestWarmerTwice(t *testing.T) {
 	_, ex, _, _ := runtime.Caller(0)
-	cwd := filepath.Dir(ex + "/cache")
-	
+	cwd := filepath.Dir(ex) + "/tmpCache"
+
 	// Start a sleeping warmer container
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
@@ -652,7 +652,7 @@ func TestWarmerTwice(t *testing.T) {
 		"--cache-dir=/cache",
 		"-i", "debian:trixie-slim")
 	warmCmd := exec.Command("docker", dockerRunFlags...)
-	
+
 	_ = RunCommand(warmCmd, t)
 	_ = RunCommand(warmCmd, t)
 }
