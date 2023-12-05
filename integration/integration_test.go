@@ -653,8 +653,17 @@ func TestWarmerTwice(t *testing.T) {
 		"-i", "debian:trixie-slim")
 	warmCmd := exec.Command("docker", dockerRunFlags...)
 
-	_ = RunCommand(warmCmd, t)
-	_ = RunCommand(warmCmd, t)
+	out, err := RunCommandWithoutTest(warmCmd, t)
+	if err != nil {
+		log.Fatal("Unable to perform first warming: ", err)
+	}
+	log.Printf("First warm output: %s", out)
+
+	out, err = RunCommandWithoutTest(warmCmd, t)
+	if err != nil {
+		log.Fatal("Unable to perform second warming: ", err)
+	}
+	log.Printf("Second warm output: %s", out)
 }
 
 func verifyBuildWith(t *testing.T, cache, dockerfile string) {
