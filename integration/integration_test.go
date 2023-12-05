@@ -647,11 +647,11 @@ func TestWarmerTwice(t *testing.T) {
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
 	dockerRunFlags = append(dockerRunFlags,
 		"--memory=16m",
-		"-v", cwd + ":/cache",
+		"-v", cwd+":/cache",
 		WarmerImage,
 		"--cache-dir=/cache",
 		"-i", "debian:trixie-slim")
-	
+
 	warmCmd := exec.Command("docker", dockerRunFlags...)
 	out, err := RunCommandWithoutTest(warmCmd)
 	if err != nil {
