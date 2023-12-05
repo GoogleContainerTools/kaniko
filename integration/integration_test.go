@@ -642,7 +642,7 @@ func TestWarmerTwice(t *testing.T) {
 	dockerRunFlags := []string{"run", "--net=host"}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
 	dockerRunFlags = append(dockerRunFlags,
-		"--entrypoint=/bin/sh",
+		"--entrypoint=/busybox/sh",
 		"--memory=16m", "--memory-swappiness=0",
 		WarmerImage,
 		"-c", 
