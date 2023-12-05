@@ -647,7 +647,7 @@ func TestWarmerTwice(t *testing.T) {
 		"-c", 
 		"/kaniko/warmer -i debian:trixie-slim ; /kaniko/warmer -i debian:trixie-slim")
 	warmTwiceCmd := exec.Command("docker", dockerRunFlags...)
-	_ := RunCommand(warmTwiceCmd, t)
+	_ = RunCommand(warmTwiceCmd, t)
 }
 
 func verifyBuildWith(t *testing.T, cache, dockerfile string) {
