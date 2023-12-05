@@ -636,6 +636,20 @@ func TestCache(t *testing.T) {
 	}
 }
 
+// Attempt to warm an image two times : first time should populate the cache, second time should find the image in the cache.
+func TestWarmerTwice(t *testing.T) {
+	// Start a sleeping warmer container
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags, WarmerImage,
+		"--entrypoint=/bin/sh",
+		"--memory=16m", "--memory-swappiness=0",
+		"-c", 
+		"/kaniko/warmer -i debian:trixie-slim ; /kaniko/warmer -i debian:trixie-slim")
+	warmTwiceCmd := exec.Command("docker", dockerRunFlags...)
+	_ := RunCommand(warmTwiceCmd, t)
+}
+
 func verifyBuildWith(t *testing.T, cache, dockerfile string) {
 	args := []string{}
 	if strings.HasPrefix(dockerfile, "Dockerfile_test_cache_copy") {
