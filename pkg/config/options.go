@@ -75,6 +75,7 @@ type KanikoOptions struct {
 	CompressionLevel         int
 	ImageFSExtractRetry      int
 	SingleSnapshot           bool
+	SkipSnapshot             bool
 	Reproducible             bool
 	NoPush                   bool
 	NoPushCache              bool

@@ -461,6 +461,11 @@ func (s *stageBuilder) takeSnapshot(files []string, shdDelete bool) (string, err
 func (s *stageBuilder) shouldTakeSnapshot(index int, isMetadatCmd bool) bool {
 	isLastCommand := index == len(s.cmds)-1
 
+	// Skip snapshot entirely with skip snapshot mode on.
+	if s.opts.SkipSnapshot {
+		return false
+	}
+
 	// We only snapshot the very end with single snapshot mode on.
 	if s.opts.SingleSnapshot {
 		return isLastCommand
