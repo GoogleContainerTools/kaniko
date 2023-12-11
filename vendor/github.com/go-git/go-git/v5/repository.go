@@ -98,6 +98,10 @@ func InitWithOptions(s storage.Storer, worktree billy.Filesystem, options InitOp
 		options.DefaultBranch = plumbing.Master
 	}
 
+	if err := options.DefaultBranch.Validate(); err != nil {
+		return nil, err
+	}
+
 	r := newRepository(s, worktree)
 	_, err := r.Reference(plumbing.HEAD, false)
 	switch err {
@@ -724,7 +728,10 @@ func (r *Repository) DeleteBranch(name string) error {
 // CreateTag creates a tag. If opts is included, the tag is an annotated tag,
 // otherwise a lightweight tag is created.
 func (r *Repository) CreateTag(name string, hash plumbing.Hash, opts *CreateTagOptions) (*plumbing.Reference, error) {
-	rname := plumbing.ReferenceName(path.Join("refs", "tags", name))
+	rname := plumbing.NewTagReferenceName(name)
+	if err := rname.Validate(); err != nil {
+		return nil, err
+	}
 
 	_, err := r.Storer.Reference(rname)
 	switch err {

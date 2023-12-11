@@ -1070,7 +1070,7 @@ func checkFastForwardUpdate(s storer.EncodedObjectStorer, remoteRefs storer.Refe
 		return fmt.Errorf("non-fast-forward update: %s", cmd.Name.String())
 	}
 
-	ff, err := isFastForward(s, cmd.Old, cmd.New)
+	ff, err := isFastForward(s, cmd.Old, cmd.New, nil)
 	if err != nil {
 		return err
 	}
@@ -1082,14 +1082,28 @@ func checkFastForwardUpdate(s storer.EncodedObjectStorer, remoteRefs storer.Refe
 	return nil
 }
 
-func isFastForward(s storer.EncodedObjectStorer, old, new plumbing.Hash) (bool, error) {
+func isFastForward(s storer.EncodedObjectStorer, old, new plumbing.Hash, earliestShallow *plumbing.Hash) (bool, error) {
 	c, err := object.GetCommit(s, new)
 	if err != nil {
 		return false, err
 	}
 
+	parentsToIgnore := []plumbing.Hash{}
+	if earliestShallow != nil {
+		earliestCommit, err := object.GetCommit(s, *earliestShallow)
+		if err != nil {
+			return false, err
+		}
+
+		parentsToIgnore = earliestCommit.ParentHashes
+	}
+
 	found := false
-	iter := object.NewCommitPreorderIter(c, nil, nil)
+	// stop iterating at the earlist shallow commit, ignoring its parents
+	// note: when pull depth is smaller than the number of new changes on the remote, this fails due to missing parents.
+	//       as far as i can tell, without the commits in-between the shallow pull and the earliest shallow, there's no
+	//       real way of telling whether it will be a fast-forward merge.
+	iter := object.NewCommitPreorderIter(c, nil, parentsToIgnore)
 	err = iter.ForEach(func(c *object.Commit) error {
 		if c.Hash != old {
 			return nil
@@ -1205,7 +1219,7 @@ func (r *Remote) updateLocalReferenceStorage(
 			// If the ref exists locally as a non-tag and force is not
 			// specified, only update if the new ref is an ancestor of the old
 			if old != nil && !old.Name().IsTag() && !force && !spec.IsForceUpdate() {
-				ff, err := isFastForward(r.s, old.Hash(), new.Hash())
+				ff, err := isFastForward(r.s, old.Hash(), new.Hash(), nil)
 				if err != nil {
 					return updated, err
 				}
@@ -1390,7 +1404,6 @@ func pushHashes(
 	useRefDeltas bool,
 	allDelete bool,
 ) (*packp.ReportStatus, error) {
-
 	rd, wr := io.Pipe()
 
 	config, err := s.Config()
