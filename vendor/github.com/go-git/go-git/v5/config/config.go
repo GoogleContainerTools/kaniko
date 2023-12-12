@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5/internal/url"
+	"github.com/go-git/go-git/v5/plumbing"
 	format "github.com/go-git/go-git/v5/plumbing/format/config"
 )
 
@@ -614,7 +615,7 @@ func (c *RemoteConfig) Validate() error {
 		c.Fetch = []RefSpec{RefSpec(fmt.Sprintf(DefaultFetchRefSpec, c.Name))}
 	}
 
-	return nil
+	return plumbing.NewRemoteHEADReferenceName(c.Name).Validate()
 }
 
 func (c *RemoteConfig) unmarshal(s *format.Subsection) error {
