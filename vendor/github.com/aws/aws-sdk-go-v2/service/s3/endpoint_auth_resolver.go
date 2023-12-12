@@ -30,7 +30,7 @@ func (r *endpointAuthResolver) ResolveAuthSchemes(
 		}
 	}
 
-	// a host of undocumented s3 operations can be done anonymously
+	// preserve pre-SRA behavior where everything technically had anonymous
 	return append(opts, &smithyauth.Option{
 		SchemeID: smithyauth.SchemeIDAnonymous,
 	}), nil
@@ -43,12 +43,12 @@ func (r *endpointAuthResolver) resolveAuthSchemes(
 ) {
 	baseOpts, err := (&defaultAuthSchemeResolver{}).ResolveAuthSchemes(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("get base options: %v", err)
+		return nil, fmt.Errorf("get base options: %w", err)
 	}
 
 	endpt, err := r.EndpointResolver.ResolveEndpoint(ctx, *params.endpointParams)
 	if err != nil {
-		return nil, fmt.Errorf("resolve endpoint: %v", err)
+		return nil, fmt.Errorf("resolve endpoint: %w", err)
 	}
 
 	endptOpts, ok := smithyauth.GetAuthOptions(&endpt.Properties)
