@@ -744,6 +744,33 @@ func (e *ScanNotFoundException) ErrorCode() string {
 }
 func (e *ScanNotFoundException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
 
+// The ARN of the secret specified in the pull through cache rule was not found.
+// Update the pull through cache rule with a valid secret ARN and try again.
+type SecretNotFoundException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *SecretNotFoundException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *SecretNotFoundException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *SecretNotFoundException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "SecretNotFoundException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *SecretNotFoundException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
 // These errors are usually caused by a server-side issue.
 type ServerException struct {
 	Message *string
@@ -796,6 +823,117 @@ func (e *TooManyTagsException) ErrorCode() string {
 	return *e.ErrorCodeOverride
 }
 func (e *TooManyTagsException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
+// The secret is unable to be accessed. Verify the resource permissions for the
+// secret and try again.
+type UnableToAccessSecretException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *UnableToAccessSecretException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *UnableToAccessSecretException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *UnableToAccessSecretException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "UnableToAccessSecretException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *UnableToAccessSecretException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
+// The secret is accessible but is unable to be decrypted. Verify the resource
+// permisisons and try again.
+type UnableToDecryptSecretValueException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *UnableToDecryptSecretValueException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *UnableToDecryptSecretValueException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *UnableToDecryptSecretValueException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "UnableToDecryptSecretValueException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *UnableToDecryptSecretValueException) ErrorFault() smithy.ErrorFault {
+	return smithy.FaultClient
+}
+
+// The image or images were unable to be pulled using the pull through cache rule.
+// This is usually caused because of an issue with the Secrets Manager secret
+// containing the credentials for the upstream registry.
+type UnableToGetUpstreamImageException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *UnableToGetUpstreamImageException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *UnableToGetUpstreamImageException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *UnableToGetUpstreamImageException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "UnableToGetUpstreamImageException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *UnableToGetUpstreamImageException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
+
+// There was an issue getting the upstream layer matching the pull through cache
+// rule.
+type UnableToGetUpstreamLayerException struct {
+	Message *string
+
+	ErrorCodeOverride *string
+
+	noSmithyDocumentSerde
+}
+
+func (e *UnableToGetUpstreamLayerException) Error() string {
+	return fmt.Sprintf("%s: %s", e.ErrorCode(), e.ErrorMessage())
+}
+func (e *UnableToGetUpstreamLayerException) ErrorMessage() string {
+	if e.Message == nil {
+		return ""
+	}
+	return *e.Message
+}
+func (e *UnableToGetUpstreamLayerException) ErrorCode() string {
+	if e == nil || e.ErrorCodeOverride == nil {
+		return "UnableToGetUpstreamLayerException"
+	}
+	return *e.ErrorCodeOverride
+}
+func (e *UnableToGetUpstreamLayerException) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
 
 // The image is of a type that cannot be scanned.
 type UnsupportedImageTypeException struct {
