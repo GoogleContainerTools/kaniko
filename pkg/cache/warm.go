@@ -97,10 +97,11 @@ func warmToFile(cacheDir, img string, opts *config.WarmerOptions) error {
 
 	digest, err := cw.Warm(img, opts)
 	if err != nil {
-		if !IsAlreadyCached(err) {
-			logrus.Warnf("Error while trying to warm image: %v %v", img, err)
+		if IsAlreadyCached(err) {
+			logrus.Infof("Image already in cache: %v", img)
+			return nil
 		}
-
+		logrus.Warnf("Error while trying to warm image: %v %v", img, err)
 		return err
 	}
 

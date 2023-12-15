@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -634,6 +635,36 @@ func TestCache(t *testing.T) {
 	if err := logBenchmarks("benchmark_cache"); err != nil {
 		t.Logf("Failed to create benchmark file: %v", err)
 	}
+}
+
+// Attempt to warm an image two times : first time should populate the cache, second time should find the image in the cache.
+func TestWarmerTwice(t *testing.T) {
+	_, ex, _, _ := runtime.Caller(0)
+	cwd := filepath.Dir(ex) + "/tmpCache"
+
+	// Start a sleeping warmer container
+	dockerRunFlags := []string{"run", "--net=host"}
+	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, config.serviceAccount)
+	dockerRunFlags = append(dockerRunFlags,
+		"--memory=16m",
+		"-v", cwd+":/cache",
+		WarmerImage,
+		"--cache-dir=/cache",
+		"-i", "debian:trixie-slim")
+
+	warmCmd := exec.Command("docker", dockerRunFlags...)
+	out, err := RunCommandWithoutTest(warmCmd)
+	if err != nil {
+		t.Fatalf("Unable to perform first warming: %s", err)
+	}
+	t.Logf("First warm output: %s", out)
+
+	warmCmd = exec.Command("docker", dockerRunFlags...)
+	out, err = RunCommandWithoutTest(warmCmd)
+	if err != nil {
+		t.Fatalf("Unable to perform second warming: %s", err)
+	}
+	t.Logf("Second warm output: %s", out)
 }
 
 func verifyBuildWith(t *testing.T, cache, dockerfile string) {
