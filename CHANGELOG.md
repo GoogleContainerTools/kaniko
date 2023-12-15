@@ -1,3 +1,43 @@
+# v1.19.1 Release 2023-12-15
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.19.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.19.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.19.1-slim
+```
+
+* Reproducing and Fixing #2892 [#2893](https://github.com/GoogleContainerTools/kaniko/pull/2893)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.15.3 to 1.15.7 [#2897](https://github.com/GoogleContainerTools/kaniko/pull/2897)
+* chore(deps): bump google-github-actions/setup-gcloud from 1.1.1 to 2.0.0 [#2902](https://github.com/GoogleContainerTools/kaniko/pull/2902)
+* chore(deps): bump actions/setup-go from 4.1.0 to 5.0.0 [#2901](https://github.com/GoogleContainerTools/kaniko/pull/2901)
+* chore(deps): bump github.com/containerd/containerd from 1.7.10 to 1.7.11 [#2899](https://github.com/GoogleContainerTools/kaniko/pull/2899)
+* chore(deps): bump github.com/go-git/go-git/v5 from 5.10.1 to 5.11.0 [#2898](https://github.com/GoogleContainerTools/kaniko/pull/2898)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2 from 1.23.5 to 1.24.0 [#2896](https://github.com/GoogleContainerTools/kaniko/pull/2896)
+* chore(deps): bump github.com/containerd/containerd from 1.7.9 to 1.7.10 [#2888](https://github.com/GoogleContainerTools/kaniko/pull/2888)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.25.8 to 1.25.11 [#2889](https://github.com/GoogleContainerTools/kaniko/pull/2889)
+* chore(deps): bump google-github-actions/auth from 1.2.0 to 2.0.0 [#2886](https://github.com/GoogleContainerTools/kaniko/pull/2886)
+* chore(deps): bump github.com/go-git/go-git/v5 from 5.10.0 to 5.10.1 [#2890](https://github.com/GoogleContainerTools/kaniko/pull/2890)
+* fix: resolve aws-sdk-go-v2 lib compat issues causing ECR failures [#2885](https://github.com/GoogleContainerTools/kaniko/pull/2885)
+* chore(deps): bump github.com/spf13/afero from 1.10.0 to 1.11.0 [#2891](https://github.com/GoogleContainerTools/kaniko/pull/2891)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- Maxime BOSSARD
+
+
 # v1.19.0 Release 2023-11-29
 The executor images in this release are:
 ```
