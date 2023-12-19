@@ -8,10 +8,10 @@
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/avelino/awesome-go#configuration)
 [![run on repl.it](https://repl.it/badge/github/sagikazarmark/Viper-example)](https://repl.it/@sagikazarmark/Viper-example#main.go)
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/spf13/viper/CI?style=flat-square)](https://github.com/spf13/viper/actions?query=workflow%3ACI)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/spf13/viper/ci.yaml?branch=master&style=flat-square)](https://github.com/spf13/viper/actions?query=workflow%3ACI)
 [![Join the chat at https://gitter.im/spf13/viper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/spf13/viper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spf13/viper?style=flat-square)](https://goreportcard.com/report/github.com/spf13/viper)
-![Go Version](https://img.shields.io/badge/go%20version-%3E=1.14-61CFDD.svg?style=flat-square)
+![Go Version](https://img.shields.io/badge/go%20version-%3E=1.19-61CFDD.svg?style=flat-square)
 [![PkgGoDev](https://pkg.go.dev/badge/mod/github.com/spf13/viper)](https://pkg.go.dev/mod/github.com/spf13/viper)
 
 **Go configuration with fangs!**
@@ -27,6 +27,10 @@ Many Go projects are built using Viper including:
 * [doctl](https://github.com/digitalocean/doctl)
 * [Clairctl](https://github.com/jgsqware/clairctl)
 * [Mercure](https://mercure.rocks)
+* [Meshery](https://github.com/meshery/meshery)
+* [Bearer](https://github.com/bearer/bearer)
+* [Coder](https://github.com/coder/coder)
+* [Vitess](https://vitess.io/)
 
 
 ## Install
@@ -40,8 +44,8 @@ go get github.com/spf13/viper
 
 ## What is Viper?
 
-Viper is a complete configuration solution for Go applications including 12-Factor apps. It is designed
-to work within an application, and can handle all types of configuration needs
+Viper is a complete configuration solution for Go applications including [12-Factor apps](https://12factor.net/#the_twelve_factors).
+It is designed to work within an application, and can handle all types of configuration needs
 and formats. It supports:
 
 * setting defaults
@@ -119,7 +123,7 @@ viper.AddConfigPath("$HOME/.appname")  // call multiple times to add many search
 viper.AddConfigPath(".")               // optionally look for config in the working directory
 err := viper.ReadInConfig() // Find and read the config file
 if err != nil { // Handle errors reading the config file
-	panic(fmt.Errorf("Fatal error config file: %w \n", err))
+	panic(fmt.Errorf("fatal error config file: %w", err))
 }
 ```
 
@@ -127,17 +131,17 @@ You can handle the specific case where no config file is found like this:
 
 ```go
 if err := viper.ReadInConfig(); err != nil {
-    if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-        // Config file not found; ignore error if desired
-    } else {
-        // Config file was found but another error was produced
-    }
+	if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		// Config file not found; ignore error if desired
+	} else {
+		// Config file was found but another error was produced
+	}
 }
 
 // Config file found and successfully parsed
 ```
 
-*NOTE [since 1.6]:* You can also have a file without an extension and specify the format programmaticaly. For those configuration files that lie in the home of the user without any extension like `.bashrc`
+*NOTE [since 1.6]:* You can also have a file without an extension and specify the format programmatically. For those configuration files that lie in the home of the user without any extension like `.bashrc`
 
 ### Writing Config Files
 
@@ -175,10 +179,10 @@ Optionally you can provide a function for Viper to run each time a change occurs
 **Make sure you add all of the configPaths prior to calling `WatchConfig()`**
 
 ```go
-viper.WatchConfig()
 viper.OnConfigChange(func(e fsnotify.Event) {
 	fmt.Println("Config file changed:", e.Name)
 })
+viper.WatchConfig()
 ```
 
 ### Reading Config from io.Reader
@@ -218,6 +222,7 @@ These could be from a command line flag, or from your own application logic.
 ```go
 viper.Set("Verbose", true)
 viper.Set("LogFile", LogFile)
+viper.Set("host.port", 5899)   // set subset
 ```
 
 ### Registering and Using Aliases
@@ -354,7 +359,7 @@ func main() {
 
 	i := viper.GetInt("flagname") // retrieve value from viper
 
-	...
+	// ...
 }
 ```
 
@@ -413,6 +418,8 @@ in a Key/Value store such as etcd or Consul.  These values take precedence over
 default values, but are overridden by configuration values retrieved from disk,
 flags, or environment variables.
 
+Viper supports multiple hosts. To use, pass a list of endpoints separated by `;`. For example `http://127.0.0.1:4001;http://127.0.0.1:4002`.
+
 Viper uses [crypt](https://github.com/bketelsen/crypt) to retrieve
 configuration from the K/V store, which means that you can store your
 configuration values encrypted and have them automatically decrypted if you have
@@ -447,6 +454,13 @@ viper.SetConfigType("json") // because there is no file extension in a stream of
 err := viper.ReadRemoteConfig()
 ```
 
+#### etcd3
+```go
+viper.AddRemoteProvider("etcd3", "http://127.0.0.1:4001","/config/hugo.json")
+viper.SetConfigType("json") // because there is no file extension in a stream of bytes, supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop", "env", "dotenv"
+err := viper.ReadRemoteConfig()
+```
+
 #### Consul
 You need to set a key to Consul key/value storage with JSON value containing your desired config.
 For example, create a Consul key/value store key `MY_CONSUL_KEY` with value:
@@ -477,6 +491,15 @@ err := viper.ReadRemoteConfig()
 
 Of course, you're allowed to use `SecureRemoteProvider` also
 
+
+#### NATS
+
+```go
+viper.AddRemoteProvider("nats", "nats://127.0.0.1:4222", "myapp.config")
+viper.SetConfigType("json")
+err := viper.ReadRemoteConfig()
+```
+
 ### Remote Key/Value Store Example - Encrypted
 
 ```go
@@ -503,18 +526,18 @@ runtime_viper.Unmarshal(&runtime_conf)
 // open a goroutine to watch remote changes forever
 go func(){
 	for {
-	    time.Sleep(time.Second * 5) // delay after each request
+		time.Sleep(time.Second * 5) // delay after each request
 
-	    // currently, only tested with etcd support
-	    err := runtime_viper.WatchRemoteConfig()
-	    if err != nil {
-	        log.Errorf("unable to read remote config: %v", err)
-	        continue
-	    }
+		// currently, only tested with etcd support
+		err := runtime_viper.WatchRemoteConfig()
+		if err != nil {
+			log.Errorf("unable to read remote config: %v", err)
+			continue
+		}
 
-	    // unmarshal new config into our runtime config struct. you can also use channel
-	    // to implement a signal to notify the system of the changes
-	    runtime_viper.Unmarshal(&runtime_conf)
+		// unmarshal new config into our runtime config struct. you can also use channel
+		// to implement a signal to notify the system of the changes
+		runtime_viper.Unmarshal(&runtime_conf)
 	}
 }()
 ```
@@ -524,29 +547,32 @@ go func(){
 In Viper, there are a few ways to get a value depending on the value’s type.
 The following functions and methods exist:
 
- * `Get(key string) : interface{}`
+ * `Get(key string) : any`
  * `GetBool(key string) : bool`
  * `GetFloat64(key string) : float64`
  * `GetInt(key string) : int`
  * `GetIntSlice(key string) : []int`
  * `GetString(key string) : string`
- * `GetStringMap(key string) : map[string]interface{}`
+ * `GetStringMap(key string) : map[string]any`
  * `GetStringMapString(key string) : map[string]string`
  * `GetStringSlice(key string) : []string`
  * `GetTime(key string) : time.Time`
  * `GetDuration(key string) : time.Duration`
  * `IsSet(key string) : bool`
- * `AllSettings() : map[string]interface{}`
+ * `AllSettings() : map[string]any`
 
 One important thing to recognize is that each Get function will return a zero
 value if it’s not found. To check if a given key exists, the `IsSet()` method
 has been provided.
 
+The zero value will also be returned if the value is set, but fails to parse
+as the requested type.
+
 Example:
 ```go
 viper.GetString("logfile") // case-insensitive Setting & Getting
 if viper.GetBool("verbose") {
-    fmt.Println("verbose enabled")
+	fmt.Println("verbose enabled")
 }
 ```
 ### Accessing nested keys
@@ -594,7 +620,7 @@ configuration level.
 
 Viper can access array indices by using numbers in the path. For example:
 
-```json
+```jsonc
 {
     "host": {
         "address": "localhost",
@@ -622,7 +648,7 @@ GetInt("host.ports.1") // returns 6029
 Lastly, if there exists a key that matches the delimited key path, its value
 will be returned instead. E.g.
 
-```json
+```jsonc
 {
     "datastore.metric.host": "0.0.0.0",
     "host": {
@@ -669,7 +695,7 @@ So instead of doing that let's pass a Viper instance to the constructor that rep
 ```go
 cache1Config := viper.Sub("cache.cache1")
 if cache1Config == nil { // Sub returns nil if the key cannot be found
-    panic("cache configuration not found")
+	panic("cache configuration not found")
 }
 
 cache1 := NewCache(cache1Config)
@@ -681,10 +707,10 @@ Internally, the `NewCache` function can address `max-items` and `item-size` keys
 
 ```go
 func NewCache(v *Viper) *Cache {
-    return &Cache{
-        MaxItems: v.GetInt("max-items"),
-        ItemSize: v.GetInt("item-size"),
-    }
+	return &Cache{
+		MaxItems: v.GetInt("max-items"),
+		ItemSize: v.GetInt("item-size"),
+	}
 }
 ```
 
@@ -699,8 +725,8 @@ etc.
 
 There are two methods to do this:
 
- * `Unmarshal(rawVal interface{}) : error`
- * `UnmarshalKey(key string, rawVal interface{}) : error`
+ * `Unmarshal(rawVal any) : error`
+ * `UnmarshalKey(key string, rawVal any) : error`
 
 Example:
 
@@ -725,19 +751,19 @@ you have to change the delimiter:
 ```go
 v := viper.NewWithOptions(viper.KeyDelimiter("::"))
 
-v.SetDefault("chart::values", map[string]interface{}{
-    "ingress": map[string]interface{}{
-        "annotations": map[string]interface{}{
-            "traefik.frontend.rule.type":                 "PathPrefix",
-            "traefik.ingress.kubernetes.io/ssl-redirect": "true",
-        },
-    },
+v.SetDefault("chart::values", map[string]any{
+	"ingress": map[string]any{
+		"annotations": map[string]any{
+			"traefik.frontend.rule.type":                 "PathPrefix",
+			"traefik.ingress.kubernetes.io/ssl-redirect": "true",
+		},
+	},
 })
 
 type config struct {
 	Chart struct{
-        Values map[string]interface{}
-    }
+		Values map[string]any
+	}
 }
 
 var C config
@@ -778,6 +804,15 @@ if err != nil {
 
 Viper uses [github.com/mitchellh/mapstructure](https://github.com/mitchellh/mapstructure) under the hood for unmarshaling values which uses `mapstructure` tags by default.
 
+### Decoding custom formats
+
+A frequently requested feature for Viper is adding more value formats and decoders.
+For example, parsing character (dot, comma, semicolon, etc) separated strings into slices.
+
+This is already available in Viper using mapstructure decode hooks.
+
+Read more about the details in [this blog post](https://sagikazarmark.hu/blog/decoding-custom-formats-with-viper/).
+
 ### Marshalling to string
 
 You may need to marshal all the settings held in viper into a string rather than write them to a file.
@@ -785,17 +820,17 @@ You can use your favorite format's marshaller with the config returned by `AllSe
 
 ```go
 import (
-    yaml "gopkg.in/yaml.v2"
-    // ...
+	yaml "gopkg.in/yaml.v2"
+	// ...
 )
 
 func yamlStringSettings() string {
-    c := viper.AllSettings()
-    bs, err := yaml.Marshal(c)
-    if err != nil {
-        log.Fatalf("unable to marshal config to YAML: %v", err)
-    }
-    return string(bs)
+	c := viper.AllSettings()
+	bs, err := yaml.Marshal(c)
+	if err != nil {
+		log.Fatalf("unable to marshal config to YAML: %v", err)
+	}
+	return string(bs)
 }
 ```
 
@@ -863,3 +898,31 @@ No, you will need to synchronize access to the viper yourself (for example by us
 ## Troubleshooting
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+## Development
+
+**For an optimal developer experience, it is recommended to install [Nix](https://nixos.org/download.html) and [direnv](https://direnv.net/docs/installation.html).**
+
+_Alternatively, install [Go](https://go.dev/dl/) on your computer then run `make deps` to install the rest of the dependencies._
+
+Run the test suite:
+
+```shell
+make test
+```
+
+Run linters:
+
+```shell
+make lint # pass -j option to run them in parallel
+```
+
+Some linter violations can automatically be fixed:
+
+```shell
+make fmt
+```
+
+## License
+
+The project is licensed under the [MIT License](LICENSE).

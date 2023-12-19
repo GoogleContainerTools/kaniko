@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/dockerversion"
 	"github.com/docker/docker/layer"
@@ -28,6 +29,8 @@ func (id ID) Digest() digest.Digest {
 }
 
 // IDFromDigest creates an ID from a digest
+//
+// Deprecated: cast to an ID using ID(digest).
 func IDFromDigest(digest digest.Digest) ID {
 	return ID(digest)
 }
@@ -112,6 +115,18 @@ type Image struct {
 	// computedID is the ID computed from the hash of the image config.
 	// Not to be confused with the legacy V1 ID in V1Image.
 	computedID ID
+
+	// Details holds additional details about image
+	Details *Details `json:"-"`
+}
+
+// Details provides additional image data
+type Details struct {
+	References  []reference.Named
+	Size        int64
+	Metadata    map[string]string
+	Driver      string
+	LastUpdated time.Time
 }
 
 // RawJSON returns the immutable JSON associated with the image.
@@ -188,6 +203,13 @@ type ChildConfig struct {
 	Config          *container.Config
 }
 
+// NewImage creates a new image with the given ID
+func NewImage(id ID) *Image {
+	return &Image{
+		computedID: id,
+	}
+}
+
 // NewChildImage creates a new Image as a child of this image.
 func NewChildImage(img *Image, child ChildConfig, os string) *Image {
 	isEmptyLayer := layer.IsEmpty(child.DiffID)
@@ -224,6 +246,15 @@ func NewChildImage(img *Image, child ChildConfig, os string) *Image {
 		OSFeatures: img.OSFeatures,
 		OSVersion:  img.OSVersion,
 	}
+}
+
+// Clone clones an image and changes ID.
+func Clone(base *Image, id ID) *Image {
+	img := *base
+	img.RootFS = img.RootFS.Clone()
+	img.V1Image.ID = id.String()
+	img.computedID = id
+	return &img
 }
 
 // History stores build commands that were used to create an image

@@ -1,7 +1,6 @@
 package dockerfile // import "github.com/docker/docker/builder/dockerfile"
 
 import (
-	"archive/tar"
 	"fmt"
 	"io"
 	"mime"
@@ -20,12 +19,12 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/containerfs"
 	"github.com/docker/docker/pkg/idtools"
-	"github.com/docker/docker/pkg/ioutils"
+	"github.com/docker/docker/pkg/longpath"
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/system"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
-	specs "github.com/opencontainers/image-spec/specs-go/v1"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -39,14 +38,14 @@ type pathCache interface {
 // copyInfo is a data object which stores the metadata about each source file in
 // a copyInstruction
 type copyInfo struct {
-	root         containerfs.ContainerFS
+	root         string
 	path         string
 	hash         string
 	noDecompress bool
 }
 
 func (c copyInfo) fullPath() (string, error) {
-	return c.root.ResolveScopedPath(c.path, true)
+	return containerfs.ResolveScopedPath(c.root, c.path)
 }
 
 func newCopyInfoFromSource(source builder.Source, path string, hash string) copyInfo {
@@ -75,7 +74,7 @@ type copier struct {
 	source      builder.Source
 	pathCache   pathCache
 	download    sourceDownloader
-	platform    *specs.Platform
+	platform    *ocispec.Platform
 	// for cleanup. TODO: having copier.cleanup() is error prone and hard to
 	// follow. Code calling performCopy should manage the lifecycle of its params.
 	// Copier should take override source as input, not imageMount.
@@ -87,7 +86,7 @@ func copierFromDispatchRequest(req dispatchRequest, download sourceDownloader, i
 	platform := req.builder.platform
 	if platform == nil {
 		// May be nil if not explicitly set in API/dockerfile
-		platform = &specs.Platform{}
+		platform = &ocispec.Platform{}
 	}
 	if platform.OS == "" {
 		// Default to the dispatch requests operating system if not explicit in API/dockerfile
@@ -159,7 +158,7 @@ func (o *copier) getCopyInfoForSourcePath(orig, dest string) ([]copyInfo, error)
 		}
 		path = unnamedFilename
 	}
-	o.tmpPaths = append(o.tmpPaths, remote.Root().Path())
+	o.tmpPaths = append(o.tmpPaths, remote.Root())
 
 	hash, err := remote.Hash(path)
 	ci := newCopyInfoFromSource(remote, path, hash)
@@ -202,7 +201,7 @@ func (o *copier) calcCopyInfo(origPath string, allowWildcards bool) ([]copyInfo,
 
 		o.source, err = remotecontext.NewLazySource(rwLayer.Root())
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create context for copy from %s", rwLayer.Root().Path())
+			return nil, errors.Wrapf(err, "failed to create context for copy from %s", rwLayer.Root())
 		}
 	}
 
@@ -259,7 +258,7 @@ func (o *copier) storeInPathCache(im *imageMount, path string, hash string) {
 func (o *copier) copyWithWildcards(origPath string) ([]copyInfo, error) {
 	root := o.source.Root()
 	var copyInfos []copyInfo
-	if err := root.Walk(root.Path(), func(path string, info os.FileInfo, err error) error {
+	if err := filepath.WalkDir(root, func(path string, _ os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -271,7 +270,7 @@ func (o *copier) copyWithWildcards(origPath string) ([]copyInfo, error) {
 		if rel == "." {
 			return nil
 		}
-		if match, _ := root.Match(origPath, rel); !match {
+		if match, _ := filepath.Match(origPath, rel); !match {
 			return nil
 		}
 
@@ -317,7 +316,7 @@ func walkSource(source builder.Source, origPath string) ([]string, error) {
 	}
 	// Must be a dir
 	var subfiles []string
-	err = source.Root().Walk(fp, func(path string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(fp, func(path string, _ os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -391,7 +390,7 @@ func downloadSource(output io.Writer, stdout io.Writer, srcURL string) (remote b
 	filename := getFilenameForDownload(u.Path, resp)
 
 	// Prepare file in a tmp dir
-	tmpDir, err := ioutils.TempDir("", "docker-remote")
+	tmpDir, err := longpath.MkdirTemp("", "docker-remote")
 	if err != nil {
 		return
 	}
@@ -442,19 +441,14 @@ func downloadSource(output io.Writer, stdout io.Writer, srcURL string) (remote b
 		return
 	}
 
-	lc, err := remotecontext.NewLazySource(containerfs.NewLocalContainerFS(tmpDir))
+	lc, err := remotecontext.NewLazySource(tmpDir)
 	return lc, filename, err
 }
 
 type copyFileOptions struct {
 	decompress bool
 	identity   *idtools.Identity
-	archiver   Archiver
-}
-
-type copyEndpoint struct {
-	driver containerfs.Driver
-	path   string
+	archiver   *archive.Archiver
 }
 
 func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions) error {
@@ -470,96 +464,77 @@ func performCopyForInfo(dest copyInfo, source copyInfo, options copyFileOptions)
 
 	archiver := options.archiver
 
-	srcEndpoint := &copyEndpoint{driver: source.root, path: srcPath}
-	destEndpoint := &copyEndpoint{driver: dest.root, path: destPath}
-
-	src, err := source.root.Stat(srcPath)
+	src, err := os.Stat(srcPath)
 	if err != nil {
 		return errors.Wrapf(err, "source path not found")
 	}
 	if src.IsDir() {
-		return copyDirectory(archiver, srcEndpoint, destEndpoint, options.identity)
+		return copyDirectory(archiver, srcPath, destPath, options.identity)
 	}
-	if options.decompress && isArchivePath(source.root, srcPath) && !source.noDecompress {
+	if options.decompress && archive.IsArchivePath(srcPath) && !source.noDecompress {
 		return archiver.UntarPath(srcPath, destPath)
 	}
 
-	destExistsAsDir, err := isExistingDirectory(destEndpoint)
+	destExistsAsDir, err := isExistingDirectory(destPath)
 	if err != nil {
 		return err
 	}
 	// dest.path must be used because destPath has already been cleaned of any
 	// trailing slash
-	if endsInSlash(dest.root, dest.path) || destExistsAsDir {
+	if endsInSlash(dest.path) || destExistsAsDir {
 		// source.path must be used to get the correct filename when the source
 		// is a symlink
-		destPath = dest.root.Join(destPath, source.root.Base(source.path))
-		destEndpoint = &copyEndpoint{driver: dest.root, path: destPath}
+		destPath = filepath.Join(destPath, filepath.Base(source.path))
 	}
-	return copyFile(archiver, srcEndpoint, destEndpoint, options.identity)
+	return copyFile(archiver, srcPath, destPath, options.identity)
 }
 
-func isArchivePath(driver containerfs.ContainerFS, path string) bool {
-	file, err := driver.Open(path)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-	rdr, err := archive.DecompressStream(file)
-	if err != nil {
-		return false
-	}
-	r := tar.NewReader(rdr)
-	_, err = r.Next()
-	return err == nil
-}
-
-func copyDirectory(archiver Archiver, source, dest *copyEndpoint, identity *idtools.Identity) error {
+func copyDirectory(archiver *archive.Archiver, source, dest string, identity *idtools.Identity) error {
 	destExists, err := isExistingDirectory(dest)
 	if err != nil {
 		return errors.Wrapf(err, "failed to query destination path")
 	}
 
-	if err := archiver.CopyWithTar(source.path, dest.path); err != nil {
+	if err := archiver.CopyWithTar(source, dest); err != nil {
 		return errors.Wrapf(err, "failed to copy directory")
 	}
 	if identity != nil {
-		return fixPermissions(source.path, dest.path, *identity, !destExists)
+		return fixPermissions(source, dest, *identity, !destExists)
 	}
 	return nil
 }
 
-func copyFile(archiver Archiver, source, dest *copyEndpoint, identity *idtools.Identity) error {
+func copyFile(archiver *archive.Archiver, source, dest string, identity *idtools.Identity) error {
 	if identity == nil {
 		// Use system.MkdirAll here, which is a custom version of os.MkdirAll
 		// modified for use on Windows to handle volume GUID paths. These paths
 		// are of the form \\?\Volume{<GUID>}\<path>. An example would be:
 		// \\?\Volume{dae8d3ac-b9a1-11e9-88eb-e8554b2ba1db}\bin\busybox.exe
-		if err := system.MkdirAll(filepath.Dir(dest.path), 0755); err != nil {
+		if err := system.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 			return err
 		}
 	} else {
-		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest.path), 0755, *identity); err != nil {
+		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest), 0755, *identity); err != nil {
 			return errors.Wrapf(err, "failed to create new directory")
 		}
 	}
 
-	if err := archiver.CopyFileWithTar(source.path, dest.path); err != nil {
+	if err := archiver.CopyFileWithTar(source, dest); err != nil {
 		return errors.Wrapf(err, "failed to copy file")
 	}
 	if identity != nil {
-		return fixPermissions(source.path, dest.path, *identity, false)
+		return fixPermissions(source, dest, *identity, false)
 	}
 	return nil
 }
 
-func endsInSlash(driver containerfs.Driver, path string) bool {
-	return strings.HasSuffix(path, string(driver.Separator()))
+func endsInSlash(path string) bool {
+	return strings.HasSuffix(path, string(filepath.Separator))
 }
 
 // isExistingDirectory returns true if the path exists and is a directory
-func isExistingDirectory(point *copyEndpoint) (bool, error) {
-	destStat, err := point.driver.Stat(point.path)
+func isExistingDirectory(path string) (bool, error) {
+	destStat, err := os.Stat(path)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		return false, nil
