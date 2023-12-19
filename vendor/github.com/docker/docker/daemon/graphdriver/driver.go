@@ -1,13 +1,13 @@
 package graphdriver // import "github.com/docker/docker/daemon/graphdriver"
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/containerfs"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/plugingetter"
 	"github.com/pkg/errors"
@@ -60,7 +60,7 @@ type ProtoDriver interface {
 	// Get returns the mountpoint for the layered filesystem referred
 	// to by this id. You can optionally specify a mountLabel or "".
 	// Returns the absolute path to the mounted layered filesystem.
-	Get(id, mountLabel string) (fs containerfs.ContainerFS, err error)
+	Get(id, mountLabel string) (fs string, err error)
 	// Put releases the system resources for the specified id,
 	// e.g, unmounting layered filesystem.
 	Put(id string) error
@@ -193,6 +193,9 @@ type Options struct {
 func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, error) {
 	if name != "" {
 		logrus.Infof("[graphdriver] trying configured driver: %s", name)
+		if err := checkRemoved(name); err != nil {
+			return nil, err
+		}
 		if isDeprecated(name) {
 			logrus.Warnf("[graphdriver] WARNING: the %s storage-driver is deprecated and will be removed in a future release; visit https://docs.docker.com/go/storage-driver/ for more information", name)
 		}
@@ -315,8 +318,17 @@ func isEmptyDir(name string) bool {
 func isDeprecated(name string) bool {
 	switch name {
 	// NOTE: when deprecating a driver, update daemon.fillDriverInfo() accordingly
-	case "aufs", "devicemapper", "overlay":
+	case "devicemapper":
 		return true
 	}
 	return false
+}
+
+// checkRemoved checks if a storage-driver has been deprecated (and removed)
+func checkRemoved(name string) error {
+	switch name {
+	case "aufs", "overlay":
+		return NotSupportedError(fmt.Sprintf("[graphdriver] ERROR: the %s storage-driver has been deprecated and removed; visit https://docs.docker.com/go/storage-driver/ for more information", name))
+	}
+	return nil
 }
