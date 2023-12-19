@@ -1,3 +1,38 @@
+# v1.19.2 Release 2023-12-19
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.19.2
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.19.2-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.19.2-slim
+```
+
+* chore: update gcr and acr cred helpers [#2910](https://github.com/GoogleContainerTools/kaniko/pull/2910)
+* chore(deps): bump sigstore/cosign-installer from 3.2.0 to 3.3.0 [#2911](https://github.com/GoogleContainerTools/kaniko/pull/2911)
+* chore(deps): bump google.golang.org/api from 0.152.0 to 0.154.0 [#2912](https://github.com/GoogleContainerTools/kaniko/pull/2912)
+* chore(deps): bump cloud.google.com/go/storage from 1.35.1 to 1.36.0 [#2913](https://github.com/GoogleContainerTools/kaniko/pull/2913)
+* chore(deps): bump github.com/spf13/cobra from 1.7.0 to 1.8.0 [#2914](https://github.com/GoogleContainerTools/kaniko/pull/2914)
+* chore(deps): bump golang.org/x/crypto from 0.16.0 to 0.17.0 [#2915](https://github.com/GoogleContainerTools/kaniko/pull/2915)
+* fix: resolve integration test issue issue where container-diff cannot pull OCI images properly from registry [#2918](https://github.com/GoogleContainerTools/kaniko/pull/2918)
+* fix: also update github.com/awslabs/amazon-ecr-credential-helper to resolve issues with AWS ECR authentication (resolves #2882) [#2908](https://github.com/GoogleContainerTools/kaniko/pull/2908)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- Patrick Decat
+
+
 # v1.19.1 Release 2023-12-15
 The executor images in this release are:
 ```
