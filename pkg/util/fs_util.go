@@ -33,10 +33,10 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/timing"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/fileutils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/karrick/godirwalk"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
+	"github.com/moby/patternmatcher"
 	otiai10Cpy "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -788,7 +788,7 @@ func (c FileContext) ExcludesFile(path string) bool {
 			return false
 		}
 	}
-	match, err := fileutils.Matches(path, c.ExcludedFiles)
+	match, err := patternmatcher.Matches(path, c.ExcludedFiles)
 	if err != nil {
 		logrus.Errorf("Error matching, including %s in build: %v", path, err)
 		return false

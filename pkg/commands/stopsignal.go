@@ -19,9 +19,9 @@ package commands
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
-	"github.com/docker/docker/pkg/signal"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/sys/signal"
 	"github.com/sirupsen/logrus"
 )
 

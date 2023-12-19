@@ -2,9 +2,9 @@ package remotecontext // import "github.com/docker/docker/builder/remotecontext"
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 
-	"github.com/docker/docker/pkg/containerfs"
 	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
@@ -15,19 +15,23 @@ type hashed interface {
 	Digest() digest.Digest
 }
 
-// CachableSource is a source that contains cache records for its contents
+// CachableSource is a source that contains cache records for its contents.
+//
+// Deprecated: this type was used for the experimental "stream" support for the classic builder, which is no longer supported.
 type CachableSource struct {
 	mu   sync.Mutex
-	root containerfs.ContainerFS
+	root string
 	tree *iradix.Tree
 	txn  *iradix.Txn
 }
 
-// NewCachableSource creates new CachableSource
+// NewCachableSource creates new CachableSource.
+//
+// Deprecated: this type was used for the experimental "stream" support for the classic builder, which is no longer supported.
 func NewCachableSource(root string) *CachableSource {
 	ts := &CachableSource{
 		tree: iradix.New(),
-		root: containerfs.NewLocalContainerFS(root),
+		root: root,
 	}
 	return ts
 }
@@ -66,7 +70,7 @@ func (cs *CachableSource) Scan() error {
 		return err
 	}
 	txn := iradix.New().Txn()
-	err = cs.root.Walk(cs.root.Path(), func(path string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(cs.root, func(path string, _ os.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to walk %s", path)
 		}
@@ -144,7 +148,7 @@ func (cs *CachableSource) Hash(path string) (string, error) {
 }
 
 // Root returns a root directory for the source
-func (cs *CachableSource) Root() containerfs.ContainerFS {
+func (cs *CachableSource) Root() string {
 	return cs.root
 }
 
