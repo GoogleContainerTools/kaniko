@@ -70,7 +70,7 @@ jobs:
         export_environment_variables: true
         create_credentials_file: true
     - if: github.event_name != 'pull_request'
-      uses: google-github-actions/setup-gcloud@825196879a077b7efa50db2e88409f44de4635c2 # v2.0.0
+      uses: google-github-actions/setup-gcloud@5a5f7b85fca43e76e53463acaa9d408a03c98d3a # v2.0.1
     - if: github.event_name != 'pull_request'
       run: gcloud auth configure-docker
 
