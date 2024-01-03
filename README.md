@@ -1255,13 +1255,14 @@ merge-manifests:
   # all containers must be build before merging them
   # alternatively the job may be configured to run in a later stage
   needs:
-    - container-build
+    - job: container-build
       artifacts: false
   tags:
     # may run on any architecture supported by manifest-tool image
     - runner-xyz
   image:
       name: mplatform/manifest-tool:alpine
+      entrypoint: [""]
   script:
     - >-
       manifest-tool
