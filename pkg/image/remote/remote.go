@@ -18,6 +18,7 @@ package remote
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -49,6 +50,46 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return nil, err
+	}
+
+	if newRegURLs, found := opts.RegistryMaps[ref.Context().RegistryStr()]; found {
+		ref, err := normalizeReference(ref, image)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, regToMapTo := range newRegURLs {
+			var newReg name.Registry
+			if opts.InsecurePull || opts.InsecureRegistries.Contains(regToMapTo) {
+				newReg, err = name.NewRegistry(regToMapTo, name.WeakValidation, name.Insecure)
+			} else {
+				newReg, err = name.NewRegistry(regToMapTo, name.StrictValidation)
+			}
+			if err != nil {
+				return nil, err
+			}
+			ref := setNewRegistry(ref, newReg)
+
+			logrus.Infof("Retrieving image %s from mapped registry  %s", ref, regToMapTo)
+			retryFunc := func() (v1.Image, error) {
+				return remoteImageFunc(ref, remoteOptions(regToMapTo, opts, customPlatform)...)
+			}
+
+			var remoteImage v1.Image
+			var err error
+			if remoteImage, err = util.RetryWithResult(retryFunc, opts.ImageDownloadRetry, 1000); err != nil {
+				logrus.Warnf("Failed to retrieve image %s from remapped registry %s: %s. Will try with the next registry, or fallback to the original registry.", ref, regToMapTo, err)
+				continue
+			}
+
+			manifestCache[image] = remoteImage
+
+			return remoteImage, nil
+		}
+
+		if len(newRegURLs) > 0 && opts.SkipDefaultRegistryFallback {
+			return nil, fmt.Errorf("image not found on any configured mapped registries for %s", ref)
+		}
 	}
 
 	if ref.Context().RegistryStr() == name.DefaultRegistry {

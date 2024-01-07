@@ -45,3 +45,36 @@ func Test_KeyValueArg_Set_shouldAcceptEqualAsValue(t *testing.T) {
 		t.Error("Invalid split. key=value=something should be split to key=>value=something")
 	}
 }
+
+func Test_multiKeyMultiValueArg_Set_shouldSplitArgumentLikeKVA(t *testing.T) {
+	arg := make(multiKeyMultiValueArg)
+	arg.Set("key=value")
+	if arg["key"][0] != "value" {
+		t.Error("Invalid split. key=value should be split to key=>value")
+	}
+}
+
+func Test_multiKeyMultiValueArg_Set_ShouldAppendIfRepeated(t *testing.T) {
+	arg := make(multiKeyMultiValueArg)
+	arg.Set("key=v1")
+	arg.Set("key=v2")
+	if arg["key"][0] != "v1" || arg["key"][1] != "v2" {
+		t.Error("Invalid repeat behavior. Repeated keys should append values")
+	}
+}
+
+func Test_multiKeyMultiValueArg_Set_Composed(t *testing.T) {
+	arg := make(multiKeyMultiValueArg)
+	arg.Set("key1=value1;key2=value2")
+	if arg["key1"][0] != "value1" || arg["key2"][0] != "value2" {
+		t.Error("Invalid composed value parsing. key=value;key2=value2 should generate 2 keys")
+	}
+}
+
+func Test_multiKeyMultiValueArg_Set_WithEmptyValueShouldWork(t *testing.T) {
+	arg := make(multiKeyMultiValueArg)
+	err := arg.Set("")
+	if len(arg) != 0 || err != nil {
+		t.Error("multiKeyMultiValueArg must handle empty value")
+	}
+}
