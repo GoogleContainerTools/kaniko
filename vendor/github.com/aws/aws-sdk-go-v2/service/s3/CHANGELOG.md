@@ -1,3 +1,7 @@
+# v1.48.0 (2024-01-05)
+
+* **Feature**: Support smithy sigv4a trait for codegen.
+
 # v1.47.8 (2024-01-04)
 
 * **Dependency Update**: Updated to the latest SDK module versions
