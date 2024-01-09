@@ -616,7 +616,7 @@ func Test_stageBuilder_optimize(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cf := &v1.ConfigFile{}
-			snap := fakeSnapShotter{}
+			snap := &fakeSnapShotter{}
 			lc := &fakeLayerCache{retrieve: tc.retrieve}
 			sb := &stageBuilder{opts: tc.opts, cf: cf, snapshotter: snap, layerCache: lc,
 				args: dockerfile.NewBuildArgs([]string{})}
@@ -896,6 +896,7 @@ func Test_stageBuilder_build(t *testing.T) {
 		stage              config.KanikoStage
 		crossStageDeps     map[int][]string
 		mockGetFSFromImage func(root string, img v1.Image, extract util.ExtractFunction) ([]string, error)
+		shouldInitSnapshot bool
 	}
 
 	testCases := []testcase{
@@ -995,6 +996,15 @@ func Test_stageBuilder_build(t *testing.T) {
 				rootDir:           dir,
 			}
 		}(),
+		{
+			description: "use new run",
+			opts:        &config.KanikoOptions{RunV2: true},
+		},
+		{
+			description:        "single snapshot",
+			opts:               &config.KanikoOptions{SingleSnapshot: true},
+			shouldInitSnapshot: true,
+		},
 		{
 			description: "fake command cache disabled and key not in cache",
 			opts:        &config.KanikoOptions{Cache: false},
@@ -1437,7 +1447,7 @@ RUN foobar
 				}
 			}
 
-			snap := fakeSnapShotter{file: fileName}
+			snap := &fakeSnapShotter{file: fileName}
 			lc := tc.layerCache
 			if lc == nil {
 				lc = &fakeLayerCache{}
@@ -1473,6 +1483,11 @@ RUN foobar
 			err := sb.build()
 			if err != nil {
 				t.Errorf("Expected error to be nil but was %v", err)
+			}
+			if tc.shouldInitSnapshot && !snap.initialized {
+				t.Errorf("Snapshotter was not initialized but should have been")
+			} else if !tc.shouldInitSnapshot && snap.initialized {
+				t.Errorf("Snapshotter was initialized but should not have been")
 			}
 			assertCacheKeys(t, tc.expectedCacheKeys, lc.receivedKeys, "receive")
 			assertCacheKeys(t, tc.pushedCacheKeys, keys, "push")
