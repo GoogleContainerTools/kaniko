@@ -19,12 +19,11 @@ package buildcontext
 import (
 	"context"
 	"errors"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -45,8 +44,10 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 	}
 
 	// Get storage accountName for Azure Blob Storage
-	u, _ := url.Parse(b.context)
-	parts := azblob.NewBlobURLParts(*u)
+	parts, err := azblob.ParseURL(b.context)
+	if err != nil {
+		return parts.Host, err
+	}
 	accountName := strings.Split(parts.Host, ".")[0]
 
 	// Generate credential with accountName and accountKey
@@ -64,11 +65,13 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 	}
 
 	// Downloading context file from Azure Blob Storage
-	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	blobURL := azblob.NewBlobURL(*u, p)
+	client, err := azblob.NewClientWithSharedKeyCredential(b.context, credential, nil)
+	if err != nil {
+		return parts.Host, err
+	}
 	ctx := context.Background()
 
-	if err := azblob.DownloadBlobToFile(ctx, blobURL, 0, 0, file, azblob.DownloadFromBlobOptions{}); err != nil {
+	if _, err := client.DownloadFile(ctx, parts.ContainerName, parts.BlobName, file, nil); err != nil {
 		return parts.Host, err
 	}
 
