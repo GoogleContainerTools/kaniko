@@ -34,6 +34,7 @@ type fakeSnapShotter struct {
 }
 
 func (f fakeSnapShotter) Init() error { return nil }
+func (f fakeSnapShotter) SetZeroTimestamps(_ bool) { }
 func (f fakeSnapShotter) TakeSnapshotFS() (string, error) {
 	return f.tarPath, nil
 }

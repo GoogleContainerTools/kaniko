@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/docker/docker/pkg/archive"
@@ -37,8 +38,9 @@ import (
 
 // Tar knows how to write files to a tar file.
 type Tar struct {
-	hardlinks map[uint64]string
-	w         *tar.Writer
+	hardlinks       map[uint64]string
+	zeroTimestamps  bool
+	w               *tar.Writer
 }
 
 // NewTar will create an instance of Tar that can write files to the writer at f.
@@ -73,6 +75,11 @@ func CreateTarballOfDirectory(pathToDir string, f io.Writer) error {
 // Close will close any open streams used by Tar.
 func (t *Tar) Close() {
 	t.w.Close()
+}
+
+// SetZeroTimestamps changes whether AddFileToTar will zero timestamps in the archive.
+func (t *Tar) SetZeroTimestamps(zeroTimestamps bool) {
+	t.zeroTimestamps = zeroTimestamps
 }
 
 // AddFileToTar adds the file at path p to the tar
@@ -117,8 +124,20 @@ func (t *Tar) AddFileToTar(p string) error {
 	// this makes this layer unnecessarily differ from a cached layer which does contain this information
 	hdr.Uname = ""
 	hdr.Gname = ""
-	// use PAX format to preserve accurate mtime (match Docker behavior)
-	hdr.Format = tar.FormatPAX
+
+	if t.zeroTimestamps {
+		// clear atime, ctime, and mtime
+		epoch := time.Unix(0, 0)
+		hdr.AccessTime = epoch
+		hdr.ChangeTime = epoch
+		hdr.ModTime = epoch
+	} else {
+		// use PAX format to preserve accurate mtime (match Docker behavior)
+		// skip this with --zero-timestamps to match behavior of --reproducible
+		// (see google/go-containerregistry#1550)
+		hdr.Format = tar.FormatPAX
+	}
+
 
 	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {

@@ -20,10 +20,12 @@ import (
 	"archive/tar"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -124,6 +126,86 @@ func TestSnapshotFSIsReproducible(t *testing.T) {
 	}
 	if !sort.StringsAreSorted(filesInTar) {
 		t.Fatalf("Expected the file in the tar archive were sorted, actual list was not sorted: %v", filesInTar)
+	}
+}
+
+func TestSnapshotFSZeroTimestamps(t *testing.T) {
+	testDir, snapshotter, cleanup, err := setUpTest(t)
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	epoch := time.Unix(0, 0)
+
+	// Create some initial files
+	initialFiles := map[string]string{
+		"foo":     "newbaz1",
+		"bar/bat": "baz",
+	}
+	if err := testutil.SetupFiles(testDir, initialFiles); err != nil {
+		t.Fatalf("Error setting up fs: %s", err)
+	}
+
+	// Take an initial snapshot
+	tarPath, err := snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+
+	// Modification timestamps should be valid (non-zero)
+	tarHeaders, err := listHeadersInTar(tarPath)
+	if err != nil {
+		t.Fatalf("Error parsing layer: %s", err)
+	}
+	for _, hdr := range tarHeaders {
+		if hdr.ModTime.Equal(epoch) {
+			t.Fatal("Timestamp was zero with zeroTimestamps disabled")
+		}
+	}
+
+	// Create some new files
+	newFiles := map[string]string{
+		"foo2":   "electric foogaloo",
+		"barbaz": "quux",
+	}
+	if err := testutil.SetupFiles(testDir, newFiles); err != nil {
+		t.Fatalf("Error setting up fs: %s", err)
+	}
+
+	// Take another snapshot with zeroed timestamps
+	snapshotter.SetZeroTimestamps(true)
+	tarPath, err = snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+
+	// All timestamps should be zero
+	tarHeaders, err = listHeadersInTar(tarPath)
+	if err != nil {
+		t.Fatalf("Error parsing layer: %s", err)
+	}
+	for _, hdr := range tarHeaders {
+		_, inNewFiles := newFiles[path.Base(hdr.Name)]
+		if (hdr.Typeflag == tar.TypeReg) && !inNewFiles {
+			t.Fatalf("Wrong file in layer: %s", hdr.Name)
+		}
+		if !hdr.ModTime.Equal(epoch) {
+			t.Fatal("Timestamp was not zero with zeroTimestamps enabled")
+		}
+	}
+
+	// Make sure the snapshotter doesn't think files with zeroed timestamps are changed
+	tarPath, err = snapshotter.TakeSnapshotFS()
+	if err != nil {
+		t.Fatalf("Error taking snapshot of fs: %s", err)
+	}
+	tarHeaders, err = listHeadersInTar(tarPath)
+	if err != nil {
+		t.Fatalf("Error parsing layer: %s", err)
+	}
+	if len(tarHeaders) != 0 {
+		t.Fatal("Snapshotter created an extra layer")
 	}
 }
 
@@ -690,4 +772,40 @@ func listFilesInTar(path string) ([]string, error) {
 		files = append(files, hdr.Name)
 	}
 	return files, nil
+}
+
+func listHeadersInTar(path string) ([]tar.Header, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(f)
+	var headers []tar.Header
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		headers = append(headers, tar.Header {
+			Typeflag:       hdr.Typeflag,
+			Name:           hdr.Name,
+			Linkname:       hdr.Linkname,
+			Size:           hdr.Size,
+			Mode:           hdr.Mode,
+			Uid:            hdr.Uid,
+			Gid:            hdr.Gid,
+			Uname:          hdr.Uname,
+			Gname:          hdr.Gname,
+			ModTime:        hdr.ModTime,
+			AccessTime:     hdr.AccessTime,
+			ChangeTime:     hdr.ChangeTime,
+			Devmajor:       hdr.Devmajor,
+			Devminor:       hdr.Devminor,
+			Format:         hdr.Format,
+		})
+	}
+	return headers, nil
 }
