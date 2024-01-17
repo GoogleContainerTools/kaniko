@@ -1,3 +1,48 @@
+# v1.20.0 Release 2024-01-17
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.20.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.20.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.20.0-slim
+```
+
+* chore(deps): bump golang.org/x/oauth2 from 0.15.0 to 0.16.0 [#2948](https://github.com/GoogleContainerTools/kaniko/pull/2948)
+* chore(deps): bump google-github-actions/auth from 2.0.0 to 2.0.1 [#2947](https://github.com/GoogleContainerTools/kaniko/pull/2947)
+* chore(deps): bump golang.org/x/sync from 0.5.0 to 0.6.0 [#2950](https://github.com/GoogleContainerTools/kaniko/pull/2950)
+* chore(deps): bump github.com/containerd/containerd from 1.7.11 to 1.7.12 [#2951](https://github.com/GoogleContainerTools/kaniko/pull/2951)
+* Prevent extra snapshot with --use-new-run [#2943](https://github.com/GoogleContainerTools/kaniko/pull/2943)
+* replace github.com/Azure/azure-storage-blob-go => github.com/Azure/azure-sdk-for-go/sdk/storage/azblob [#2945](https://github.com/GoogleContainerTools/kaniko/pull/2945)
+* Fixed wrong example in README.md [#2931](https://github.com/GoogleContainerTools/kaniko/pull/2931)
+* chore(deps): bump golang.org/x/sys from 0.15.0 to 0.16.0 [#2936](https://github.com/GoogleContainerTools/kaniko/pull/2936)
+* chore(deps): bump google.golang.org/api from 0.154.0 to 0.155.0 [#2937](https://github.com/GoogleContainerTools/kaniko/pull/2937)
+* chore(deps): bump github.com/cloudflare/circl from 1.3.3 to 1.3.7 [#2942](https://github.com/GoogleContainerTools/kaniko/pull/2942)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.15.9 to 1.15.11 [#2939](https://github.com/GoogleContainerTools/kaniko/pull/2939)
+* chore(deps): bump AdityaGarg8/remove-unwanted-software from 1 to 2 [#2940](https://github.com/GoogleContainerTools/kaniko/pull/2940)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.47.7 to 1.47.8 [#2932](https://github.com/GoogleContainerTools/kaniko/pull/2932)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.26.2 to 1.26.3 [#2933](https://github.com/GoogleContainerTools/kaniko/pull/2933)
+* chore(deps): bump github.com/google/go-containerregistry from 0.15.2 to 0.17.0 [#2924](https://github.com/GoogleContainerTools/kaniko/pull/2924)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.15.7 to 1.15.9 [#2926](https://github.com/GoogleContainerTools/kaniko/pull/2926)
+* chore(deps): bump google-github-actions/setup-gcloud from 2.0.0 to 2.0.1 [#2927](https://github.com/GoogleContainerTools/kaniko/pull/2927)
+
+
+Huge thank you for this release towards our contributors: 
+- Asher
+- Bob Du
+- dependabot[bot]
+- Maximilian Hippler
+
+
 # v1.19.2 Release 2023-12-19
 The executor images in this release are:
 ```
