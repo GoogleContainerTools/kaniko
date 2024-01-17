@@ -92,7 +92,8 @@ gcr.io/kaniko-project/executor:warmer-vX.Y.Z
 ```
 You could verify if the images are published using the `docker pull` command
 ```
-docker pull gcr.io/kaniko-project/executor:warmer-vX.Y.Z
+docker pull gcr.io/kaniko-project/executor:vX.Y.Z
+docker pull gcr.io/kaniko-project/warmer:vX.Y.Z
 ```
 In case the images are still not published, ping one of the kaniko maintainers and they will provide the cloud build trigger logs.
 You can also request read access to the Google `kaniko-project`.
