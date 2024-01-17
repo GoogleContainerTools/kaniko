@@ -29,15 +29,19 @@ import (
 )
 
 type fakeSnapShotter struct {
-	file    string
-	tarPath string
+	file        string
+	tarPath     string
+	initialized bool
 }
 
-func (f fakeSnapShotter) Init() error { return nil }
-func (f fakeSnapShotter) TakeSnapshotFS() (string, error) {
+func (f *fakeSnapShotter) Init() error {
+	f.initialized = true
+	return nil
+}
+func (f *fakeSnapShotter) TakeSnapshotFS() (string, error) {
 	return f.tarPath, nil
 }
-func (f fakeSnapShotter) TakeSnapshot(_ []string, _, _ bool) (string, error) {
+func (f *fakeSnapShotter) TakeSnapshot(_ []string, _, _ bool) (string, error) {
 	return f.tarPath, nil
 }
 

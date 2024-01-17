@@ -344,7 +344,7 @@ func (s *stageBuilder) build() error {
 	}
 
 	initSnapshotTaken := false
-	if s.opts.SingleSnapshot || s.opts.RunV2 {
+	if s.opts.SingleSnapshot {
 		if err := s.initSnapshotWithTimings(); err != nil {
 			return err
 		}
