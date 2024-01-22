@@ -19,7 +19,7 @@ standard Kubernetes cluster.
 
 kaniko is meant to be run as an image: `gcr.io/kaniko-project/executor`. We do
 **not** recommend running the kaniko executor binary in another image, as it
-might not work.
+might not work as you expect - see [Known Issues](#known-issues).
 
 We'd love to hear from you! Join us on
 [#kaniko Kubernetes Slack](https://kubernetes.slack.com/messages/CQDCHGX7Y/)
@@ -150,9 +150,12 @@ image (if there are any) and update image metadata.
 
 - kaniko does not support building Windows containers.
 - Running kaniko in any Docker image other than the official kaniko image is not
-  supported (ie YMMV).
+  supported due to implementation details.
   - This includes copying the kaniko executables from the official image into
-    another image.
+    another image (e.g. a Jenkins CI agent).
+  - In particular, it cannot use chroot or bind-mount because its container must
+    not require privilege, so it unpacks directly into its own container root
+    and may overwrite anything already there.
 - kaniko does not support the v1 Registry API
   ([Registry v1 API Deprecation](https://engineering.docker.com/2019/03/registry-v1-api-deprecation/))
 
