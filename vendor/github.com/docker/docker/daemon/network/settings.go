@@ -15,16 +15,15 @@ import (
 type Settings struct {
 	Bridge                 string
 	SandboxID              string
+	SandboxKey             string
 	HairpinMode            bool
 	LinkLocalIPv6Address   string
 	LinkLocalIPv6PrefixLen int
 	Networks               map[string]*EndpointSettings
 	Service                *clustertypes.ServiceConfig
 	Ports                  nat.PortMap
-	SandboxKey             string
 	SecondaryIPAddresses   []networktypes.Address
 	SecondaryIPv6Addresses []networktypes.Address
-	IsAnonymousEndpoint    bool
 	HasSwarmEndpoint       bool
 }
 
@@ -34,6 +33,8 @@ type Settings struct {
 type EndpointSettings struct {
 	*networktypes.EndpointSettings
 	IPAMOperational bool
+	// MACOperational is false if EndpointSettings.MacAddress is a user-configured value.
+	MACOperational bool
 }
 
 // AttachmentStore stores the load balancer IP address for a network id.

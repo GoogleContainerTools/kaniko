@@ -17,13 +17,13 @@ import (
 	"github.com/docker/docker/builder/remotecontext"
 	"github.com/docker/docker/builder/remotecontext/urlutil"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/containerfs"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/longpath"
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/system"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/sys/symlink"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
@@ -45,7 +45,7 @@ type copyInfo struct {
 }
 
 func (c copyInfo) fullPath() (string, error) {
-	return containerfs.ResolveScopedPath(c.root, c.path)
+	return symlink.FollowSymlinkInScope(filepath.Join(c.root, c.path), c.root)
 }
 
 func newCopyInfoFromSource(source builder.Source, path string, hash string) copyInfo {
@@ -406,7 +406,7 @@ func downloadSource(output io.Writer, stdout io.Writer, srcURL string) (remote b
 		tmpFileName = unnamedFilename
 	}
 	tmpFileName = filepath.Join(tmpDir, tmpFileName)
-	tmpFile, err := os.OpenFile(tmpFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	tmpFile, err := os.OpenFile(tmpFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return
 	}
@@ -510,11 +510,11 @@ func copyFile(archiver *archive.Archiver, source, dest string, identity *idtools
 		// modified for use on Windows to handle volume GUID paths. These paths
 		// are of the form \\?\Volume{<GUID>}\<path>. An example would be:
 		// \\?\Volume{dae8d3ac-b9a1-11e9-88eb-e8554b2ba1db}\bin\busybox.exe
-		if err := system.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		if err := system.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return err
 		}
 	} else {
-		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest), 0755, *identity); err != nil {
+		if err := idtools.MkdirAllAndChownNew(filepath.Dir(dest), 0o755, *identity); err != nil {
 			return errors.Wrapf(err, "failed to create new directory")
 		}
 	}
