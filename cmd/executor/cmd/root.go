@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +70,15 @@ func validateFlags() {
 	// Allow setting --registry-mirror using an environment variable.
 	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
 		opts.RegistryMirrors.Set(val)
+	}
+
+	// Allow setting --no-push using an environment variable.
+	if val, ok := os.LookupEnv("KANIKO_NO_PUSH"); ok {
+		valBoolean, err := strconv.ParseBool(val)
+		if err != nil {
+			errors.New("invalid value (true/false) for KANIKO_NO_PUSH environment variable")
+		}
+		opts.NoPush = valBoolean
 	}
 
 	// Allow setting --registry-maps using an environment variable.
