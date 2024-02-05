@@ -117,7 +117,7 @@ func Test_RetrieveRemoteImage_skipFallback(t *testing.T) {
 	registryMirror := "some-registry"
 
 	opts := config.RegistryOptions{
-		RegistryMirrors:             []string{registryMirror},
+		RegistryMaps:                map[string][]string{name.DefaultRegistry: {registryMirror}},
 		SkipDefaultRegistryFallback: false,
 	}
 
