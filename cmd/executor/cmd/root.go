@@ -34,6 +34,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/pkg/util/proc"
 	"github.com/containerd/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -68,6 +69,21 @@ func validateFlags() {
 	// Allow setting --registry-mirror using an environment variable.
 	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MIRROR"); ok {
 		opts.RegistryMirrors.Set(val)
+	}
+
+	// Allow setting --registry-maps using an environment variable.
+	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MAP"); ok {
+		opts.RegistryMaps.Set(val)
+	}
+
+	for _, target := range opts.RegistryMirrors {
+		opts.RegistryMaps.Set(fmt.Sprintf("%s=%s", name.DefaultRegistry, target))
+	}
+
+	if len(opts.RegistryMaps) > 0 {
+		for src, dsts := range opts.RegistryMaps {
+			logrus.Debugf("registry-map remaps %s to %s.", src, strings.Join(dsts, ", "))
+		}
 	}
 
 	// Default the custom platform flag to our current platform, and validate it.
