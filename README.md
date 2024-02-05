@@ -987,6 +987,8 @@ You can mention several remap in a single flag too, separated by semi-colon.
 If an image is not found on the first mirror, Kaniko will try
 the next mirror(s), and at the end fallback on the original registry.
 
+Registry maps can also be defined through `KANIKO_REGISTRY_MAP` environment variable.
+
 Expected format is `original-registry=remapped-registry[;another-reg=another-remap[;...]]` for example.
 
 Note that you can't specify a URL with scheme for this flag. Some valid options
@@ -1004,6 +1006,8 @@ Set this flag if you want to use a registry mirror instead of the default
 `index.docker.io`. You can use this flag more than once, if you want to set
 multiple mirrors. If an image is not found on the first mirror, Kaniko will try
 the next mirror(s), and at the end fallback on the default registry.
+
+Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment variable.
 
 Expected format is `mirror.gcr.io` for example.
 
