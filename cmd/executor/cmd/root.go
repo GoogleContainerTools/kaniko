@@ -85,6 +85,10 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 
+			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
+				return err
+			}
+
 			validateFlags()
 
 			// Command line flag takes precedence over the KANIKO_DIR environment variable.
@@ -98,10 +102,6 @@ var RootCmd = &cobra.Command{
 			}
 
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
-
-			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
-				return err
-			}
 
 			if !opts.NoPush && len(opts.Destinations) == 0 {
 				return errors.New("you must provide --destination, or use --no-push")
