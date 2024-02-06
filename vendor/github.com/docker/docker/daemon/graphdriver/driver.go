@@ -1,17 +1,18 @@
 package graphdriver // import "github.com/docker/docker/daemon/graphdriver"
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/containerd/log"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/plugingetter"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/vbatts/tar-split/tar/storage"
 )
 
@@ -23,10 +24,8 @@ const (
 	FsMagicUnsupported = FsMagic(0x00000000)
 )
 
-var (
-	// All registered drivers
-	drivers map[string]InitFunc
-)
+// All registered drivers
+var drivers map[string]InitFunc
 
 // CreateOpts contains optional arguments for Create() and CreateReadWrite()
 // methods.
@@ -168,7 +167,7 @@ func GetDriver(name string, pg plugingetter.PluginGetter, config Options) (Drive
 	if err == nil {
 		return pluginDriver, nil
 	}
-	logrus.WithError(err).WithField("driver", name).WithField("home-dir", config.Root).Error("Failed to GetDriver graph")
+	log.G(context.TODO()).WithError(err).WithField("driver", name).WithField("home-dir", config.Root).Error("Failed to GetDriver graph")
 	return nil, ErrNotSupported
 }
 
@@ -177,7 +176,7 @@ func getBuiltinDriver(name, home string, options []string, idMap idtools.Identit
 	if initFunc, exists := drivers[name]; exists {
 		return initFunc(filepath.Join(home, name), options, idMap)
 	}
-	logrus.Errorf("Failed to built-in GetDriver graph %s %s", name, home)
+	log.G(context.TODO()).Errorf("Failed to built-in GetDriver graph %s %s", name, home)
 	return nil, ErrNotSupported
 }
 
@@ -191,13 +190,11 @@ type Options struct {
 
 // New creates the driver and initializes it at the specified root.
 func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, error) {
+	ctx := context.TODO()
 	if name != "" {
-		logrus.Infof("[graphdriver] trying configured driver: %s", name)
+		log.G(ctx).Infof("[graphdriver] trying configured driver: %s", name)
 		if err := checkRemoved(name); err != nil {
 			return nil, err
-		}
-		if isDeprecated(name) {
-			logrus.Warnf("[graphdriver] WARNING: the %s storage-driver is deprecated and will be removed in a future release; visit https://docs.docker.com/go/storage-driver/ for more information", name)
 		}
 		return GetDriver(name, pg, config)
 	}
@@ -205,7 +202,7 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 	// Guess for prior driver
 	driversMap := scanPriorDrivers(config.Root)
 	priorityList := strings.Split(priority, ",")
-	logrus.Debugf("[graphdriver] priority list: %v", priorityList)
+	log.G(ctx).Debugf("[graphdriver] priority list: %v", priorityList)
 	for _, name := range priorityList {
 		if _, prior := driversMap[name]; prior {
 			// of the state found from prior drivers, check in order of our priority
@@ -216,12 +213,7 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 				// state, and now it is no longer supported/prereq/compatible, so
 				// something changed and needs attention. Otherwise the daemon's
 				// images would just "disappear".
-				logrus.Errorf("[graphdriver] prior storage driver %s failed: %s", name, err)
-				return nil, err
-			}
-			if isDeprecated(name) {
-				err = errors.Errorf("prior storage driver %s is deprecated and will be removed in a future release; update the the daemon configuration and explicitly choose this storage driver to continue using it; visit https://docs.docker.com/go/storage-driver/ for more information", name)
-				logrus.Errorf("[graphdriver] %v", err)
+				log.G(ctx).Errorf("[graphdriver] prior storage driver %s failed: %s", name, err)
 				return nil, err
 			}
 
@@ -234,11 +226,11 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 				}
 
 				err = errors.Errorf("%s contains several valid graphdrivers: %s; cleanup or explicitly choose storage driver (-s <DRIVER>)", config.Root, strings.Join(driversSlice, ", "))
-				logrus.Errorf("[graphdriver] %v", err)
+				log.G(ctx).Errorf("[graphdriver] %v", err)
 				return nil, err
 			}
 
-			logrus.Infof("[graphdriver] using prior storage driver: %s", name)
+			log.G(ctx).Infof("[graphdriver] using prior storage driver: %s", name)
 			return driver, nil
 		}
 	}
@@ -246,11 +238,6 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 	// If no prior state was found, continue with automatic selection, and pick
 	// the first supported, non-deprecated, storage driver (in order of priorityList).
 	for _, name := range priorityList {
-		if isDeprecated(name) {
-			// Deprecated storage-drivers are skipped in automatic selection, but
-			// can be selected through configuration.
-			continue
-		}
 		driver, err := getBuiltinDriver(name, config.Root, config.DriverOptions, config.IDMap)
 		if err != nil {
 			if IsDriverNotSupported(err) {
@@ -263,11 +250,6 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 
 	// Check all registered drivers if no priority driver is found
 	for name, initFunc := range drivers {
-		if isDeprecated(name) {
-			// Deprecated storage-drivers are skipped in automatic selection, but
-			// can be selected through configuration.
-			continue
-		}
 		driver, err := initFunc(filepath.Join(config.Root, name), config.DriverOptions, config.IDMap)
 		if err != nil {
 			if IsDriverNotSupported(err) {
@@ -314,20 +296,10 @@ func isEmptyDir(name string) bool {
 	return false
 }
 
-// isDeprecated checks if a storage-driver is marked "deprecated"
-func isDeprecated(name string) bool {
-	switch name {
-	// NOTE: when deprecating a driver, update daemon.fillDriverInfo() accordingly
-	case "devicemapper":
-		return true
-	}
-	return false
-}
-
 // checkRemoved checks if a storage-driver has been deprecated (and removed)
 func checkRemoved(name string) error {
 	switch name {
-	case "aufs", "overlay":
+	case "aufs", "devicemapper", "overlay":
 		return NotSupportedError(fmt.Sprintf("[graphdriver] ERROR: the %s storage-driver has been deprecated and removed; visit https://docs.docker.com/go/storage-driver/ for more information", name))
 	}
 	return nil
