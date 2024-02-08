@@ -235,7 +235,12 @@ func UnpackLocalTarArchive(path, dest string) ([]string, error) {
 		}
 		defer file.Close()
 		if compressionLevel == archive.Gzip {
-			return nil, UnpackCompressedTar(path, dest)
+			gzr, err := gzip.NewReader(file)
+			if err != nil {
+				return nil, err
+			}
+			defer gzr.Close()
+			return UnTar(gzr, dest)
 		} else if compressionLevel == archive.Bzip2 {
 			bzr := bzip2.NewReader(file)
 			return UnTar(bzr, dest)
