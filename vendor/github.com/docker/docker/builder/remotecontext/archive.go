@@ -8,9 +8,10 @@ import (
 	"github.com/docker/docker/builder"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/chrootarchive"
-	"github.com/docker/docker/pkg/containerfs"
 	"github.com/docker/docker/pkg/longpath"
+	"github.com/docker/docker/pkg/system"
 	"github.com/docker/docker/pkg/tarsum"
+	"github.com/moby/sys/symlink"
 	"github.com/pkg/errors"
 )
 
@@ -24,9 +25,11 @@ func (c *archiveContext) Close() error {
 }
 
 func convertPathError(err error, cleanpath string) error {
-	if err, ok := err.(*os.PathError); ok {
+	switch err := err.(type) {
+	case *os.PathError:
 		err.Path = cleanpath
-		return err
+	case *system.XattrError:
+		err.Path = cleanpath
 	}
 	return err
 }
@@ -117,7 +120,7 @@ func (c *archiveContext) Hash(path string) (string, error) {
 
 func normalize(path string, root string) (cleanPath, fullPath string, err error) {
 	cleanPath = filepath.Clean(string(filepath.Separator) + path)[1:]
-	fullPath, err = containerfs.ResolveScopedPath(root, path)
+	fullPath, err = symlink.FollowSymlinkInScope(filepath.Join(root, path), root)
 	if err != nil {
 		return "", "", errors.Wrapf(err, "forbidden path outside the build context: %s (%s)", path, cleanPath)
 	}

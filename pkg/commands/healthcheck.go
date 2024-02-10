@@ -18,9 +18,20 @@ package commands
 
 import (
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
+	"github.com/docker/docker/api/types/container"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
+
+func convertDockerHealthConfigToContainerRegistryFormat(dockerHealthcheck container.HealthConfig) v1.HealthConfig {
+	return v1.HealthConfig{
+		Test:        dockerHealthcheck.Test,
+		Interval:    dockerHealthcheck.Interval,
+		Timeout:     dockerHealthcheck.Timeout,
+		StartPeriod: dockerHealthcheck.StartPeriod,
+		Retries:     dockerHealthcheck.Retries,
+	}
+}
 
 type HealthCheckCommand struct {
 	BaseCommand
@@ -29,7 +40,7 @@ type HealthCheckCommand struct {
 
 // ExecuteCommand handles command processing similar to CMD and RUN,
 func (h *HealthCheckCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
-	check := v1.HealthConfig(*h.cmd.Health)
+	check := convertDockerHealthConfigToContainerRegistryFormat(*h.cmd.Health)
 	config.Healthcheck = &check
 
 	return nil

@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/log"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/backend"
 	"github.com/docker/docker/api/types/container"
@@ -21,7 +23,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 func (b *Builder) getArchiver() *archive.Archiver {
@@ -122,7 +123,7 @@ func (b *Builder) performCopy(ctx context.Context, req dispatchRequest, inst cop
 
 	var chownComment string
 	if inst.chownStr != "" {
-		chownComment = fmt.Sprintf("--chown=%s", inst.chownStr)
+		chownComment = fmt.Sprintf("--chown=%s ", inst.chownStr)
 	}
 	commentStr := fmt.Sprintf("%s %s%s in %s ", inst.cmdName, chownComment, srcHash, inst.dest)
 
@@ -328,7 +329,7 @@ func getShell(c *container.Config, os string) []string {
 }
 
 func (b *Builder) probeCache(dispatchState *dispatchState, runConfig *container.Config) (bool, error) {
-	cachedID, err := b.imageProber.Probe(dispatchState.imageID, runConfig)
+	cachedID, err := b.imageProber.Probe(dispatchState.imageID, runConfig, b.getPlatform(dispatchState))
 	if cachedID == "" || err != nil {
 		return false, err
 	}
@@ -348,7 +349,7 @@ func (b *Builder) probeAndCreate(ctx context.Context, dispatchState *dispatchSta
 }
 
 func (b *Builder) create(ctx context.Context, runConfig *container.Config) (string, error) {
-	logrus.Debugf("[BUILDER] Command to be executed: %v", runConfig.Cmd)
+	log.G(ctx).Debugf("[BUILDER] Command to be executed: %v", runConfig.Cmd)
 
 	hostConfig := hostConfigFromOptions(b.options)
 	container, err := b.containerManager.Create(ctx, runConfig, hostConfig)
@@ -387,4 +388,18 @@ func hostConfigFromOptions(options *types.ImageBuildOptions) *container.HostConf
 		ExtraHosts: options.ExtraHosts,
 	}
 	return hc
+}
+
+func (b *Builder) getPlatform(state *dispatchState) ocispec.Platform {
+	// May be nil if not explicitly set in API/dockerfile
+	out := platforms.DefaultSpec()
+	if b.platform != nil {
+		out = *b.platform
+	}
+
+	if state.operatingSystem != "" {
+		out.OS = state.operatingSystem
+	}
+
+	return out
 }

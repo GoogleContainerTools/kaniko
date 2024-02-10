@@ -1,10 +1,11 @@
 //go:build linux || freebsd || openbsd
-// +build linux freebsd openbsd
 
 package kernel // import "github.com/docker/docker/pkg/parsers/kernel"
 
 import (
-	"github.com/sirupsen/logrus"
+	"context"
+
+	"github.com/containerd/log"
 	"golang.org/x/sys/unix"
 )
 
@@ -23,7 +24,7 @@ func GetKernelVersion() (*VersionInfo, error) {
 // the given version.
 func CheckKernelVersion(k, major, minor int) bool {
 	if v, err := GetKernelVersion(); err != nil {
-		logrus.Warnf("error getting kernel version: %s", err)
+		log.G(context.TODO()).Warnf("error getting kernel version: %s", err)
 	} else {
 		if CompareKernelVersion(*v, VersionInfo{Kernel: k, Major: major, Minor: minor}) < 0 {
 			return false
