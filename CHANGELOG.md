@@ -1,3 +1,49 @@
+# v1.20.1 Release 2024-02-10
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.20.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.20.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.20.1-slim
+```
+
+* chore(deps): bump github.com/moby/buildkit from 0.11.6 to 0.12.5, github.com/docker/docker from 24.0.7+incompatible to 25.0.2+incompatible, and other deps [#2995](https://github.com/GoogleContainerTools/kaniko/pull/2995)
+* chore(deps): bump google.golang.org/api from 0.157.0 to 0.161.0 [#2987](https://github.com/GoogleContainerTools/kaniko/pull/2987)
+* chore(deps): bump github.com/google/go-containerregistry from 0.18.0 to 0.19.0 [#2988](https://github.com/GoogleContainerTools/kaniko/pull/2988)
+* chore(deps): bump sigstore/cosign-installer from 3.3.0 to 3.4.0 [#2989](https://github.com/GoogleContainerTools/kaniko/pull/2989)
+* chore(deps): bump github.com/opencontainers/runc from 1.1.5 to 1.1.12 [#2981](https://github.com/GoogleContainerTools/kaniko/pull/2981)
+* README change only: Clarify why merging into another container is a bad idea [#2965](https://github.com/GoogleContainerTools/kaniko/pull/2965)
+* chore(deps): bump google-github-actions/auth from 2.0.1 to 2.1.0 [#2972](https://github.com/GoogleContainerTools/kaniko/pull/2972)
+* chore(deps): bump google-github-actions/setup-gcloud from 2.0.1 to 2.1.0 [#2973](https://github.com/GoogleContainerTools/kaniko/pull/2973)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.15.14 to 1.15.15 [#2975](https://github.com/GoogleContainerTools/kaniko/pull/2975)
+* chore(deps): bump github.com/google/go-containerregistry from 0.17.0 to 0.18.0 [#2976](https://github.com/GoogleContainerTools/kaniko/pull/2976)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.15.11 to 1.15.14 [#2966](https://github.com/GoogleContainerTools/kaniko/pull/2966)
+* chore(deps): bump google.golang.org/api from 0.155.0 to 0.157.0 [#2960](https://github.com/GoogleContainerTools/kaniko/pull/2960)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.26.3 to 1.26.5 [#2963](https://github.com/GoogleContainerTools/kaniko/pull/2963)
+* chore(deps): update go-git/go-git, ProtonMail/go-cryto, and cloudflare/circl deps [#2959](https://github.com/GoogleContainerTools/kaniko/pull/2959)
+* Update clarification for release.md [#2957](https://github.com/GoogleContainerTools/kaniko/pull/2957)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- Asher
+- Bob Du
+- dependabot[bot]
+- JeromeJu
+- Maximilian Hippler
+- timbavtbc
+
+
 # v1.20.0 Release 2024-01-17
 The executor images in this release are:
 ```
