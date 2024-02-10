@@ -22,7 +22,6 @@ import (
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/docker/docker/pkg/system"
 	"github.com/docker/go-connections/nat"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
@@ -331,8 +330,8 @@ func dispatchWorkdir(ctx context.Context, d dispatchRequest, c *instructions.Wor
 // RUN echo hi          # cmd /S /C echo hi   (Windows)
 // RUN [ "echo", "hi" ] # echo hi
 func dispatchRun(ctx context.Context, d dispatchRequest, c *instructions.RunCommand) error {
-	if !system.IsOSSupported(d.state.operatingSystem) {
-		return system.ErrNotSupportedOperatingSystem
+	if err := image.CheckOS(d.state.operatingSystem); err != nil {
+		return err
 	}
 
 	if len(c.FlagsUsed) > 0 {
@@ -349,9 +348,16 @@ func dispatchRun(ctx context.Context, d dispatchRequest, c *instructions.RunComm
 		saveCmd = prependEnvOnCmd(d.state.buildArgs, buildArgs, cmdFromArgs)
 	}
 
+	cacheArgsEscaped := argsEscaped
+	// ArgsEscaped is not persisted in the committed image on Windows.
+	// Use the original from previous build steps for cache probing.
+	if d.state.operatingSystem == "windows" {
+		cacheArgsEscaped = stateRunConfig.ArgsEscaped
+	}
+
 	runConfigForCacheProbe := copyRunConfig(stateRunConfig,
 		withCmd(saveCmd),
-		withArgsEscaped(argsEscaped),
+		withArgsEscaped(cacheArgsEscaped),
 		withEntrypointOverride(saveCmd, nil))
 	if hit, err := d.builder.probeCache(d.state, runConfigForCacheProbe); err != nil || hit {
 		return err

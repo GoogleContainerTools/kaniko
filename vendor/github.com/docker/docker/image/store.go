@@ -1,17 +1,18 @@
 package image // import "github.com/docker/docker/image"
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/containerd/log"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/layer"
-	"github.com/docker/docker/pkg/system"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/go-digest/digestset"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // Store is an interface for creating and accessing images
@@ -24,6 +25,8 @@ type Store interface {
 	GetParent(id ID) (ID, error)
 	SetLastUpdated(id ID) error
 	GetLastUpdated(id ID) (time.Time, error)
+	SetBuiltLocally(id ID) error
+	IsBuiltLocally(id ID) (bool, error)
 	Children(id ID) []ID
 	Map() map[ID]*Image
 	Heads() map[ID]*Image
@@ -68,28 +71,28 @@ func NewImageStore(fs StoreBackend, lss LayerGetReleaser) (Store, error) {
 
 func (is *store) restore() error {
 	// As the code below is run when restoring all images (which can be "many"),
-	// constructing the "logrus.WithFields" is deliberately not "DRY", as the
+	// constructing the "log.G(ctx).WithFields" is deliberately not "DRY", as the
 	// logger is only used for error-cases, and we don't want to do allocations
 	// if we don't need it. The "f" type alias is here is just for convenience,
 	// and to make the code _slightly_ more DRY. See the discussion on GitHub;
 	// https://github.com/moby/moby/pull/44426#discussion_r1059519071
-	type f = logrus.Fields
+	type f = log.Fields
 	err := is.fs.Walk(func(dgst digest.Digest) error {
 		img, err := is.Get(ID(dgst))
 		if err != nil {
-			logrus.WithFields(f{"digest": dgst, "err": err}).Error("invalid image")
+			log.G(context.TODO()).WithFields(f{"digest": dgst, "err": err}).Error("invalid image")
 			return nil
 		}
 		var l layer.Layer
 		if chainID := img.RootFS.ChainID(); chainID != "" {
-			if !system.IsOSSupported(img.OperatingSystem()) {
-				logrus.WithFields(f{"chainID": chainID, "os": img.OperatingSystem()}).Error("not restoring image with unsupported operating system")
+			if err := CheckOS(img.OperatingSystem()); err != nil {
+				log.G(context.TODO()).WithFields(f{"chainID": chainID, "os": img.OperatingSystem()}).Error("not restoring image with unsupported operating system")
 				return nil
 			}
 			l, err = is.lss.Get(chainID)
 			if err != nil {
 				if errors.Is(err, layer.ErrLayerDoesNotExist) {
-					logrus.WithFields(f{"chainID": chainID, "os": img.OperatingSystem(), "err": err}).Error("not restoring image")
+					log.G(context.TODO()).WithFields(f{"chainID": chainID, "os": img.OperatingSystem(), "err": err}).Error("not restoring image")
 					return nil
 				}
 				return err
@@ -163,8 +166,8 @@ func (is *store) Create(config []byte) (ID, error) {
 
 	var l layer.Layer
 	if layerID != "" {
-		if !system.IsOSSupported(img.OperatingSystem()) {
-			return "", errdefs.InvalidParameter(system.ErrNotSupportedOperatingSystem)
+		if err := CheckOS(img.OperatingSystem()); err != nil {
+			return "", err
 		}
 		l, err = is.lss.Get(layerID)
 		if err != nil {
@@ -246,7 +249,7 @@ func (is *store) Delete(id ID) ([]layer.Metadata, error) {
 	}
 
 	if err := is.digestSet.Remove(id.Digest()); err != nil {
-		logrus.Errorf("error removing %s from digest set: %q", id, err)
+		log.G(context.TODO()).Errorf("error removing %s from digest set: %q", id, err)
 	}
 	delete(is.images, id)
 	is.fs.Delete(id.Digest())
@@ -295,6 +298,23 @@ func (is *store) GetLastUpdated(id ID) (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, string(bytes))
 }
 
+// SetBuiltLocally sets whether image can be used as a builder cache
+func (is *store) SetBuiltLocally(id ID) error {
+	return is.fs.SetMetadata(id.Digest(), "builtLocally", []byte{1})
+}
+
+// IsBuiltLocally returns whether image can be used as a builder cache
+func (is *store) IsBuiltLocally(id ID) (bool, error) {
+	bytes, err := is.fs.GetMetadata(id.Digest(), "builtLocally")
+	if err != nil || len(bytes) == 0 {
+		if errors.Is(err, os.ErrNotExist) {
+			err = nil
+		}
+		return false, err
+	}
+	return bytes[0] == 1, nil
+}
+
 func (is *store) Children(id ID) []ID {
 	is.RLock()
 	defer is.RUnlock()
@@ -332,7 +352,7 @@ func (is *store) imagesMap(all bool) map[ID]*Image {
 		}
 		img, err := is.Get(id)
 		if err != nil {
-			logrus.Errorf("invalid image access: %q, error: %q", id, err)
+			log.G(context.TODO()).Errorf("invalid image access: %q, error: %q", id, err)
 			continue
 		}
 		images[id] = img
