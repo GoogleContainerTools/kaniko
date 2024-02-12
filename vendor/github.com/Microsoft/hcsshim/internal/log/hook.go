@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Microsoft/hcsshim/internal/logfields"
+	"github.com/containerd/containerd/log"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -29,7 +30,7 @@ type Hook struct {
 	// An empty string disables formatting.
 	// When disabled, the fall back will the JSON encoding, if enabled.
 	//
-	// Default is [TimeFormat].
+	// Default is [github.com/containerd/containerd/log.RFC3339NanoFixed].
 	TimeFormat string
 
 	// Duration format converts a [time.Duration] fields to an appropriate encoding.
@@ -48,7 +49,7 @@ var _ logrus.Hook = &Hook{}
 
 func NewHook() *Hook {
 	return &Hook{
-		TimeFormat:     TimeFormat,
+		TimeFormat:     log.RFC3339NanoFixed,
 		DurationFormat: DurationFormatString,
 		AddSpanContext: true,
 	}
