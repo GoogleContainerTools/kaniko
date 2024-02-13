@@ -6,7 +6,7 @@ Kaniko is an open-source project designed to build container images from a Docke
 
 ## Vision
 
-- **To be the leading tool for building container images in cloud-native environments, prioritizing security, efficiency, and compatibility.**
+- **To be the leading tool for building container images via Dockerfile in cloud-native environments - prioritizing security, efficiency, compatibility, and portability.**
 
 ## Strategic Goals
 
@@ -37,15 +37,3 @@ Kaniko is an open-source project designed to build container images from a Docke
   - Improve layer caching generally for users (eg: reduce incorrect cache misses and usage).
 - **Enhanced Documentation**
   - Update documentation to reflect 2024 best practices and usage patterns.
-- **User Experience Improvements**
-  - Simplify the user interface and streamline kaniko workflows.
-
-## Ongoing Efforts
-
-- **Issue Tracking and Resolution**: Regular monitoring and resolution of issues reported on GitHub.
-- **Continuous Integration Testing**: Maintain and improve CI testing for reliability.
-- **Collaboration with Related Projects**: Engage with other open-source projects for synergistic developments.
-
-## Conclusion
-
-The Kaniko project is committed to evolving in line with the needs of the cloud-native community. This roadmap is subject to change based on community feedback and emerging trends in the industry.
