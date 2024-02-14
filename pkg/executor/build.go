@@ -204,10 +204,6 @@ func (s *stageBuilder) populateCompositeKey(command commands.DockerCommand, file
 	// The sort order of `replacementEnvs` is basically undefined, sort it
 	// so we can ensure a stable cache key.
 	sort.Strings(replacementEnvs)
-	resolvedCmd, err := util.ResolveEnvironmentReplacement(command.String(), replacementEnvs, false)
-	if err != nil {
-		return compositeKey, err
-	}
 	// Use the special argument "|#" at the start of the args array. This will
 	// avoid conflicts with any RUN command since commands can not
 	// start with | (vertical bar). The "#" (number of build envs) is there to
@@ -221,7 +217,7 @@ func (s *stageBuilder) populateCompositeKey(command commands.DockerCommand, file
 	}
 
 	// Add the next command to the cache key.
-	compositeKey.AddKey(resolvedCmd)
+	compositeKey.AddKey(command.String())
 
 	for _, f := range files {
 		if err := compositeKey.AddPath(f, s.fileContext); err != nil {

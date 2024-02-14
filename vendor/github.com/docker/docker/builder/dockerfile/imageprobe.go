@@ -3,16 +3,17 @@ package dockerfile // import "github.com/docker/docker/builder/dockerfile"
 import (
 	"context"
 
+	"github.com/containerd/log"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/builder"
-	"github.com/sirupsen/logrus"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // ImageProber exposes an Image cache to the Builder. It supports resetting a
 // cache.
 type ImageProber interface {
 	Reset(ctx context.Context) error
-	Probe(parentID string, runConfig *container.Config) (string, error)
+	Probe(parentID string, runConfig *container.Config, platform ocispec.Platform) (string, error)
 }
 
 type resetFunc func(context.Context) (builder.ImageCache, error)
@@ -51,20 +52,20 @@ func (c *imageProber) Reset(ctx context.Context) error {
 
 // Probe checks if cache match can be found for current build instruction.
 // It returns the cachedID if there is a hit, and the empty string on miss
-func (c *imageProber) Probe(parentID string, runConfig *container.Config) (string, error) {
+func (c *imageProber) Probe(parentID string, runConfig *container.Config, platform ocispec.Platform) (string, error) {
 	if c.cacheBusted {
 		return "", nil
 	}
-	cacheID, err := c.cache.GetCache(parentID, runConfig)
+	cacheID, err := c.cache.GetCache(parentID, runConfig, platform)
 	if err != nil {
 		return "", err
 	}
 	if len(cacheID) == 0 {
-		logrus.Debugf("[BUILDER] Cache miss: %s", runConfig.Cmd)
+		log.G(context.TODO()).Debugf("[BUILDER] Cache miss: %s", runConfig.Cmd)
 		c.cacheBusted = true
 		return "", nil
 	}
-	logrus.Debugf("[BUILDER] Use cached version: %s", runConfig.Cmd)
+	log.G(context.TODO()).Debugf("[BUILDER] Use cached version: %s", runConfig.Cmd)
 	return cacheID, nil
 }
 
@@ -74,6 +75,6 @@ func (c *nopProber) Reset(ctx context.Context) error {
 	return nil
 }
 
-func (c *nopProber) Probe(_ string, _ *container.Config) (string, error) {
+func (c *nopProber) Probe(_ string, _ *container.Config, _ ocispec.Platform) (string, error) {
 	return "", nil
 }

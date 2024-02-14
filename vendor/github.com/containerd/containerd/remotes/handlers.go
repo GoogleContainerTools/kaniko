@@ -361,15 +361,8 @@ func annotateDistributionSourceHandler(f images.HandlerFunc, provider content.In
 			return children, nil
 		}
 
-		parentSourceAnnotations := desc.Annotations
-		var parentLabels map[string]string
-		if pi, err := provider.Info(ctx, desc.Digest); err != nil {
-			if !errdefs.IsNotFound(err) {
-				return nil, err
-			}
-		} else {
-			parentLabels = pi.Labels
-		}
+		// parentInfo can be used to inherit info for non-existent blobs
+		var parentInfo *content.Info
 
 		for i := range children {
 			child := children[i]
@@ -379,35 +372,32 @@ func annotateDistributionSourceHandler(f images.HandlerFunc, provider content.In
 				if !errdefs.IsNotFound(err) {
 					return nil, err
 				}
+				if parentInfo == nil {
+					pi, err := provider.Info(ctx, desc.Digest)
+					if err != nil {
+						return nil, err
+					}
+					parentInfo = &pi
+				}
+				// Blob may not exist locally, annotate with parent labels for cross repo
+				// mount or fetch. Parent sources may apply to all children since most
+				// registries enforce that children exist before the manifests.
+				info = *parentInfo
 			}
-			copyDistributionSourceLabels(info.Labels, &child)
 
-			// Annotate with parent labels for cross repo mount or fetch.
-			// Parent sources may apply to all children since most registries
-			// enforce that children exist before the manifests.
-			copyDistributionSourceLabels(parentSourceAnnotations, &child)
-			copyDistributionSourceLabels(parentLabels, &child)
+			for k, v := range info.Labels {
+				if !strings.HasPrefix(k, labels.LabelDistributionSource+".") {
+					continue
+				}
+
+				if child.Annotations == nil {
+					child.Annotations = map[string]string{}
+				}
+				child.Annotations[k] = v
+			}
 
 			children[i] = child
 		}
 		return children, nil
-	}
-}
-
-func copyDistributionSourceLabels(from map[string]string, to *ocispec.Descriptor) {
-	for k, v := range from {
-		if !strings.HasPrefix(k, labels.LabelDistributionSource+".") {
-			continue
-		}
-
-		if to.Annotations == nil {
-			to.Annotations = make(map[string]string)
-		} else {
-			// Only propagate the parent label if the child doesn't already have it.
-			if _, has := to.Annotations[k]; has {
-				continue
-			}
-		}
-		to.Annotations[k] = v
 	}
 }

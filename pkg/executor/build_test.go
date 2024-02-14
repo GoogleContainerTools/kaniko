@@ -770,6 +770,34 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 				[]string{"ENV=1"},
 			),
 		},
+		{
+			description: "cache key for command [RUN] with same env values [check that variable no interpolate in RUN command]",
+			cmd1: newStageContext(
+				"RUN echo $ENV > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo 1 > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			shdEqual: false,
+		},
+		{
+			description: "cache key for command [RUN] with different env values [check that variable no interpolate in RUN command]",
+			cmd1: newStageContext(
+				"RUN echo ${APP_VERSION%.*} ${APP_VERSION%-*} > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo ${APP_VERSION%.*} ${APP_VERSION%-*} > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=2"},
+			),
+			shdEqual: false,
+		},
 		func() testcase {
 			dir, files := tempDirAndFile(t)
 			file := files[0]
@@ -1331,7 +1359,7 @@ RUN foobar
 			ch := NewCompositeCache("")
 			ch.AddKey("|1")
 			ch.AddKey("arg=value")
-			ch.AddKey("RUN value")
+			ch.AddKey("RUN $arg")
 			hash, err := ch.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
@@ -1376,7 +1404,7 @@ RUN foobar
 			ch2 := NewCompositeCache("")
 			ch2.AddKey("|1")
 			ch2.AddKey("arg=anotherValue")
-			ch2.AddKey("RUN anotherValue")
+			ch2.AddKey("RUN $arg")
 			hash2, err := ch2.Hash()
 			if err != nil {
 				t.Errorf("couldn't create hash %v", err)
