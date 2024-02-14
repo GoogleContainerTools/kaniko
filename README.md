@@ -95,12 +95,13 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--push-retry`](#flag---push-retry)
       - [Flag `--registry-certificate`](#flag---registry-certificate)
       - [Flag `--registry-client-cert`](#flag---registry-client-cert)
+      - [Flag `--registry-map`](#flag---registry-map)
       - [Flag `--registry-mirror`](#flag---registry-mirror)
       - [Flag `--skip-default-registry-fallback`](#flag---skip-default-registry-fallback)
       - [Flag `--reproducible`](#flag---reproducible)
       - [Flag `--single-snapshot`](#flag---single-snapshot)
-      - [Flag `--skip-tls-verify`](#flag---skip-tls-verify)
       - [Flag `--skip-push-permission-check`](#flag---skip-push-permission-check)
+      - [Flag `--skip-tls-verify`](#flag---skip-tls-verify)
       - [Flag `--skip-tls-verify-pull`](#flag---skip-tls-verify-pull)
       - [Flag `--skip-tls-verify-registry`](#flag---skip-tls-verify-registry)
       - [Flag `--skip-unused-stages`](#flag---skip-unused-stages)
@@ -112,8 +113,8 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--ignore-var-run`](#flag---ignore-var-run)
       - [Flag `--ignore-path`](#flag---ignore-path)
       - [Flag `--image-fs-extract-retry`](#flag---image-fs-extract-retry)
-      - [Flag `--image-download-retry`](#flag---image-download-retry)    
-  - [Debug Image](#debug-image)
+      - [Flag `--image-download-retry`](#flag---image-download-retry)
+    - [Debug Image](#debug-image)
   - [Security](#security)
     - [Verifying Signed Kaniko Images](#verifying-signed-kaniko-images)
   - [Kaniko Builds - Profiling](#kaniko-builds---profiling)
@@ -981,12 +982,35 @@ for authentication.
 
 Expected format is `my.registry.url=/path/to/client/cert.crt,/path/to/client/key.key`
 
+#### Flag `--registry-map`
+
+Set this flag if you want to remap registries references. Usefull for air gap environement for example.
+You can use this flag more than once, if you want to set multiple mirrors for a given registry.
+You can mention several remap in a single flag too, separated by semi-colon.
+If an image is not found on the first mirror, Kaniko will try
+the next mirror(s), and at the end fallback on the original registry.
+
+Registry maps can also be defined through `KANIKO_REGISTRY_MAP` environment variable.
+
+Expected format is `original-registry=remapped-registry[;another-reg=another-remap[;...]]` for example.
+
+Note that you can't specify a URL with scheme for this flag. Some valid options
+are:
+
+- `index.docker.io=mirror.gcr.io`
+- `gcr.io=127.0.0.1`
+- `quay.io=192.168.0.1:5000`
+- `index.docker.io=docker-io.mirrors.corp.net;index.docker.io=mirror.gcr.io;gcr.io=127.0.0.1`
+   will try `docker-io.mirrors.corp.net` then `mirror.gcr.io` for `index.docker.io` and `127.0.0.1` for `gcr.io`
+
 #### Flag `--registry-mirror`
 
 Set this flag if you want to use a registry mirror instead of the default
 `index.docker.io`. You can use this flag more than once, if you want to set
 multiple mirrors. If an image is not found on the first mirror, Kaniko will try
 the next mirror(s), and at the end fallback on the default registry.
+
+Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment variable.
 
 Expected format is `mirror.gcr.io` for example.
 

@@ -32,6 +32,7 @@ type CacheOptions struct {
 
 // RegistryOptions are all the options related to the registries, set by command line arguments.
 type RegistryOptions struct {
+	RegistryMaps                 multiKeyMultiValueArg
 	RegistryMirrors              multiArg
 	InsecureRegistries           multiArg
 	SkipTLSVerifyRegistries      multiArg

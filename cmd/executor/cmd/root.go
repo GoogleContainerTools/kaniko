@@ -34,6 +34,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/GoogleContainerTools/kaniko/pkg/util/proc"
 	"github.com/containerd/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -70,6 +71,21 @@ func validateFlags() {
 		opts.RegistryMirrors.Set(val)
 	}
 
+	// Allow setting --registry-maps using an environment variable.
+	if val, ok := os.LookupEnv("KANIKO_REGISTRY_MAP"); ok {
+		opts.RegistryMaps.Set(val)
+	}
+
+	for _, target := range opts.RegistryMirrors {
+		opts.RegistryMaps.Set(fmt.Sprintf("%s=%s", name.DefaultRegistry, target))
+	}
+
+	if len(opts.RegistryMaps) > 0 {
+		for src, dsts := range opts.RegistryMaps {
+			logrus.Debugf("registry-map remaps %s to %s.", src, strings.Join(dsts, ", "))
+		}
+	}
+
 	// Default the custom platform flag to our current platform, and validate it.
 	if opts.CustomPlatform == "" {
 		opts.CustomPlatform = platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
@@ -85,6 +101,10 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Use == "executor" {
 
+			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
+				return err
+			}
+
 			validateFlags()
 
 			// Command line flag takes precedence over the KANIKO_DIR environment variable.
@@ -98,10 +118,6 @@ var RootCmd = &cobra.Command{
 			}
 
 			resolveEnvironmentBuildArgs(opts.BuildArgs, os.Getenv)
-
-			if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
-				return err
-			}
 
 			if !opts.NoPush && len(opts.Destinations) == 0 {
 				return errors.New("you must provide --destination, or use --no-push")
@@ -238,6 +254,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	opts.RegistriesClientCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesClientCertificates, "registry-client-cert", "", "Use the provided client certificate for mutual TLS (mTLS) communication with the given registry. Expected format is 'my.registry.url=/path/to/client/cert,/path/to/client/key'.")
+	opts.RegistryMaps = make(map[string][]string)
+	RootCmd.PersistentFlags().VarP(&opts.RegistryMaps, "registry-map", "", "Registry map of mirror to use as pull-through cache instead. Expected format is 'orignal.registry=new.registry;other-original.registry=other-remap.registry'")
 	RootCmd.PersistentFlags().VarP(&opts.RegistryMirrors, "registry-mirror", "", "Registry mirror to use as pull-through cache instead of docker.io. Set it repeatedly for multiple mirrors.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipDefaultRegistryFallback, "skip-default-registry-fallback", "", false, "If an image is not found on any mirrors (defined with registry-mirror) do not fallback to the default registry. If registry-mirror is not defined, this flag is ignored.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.IgnoreVarRun, "ignore-var-run", "", true, "Ignore /var/run directory when taking image snapshot. Set it to false to preserve /var/run/ in destination image.")

@@ -82,3 +82,46 @@ func (a *keyValueArg) Set(value string) error {
 func (a *keyValueArg) Type() string {
 	return "key-value-arg type"
 }
+
+type multiKeyMultiValueArg map[string][]string
+
+func (c *multiKeyMultiValueArg) parseKV(value string) error {
+	valueSplit := strings.SplitN(value, "=", 2)
+	if len(valueSplit) < 2 {
+		return fmt.Errorf("invalid argument value. expect key=value, got %s", value)
+	}
+	(*c)[valueSplit[0]] = append((*c)[valueSplit[0]], valueSplit[1])
+	return nil
+}
+
+func (c *multiKeyMultiValueArg) String() string {
+	var result []string
+	for key := range *c {
+		for _, val := range (*c)[key] {
+			result = append(result, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+	return strings.Join(result, ";")
+
+}
+
+func (c *multiKeyMultiValueArg) Set(value string) error {
+	if value == "" {
+		return nil
+	}
+	if strings.Contains(value, ";") {
+		kvpairs := strings.Split(value, ";")
+		for _, kv := range kvpairs {
+			err := c.parseKV(kv)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return c.parseKV(value)
+}
+
+func (c *multiKeyMultiValueArg) Type() string {
+	return "key-multi-value-arg type"
+}
