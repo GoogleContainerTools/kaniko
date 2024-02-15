@@ -158,7 +158,7 @@ image (if there are any) and update image metadata.
     not require privilege, so it unpacks directly into its own container root
     and may overwrite anything already there.
 - kaniko does not support the v1 Registry API
-  ([Registry v1 API Deprecation](https://engineering.docker.com/2019/03/registry-v1-api-deprecation/))
+  ([Registry v1 API Deprecation](https://www.docker.com/blog/registry-v1-api-deprecation/))
 
 ## Demo
 
@@ -1241,9 +1241,9 @@ The following conditions must be met:
    scope of this documentation). This is something to keep in mind when using
    SaaS build tools such as github.com or gitlab.com, of which at the time of
    writing neither supports any non-x86_64 SaaS runners
-   ([GitHub](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources),[GitLab](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-private-projects-x86-64)),
+   ([GitHub](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources),[GitLab](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-private-projects-x86-64)),
    so be prepared to bring your own machines
-   ([GitHub](https://docs.github.com/en/actions/hosting-your-own-runners/about-self-hosted-runners),[GitLab](https://docs.gitlab.com/runner/register/).
+   ([GitHub](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners),[GitLab](https://docs.gitlab.com/runner/register/).
 2. Kaniko needs to be able to run on the desired architectures. At the time of
    writing, the official Kaniko container supports
    [linux/amd64, linux/arm64, linux/s390x and linux/ppc64le (not on \*-debug images)](https://github.com/GoogleContainerTools/kaniko/blob/main/.github/workflows/images.yaml).
