@@ -231,7 +231,7 @@ specify the location of your build context:
 | Source             | Prefix                                                                | Example                                                                       |
 | ------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Local Directory    | dir://[path to a directory in the kaniko container]                   | `dir:///workspace`                                                            |
-| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar:///path/to/context.tar.gz`                                                |
+| Local Tar Gz       | tar://[path to a .tar.gz in the kaniko container]                     | `tar:///path/to/context.tar.gz`                                               |
 | Standard Input     | tar://[stdin]                                                         | `tar://stdin`                                                                 |
 | GCS Bucket         | gs://[bucket name]/[path to .tar.gz]                                  | `gs://kaniko-bucket/path/to/context.tar.gz`                                   |
 | S3 Bucket          | s3://[bucket name]/[path to .tar.gz]                                  | `s3://kaniko-bucket/path/to/context.tar.gz`                                   |
@@ -516,8 +516,8 @@ docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=
 docker run -v $(pwd):/workspace gcr.io/kaniko-project/warmer:latest --cache-dir=/workspace/cache --dockerfile=<path to dockerfile> --build-arg version=1.19
 ```
 
-`--image` can be specified for any number of desired images. `--dockerfile` can 
-be specified for the path of dockerfile for cache.These command will combined to 
+`--image` can be specified for any number of desired images. `--dockerfile` can
+be specified for the path of dockerfile for cache.These command will combined to
 cache those images by digest in a local directory named `cache`. Once the cache
 is populated, caching is opted into with the same `--cache=true` flag as above.
 The location of the local cache is provided via the `--cache-dir` flag,
@@ -795,9 +795,9 @@ and
 This flag allows you to pass in ARG values at build time, similarly to Docker.
 You can set it multiple times for multiple arguments.
 
-Note that passing values that contain spaces is not natively supported - you need
-to ensure that the IFS is set to null before your executor command. You can set
-this by adding `export IFS=''` before your executor call. See the following
+Note that passing values that contain spaces is not natively supported - you
+need to ensure that the IFS is set to null before your executor command. You can
+set this by adding `export IFS=''` before your executor call. See the following
 example
 
 ```bash
@@ -945,7 +945,8 @@ Set this flag as `--log-timestamp=<true|false>` to add timestamps to
 #### Flag `--no-push`
 
 Set this flag if you only want to build the image, without pushing to a
-registry.
+registry. This can also be defined through `KANIKO_NO_PUSH` environment
+variable.
 
 #### Flag `--oci-layout-path`
 
@@ -980,19 +981,24 @@ communication with a given
 [registry that requires mTLS](https://docs.docker.com/engine/security/certificates/)
 for authentication.
 
-Expected format is `my.registry.url=/path/to/client/cert.crt,/path/to/client/key.key`
+Expected format is
+`my.registry.url=/path/to/client/cert.crt,/path/to/client/key.key`
 
 #### Flag `--registry-map`
 
-Set this flag if you want to remap registries references. Usefull for air gap environement for example.
-You can use this flag more than once, if you want to set multiple mirrors for a given registry.
-You can mention several remap in a single flag too, separated by semi-colon.
-If an image is not found on the first mirror, Kaniko will try
-the next mirror(s), and at the end fallback on the original registry.
+Set this flag if you want to remap registries references. Usefull for air gap
+environement for example. You can use this flag more than once, if you want to
+set multiple mirrors for a given registry. You can mention several remap in a
+single flag too, separated by semi-colon. If an image is not found on the first
+mirror, Kaniko will try the next mirror(s), and at the end fallback on the
+original registry.
 
-Registry maps can also be defined through `KANIKO_REGISTRY_MAP` environment variable.
+Registry maps can also be defined through `KANIKO_REGISTRY_MAP` environment
+variable.
 
-Expected format is `original-registry=remapped-registry[;another-reg=another-remap[;...]]` for example.
+Expected format is
+`original-registry=remapped-registry[;another-reg=another-remap[;...]]` for
+example.
 
 Note that you can't specify a URL with scheme for this flag. Some valid options
 are:
@@ -1001,7 +1007,8 @@ are:
 - `gcr.io=127.0.0.1`
 - `quay.io=192.168.0.1:5000`
 - `index.docker.io=docker-io.mirrors.corp.net;index.docker.io=mirror.gcr.io;gcr.io=127.0.0.1`
-   will try `docker-io.mirrors.corp.net` then `mirror.gcr.io` for `index.docker.io` and `127.0.0.1` for `gcr.io`
+  will try `docker-io.mirrors.corp.net` then `mirror.gcr.io` for
+  `index.docker.io` and `127.0.0.1` for `gcr.io`
 
 #### Flag `--registry-mirror`
 
@@ -1010,7 +1017,8 @@ Set this flag if you want to use a registry mirror instead of the default
 multiple mirrors. If an image is not found on the first mirror, Kaniko will try
 the next mirror(s), and at the end fallback on the default registry.
 
-Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment variable.
+Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment
+variable.
 
 Expected format is `mirror.gcr.io` for example.
 
@@ -1024,9 +1032,13 @@ are:
 
 #### Flag `--skip-default-registry-fallback`
 
-Set this flag if you want the build process to fail if none of the mirrors listed in flag [registry-mirror](#flag---registry-mirror) can pull some image. This should be used with mirrors that implements a whitelist or some image restrictions.
+Set this flag if you want the build process to fail if none of the mirrors
+listed in flag [registry-mirror](#flag---registry-mirror) can pull some image.
+This should be used with mirrors that implements a whitelist or some image
+restrictions.
 
-If [registry-mirror](#flag---registry-mirror) is not set or is empty, this flag is ignored.
+If [registry-mirror](#flag---registry-mirror) is not set or is empty, this flag
+is ignored.
 
 #### Flag `--reproducible`
 
@@ -1040,8 +1052,8 @@ only one layer will be appended to the base image.
 
 #### Flag `--skip-push-permission-check`
 
-Set this flag to skip push permission check. This can be useful to delay Kanikos first request for delayed 
-network-policies.
+Set this flag to skip push permission check. This can be useful to delay Kanikos
+first request for delayed network-policies.
 
 #### Flag `--skip-tls-verify`
 
@@ -1065,8 +1077,8 @@ multiple times for multiple registries.
 #### Flag `--skip-unused-stages`
 
 This flag builds only used stages if defined to `true`. Otherwise it builds by
-default all stages, even the unnecessary ones until it reaches the target
-stage / end of Dockerfile
+default all stages, even the unnecessary ones until it reaches the target stage
+/ end of Dockerfile
 
 #### Flag `--snapshot-mode`
 
@@ -1077,8 +1089,8 @@ kaniko will snapshot the filesystem.
   considered when snapshotting. This is the least performant option, but also
   the most robust.
 
-- If `--snapshot-mode=redo` is set, the file mtime, size, mode, owner uid and gid
-  will be considered when snapshotting. This may be up to 50% faster than
+- If `--snapshot-mode=redo` is set, the file mtime, size, mode, owner uid and
+  gid will be considered when snapshotting. This may be up to 50% faster than
   "full", particularly if your project has a large number files.
 
 - If `--snapshot-mode=time` is set, only file mtime will be considered when
@@ -1096,11 +1108,15 @@ Set this flag to indicate which build stage is the target build stage.
 
 #### Flag `--use-new-run`
 
-Using this flag enables an experimental implementation of the Run command which does not rely on snapshotting at all.
-In this approach, in order to compute which files were changed, a marker file is created before executing the Run command.
-Then the entire filesystem is walked (takes ~1-3 seconds for 700Kfiles) to find all files whose ModTime is greater than the marker file.
-With this new run command implementation, the total build time is reduced seeing performance improvements in the range of ~75%.  This new run mode trades 
-off accuracy/correctness in some cases (potential for missed files in a "snapshot") for improved performance by avoiding the full filesystem snapshots.
+Using this flag enables an experimental implementation of the Run command which
+does not rely on snapshotting at all. In this approach, in order to compute
+which files were changed, a marker file is created before executing the Run
+command. Then the entire filesystem is walked (takes ~1-3 seconds for 700Kfiles)
+to find all files whose ModTime is greater than the marker file. With this new
+run command implementation, the total build time is reduced seeing performance
+improvements in the range of ~75%. This new run mode trades off
+accuracy/correctness in some cases (potential for missed files in a "snapshot")
+for improved performance by avoiding the full filesystem snapshots.
 
 #### Flag `--verbosity`
 
@@ -1124,8 +1140,8 @@ image filesystem. Defaults to `0`.
 
 #### Flag `--image-download-retry`
 
-Set this flag to the number of retries that should happen when downloading the 
-remote image.  Consecutive retries occur with exponential backoff and an initial
+Set this flag to the number of retries that should happen when downloading the
+remote image. Consecutive retries occur with exponential backoff and an initial
 delay of 1 second. Defaults to 0`.
 
 ### Debug Image
@@ -1199,18 +1215,19 @@ profiling,
 ## Creating Multi-arch Container Manifests Using Kaniko and Manifest-tool
 
 While Kaniko itself currently does not support creating multi-arch manifests
-(contributions welcome), one can use tools such as [manifest-tool](https://github.com/estesp/manifest-tool)
-to stitch multiple separate builds together into a single  container manifest.
+(contributions welcome), one can use tools such as
+[manifest-tool](https://github.com/estesp/manifest-tool) to stitch multiple
+separate builds together into a single container manifest.
 
 ### General Workflow
 
 The general workflow for creating multi-arch manifests is as follows:
 
 1. Build separate container images using Kaniko on build hosts matching your
-target architecture and tag them with the appropriate ARCH tag.
+   target architecture and tag them with the appropriate ARCH tag.
 2. Push the separate images to your container registry.
 3. Manifest-tool identifies the separate manifests in your container registry,
-according to a given template.
+   according to a given template.
 4. Manifest-tool pushes a combined manifest referencing the separate manifests.
 
 ![Workflow Multi-arch](docs/images/multi-arch.drawio.svg)
@@ -1219,27 +1236,30 @@ according to a given template.
 
 The following conditions must be met:
 
-1. You need access to build-machines running the desired architectures
-(running Kaniko in an emulator, e.g. QEMU should also be possible but goes
-beyond the scope of this documentation). This is something to keep in mind
-when using SaaS build tools such as github.com or gitlab.com, of which at the
-time of writing neither supports any non-x86_64 SaaS runners ([GitHub](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources),[GitLab](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-private-projects-x86-64)),
-so be prepared to bring your own machines ([GitHub](https://docs.github.com/en/actions/hosting-your-own-runners/about-self-hosted-runners),[GitLab](https://docs.gitlab.com/runner/register/).
+1. You need access to build-machines running the desired architectures (running
+   Kaniko in an emulator, e.g. QEMU should also be possible but goes beyond the
+   scope of this documentation). This is something to keep in mind when using
+   SaaS build tools such as github.com or gitlab.com, of which at the time of
+   writing neither supports any non-x86_64 SaaS runners
+   ([GitHub](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources),[GitLab](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-private-projects-x86-64)),
+   so be prepared to bring your own machines
+   ([GitHub](https://docs.github.com/en/actions/hosting-your-own-runners/about-self-hosted-runners),[GitLab](https://docs.gitlab.com/runner/register/).
 2. Kaniko needs to be able to run on the desired architectures. At the time of
-writing, the official Kaniko container supports [linux/amd64, linux/arm64,
-linux/s390x and linux/ppc64le (not on *-debug images)](https://github.com/GoogleContainerTools/kaniko/blob/main/.github/workflows/images.yaml).
+   writing, the official Kaniko container supports
+   [linux/amd64, linux/arm64, linux/s390x and linux/ppc64le (not on \*-debug images)](https://github.com/GoogleContainerTools/kaniko/blob/main/.github/workflows/images.yaml).
 3. The container registry of your choice must be OCIv1 or Docker v2.2
-compatible.
+   compatible.
 
 ### Example CI Pipeline (GitLab)
 
-It is up to you to find an automation tool that suits your needs best.
-We recommend using a modern CI/CD system such as GitHub workflows or GitLab CI.
-As we (the authors) happen to use GitLab CI, the following examples are
-tailored to this specific platform but the underlying principles should apply
-anywhere else and the examples are kept simple enough, so that you should be
-able to follow along, even without any previous experiences with this specific
-platform. When in doubt, visit the [gitlab-ci.yml reference page](https://docs.gitlab.com/ee/ci/yaml/index.html)
+It is up to you to find an automation tool that suits your needs best. We
+recommend using a modern CI/CD system such as GitHub workflows or GitLab CI. As
+we (the authors) happen to use GitLab CI, the following examples are tailored to
+this specific platform but the underlying principles should apply anywhere else
+and the examples are kept simple enough, so that you should be able to follow
+along, even without any previous experiences with this specific platform. When
+in doubt, visit the
+[gitlab-ci.yml reference page](https://docs.gitlab.com/ee/ci/yaml/index.html)
 for a comprehensive overview of the GitLab CI keywords.
 
 #### Building the Separate Container Images
@@ -1264,11 +1284,10 @@ build-container:
   script:
     # build the container image for the current arch using kaniko
     - >-
-      /kaniko/executor
-      --context "${CI_PROJECT_DIR}"
-      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      # push the image to the GitLab container registry, add the current arch as tag.
-      --destination "${CI_REGISTRY_IMAGE}:${ARCH}"
+      /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile
+      "${CI_PROJECT_DIR}/Dockerfile" # push the image to the GitLab container
+      registry, add the current arch as tag. --destination
+      "${CI_REGISTRY_IMAGE}:${ARCH}"
 ```
 
 #### Merging the Container Manifests
@@ -1288,42 +1307,37 @@ merge-manifests:
     # may run on any architecture supported by manifest-tool image
     - runner-xyz
   image:
-      name: mplatform/manifest-tool:alpine
-      entrypoint: [""]
+    name: mplatform/manifest-tool:alpine
+    entrypoint: [""]
   script:
     - >-
-      manifest-tool
-      # authorize against your container registry
-      --username=${CI_REGISTRY_USER}
-      --password=${CI_REGISTRY_PASSWORD}
-      push from-args
-      # define the architectures you want to merge
-      --platforms linux/amd64,linux/arm64
-      # "ARCH" will be automatically replaced by manifest-tool
-      # with the appropriate arch from the platform definitions
-      --template ${CI_REGISTRY_IMAGE}:ARCH
-      # The name of the final, combined image which will be pushed to your registry
-      --target ${CI_REGISTRY_IMAGE}
+      manifest-tool # authorize against your container registry
+      --username=${CI_REGISTRY_USER} --password=${CI_REGISTRY_PASSWORD} push
+      from-args # define the architectures you want to merge --platforms
+      linux/amd64,linux/arm64 # "ARCH" will be automatically replaced by
+      manifest-tool # with the appropriate arch from the platform definitions
+      --template ${CI_REGISTRY_IMAGE}:ARCH # The name of the final, combined
+      image which will be pushed to your registry --target ${CI_REGISTRY_IMAGE}
 ```
 
 #### On the Note of Adding Versioned Tags
 
-For simplicity's sake we deliberately refrained from using versioned
-tagged images (all builds will be tagged as "latest") in the
-previous examples, as we feel like this adds to much platform and workflow
-specific code.
+For simplicity's sake we deliberately refrained from using versioned tagged
+images (all builds will be tagged as "latest") in the previous examples, as we
+feel like this adds to much platform and workflow specific code.
 
 Nethertheless, for anyone interested in how we handle (dynamic) versioning in
 GitLab, here is a short rundown:
 
-- If you are only interested in building tagged releases, you can simply
-use the [GitLab predefined](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) `CI_COMMIT_TAG` variable when running a tag pipeline.
+- If you are only interested in building tagged releases, you can simply use the
+  [GitLab predefined](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)
+  `CI_COMMIT_TAG` variable when running a tag pipeline.
 - When you (like us) want to additionally build container images outside of
-releases, things get a bit messier. In our case, we added a additional job
-which runs before the build and merge jobs (don't forget to extend the `needs`
-section of the build and merge jobs accordingly), which will set the tag to
-`latest` when running on the default branch, to the commit hash when run on
-other branches and to the release tag when run on a tag pipeline.
+  releases, things get a bit messier. In our case, we added a additional job
+  which runs before the build and merge jobs (don't forget to extend the `needs`
+  section of the build and merge jobs accordingly), which will set the tag to
+  `latest` when running on the default branch, to the commit hash when run on
+  other branches and to the release tag when run on a tag pipeline.
 
 gitlab-ci.yml:
 
