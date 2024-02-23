@@ -1430,6 +1430,9 @@ _Note that these issues are currently theoretical only. If you see this issue
 occur, please
 [open an issue](https://github.com/GoogleContainerTools/kaniko/issues)._
 
+### Dockerfile commands `--chown` support
+Kaniko currently supports `COPY --chown` and `ADD --chown` Dockerfile command. It does not support `RUN --chown`.
+
 ## References
 
 - [Kaniko - Building Container Images In Kubernetes Without Docker](https://youtu.be/EgwVQN6GNJg).
