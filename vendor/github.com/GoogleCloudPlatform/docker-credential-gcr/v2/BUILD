@@ -19,7 +19,7 @@ gazelle(
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/GoogleCloudPlatform/docker-credential-gcr",
+    importpath = "github.com/GoogleCloudPlatform/docker-credential-gcr/v2",
     visibility = ["//visibility:private"],
     deps = [
         "//cli:go_default_library",

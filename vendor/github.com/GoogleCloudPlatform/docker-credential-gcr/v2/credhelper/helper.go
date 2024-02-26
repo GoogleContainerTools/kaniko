@@ -19,15 +19,19 @@ for GCR authentication.
 package credhelper
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/config"
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/store"
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/util/cmd"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/auth"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/config"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/store"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/util/cmd"
 	"github.com/docker/docker-credential-helpers/credentials"
 
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
@@ -82,7 +86,34 @@ func (ch *gcrCredHelper) Get(serverURL string) (string, string, error) {
 func (ch *gcrCredHelper) gcrCreds() (string, string, error) {
 	accessToken, err := ch.getGCRAccessToken()
 	if err != nil {
-		return "", "", helperErr("could not retrieve GCR's access token", err)
+		if rerr, ok := err.(*oauth2.RetrieveError); ok {
+			var resp struct {
+				Error        string `json:"error"`
+				ErrorSubtype string `json:"error_subtype"`
+			}
+			if err := json.Unmarshal(rerr.Body, &resp); err == nil &&
+				resp.Error == "invalid_grant" &&
+				resp.ErrorSubtype == "invalid_rapt" {
+				fmt.Fprintln(os.Stderr, "Reauth required; opening a browser to proceed...")
+				tok, err := (&auth.GCRLoginAgent{}).PerformLogin()
+				if err != nil {
+					return "", "", fmt.Errorf("unable to authenticate user: %v", err)
+				}
+				if err = ch.store.SetGCRAuth(tok); err != nil {
+					return "", "", fmt.Errorf("unable to persist access token: %v", err)
+				}
+				fmt.Fprintln(os.Stderr, "Reauth successful!")
+				// Attempt the refresh dance again, using the new token.
+				if accessToken, err := ch.getGCRAccessToken(); err != nil {
+					return "", "", err
+				} else {
+					return config.GcrOAuth2Username, accessToken, nil
+				}
+			}
+		}
+		if err != nil {
+			return "", "", helperErr("could not retrieve GCR's access token", err)
+		}
 	}
 	return config.GcrOAuth2Username, accessToken, nil
 }

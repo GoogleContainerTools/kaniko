@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/util"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/util"
 )
 
 const (
