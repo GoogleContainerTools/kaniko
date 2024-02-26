@@ -20,39 +20,39 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/store"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/store"
 	"github.com/google/subcommands"
 )
 
-type logoutCmd struct {
+type clearCmd struct {
 	cmd
 }
 
-// NewGCRLogoutSubcommand returns a subcommands.Command which implements the GCR
-// logout operation.
-func NewGCRLogoutSubcommand() subcommands.Command {
-	return &logoutCmd{
+// NewClearSubcommand returns a subcommands.Command which removes all stored
+// credentials.
+func NewClearSubcommand() subcommands.Command {
+	return &clearCmd{
 		cmd{
-			name:     "gcr-logout",
-			synopsis: "log out from GCR",
+			name:     "clear",
+			synopsis: "remove all stored credentials",
 		},
 	}
 }
 
-func (c *logoutCmd) Execute(context.Context, *flag.FlagSet, ...interface{}) subcommands.ExitStatus {
-	if err := c.GCRLogout(); err != nil {
-		fmt.Fprintf(os.Stderr, "Logout failure: %v\n", err)
+func (c *clearCmd) Execute(context.Context, *flag.FlagSet, ...interface{}) subcommands.ExitStatus {
+	if err := c.ClearAll(); err != nil {
+		fmt.Fprintf(os.Stderr, "failure: %v\n", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
 }
 
-// GCRLogout performs the actions necessary to remove any GCR credentials
-// from the credential store.
-func (*logoutCmd) GCRLogout() error {
+// ClearAll removes all credentials from the store (GCR or otherwise).
+func (c *clearCmd) ClearAll() error {
 	s, err := store.DefaultGCRCredStore()
 	if err != nil {
 		return err
 	}
+
 	return s.DeleteGCRAuth()
 }

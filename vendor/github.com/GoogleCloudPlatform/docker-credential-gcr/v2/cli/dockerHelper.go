@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/config"
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/credhelper"
-	"github.com/GoogleCloudPlatform/docker-credential-gcr/store"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/config"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/credhelper"
+	"github.com/GoogleCloudPlatform/docker-credential-gcr/v2/store"
 	"github.com/docker/docker-credential-helpers/credentials"
 	"github.com/google/subcommands"
 )

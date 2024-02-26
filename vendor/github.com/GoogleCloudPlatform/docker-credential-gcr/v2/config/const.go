@@ -18,6 +18,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"runtime/debug"
 	"strings"
 
@@ -37,16 +38,21 @@ const (
 )
 
 // Version can be set via:
-// -ldflags="-X 'github.com/GoogleCloudPlatform/docker-credential-gcr/config.Version=$TAG'"
+// -ldflags="-X 'github.com/GoogleCloudPlatform/docker-credential-gcr/v2/config.Version=$TAG'"
 var Version string
 
 func init() {
 	if Version == "" {
-		i, ok := debug.ReadBuildInfo()
-		if !ok {
-			return
+		if i, ok := debug.ReadBuildInfo(); ok {
+			Version = i.Main.Version
 		}
-		Version = i.Main.Version
+	}
+	Version = strings.TrimPrefix(Version, "v")
+	re := regexp.MustCompile(`^[0-9]+(?:[\._][0-9]+)*$`)
+	if re.MatchString(Version) {
+		GcrOAuth2Username = fmt.Sprintf("_dcgcr_%s_token", strings.ReplaceAll(Version, ".", "_"))
+	} else {
+		GcrOAuth2Username = "_dcgcr_0_0_0_token"
 	}
 }
 
@@ -63,6 +69,7 @@ var DefaultGCRRegistries = [...]string{
 // Registry.  If the --include-artifact-registry flag is supplied then these
 // are added in addition to the GCR Registries.
 var DefaultARRegistries = [...]string{
+	"africa-south1-docker.pkg.dev",
 	"asia-docker.pkg.dev",
 	"asia-east1-docker.pkg.dev",
 	"asia-east2-docker.pkg.dev",
@@ -86,8 +93,11 @@ var DefaultARRegistries = [...]string{
 	"europe-west6-docker.pkg.dev",
 	"europe-west8-docker.pkg.dev",
 	"europe-west9-docker.pkg.dev",
+	"europe-west10-docker.pkg.dev",
 	"europe-west12-docker.pkg.dev",
 	"me-central1-docker.pkg.dev",
+	"me-central2-docker.pkg.dev",
+	"docker.me-central2.rep.pkg.dev",
 	"me-west1-docker.pkg.dev",
 	"northamerica-northeast1-docker.pkg.dev",
 	"northamerica-northeast2-docker.pkg.dev",
@@ -103,6 +113,7 @@ var DefaultARRegistries = [...]string{
 	"us-west2-docker.pkg.dev",
 	"us-west3-docker.pkg.dev",
 	"us-west4-docker.pkg.dev",
+	"us-west8-docker.pkg.dev",
 }
 
 // SupportedGCRTokenSources maps config keys to plain english explanations for
@@ -124,4 +135,4 @@ var GCRScopes = []string{"https://www.googleapis.com/auth/devstorage.read_write"
 var OAuthHTTPContext = context.Background()
 
 // GcrOAuth2Username is the Basic auth username accompanying Docker requests to GCR.
-var GcrOAuth2Username = fmt.Sprintf("_dcgcr_%s_token", strings.ReplaceAll(Version, ".", "_"))
+var GcrOAuth2Username string

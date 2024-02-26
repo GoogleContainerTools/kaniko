@@ -55,6 +55,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/GoogleCloudPlatform/docker-credential-gcr v1.5.1-0.20230328182921-62afb2723512 h1:cauzkEqKnOXwl0L5futNq6BbWWtIRPfJtwDDulac6A8=
 github.com/GoogleCloudPlatform/docker-credential-gcr v1.5.1-0.20230328182921-62afb2723512/go.mod h1:6u40niDQl1ufFtykax72lx+pcIO67AoUSu9ebOzdA8Q=
+github.com/GoogleCloudPlatform/docker-credential-gcr/v2 v2.1.22 h1:HevuUpLsTedep2D6wnIp6AAJbVgP0BiVxaMt3HXeOyA=
+github.com/GoogleCloudPlatform/docker-credential-gcr/v2 v2.1.22/go.mod h1:nzCpg7DFIIkQIZB3mdUPXVvqQ5f/GahA6xgWXTjnK7w=
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=

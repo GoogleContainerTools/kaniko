@@ -57,7 +57,7 @@ The program in this repository is written with the Go programming language and c
 You can download the source code, compile the binary, and put it in your `$GOPATH` with `go get`.
 
 ```shell
-go get -u github.com/GoogleCloudPlatform/docker-credential-gcr
+go get -u github.com/GoogleCloudPlatform/docker-credential-gcr/v2
 ```
 
 If `$GOPATH/bin` is in your system `$PATH`, this will also automatically install the compiled binary. You can confirm using `which docker-credential-gcr` and continue to the [section on Configuration and Usage](#configuration-and-usage).

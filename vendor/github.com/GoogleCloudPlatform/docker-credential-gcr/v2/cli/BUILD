@@ -12,7 +12,7 @@ go_library(
         "gcr-logout.go",
         "version.go",
     ],
-    importpath = "github.com/GoogleCloudPlatform/docker-credential-gcr/cli",
+    importpath = "github.com/GoogleCloudPlatform/docker-credential-gcr/v2/cli",
     visibility = ["//visibility:public"],
     deps = [
         "//auth:go_default_library",

@@ -1,6 +1,6 @@
 module github.com/GoogleContainerTools/kaniko
 
-go 1.19
+go 1.21
 
 require (
 	cloud.google.com/go/storage v1.38.0
@@ -156,6 +156,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.2 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.2 // indirect
+	github.com/GoogleCloudPlatform/docker-credential-gcr/v2 v2.1.22 // indirect
 	github.com/Microsoft/hcsshim v0.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.24.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.21.5 // indirect
