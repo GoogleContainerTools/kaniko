@@ -31,6 +31,8 @@ jobs:
         - warmer
 
         include:
+
+        
         - image: executor
           target: kaniko-executor
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
@@ -64,7 +66,7 @@ jobs:
 
     # Setup auth if not a PR.
     - if: github.event_name != 'pull_request'
-      uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c # v2.1.2
+      uses: google-github-actions/auth@a6e2e39c0a0331da29f7fd2c2a20a427e8d3ad1f # v2.1.1
       with:
         credentials_json: '${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}'
         export_environment_variables: true
