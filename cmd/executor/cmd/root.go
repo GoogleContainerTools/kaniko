@@ -424,6 +424,7 @@ func resolveSourceContext() error {
 		GitBranch:            opts.Git.Branch,
 		GitSingleBranch:      opts.Git.SingleBranch,
 		GitRecurseSubmodules: opts.Git.RecurseSubmodules,
+		InsecureSkipTLS:      opts.Git.InsecureSkipTLS,
 	})
 	if err != nil {
 		return err

@@ -33,10 +33,12 @@ func TestKanikoGitOptions(t *testing.T) {
 		testutil.CheckNoError(t, g.Set("branch=foo"))
 		testutil.CheckNoError(t, g.Set("recurse-submodules=true"))
 		testutil.CheckNoError(t, g.Set("single-branch=true"))
+		testutil.CheckNoError(t, g.Set("insecure-skip-tls=false"))
 		testutil.CheckDeepEqual(t, KanikoGitOptions{
 			Branch:            "foo",
 			SingleBranch:      true,
 			RecurseSubmodules: true,
+			InsecureSkipTLS:   false,
 		}, *g)
 	})
 

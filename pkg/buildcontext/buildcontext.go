@@ -32,6 +32,7 @@ type BuildOptions struct {
 	GitBranch            string
 	GitSingleBranch      bool
 	GitRecurseSubmodules bool
+	InsecureSkipTLS      bool
 }
 
 // BuildContext unifies calls to download and unpack the build context.

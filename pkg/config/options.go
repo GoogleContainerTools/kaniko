@@ -96,6 +96,7 @@ type KanikoGitOptions struct {
 	Branch            string
 	SingleBranch      bool
 	RecurseSubmodules bool
+	InsecureSkipTLS   bool
 }
 
 var ErrInvalidGitFlag = errors.New("invalid git flag, must be in the key=value format")
@@ -128,6 +129,12 @@ func (k *KanikoGitOptions) Set(s string) error {
 			return err
 		}
 		k.RecurseSubmodules = v
+	case "insecure-skip-tls":
+		v, err := strconv.ParseBool(parts[1])
+		if err != nil {
+			return err
+		}
+		k.InsecureSkipTLS = v
 	}
 	return nil
 }
