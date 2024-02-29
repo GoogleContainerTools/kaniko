@@ -1,3 +1,66 @@
+# v1.21.0 Release 2024-02-29
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.21.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.21.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.21.0-slim
+```
+
+* Add --push-ignore-immutable-tag-errors boolean CLI option [#2774](https://github.com/GoogleContainerTools/kaniko/pull/2774)
+* docs: fix broken links and redirects [#3009](https://github.com/GoogleContainerTools/kaniko/pull/3009)
+* feat: add skip tls flag for private git context [#2854](https://github.com/GoogleContainerTools/kaniko/pull/2854)
+* Fix unpack tar.gz archive with ADD instruction, issue #2409 [#2991](https://github.com/GoogleContainerTools/kaniko/pull/2991)
+* chore: update google github-action auth version [#3030](https://github.com/GoogleContainerTools/kaniko/pull/3030)
+* refactor: remove artifact upload from nightly-vulnerabiliy-scan.yml [#3029](https://github.com/GoogleContainerTools/kaniko/pull/3029)
+* feat: add nightly grype vuln scan to kaniko executor image [#2970](https://github.com/GoogleContainerTools/kaniko/pull/2970)
+* chore: update docker-credential-gcr to use v2 [#3026](https://github.com/GoogleContainerTools/kaniko/pull/3026)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.1 to 1.16.6 [#3020](https://github.com/GoogleContainerTools/kaniko/pull/3020)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.50.0 to 1.51.1 [#3021](https://github.com/GoogleContainerTools/kaniko/pull/3021)
+* chore(deps): bump google.golang.org/api from 0.165.0 to 0.167.0 [#3023](https://github.com/GoogleContainerTools/kaniko/pull/3023)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.27.0 to 1.27.4 [#3024](https://github.com/GoogleContainerTools/kaniko/pull/3024)
+* chore(deps): bump google-github-actions/auth from 2.1.1 to 2.1.2 [#3025](https://github.com/GoogleContainerTools/kaniko/pull/3025)
+* feat: add support for no push environment variable [#2983](https://github.com/GoogleContainerTools/kaniko/pull/2983)
+* Add documentation for --chown support limitation [#3019](https://github.com/GoogleContainerTools/kaniko/pull/3019)
+* chore(deps): bump github.com/Azure/azure-sdk-for-go/sdk/storage/azblob from 1.2.1 to 1.3.0 [#3013](https://github.com/GoogleContainerTools/kaniko/pull/3013)
+* chore(deps): bump google.golang.org/api from 0.161.0 to 0.165.0 [#3016](https://github.com/GoogleContainerTools/kaniko/pull/3016)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.15.15 to 1.16.1 [#3014](https://github.com/GoogleContainerTools/kaniko/pull/3014)
+* chore(deps): bump cloud.google.com/go/storage from 1.37.0 to 1.38.0 [#3015](https://github.com/GoogleContainerTools/kaniko/pull/3015)
+* Add flag to remap registries for any registry mirror [#2935](https://github.com/GoogleContainerTools/kaniko/pull/2935)
+* FIX: missing or partial support for pattern substition in variable when cache enabled [#2968](https://github.com/GoogleContainerTools/kaniko/pull/2968)
+* docs: add ROADMAP.md to kaniko project [#3005](https://github.com/GoogleContainerTools/kaniko/pull/3005)
+* chore: update MAINTAINERS file with up-to-date information [#3003](https://github.com/GoogleContainerTools/kaniko/pull/3003)
+* chore(deps): bump golang.org/x/oauth2 from 0.16.0 to 0.17.0 [#3000](https://github.com/GoogleContainerTools/kaniko/pull/3000)
+* chore(deps): bump golang.org/x/net from 0.20.0 to 0.21.0 [#2999](https://github.com/GoogleContainerTools/kaniko/pull/2999)
+* chore(deps): bump golang from 1.21 to 1.22 in /deploy [#2997](https://github.com/GoogleContainerTools/kaniko/pull/2997)
+* chore(deps): bump cloud.google.com/go/storage from 1.36.0 to 1.37.0 [#2998](https://github.com/GoogleContainerTools/kaniko/pull/2998)
+* chore(deps): bump golang.org/x/sys from 0.16.0 to 0.17.0 [#3001](https://github.com/GoogleContainerTools/kaniko/pull/3001)
+* chore(deps): bump google-github-actions/auth from 2.1.0 to 2.1.1 [#3002](https://github.com/GoogleContainerTools/kaniko/pull/3002)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- Alessandro Bitocchi
+- Damien Degois
+- dependabot[bot]
+- JeromeJu
+- Kraev Sergei
+- Matheus Pimenta
+- Oliver Radwell
+- Sacha Smart
+- schwannden
+
+
 # v1.20.1 Release 2024-02-10
 The executor images in this release are:
 ```
