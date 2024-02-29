@@ -962,6 +962,16 @@ _Note: Depending on the built image, the media type of the image manifest might
 be either `application/vnd.oci.image.manifest.v1+json` or
 `application/vnd.docker.distribution.manifest.v2+json`._
 
+#### Flag `--push-ignore-immutable-tag-errors`
+
+Set this boolean flag to `true` if you want the Kaniko process to exit with
+success when a push error related to tag immutability occurs.
+
+This is useful for example if you have parallel builds pushing the same tag
+and do not care which one actually succeeds.
+
+Defaults to `false`.
+
 #### Flag `--push-retry`
 
 Set this flag to the number of retries that should happen for the push of an

@@ -43,6 +43,7 @@ type RegistryOptions struct {
 	SkipTLSVerify                bool
 	InsecurePull                 bool
 	SkipTLSVerifyPull            bool
+	PushIgnoreImmutableTagErrors bool
 	PushRetry                    int
 	ImageDownloadRetry           int
 }
