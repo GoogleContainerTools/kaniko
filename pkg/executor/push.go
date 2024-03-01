@@ -62,6 +62,14 @@ const (
 	DummyDestination    = "docker.io/unset-repo/unset-image-name"
 )
 
+var (
+	// known tag immutability errors
+	errTagImmutable = []string{
+		// https://cloud.google.com/artifact-registry/docs/docker/troubleshoot#push
+		"The repository has enabled tag immutability",
+	}
+)
+
 func (w *withUserAgent) RoundTrip(r *http.Request) (*http.Response, error) {
 	ua := []string{fmt.Sprintf("kaniko/%s", version.Version())}
 	if upstream := os.Getenv(UpstreamClientUaKey); upstream != "" {
@@ -280,10 +288,23 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			if err != nil {
 				return err
 			}
+			digest := destRef.Context().Digest(dig.String())
 			if err := remote.Write(destRef, image, remote.WithAuth(pushAuth), remote.WithTransport(rt)); err != nil {
+				if !opts.PushIgnoreImmutableTagErrors {
+					return err
+				}
+
+				// check for known "tag immutable" errors
+				errStr := err.Error()
+				for _, candidate := range errTagImmutable {
+					if strings.Contains(errStr, candidate) {
+						logrus.Infof("Immutable tag error ignored for %s", digest)
+						return nil
+					}
+				}
 				return err
 			}
-			logrus.Infof("Pushed %s", destRef.Context().Digest(dig.String()))
+			logrus.Infof("Pushed %s", digest)
 			return nil
 		}
 
