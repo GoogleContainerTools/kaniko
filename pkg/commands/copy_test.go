@@ -478,7 +478,7 @@ func Test_CopyEnvAndWildcards(t *testing.T) {
 			t.Fatal(err)
 		}
 		testutil.CheckNoError(t, err)
-		// Check if "dest" dir exists with contents of srcDir
+
 		actual, err := readDirectory(targetPath)
 		if err != nil {
 			t.Fatal(err)
