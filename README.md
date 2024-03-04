@@ -78,6 +78,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--compressed-caching`](#flag---compressed-caching)
       - [Flag `--context-sub-path`](#flag---context-sub-path)
       - [Flag `--custom-platform`](#flag---custom-platform)
+      - [Flag `--destination`](#flag---destination)
       - [Flag `--digest-file`](#flag---digest-file)
       - [Flag `--dockerfile`](#flag---dockerfile)
       - [Flag `--force`](#flag---force)
@@ -875,6 +876,16 @@ limitation of the OCI-image specification._
 _This is not virtualization and cannot help to build an architecture not
 natively supported by the build host. This is used to build i386 on an amd64
 Host for example, or arm32 on an arm64 host._
+
+#### Flag `--destination`
+
+Path where to push the built image. You can set it multiple
+times for multiple registries, image names or tags.
+
+Example value: `gcr.io/my-repo/my-image:my-tag`
+
+When setting the destination to multiple image names, set the
+[`--cache-repo` flag](#flag---cache-repo) explicitly.
 
 #### Flag `--digest-file`
 
