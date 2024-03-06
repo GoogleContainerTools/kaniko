@@ -1,3 +1,34 @@
+# v1.21.1 Release 2024-03-06
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.21.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.21.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.21.1-slim
+```
+
+* chore(deps): bump cloud.google.com/go/storage from 1.38.0 to 1.39.0 [#3040](https://github.com/GoogleContainerTools/kaniko/pull/3040)
+* chore(deps): bump github.com/containerd/containerd from 1.7.6 to 1.7.13 [#3038](https://github.com/GoogleContainerTools/kaniko/pull/3038)
+* test: fix test breakage caused by external dependency update [#3049](https://github.com/GoogleContainerTools/kaniko/pull/3049)
+* chore(deps): bump docker/setup-buildx-action from 3.0.0 to 3.1.0 [#3037](https://github.com/GoogleContainerTools/kaniko/pull/3037)
+* chore(deps): bump github.com/Azure/azure-sdk-for-go/sdk/storage/azblob from 1.3.0 to 1.3.1 [#3039](https://github.com/GoogleContainerTools/kaniko/pull/3039)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+
+
 # v1.21.0 Release 2024-02-29
 The executor images in this release are:
 ```
