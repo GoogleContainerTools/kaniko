@@ -1,3 +1,4 @@
 ARG IMAGE_NAME='busybox:latest'
 
 FROM $IMAGE_NAME
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
