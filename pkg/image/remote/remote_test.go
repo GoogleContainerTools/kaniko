@@ -89,7 +89,7 @@ func Test_normalizeReference(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ref2, err := normalizeReference(ref, image)
+	ref2, err := normalizeReference(ref, image, "library")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,5 +181,40 @@ func Test_NoRetryRetrieveRemoteImageFails(t *testing.T) {
 
 	if _, err := RetrieveRemoteImage(image, opts, ""); err == nil {
 		t.Fatal("Expected call to fail because there is no retry")
+	}
+}
+
+func Test_extractPathFromRegistryURL(t *testing.T) {
+	tests := []struct {
+		name         string
+		regFullURL   string
+		expectedPath string
+		expectedRepo string
+	}{
+		{
+			name:         "Test case 1",
+			regFullURL:   "registry.example.com/namespace/repo:tag",
+			expectedPath: "namespace",
+			expectedRepo: "repo",
+		},
+		{
+			name:         "Test case 2",
+			regFullURL:   "registry.example.com/repo:tag",
+			expectedPath: "",
+			expectedRepo: "repo",
+		},
+		// Add more test cases here
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path, repo := extractPathFromRegistryURL(tt.regFullURL)
+			if path != tt.expectedPath {
+				t.Errorf("Expected path: %s, but got: %s", tt.expectedPath, path)
+			}
+			if repo != tt.expectedRepo {
+				t.Errorf("Expected repo: %s, but got: %s", tt.expectedRepo, repo)
+			}
+		})
 	}
 }
