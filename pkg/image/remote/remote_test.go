@@ -184,36 +184,36 @@ func Test_NoRetryRetrieveRemoteImageFails(t *testing.T) {
 	}
 }
 
-func Test_extractPathFromRegistryURL(t *testing.T) {
+func Test_ExtractPathFromRegistryURL(t *testing.T) {
 	tests := []struct {
-		name         string
-		regFullURL   string
-		expectedPath string
-		expectedRepo string
+		name                string
+		regFullURL          string
+		expectedRegistry    string
+		expectedImagePrefix string
 	}{
 		{
-			name:         "Test case 1",
-			regFullURL:   "registry.example.com/namespace/repo:tag",
-			expectedPath: "namespace",
-			expectedRepo: "repo",
+			name:                "Test case 1",
+			regFullURL:          "registry.example.com/namespace",
+			expectedRegistry:    "registry.example.com",
+			expectedImagePrefix: "namespace",
 		},
 		{
-			name:         "Test case 2",
-			regFullURL:   "registry.example.com/repo:tag",
-			expectedPath: "",
-			expectedRepo: "repo",
+			name:                "Test case 2",
+			regFullURL:          "registry.example.com",
+			expectedRegistry:    "registry.example.com",
+			expectedImagePrefix: "",
 		},
 		// Add more test cases here
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, repo := extractPathFromRegistryURL(tt.regFullURL)
-			if path != tt.expectedPath {
-				t.Errorf("Expected path: %s, but got: %s", tt.expectedPath, path)
+			path, registry := extractPathFromRegistryURL(tt.regFullURL)
+			if registry != tt.expectedRegistry {
+				t.Errorf("Expected path: %s, but got: %s", tt.expectedRegistry, registry)
 			}
-			if repo != tt.expectedRepo {
-				t.Errorf("Expected repo: %s, but got: %s", tt.expectedRepo, repo)
+			if path != tt.expectedImagePrefix {
+				t.Errorf("Expected repo: %s, but got: %s", tt.expectedImage, path)
 			}
 		})
 	}
