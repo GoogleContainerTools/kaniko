@@ -125,7 +125,7 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 // this fix automatically add library or the custom path on registry map.
 func normalizeReference(ref name.Reference, image string, custompath string) (name.Reference, error) {
 	if custompath == "" {
-		custompath = "libary"
+		custompath = "library"
 	}
 	if !strings.ContainsRune(image, '/') {
 		return name.ParseReference(custompath+"/"+image, name.WeakValidation)
