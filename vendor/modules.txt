@@ -124,9 +124,8 @@ github.com/Microsoft/go-winio/internal/socket
 github.com/Microsoft/go-winio/internal/stringbuffer
 github.com/Microsoft/go-winio/pkg/bindfilter
 github.com/Microsoft/go-winio/pkg/guid
-github.com/Microsoft/go-winio/tools/mkwinsyscall
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.11.0
+# github.com/Microsoft/hcsshim v0.11.4
 ## explicit; go 1.18
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options
@@ -370,7 +369,7 @@ github.com/containerd/cgroups/v3/cgroup1
 github.com/containerd/cgroups/v3/cgroup1/stats
 github.com/containerd/cgroups/v3/cgroup2
 github.com/containerd/cgroups/v3/cgroup2/stats
-# github.com/containerd/containerd v1.7.6
+# github.com/containerd/containerd v1.7.13
 ## explicit; go 1.19
 github.com/containerd/containerd
 github.com/containerd/containerd/api/runtime/sandbox/v1
@@ -418,6 +417,7 @@ github.com/containerd/containerd/namespaces
 github.com/containerd/containerd/oci
 github.com/containerd/containerd/pkg/cap
 github.com/containerd/containerd/pkg/cleanup
+github.com/containerd/containerd/pkg/deprecation
 github.com/containerd/containerd/pkg/dialer
 github.com/containerd/containerd/pkg/epoch
 github.com/containerd/containerd/pkg/kmutex
@@ -449,6 +449,7 @@ github.com/containerd/containerd/sandbox
 github.com/containerd/containerd/sandbox/proxy
 github.com/containerd/containerd/services
 github.com/containerd/containerd/services/introspection
+github.com/containerd/containerd/services/warning
 github.com/containerd/containerd/snapshots
 github.com/containerd/containerd/snapshots/proxy
 github.com/containerd/containerd/tracing
@@ -918,9 +919,6 @@ github.com/opencontainers/go-digest/digestset
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.7
-## explicit; go 1.17
-github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.1.0
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
@@ -1067,10 +1065,9 @@ go.opentelemetry.io/otel/internal/attribute
 go.opentelemetry.io/otel/internal/baggage
 go.opentelemetry.io/otel/internal/global
 go.opentelemetry.io/otel/propagation
-go.opentelemetry.io/otel/semconv/internal/v2
 go.opentelemetry.io/otel/semconv/v1.17.0
-go.opentelemetry.io/otel/semconv/v1.17.0/httpconv
 go.opentelemetry.io/otel/semconv/v1.20.0
+go.opentelemetry.io/otel/semconv/v1.21.0
 # go.opentelemetry.io/otel/metric v1.23.0
 ## explicit; go 1.20
 go.opentelemetry.io/otel/metric
