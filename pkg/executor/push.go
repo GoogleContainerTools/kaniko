@@ -67,6 +67,8 @@ var (
 	errTagImmutable = []string{
 		// https://cloud.google.com/artifact-registry/docs/docker/troubleshoot#push
 		"The repository has enabled tag immutability",
+		// https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-tag-mutability.html
+		"cannot be overwritten because the repository is immutable",
 	}
 )
 
