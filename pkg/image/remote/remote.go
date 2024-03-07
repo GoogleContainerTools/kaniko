@@ -174,7 +174,7 @@ func extractPathFromRegistryURL(regFullURL string) (string, string) {
 	// Join all segments except the first one (which is typically empty)
 	path := strings.Join(segments[1:], "/")
 	// get the fist segment to get the registry url
-	regUrl := segments[0]
+	regURL := segments[0]
 
-	return path, regUrl
+	return path, regURL
 }
