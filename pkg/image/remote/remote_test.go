@@ -213,7 +213,7 @@ func Test_ExtractPathFromRegistryURL(t *testing.T) {
 				t.Errorf("Expected path: %s, but got: %s", tt.expectedRegistry, registry)
 			}
 			if path != tt.expectedImagePrefix {
-				t.Errorf("Expected repo: %s, but got: %s", tt.expectedImage, path)
+				t.Errorf("Expected repo: %s, but got: %s", tt.expectedImagePrefix, path)
 			}
 		})
 	}
