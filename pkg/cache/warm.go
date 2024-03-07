@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
@@ -158,10 +159,26 @@ func (w *Warmer) Warm(image string, opts *config.WarmerOptions) (v1.Hash, error)
 		return v1.Hash{}, errors.Wrapf(err, "Failed to retrieve digest: %s", image)
 	}
 
-	if !opts.Force {
-		_, err := w.Local(&opts.CacheOptions, digest.String())
-		if err == nil || IsExpired(err) {
-			return v1.Hash{}, AlreadyCachedErr{}
+	for {
+		if !opts.Force {
+			_, err := w.Local(&opts.CacheOptions, digest.String())
+			if err == nil || IsExpired(err) {
+				return v1.Hash{}, AlreadyCachedErr{}
+			}
+		}
+
+		// Acquire file lock.
+		lockPath := path.Join(opts.CacheDir, digest.String()+".cache-lock")
+		fl := FLock(lockPath)
+		if fl != nil {
+			logrus.Debugf("Succeed to get cache lock: %s", lockPath)
+			defer fl.Unlock()
+			break
+		} else {
+			// Failed to acquire lock, sleep and try again.
+			logrus.Debugf("Failed to get cache lock, try again after 1 sec: %s", lockPath)
+			ClearDeadlock(lockPath) // Try to clean expired lock.
+			time.Sleep(time.Second * 1)
 		}
 	}
 
