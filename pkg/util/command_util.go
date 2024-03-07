@@ -216,7 +216,7 @@ func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, er
 		}
 		return dest, nil
 	}
-	urlBase := filepath.Base(rawurl)
+	urlBase := extractFilename(rawurl)
 	urlBase, err := ResolveEnvironmentReplacement(urlBase, envs, true)
 	if err != nil {
 		return "", err
@@ -469,4 +469,12 @@ func getUID(userStr string) (uint32, error) {
 		return 0, err
 	}
 	return uint32(uid), nil
+}
+
+// ExtractFilename extracts the filename from a URL without its query url
+func extractFilename(rawUrl string) string {
+	// not necessarily return an error, due to parsing ambiguities https://pkg.go.dev/net/url#Parse
+	parsedUrl, _ := url.Parse(rawUrl)
+	filename := filepath.Base(parsedUrl.Path)
+	return filename
 }
