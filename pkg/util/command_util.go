@@ -99,6 +99,7 @@ func ResolveEnvAndWildcards(sd instructions.SourcesAndDest, fileContext FileCont
 		return nil, "", errors.Wrap(err, "failed to resolve environment for dest path")
 	}
 	dest := dests[0]
+	sd.DestPath = dest
 	// Resolve wildcards and get a list of resolved sources
 	srcs, err := ResolveSources(resolvedEnvs, fileContext.Root)
 	if err != nil {

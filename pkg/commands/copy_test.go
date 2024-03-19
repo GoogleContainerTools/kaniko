@@ -426,6 +426,70 @@ func Test_resolveIfSymlink(t *testing.T) {
 	}
 }
 
+func Test_CopyEnvAndWildcards(t *testing.T) {
+	setupDirs := func(t *testing.T) (string, string) {
+		testDir := t.TempDir()
+
+		dir := filepath.Join(testDir, "bar")
+
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			t.Fatal(err)
+		}
+		file := filepath.Join(dir, "bam.txt")
+
+		if err := os.WriteFile(file, []byte("meow"), 0777); err != nil {
+			t.Fatal(err)
+		}
+		targetPath := filepath.Join(dir, "dam.txt")
+		if err := os.WriteFile(targetPath, []byte("woof"), 0777); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink("dam.txt", filepath.Join(dir, "sym.link")); err != nil {
+			t.Fatal(err)
+		}
+
+		return testDir, filepath.Base(dir)
+	}
+	testDir, srcDir := setupDirs(t)
+	t.Run("copy sources into a dir defined in env variable", func(t *testing.T) {
+		defer os.RemoveAll(testDir)
+		expected, err := readDirectory(filepath.Join(testDir, srcDir))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		targetPath := filepath.Join(testDir, "target") + "/"
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir + "/*"}, DestPath: "$TARGET_PATH"},
+			},
+			fileContext: util.FileContext{Root: testDir},
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{"TARGET_PATH=" + targetPath},
+			WorkingDir: testDir,
+		}
+
+		err = cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckNoError(t, err)
+
+		actual, err := readDirectory(targetPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, f := range actual {
+			testutil.CheckDeepEqual(t, expected[i].Name(), f.Name())
+			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
+		}
+	})
+}
+
 func TestCopyCommand_ExecuteCommand_Extended(t *testing.T) {
 	setupDirs := func(t *testing.T) (string, string) {
 		testDir := t.TempDir()
