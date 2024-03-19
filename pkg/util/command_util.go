@@ -472,9 +472,9 @@ func getUID(userStr string) (uint32, error) {
 }
 
 // ExtractFilename extracts the filename from a URL without its query url
-func extractFilename(rawUrl string) string {
+func extractFilename(rawURL string) string {
 	// not necessarily return an error, due to parsing ambiguities https://pkg.go.dev/net/url#Parse
-	parsedUrl, _ := url.Parse(rawUrl)
-	filename := filepath.Base(parsedUrl.Path)
+	parsedURL, _ := url.Parse(rawURL)
+	filename := filepath.Base(parsedURL.Path)
 	return filename
 }
