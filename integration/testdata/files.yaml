@@ -5,7 +5,7 @@ fileExistenceTests:
   path: '/'
   shouldExist: true
 - name: certs
-  path: '/kaniko/ssl/certs/ca-certificates.crt'
+  path: '/etc/ssl/certs/ca-certificates.crt'
   shouldExist: true
 - name: certs
   path: '/etc/nsswitch.conf'
