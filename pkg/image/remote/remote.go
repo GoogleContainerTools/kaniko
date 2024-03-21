@@ -54,7 +54,7 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 	if newRegURLs, found := opts.RegistryMaps[ref.Context().RegistryStr()]; found {
 		for _, regToMapTo := range newRegURLs {
 
-			//ectract custom path if any in all registry map and clean regToMapTo to only the registry without the path
+			//extract custom path if any in all registry map and clean regToMapTo to only the registry without the path
 			custompath, regToMapTo := extractPathFromRegistryURL(regToMapTo)
 			//normalize reference is call in every fallback to ensure that the image is normalized to the new registry include the image prefix
 			ref, err = normalizeReference(ref, image, custompath)
