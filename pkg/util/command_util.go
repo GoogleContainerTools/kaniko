@@ -216,11 +216,17 @@ func URLDestinationFilepath(rawurl, dest, cwd string, envs []string) (string, er
 		}
 		return dest, nil
 	}
-	urlBase := filepath.Base(rawurl)
-	urlBase, err := ResolveEnvironmentReplacement(urlBase, envs, true)
+
+	urlBase, err := ResolveEnvironmentReplacement(rawurl, envs, true)
 	if err != nil {
 		return "", err
 	}
+
+	urlBase, err = extractFilename(urlBase)
+	if err != nil {
+		return "", err
+	}
+
 	destPath := filepath.Join(dest, urlBase)
 
 	if !filepath.IsAbs(dest) {
@@ -469,4 +475,14 @@ func getUID(userStr string) (uint32, error) {
 		return 0, err
 	}
 	return uint32(uid), nil
+}
+
+// ExtractFilename extracts the filename from a URL without its query url
+func extractFilename(rawURL string) (string, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	filename := filepath.Base(parsedURL.Path)
+	return filename, nil
 }

@@ -227,6 +227,12 @@ var urlDestFilepathTests = []struct {
 		expectedDest: "/test",
 	},
 	{
+		url:          "https://something/something.tar?foo=bar",
+		cwd:          "/cwd",
+		dest:         "/dir/",
+		expectedDest: "/dir/something.tar",
+	},
+	{
 		url:          "https://something/something",
 		cwd:          "/test",
 		dest:         "/dest/",
