@@ -52,6 +52,14 @@ func NewMemDB(schema *DBSchema) (*MemDB, error) {
 	return db, nil
 }
 
+// DBSchema returns schema in use for introspection.
+//
+// The method is intended for *read-only* debugging use cases,
+// returned schema should *never be modified in-place*.
+func (db *MemDB) DBSchema() *DBSchema {
+	return db.schema
+}
+
 // getRoot is used to do an atomic load of the root pointer
 func (db *MemDB) getRoot() *iradix.Tree {
 	root := (*iradix.Tree)(atomic.LoadPointer(&db.root))

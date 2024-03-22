@@ -6,11 +6,30 @@
 #     $ ./run-tests.sh 5.4
 #     Run a subset of tests:
 #     $ ./run-tests.sh 5.4 ./link
+#     Run using a local kernel image
+#     $ ./run-tests.sh /path/to/bzImage
 
 set -euo pipefail
 
 script="$(realpath "$0")"
 readonly script
+
+source "$(dirname "$script")/testdata/sh/lib.sh"
+
+quote_env() {
+  for var in "$@"; do
+    if [ -v "$var" ]; then
+      printf "%s=%q " "$var" "${!var}"
+    fi
+  done
+}
+
+declare -a preserved_env=(
+  PATH
+  CI_MAX_KERNEL_VERSION
+  TEST_SEED
+  KERNEL_VERSION
+)
 
 # This script is a bit like a Matryoshka doll since it keeps re-executing itself
 # in various different contexts:
@@ -49,12 +68,12 @@ if [[ "${1:-}" = "--exec-vm" ]]; then
   fi
 
   for ((i = 0; i < 3; i++)); do
-    if ! $sudo virtme-run --kimg "${input}/bzImage" --memory 768M --pwd \
+    if ! $sudo virtme-run --kimg "${input}/boot/vmlinuz" --cpus 2 --memory 768M --pwd \
       --rwdir="${testdir}=${testdir}" \
       --rodir=/run/input="${input}" \
       --rwdir=/run/output="${output}" \
-      --script-sh "PATH=\"$PATH\" CI_MAX_KERNEL_VERSION="${CI_MAX_KERNEL_VERSION:-}" \"$script\" --exec-test $cmd" \
-      --kopt possible_cpus=2; then # need at least two CPUs for some tests
+      --script-sh "$(quote_env "${preserved_env[@]}") \"$script\" \
+      --exec-test $cmd"; then
       exit 23
     fi
 
@@ -79,12 +98,12 @@ elif [[ "${1:-}" = "--exec-test" ]]; then
   mount -t bpf bpf /sys/fs/bpf
   mount -t tracefs tracefs /sys/kernel/debug/tracing
 
-  if [[ -d "/run/input/bpf" ]]; then
-    export KERNEL_SELFTESTS="/run/input/bpf"
+  if [[ -d "/run/input/usr/src/linux/tools/testing/selftests/bpf" ]]; then
+    export KERNEL_SELFTESTS="/run/input/usr/src/linux/tools/testing/selftests/bpf"
   fi
 
-  if [[ -f "/run/input/bpf/bpf_testmod/bpf_testmod.ko" ]]; then
-    insmod "/run/input/bpf/bpf_testmod/bpf_testmod.ko"
+  if [[ -d "/run/input/lib/modules" ]]; then
+    find /run/input/lib/modules -type f -name bpf_testmod.ko -exec insmod {} \;
   fi
 
   dmesg --clear
@@ -95,38 +114,29 @@ elif [[ "${1:-}" = "--exec-test" ]]; then
   exit $rc # this return code is "swallowed" by qemu
 fi
 
-readonly kernel_version="${1:-}"
-if [[ -z "${kernel_version}" ]]; then
-  echo "Expecting kernel version as first argument"
+if [[ -z "${1:-}" ]]; then
+  echo "Expecting kernel version or path as first argument"
   exit 1
 fi
-shift
 
-readonly kernel="linux-${kernel_version}.bz"
-readonly selftests="linux-${kernel_version}-selftests-bpf.tgz"
-readonly input="$(mktemp -d)"
-readonly tmp_dir="${TMPDIR:-/tmp}"
-readonly branch="${BRANCH:-master}"
+input="$(mktemp -d)"
+readonly input
 
-fetch() {
-    echo Fetching "${1}"
-    pushd "${tmp_dir}" > /dev/null
-    curl -s -L -O --fail --etag-compare "${1}.etag" --etag-save "${1}.etag" "https://github.com/cilium/ci-kernels/raw/${branch}/${1}"
-    local ret=$?
-    popd > /dev/null
-    return $ret
-}
-
-fetch "${kernel}"
-cp "${tmp_dir}/${kernel}" "${input}/bzImage"
-
-if fetch "${selftests}"; then
-  echo "Decompressing selftests"
-  mkdir "${input}/bpf"
-  tar --strip-components=4 -xf "${tmp_dir}/${selftests}" -C "${input}/bpf"
+if [[ -f "${1}" ]]; then
+  # First argument is a local file.
+  readonly kernel="${1}"
+  cp "${1}" "${input}/boot/vmlinuz"
 else
-  echo "No selftests found, disabling"
+  readonly kernel="${1}"
+
+  # LINUX_VERSION_CODE test compares this to discovered value.
+  export KERNEL_VERSION="${1}"
+
+  if ! extract_oci_image "ghcr.io/cilium/ci-kernels:${kernel}-selftests" "${input}"; then
+    extract_oci_image "ghcr.io/cilium/ci-kernels:${kernel}" "${input}"
+  fi
 fi
+shift
 
 args=(-short -coverpkg=./... -coverprofile=coverage.out -count 1 ./...)
 if (( $# > 0 )); then
@@ -135,11 +145,9 @@ fi
 
 export GOFLAGS=-mod=readonly
 export CGO_ENABLED=0
-# LINUX_VERSION_CODE test compares this to discovered value.
-export KERNEL_VERSION="${kernel_version}"
 
-echo Testing on "${kernel_version}"
+echo Testing on "${kernel}"
 go test -exec "$script --exec-vm $input" "${args[@]}"
-echo "Test successful on ${kernel_version}"
+echo "Test successful on ${kernel}"
 
 rm -r "${input}"
