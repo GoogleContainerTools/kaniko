@@ -500,7 +500,7 @@ github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v25.0.4+incompatible
+# github.com/docker/docker v25.0.5+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
@@ -546,6 +546,8 @@ github.com/docker/docker/image
 github.com/docker/docker/image/spec/specs-go/v1
 github.com/docker/docker/internal/mounttree
 github.com/docker/docker/internal/multierror
+github.com/docker/docker/internal/rootless/mountopts
+github.com/docker/docker/internal/sliceutil
 github.com/docker/docker/internal/unshare
 github.com/docker/docker/layer
 github.com/docker/docker/libcontainerd/types
@@ -708,7 +710,6 @@ github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.5.3
 ## explicit; go 1.9
 github.com/golang/protobuf/proto
-github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/go-cmp v0.6.0
 ## explicit; go 1.13
 github.com/google/go-cmp/cmp
