@@ -50,6 +50,7 @@ type MockDockerCommand struct {
 	contextFiles        []string
 	cacheCommand        commands.DockerCommand
 	argToCompositeCache bool
+	considerExcludedFiles bool
 }
 
 func (m MockDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error { return nil }
@@ -83,10 +84,14 @@ func (m MockDockerCommand) ShouldDetectDeletedFiles() bool {
 func (m MockDockerCommand) IsArgsEnvsRequiredInCache() bool {
 	return m.argToCompositeCache
 }
+func (m MockDockerCommand) IsConsiderExcludedFilesInCache() bool {
+	return m.argToCompositeCache
+}
 
 type MockCachedDockerCommand struct {
 	contextFiles        []string
 	argToCompositeCache bool
+	considerExcludedFiles bool
 }
 
 func (m MockCachedDockerCommand) ExecuteCommand(c *v1.Config, args *dockerfile.BuildArgs) error {
@@ -121,6 +126,9 @@ func (m MockCachedDockerCommand) ShouldCacheOutput() bool {
 }
 func (m MockCachedDockerCommand) IsArgsEnvsRequiredInCache() bool {
 	return m.argToCompositeCache
+}
+func (m MockCachedDockerCommand) IsConsiderExcludedFilesInCache() bool {
+	return m.considerExcludedFiles
 }
 
 type fakeLayerCache struct {
