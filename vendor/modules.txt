@@ -500,7 +500,7 @@ github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v25.0.4+incompatible
+# github.com/docker/docker v26.0.0+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
@@ -543,9 +543,14 @@ github.com/docker/docker/daemon/network
 github.com/docker/docker/dockerversion
 github.com/docker/docker/errdefs
 github.com/docker/docker/image
-github.com/docker/docker/image/spec/specs-go/v1
+github.com/docker/docker/internal/cleanups
+github.com/docker/docker/internal/compatcontext
 github.com/docker/docker/internal/mounttree
 github.com/docker/docker/internal/multierror
+github.com/docker/docker/internal/rootless/mountopts
+github.com/docker/docker/internal/safepath
+github.com/docker/docker/internal/sliceutil
+github.com/docker/docker/internal/unix_noeintr
 github.com/docker/docker/internal/unshare
 github.com/docker/docker/layer
 github.com/docker/docker/libcontainerd/types
@@ -863,6 +868,9 @@ github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/util/stack
 github.com/moby/buildkit/util/suggest
+# github.com/moby/docker-image-spec v1.3.1
+## explicit; go 1.18
+github.com/moby/docker-image-spec/specs-go/v1
 # github.com/moby/locker v1.0.1
 ## explicit; go 1.13
 github.com/moby/locker
