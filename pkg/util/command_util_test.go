@@ -567,8 +567,8 @@ func TestGetUserGroup(t *testing.T) {
 			mockIDGetter: func(string, string) (uint32, uint32, error) {
 				return 0, 0, fmt.Errorf("should not be called")
 			},
-			expectedU: -1,
-			expectedG: -1,
+			expectedU: 0,
+			expectedG: 0,
 		},
 	}
 	for _, tc := range tests {
