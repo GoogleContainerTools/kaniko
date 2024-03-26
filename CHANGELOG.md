@@ -1,3 +1,54 @@
+# v1.22.0 Release 2024-03-26
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.22.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.22.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.22.0-slim
+```
+
+* chore(deps): bump github.com/docker/docker from 25.0.4+incompatible to 26.0.0+incompatible [#3085](https://github.com/GoogleContainerTools/kaniko/pull/3085)
+* chore(deps): bump google.golang.org/api from 0.167.0 to 0.171.0 [#3082](https://github.com/GoogleContainerTools/kaniko/pull/3082)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2 from 1.25.3 to 1.26.0 [#3083](https://github.com/GoogleContainerTools/kaniko/pull/3083)
+* chore(deps): bump github.com/containerd/containerd from 1.7.13 to 1.7.14 [#3084](https://github.com/GoogleContainerTools/kaniko/pull/3084)
+* chore(deps): bump docker/build-push-action from 5.2.0 to 5.3.0 [#3070](https://github.com/GoogleContainerTools/kaniko/pull/3070)
+* Fix #3032: Remove query parameters in ADD command when the destinatio… [#3053](https://github.com/GoogleContainerTools/kaniko/pull/3053)
+* Kaniko/add path regmaps [possible in registry maps and/or mirror] [#3051](https://github.com/GoogleContainerTools/kaniko/pull/3051)
+* chore(deps): bump docker/setup-buildx-action from 3.1.0 to 3.2.0 [#3071](https://github.com/GoogleContainerTools/kaniko/pull/3071)
+* chore(deps): bump github.com/moby/buildkit from 0.12.5 to 0.13.0 [#3072](https://github.com/GoogleContainerTools/kaniko/pull/3072)
+* chore(deps): bump github.com/google/go-containerregistry from 0.19.0 to 0.19.1 [#3073](https://github.com/GoogleContainerTools/kaniko/pull/3073)
+* chore(deps): bump golang.org/x/oauth2 from 0.17.0 to 0.18.0 [#3074](https://github.com/GoogleContainerTools/kaniko/pull/3074)
+* chore(deps): bump cloud.google.com/go/storage from 1.39.0 to 1.39.1 [#3075](https://github.com/GoogleContainerTools/kaniko/pull/3075)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.51.4 to 1.52.1 [#3076](https://github.com/GoogleContainerTools/kaniko/pull/3076)
+* Fix COPY fails when multiple files are copied to path specified in ENV [#3034](https://github.com/GoogleContainerTools/kaniko/pull/3034)
+* Add AWS ECR error message for tag Immutability [#3045](https://github.com/GoogleContainerTools/kaniko/pull/3045)
+* chore: update google.golang.org/protobuff to resolve CVE-2024-24786 [#3068](https://github.com/GoogleContainerTools/kaniko/pull/3068)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.6 to 1.16.9 [#3058](https://github.com/GoogleContainerTools/kaniko/pull/3058)
+* chore(deps): bump golang.org/x/net from 0.21.0 to 0.22.0 [#3056](https://github.com/GoogleContainerTools/kaniko/pull/3056)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2 from 1.25.2 to 1.25.3 [#3057](https://github.com/GoogleContainerTools/kaniko/pull/3057)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.51.1 to 1.51.4 [#3059](https://github.com/GoogleContainerTools/kaniko/pull/3059)
+* chore(deps): bump github.com/docker/docker from 25.0.3+incompatible to 25.0.4+incompatible [#3060](https://github.com/GoogleContainerTools/kaniko/pull/3060)
+* chore(deps): bump docker/build-push-action from 5.1.0 to 5.2.0 [#3061](https://github.com/GoogleContainerTools/kaniko/pull/3061)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- Alessandro Bitocchi
+- dependabot[bot]
+- Jérémie Augustin
+- Prima Adi Pradana
+
+
 # v1.21.1 Release 2024-03-06
 The executor images in this release are:
 ```
