@@ -76,12 +76,22 @@ func (hkcb HostKeyCallback) HostKeyAlgorithms(hostWithPort string) (algos []stri
 	// example by https://github.com/golang/crypto/pull/254.
 	hostKeys := hkcb.HostKeys(hostWithPort)
 	seen := make(map[string]struct{}, len(hostKeys))
-	for _, key := range hostKeys {
-		typ := key.Type()
+	addAlgo := func(typ string) {
 		if _, already := seen[typ]; !already {
 			algos = append(algos, typ)
 			seen[typ] = struct{}{}
 		}
+	}
+	for _, key := range hostKeys {
+		typ := key.Type()
+		if typ == ssh.KeyAlgoRSA {
+			// KeyAlgoRSASHA256 and KeyAlgoRSASHA512 are only public key algorithms,
+			// not public key formats, so they can't appear as a PublicKey.Type.
+			// The corresponding PublicKey.Type is KeyAlgoRSA. See RFC 8332, Section 2.
+			addAlgo(ssh.KeyAlgoRSASHA512)
+			addAlgo(ssh.KeyAlgoRSASHA256)
+		}
+		addAlgo(typ)
 	}
 	return algos
 }
