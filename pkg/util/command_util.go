@@ -18,6 +18,7 @@ package util
 
 import (
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"os/user"
@@ -368,6 +369,24 @@ func GetUserGroup(chownStr string, env []string) (int64, int64, error) {
 	}
 
 	return int64(uid32), int64(gid32), nil
+}
+
+func GetChmod(chmodStr string, env []string) (chmod fs.FileMode, useDefault bool, err error) {
+	if chmodStr == "" {
+		return fs.FileMode(0o600), true, nil
+	}
+
+	chmodStr, err = ResolveEnvironmentReplacement(chmodStr, env, false)
+	if err != nil {
+		return 0, false, err
+	}
+
+	mode, err := strconv.ParseUint(chmodStr, 8, 32)
+	if err != nil {
+		return 0, false, errors.Wrap(err, "parsing value from chmod")
+	}
+	chmod = fs.FileMode(mode)
+	return
 }
 
 // Extract user and group id from a string formatted 'user:group'.

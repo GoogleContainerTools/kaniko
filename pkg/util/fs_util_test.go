@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -48,10 +49,10 @@ func Test_DetectFilesystemSkiplist(t *testing.T) {
 	232 228 0:101 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro`
 
 	path := filepath.Join(testDir, "mountinfo")
-	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		t.Fatalf("Error creating tempdir: %s", err)
 	}
-	if err := os.WriteFile(path, []byte(fileContents), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(fileContents), 0o644); err != nil {
 		t.Fatalf("Error writing file contents to %s: %s", path, err)
 	}
 
@@ -671,7 +672,6 @@ func Test_UnTar(t *testing.T) {
 			sort.Strings(tc.expectedFileList)
 			sort.Strings(fileList)
 			testutil.CheckErrorAndDeepEqual(t, tc.errorExpected, err, tc.expectedFileList, fileList)
-
 		})
 	}
 }
@@ -694,37 +694,37 @@ func TestExtractFile(t *testing.T) {
 		{
 			name:     "normal file",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0644, defaultTestTime)},
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0o644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
-				permissionsMatch("/bar", 0644),
+				permissionsMatch("/bar", 0o644),
 				timesMatch("/bar", defaultTestTime),
 			},
 		},
 		{
 			name:     "normal file, directory does not exist",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime)},
+			hdrs:     []*tar.Header{fileHeader("./foo/bar", "helloworld", 0o644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/foo/bar"),
 				fileMatches("/foo/bar", []byte("helloworld")),
-				permissionsMatch("/foo/bar", 0644),
-				permissionsMatch("/foo", 0755|os.ModeDir),
+				permissionsMatch("/foo/bar", 0o644),
+				permissionsMatch("/foo", 0o755|os.ModeDir),
 			},
 		},
 		{
 			name:     "normal file, directory is created after",
 			contents: []byte("helloworld"),
 			hdrs: []*tar.Header{
-				fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime),
-				dirHeader("./foo", 0722),
+				fileHeader("./foo/bar", "helloworld", 0o644, defaultTestTime),
+				dirHeader("./foo", 0o722),
 			},
 			checkers: []checker{
 				fileExists("/foo/bar"),
 				fileMatches("/foo/bar", []byte("helloworld")),
-				permissionsMatch("/foo/bar", 0644),
-				permissionsMatch("/foo", 0722|os.ModeDir),
+				permissionsMatch("/foo/bar", 0o644),
+				permissionsMatch("/foo", 0o722|os.ModeDir),
 			},
 		},
 		{
@@ -753,15 +753,15 @@ func TestExtractFile(t *testing.T) {
 			hdrs: []*tar.Header{linkHeader("./foo/bar/baz", "../../bat")},
 			checkers: []checker{
 				linkPointsTo("/foo/bar/baz", "../../bat"),
-				permissionsMatch("/foo", 0755|os.ModeDir),
-				permissionsMatch("/foo/bar", 0755|os.ModeDir),
+				permissionsMatch("/foo", 0o755|os.ModeDir),
+				permissionsMatch("/foo/bar", 0o755|os.ModeDir),
 			},
 		},
 		{
 			name:   "hardlink",
 			tmpdir: "/tmp/hardlink",
 			hdrs: []*tar.Header{
-				fileHeader("/bin/gzip", "gzip-binary", 0751, defaultTestTime),
+				fileHeader("/bin/gzip", "gzip-binary", 0o751, defaultTestTime),
 				hardlinkHeader("/bin/uncompress", "/bin/gzip"),
 			},
 			checkers: []checker{
@@ -772,25 +772,25 @@ func TestExtractFile(t *testing.T) {
 		{
 			name:     "file with setuid bit",
 			contents: []byte("helloworld"),
-			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 04644, defaultTestTime)},
+			hdrs:     []*tar.Header{fileHeader("./bar", "helloworld", 0o4644, defaultTestTime)},
 			checkers: []checker{
 				fileExists("/bar"),
 				fileMatches("/bar", []byte("helloworld")),
-				permissionsMatch("/bar", 0644|os.ModeSetuid),
+				permissionsMatch("/bar", 0o644|os.ModeSetuid),
 			},
 		},
 		{
 			name:     "dir with sticky bit",
 			contents: []byte("helloworld"),
 			hdrs: []*tar.Header{
-				dirHeader("./foo", 01755),
-				fileHeader("./foo/bar", "helloworld", 0644, defaultTestTime),
+				dirHeader("./foo", 0o1755),
+				fileHeader("./foo/bar", "helloworld", 0o644, defaultTestTime),
 			},
 			checkers: []checker{
 				fileExists("/foo/bar"),
 				fileMatches("/foo/bar", []byte("helloworld")),
-				permissionsMatch("/foo/bar", 0644),
-				permissionsMatch("/foo", 0755|os.ModeDir|os.ModeSticky),
+				permissionsMatch("/foo/bar", 0o644),
+				permissionsMatch("/foo", 0o755|os.ModeDir|os.ModeSticky),
 			},
 		},
 	}
@@ -839,7 +839,7 @@ func TestCopySymlink(t *testing.T) {
 		linkTarget: "/abs/dest",
 		dest:       "overwrite_me",
 		beforeLink: func(r string) error {
-			return os.WriteFile(filepath.Join(r, "overwrite_me"), nil, 0644)
+			return os.WriteFile(filepath.Join(r, "overwrite_me"), nil, 0o644)
 		},
 	}}
 
@@ -848,9 +848,9 @@ func TestCopySymlink(t *testing.T) {
 			tc := tc
 			t.Parallel()
 			r := t.TempDir()
-			os.MkdirAll(filepath.Join(r, filepath.Dir(tc.linkTarget)), 0777)
+			os.MkdirAll(filepath.Join(r, filepath.Dir(tc.linkTarget)), 0o777)
 			tc.linkTarget = filepath.Join(r, tc.linkTarget)
-			os.WriteFile(tc.linkTarget, nil, 0644)
+			os.WriteFile(tc.linkTarget, nil, 0o644)
 
 			if tc.beforeLink != nil {
 				if err := tc.beforeLink(r); err != nil {
@@ -982,12 +982,12 @@ func Test_CopyFile_skips_self(t *testing.T) {
 	if err := os.WriteFile(
 		tempFile,
 		[]byte(expected),
-		0755,
+		0o755,
 	); err != nil {
 		t.Fatal(err)
 	}
 
-	ignored, err := CopyFile(tempFile, tempFile, FileContext{}, DoNotChangeUID, DoNotChangeGID)
+	ignored, err := CopyFile(tempFile, tempFile, FileContext{}, DoNotChangeUID, DoNotChangeGID, fs.FileMode(0o600), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1012,7 +1012,7 @@ func fakeExtract(_ string, _ *tar.Header, _ string, _ io.Reader) error {
 }
 
 func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) {
-	var resetMountInfoFile = provideEmptyMountinfoFile()
+	resetMountInfoFile := provideEmptyMountinfoFile()
 	defer resetMountInfoFile()
 
 	ctrl := gomock.NewController(t)
@@ -1020,7 +1020,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 	root := t.TempDir()
 	// Write a whiteout path
 	d1 := []byte("Hello World\n")
-	if err := os.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "foobar"), d1, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1039,7 +1039,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_enabled(t *testing.T) 
 
 			hdr := &tar.Header{
 				Name: f,
-				Mode: 0644,
+				Mode: 0o644,
 				Size: int64(len("Hello World\n")),
 			}
 
@@ -1121,7 +1121,7 @@ func provideEmptyMountinfoFile() func() {
 }
 
 func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T) {
-	var resetMountInfoFile = provideEmptyMountinfoFile()
+	resetMountInfoFile := provideEmptyMountinfoFile()
 	defer resetMountInfoFile()
 
 	ctrl := gomock.NewController(t)
@@ -1129,7 +1129,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 	root := t.TempDir()
 	// Write a whiteout path
 	d1 := []byte("Hello World\n")
-	if err := os.WriteFile(filepath.Join(root, "foobar"), d1, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "foobar"), d1, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1147,7 +1147,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 
 			hdr := &tar.Header{
 				Name: f,
-				Mode: 0644,
+				Mode: 0o644,
 				Size: int64(len("Hello world\n")),
 			}
 
@@ -1224,7 +1224,7 @@ func Test_GetFSFromLayers_with_whiteouts_include_whiteout_disabled(t *testing.T)
 }
 
 func Test_GetFSFromLayers_ignorelist(t *testing.T) {
-	var resetMountInfoFile = provideEmptyMountinfoFile()
+	resetMountInfoFile := provideEmptyMountinfoFile()
 	defer resetMountInfoFile()
 
 	ctrl := gomock.NewController(t)
@@ -1232,7 +1232,7 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 	root := t.TempDir()
 	// Write a whiteout path
 	fileContents := []byte("Hello World\n")
-	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
+	if err := os.Mkdir(filepath.Join(root, "testdir"), 0o775); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1249,7 +1249,7 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 
 			hdr := &tar.Header{
 				Name: f,
-				Mode: 0644,
+				Mode: 0o644,
 				Size: int64(len(string(fileContents))),
 			}
 
@@ -1321,7 +1321,7 @@ func Test_GetFSFromLayers_ignorelist(t *testing.T) {
 	defaultIgnoreList = append(defaultIgnoreList, IgnoreListEntry{
 		Path: filepath.Join(root, "testdir"),
 	})
-	if err := os.Mkdir(filepath.Join(root, "testdir"), 0775); err != nil {
+	if err := os.Mkdir(filepath.Join(root, "testdir"), 0o775); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1392,7 +1392,7 @@ func Test_GetFSFromLayers(t *testing.T) {
 
 		hdr := &tar.Header{
 			Name: f,
-			Mode: 0644,
+			Mode: 0o644,
 			Size: int64(len("Hello world\n")),
 		}
 
@@ -1519,7 +1519,7 @@ func Test_setFileTimes(t *testing.T) {
 
 	p := filepath.Join(testDir, "foo.txt")
 
-	if err := os.WriteFile(p, []byte("meow"), 0777); err != nil {
+	if err := os.WriteFile(p, []byte("meow"), 0o777); err != nil {
 		t.Fatal(err)
 	}
 

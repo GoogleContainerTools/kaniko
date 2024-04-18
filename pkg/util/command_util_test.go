@@ -18,6 +18,7 @@ package util
 
 import (
 	"fmt"
+	"io/fs"
 	"os/user"
 	"reflect"
 	"sort"
@@ -308,7 +309,8 @@ var updateConfigEnvTests = []struct {
 			{
 				Key:   "foo",
 				Value: "baz",
-			}},
+			},
+		},
 		config:          &v1.Config{},
 		replacementEnvs: []string{},
 		expectedEnv:     []string{"key=var", "foo=baz"},
@@ -326,7 +328,8 @@ var updateConfigEnvTests = []struct {
 			{
 				Key:   "foo",
 				Value: "$argarg",
-			}},
+			},
+		},
 		config:          &v1.Config{},
 		replacementEnvs: []string{"var=/test/with'chars'/", "not=used", "argarg=\"a\"b\""},
 		expectedEnv:     []string{"key=/var/run", "env=/test/with'chars'/", "foo=\"a\"b\""},
@@ -340,7 +343,8 @@ var updateConfigEnvTests = []struct {
 			{
 				Key:   "bob",
 				Value: "cool",
-			}},
+			},
+		},
 		config:          &v1.Config{Env: []string{"bob=used", "more=test"}},
 		replacementEnvs: []string{},
 		expectedEnv:     []string{"bob=cool", "more=test", "alice=nice"},
@@ -585,6 +589,43 @@ func TestGetUserGroup(t *testing.T) {
 	}
 }
 
+func TestGetChmod(t *testing.T) {
+	tests := []struct {
+		description string
+		chmod       string
+		env         []string
+		expected    fs.FileMode
+		shdErr      bool
+	}{
+		{
+			description: "non empty chmod",
+			chmod:       "0755",
+			env:         []string{},
+			expected:    fs.FileMode(0o755),
+		},
+		{
+			description: "non empty chmod with env replacement",
+			chmod:       "$foo",
+			env:         []string{"foo=0750"},
+			expected:    fs.FileMode(0o750),
+		},
+		{
+			description: "empty chmod string",
+			expected:    fs.FileMode(0o600),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			defaultChmod := fs.FileMode(0o600)
+			chmod, useDefault, err := GetChmod(tc.chmod, tc.env)
+			if useDefault {
+				chmod = defaultChmod
+			}
+			testutil.CheckErrorAndDeepEqual(t, tc.shdErr, err, tc.expected, chmod)
+		})
+	}
+}
+
 func TestResolveEnvironmentReplacementList(t *testing.T) {
 	type args struct {
 		values     []string
@@ -806,7 +847,6 @@ func TestLookupUser(t *testing.T) {
 			testutil.CheckErrorAndDeepEqual(t, tt.wantErr, err, tt.expected, got)
 		})
 	}
-
 }
 
 func TestIsSrcRemoteFileURL(t *testing.T) {
