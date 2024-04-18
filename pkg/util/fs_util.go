@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"net/http"
 	"os"
@@ -325,7 +326,7 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 		if os.IsNotExist(err) || !fi.IsDir() {
 			logrus.Debugf("Base %s for file %s does not exist. Creating.", base, path)
 
-			if err := os.MkdirAll(dir, 0755); err != nil {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
 				return err
 			}
 		}
@@ -377,7 +378,7 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 			return nil
 		}
 		// The base directory for a link may not exist before it is created.
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
 		// Check if something already exists at path
@@ -395,7 +396,7 @@ func ExtractFile(dest string, hdr *tar.Header, cleanedName string, tr io.Reader)
 	case tar.TypeSymlink:
 		logrus.Tracef("Symlink from %s to %s", hdr.Linkname, path)
 		// The base directory for a symlink may not exist before it is created.
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
 		// Check if something already exists at path
@@ -621,9 +622,9 @@ func AddVolumePathToIgnoreList(path string) {
 // DownloadFileToDest downloads the file at rawurl to the given dest for the ADD command
 // From add command docs:
 //  1. If <src> is a remote file URL:
-//     - destination will have permissions of 0600
+//     - destination will have permissions of 0600 by default if not specified with chmod
 //     - If remote file has HTTP Last-Modified header, we set the mtime of the file to that timestamp
-func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
+func DownloadFileToDest(rawurl, dest string, uid, gid int64, chmod fs.FileMode) error {
 	resp, err := http.Get(rawurl) //nolint:noctx
 	if err != nil {
 		return err
@@ -634,7 +635,7 @@ func DownloadFileToDest(rawurl, dest string, uid, gid int64) error {
 		return fmt.Errorf("invalid response status %d", resp.StatusCode)
 	}
 
-	if err := CreateFile(dest, resp.Body, 0600, uint32(uid), uint32(gid)); err != nil {
+	if err := CreateFile(dest, resp.Body, chmod, uint32(uid), uint32(gid)); err != nil {
 		return err
 	}
 	mTime := time.Time{}
@@ -661,7 +662,7 @@ func DetermineTargetFileOwnership(fi os.FileInfo, uid, gid int64) (int64, int64)
 
 // CopyDir copies the file or directory at src to dest
 // It returns a list of files it copied over
-func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, error) {
+func CopyDir(src, dest string, context FileContext, uid, gid int64, chmod fs.FileMode, useDefaultChmod bool) ([]string, error) {
 	files, err := RelativeFiles("", src)
 	if err != nil {
 		return nil, errors.Wrap(err, "copying dir")
@@ -681,7 +682,10 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 		if fi.IsDir() {
 			logrus.Tracef("Creating directory %s", destPath)
 
-			mode := fi.Mode()
+			mode := chmod
+			if useDefaultChmod {
+				mode = fi.Mode()
+			}
 			uid, gid := DetermineTargetFileOwnership(fi, uid, gid)
 			if err := MkdirAllWithPermissions(destPath, mode, uid, gid); err != nil {
 				return nil, err
@@ -693,7 +697,12 @@ func CopyDir(src, dest string, context FileContext, uid, gid int64) ([]string, e
 			}
 		} else {
 			// ... Else, we want to copy over a file
-			if _, err := CopyFile(fullPath, destPath, context, uid, gid); err != nil {
+			mode := chmod
+			if useDefaultChmod {
+				mode = fs.FileMode(0o600)
+			}
+
+			if _, err := CopyFile(fullPath, destPath, context, uid, gid, mode, useDefaultChmod); err != nil {
 				return nil, err
 			}
 		}
@@ -724,7 +733,7 @@ func CopySymlink(src, dest string, context FileContext) (bool, error) {
 }
 
 // CopyFile copies the file at src to dest
-func CopyFile(src, dest string, context FileContext, uid, gid int64) (bool, error) {
+func CopyFile(src, dest string, context FileContext, uid, gid int64, chmod fs.FileMode, useDefaultChmod bool) (bool, error) {
 	if context.ExcludesFile(src) {
 		logrus.Debugf("%s found in .dockerignore, ignoring", src)
 		return true, nil
@@ -746,7 +755,12 @@ func CopyFile(src, dest string, context FileContext, uid, gid int64) (bool, erro
 	}
 	defer srcFile.Close()
 	uid, gid = DetermineTargetFileOwnership(fi, uid, gid)
-	return false, CreateFile(dest, srcFile, fi.Mode(), uint32(uid), uint32(gid))
+
+	mode := chmod
+	if useDefaultChmod {
+		mode = fi.Mode()
+	}
+	return false, CreateFile(dest, srcFile, mode, uint32(uid), uint32(gid))
 }
 
 func NewFileContextFromDockerfile(dockerfilePath, buildcontext string) (FileContext, error) {
@@ -903,7 +917,7 @@ func CreateTargetTarfile(tarpath string) (*os.File, error) {
 	baseDir := filepath.Dir(tarpath)
 	if _, err := os.Lstat(baseDir); os.IsNotExist(err) {
 		logrus.Debugf("BaseDir %s for file %s does not exist. Creating.", baseDir, tarpath)
-		if err := os.MkdirAll(baseDir, 0755); err != nil {
+		if err := os.MkdirAll(baseDir, 0o755); err != nil {
 			return nil, err
 		}
 	}
@@ -1040,7 +1054,7 @@ func createParentDirectory(path string, uid int, gid int) error {
 			dir := dirs[i]
 
 			if _, err := os.Lstat(dir); os.IsNotExist(err) {
-				os.Mkdir(dir, 0755)
+				os.Mkdir(dir, 0o755)
 				if uid != DoNotChangeUID {
 					if gid != DoNotChangeGID {
 						os.Chown(dir, uid, gid)

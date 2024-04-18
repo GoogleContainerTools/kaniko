@@ -64,6 +64,11 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		return errors.Wrap(err, "resolving src")
 	}
 
+	chmod, useDefaultChmod, err := util.GetChmod(c.cmd.Chmod, replacementEnvs)
+	if err != nil {
+		return errors.Wrap(err, "getting permissions from chmod")
+	}
+
 	// For each source, iterate through and copy it over
 	for _, src := range srcs {
 		fullPath := filepath.Join(c.fileContext.Root, src)
@@ -93,7 +98,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 		}
 
 		if fi.IsDir() {
-			copiedFiles, err := util.CopyDir(fullPath, destPath, c.fileContext, uid, gid)
+			copiedFiles, err := util.CopyDir(fullPath, destPath, c.fileContext, uid, gid, chmod, useDefaultChmod)
 			if err != nil {
 				return errors.Wrap(err, "copying dir")
 			}
@@ -110,7 +115,7 @@ func (c *CopyCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.Bu
 			c.snapshotFiles = append(c.snapshotFiles, destPath)
 		} else {
 			// ... Else, we want to copy over a file
-			exclude, err := util.CopyFile(fullPath, destPath, c.fileContext, uid, gid)
+			exclude, err := util.CopyFile(fullPath, destPath, c.fileContext, uid, gid, chmod, useDefaultChmod)
 			if err != nil {
 				return errors.Wrap(err, "copying file")
 			}

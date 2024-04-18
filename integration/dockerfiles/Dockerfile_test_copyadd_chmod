@@ -1,0 +1,22 @@
+FROM alpine@sha256:5ce5f501c457015c4b91f91a15ac69157d9b06f1a75cf9107bf2b62e0843983a
+
+ADD --chmod=0666 context/foo /file666
+ADD --chmod=777 context/qux /dir777
+
+# ADD tests
+# simple file
+RUN test "$(stat -c "%a" /file666)" = "666"
+
+# recurive dir
+RUN test "$(stat -c "%a" /dir777/qup)" = "777"
+RUN test "$(stat -c "%a" /dir777/quw/que)" = "777"
+
+# COPY tests
+
+COPY --chmod=0755 context/foo /copyfile755
+COPY --chmod=755 context/qux /copydir755
+
+RUN test "$(stat -c "%a" /copyfile755)" = "755"
+
+RUN test "$(stat -c "%a" /copydir755/qup)" = "755"
+RUN test "$(stat -c "%a" /copydir755/quw/que)" = "755"

@@ -46,9 +46,11 @@ import (
 	"github.com/GoogleContainerTools/kaniko/testutil"
 )
 
-var config *integrationTestConfig
-var imageBuilder *DockerFileBuilder
-var allDockerfiles []string
+var (
+	config         *integrationTestConfig
+	imageBuilder   *DockerFileBuilder
+	allDockerfiles []string
+)
 
 const (
 	daemonPrefix       = "daemon://"
@@ -148,7 +150,6 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 	}
 	os.Exit(exitCode)
-
 }
 
 func buildRequiredImages() error {
@@ -207,7 +208,6 @@ func TestRun(t *testing.T) {
 
 			expected := fmt.Sprintf(emptyContainerDiff, dockerImage, kanikoImage, dockerImage, kanikoImage)
 			checkContainerDiffOutput(t, diff, expected)
-
 		})
 	}
 
@@ -253,10 +253,12 @@ func testGitBuildcontextHelper(t *testing.T, repo string) {
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_git")
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			repo})...)
+			repo,
+		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
@@ -363,10 +365,12 @@ func TestBuildViaRegistryMirrors(t *testing.T) {
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			repo})...)
+			repo,
+		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
@@ -403,10 +407,12 @@ func TestBuildViaRegistryMap(t *testing.T) {
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			repo})...)
+			repo,
+		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
@@ -467,10 +473,12 @@ func TestKanikoDir(t *testing.T) {
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_registry_mirror")
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			repo})...)
+			repo,
+		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
@@ -508,11 +516,13 @@ func TestBuildWithLabels(t *testing.T) {
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_label:mylabel")
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
 			"--label", testLabel,
-			repo})...)
+			repo,
+		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err != nil {
 		t.Errorf("Failed to build image %s with docker command %q: %s %s", dockerImage, dockerCmd.Args, err, string(out))
@@ -549,10 +559,12 @@ func TestBuildWithHTTPError(t *testing.T) {
 	// Build with docker
 	dockerImage := GetDockerImage(config.imageRepo, "Dockerfile_test_add_404")
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			repo})...)
+			repo,
+		})...)
 	out, err := RunCommandWithoutTest(dockerCmd)
 	if err == nil {
 		t.Errorf("an error was expected, got %s", string(out))
@@ -588,6 +600,7 @@ func TestLayers(t *testing.T) {
 		// produces a different amount of layers (?).
 		offset["Dockerfile_test_copy_same_file_many_times"] = 47
 		offset["Dockerfile_test_meta_arg"] = 1
+		offset["Dockerfile_test_copyadd_chmod"] = 6
 	}
 
 	for _, dockerfile := range allDockerfiles {
@@ -732,7 +745,6 @@ func verifyBuildWith(t *testing.T, cache, dockerfile string) {
 }
 
 func TestRelativePaths(t *testing.T) {
-
 	dockerfile := "Dockerfile_relative_copy"
 
 	t.Run("test_relative_"+dockerfile, func(t *testing.T) {
@@ -763,7 +775,6 @@ func TestRelativePaths(t *testing.T) {
 }
 
 func TestExitCodePropagation(t *testing.T) {
-
 	currentDir, err := os.Getwd()
 	if err != nil {
 		t.Fatal("Could not get working dir")
@@ -778,7 +789,8 @@ func TestExitCodePropagation(t *testing.T) {
 		dockerFlags := []string{
 			"build",
 			"-t", dockerImage,
-			"-f", dockerfile}
+			"-f", dockerfile,
+		}
 		dockerCmd := exec.Command("docker", append(dockerFlags, context)...)
 
 		out, kanikoErr := RunCommandWithoutTest(dockerCmd)
@@ -798,7 +810,7 @@ func TestExitCodePropagation(t *testing.T) {
 			t.Fatalf("did not produce the expected error:\n%s", out)
 		}
 
-		//try to build the same image with kaniko the error code should match with the one from the plain docker build
+		// try to build the same image with kaniko the error code should match with the one from the plain docker build
 		contextVolume := fmt.Sprintf("%s:/workspace", context)
 
 		dockerFlags = []string{

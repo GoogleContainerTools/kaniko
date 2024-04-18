@@ -39,7 +39,7 @@ import (
 const (
 	// ExecutorImage is the name of the kaniko executor image
 	ExecutorImage = "executor-image"
-	//WarmerImage is the name of the kaniko cache warmer image
+	// WarmerImage is the name of the kaniko cache warmer image
 	WarmerImage = "warmer-image"
 
 	dockerPrefix     = "docker-"
@@ -69,7 +69,8 @@ var argsMap = map[string][]string{
 
 // Environment to build Dockerfiles with, used for both docker and kaniko builds
 var envsMap = map[string][]string{
-	"Dockerfile_test_arg_secret": {"SSH_PRIVATE_KEY=ThEPriv4t3Key"},
+	"Dockerfile_test_arg_secret":    {"SSH_PRIVATE_KEY=ThEPriv4t3Key"},
+	"Dockerfile_test_copyadd_chmod": {"DOCKER_BUILDKIT=1"},
 }
 
 // Arguments to build Dockerfiles with when building with docker
@@ -138,8 +139,10 @@ func checkArgsNotPrinted(dockerfile string, out []byte) error {
 	return nil
 }
 
-var bucketContextTests = []string{"Dockerfile_test_copy_bucket"}
-var reproducibleTests = []string{"Dockerfile_test_reproducible"}
+var (
+	bucketContextTests = []string{"Dockerfile_test_copy_bucket"}
+	reproducibleTests  = []string{"Dockerfile_test_reproducible"}
+)
 
 // GetDockerImage constructs the name of the docker image that would be built with
 // dockerfile if it was tagged with imageRepo.
@@ -347,13 +350,15 @@ func populateVolumeCache() error {
 	_, ex, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(ex)
 	warmerCmd := exec.Command("docker",
-		append([]string{"run", "--net=host",
+		append([]string{
+			"run", "--net=host",
 			"-d",
 			"-v", os.Getenv("HOME") + "/.config/gcloud:/root/.config/gcloud",
 			"-v", cwd + ":/workspace",
 			WarmerImage,
 			"-c", cacheDir,
-			"-i", baseImageToCache},
+			"-i", baseImageToCache,
+		},
 		)...,
 	)
 
@@ -374,14 +379,16 @@ func (d *DockerFileBuilder) buildCachedImage(config *integrationTestConfig, cach
 
 	benchmarkEnv := "BENCHMARK_FILE=false"
 	if b, err := strconv.ParseBool(os.Getenv("BENCHMARK")); err == nil && b {
-		os.Mkdir("benchmarks", 0755)
+		os.Mkdir("benchmarks", 0o755)
 		benchmarkEnv = "BENCHMARK_FILE=/workspace/benchmarks/" + dockerfile
 	}
 	kanikoImage := GetVersionedKanikoImage(imageRepo, dockerfile, version)
 
-	dockerRunFlags := []string{"run", "--net=host",
+	dockerRunFlags := []string{
+		"run", "--net=host",
 		"-v", cwd + ":/workspace",
-		"-e", benchmarkEnv}
+		"-e", benchmarkEnv,
+	}
 	dockerRunFlags = addServiceAccountFlags(dockerRunFlags, serviceAccount)
 	dockerRunFlags = append(dockerRunFlags, ExecutorImage,
 		"-f", path.Join(buildContextPath, dockerfilesPath, dockerfile),
@@ -411,10 +418,12 @@ func (d *DockerFileBuilder) buildRelativePathsImage(imageRepo, dockerfile, servi
 	kanikoImage := GetKanikoImage(imageRepo, "test_relative_"+dockerfile)
 
 	dockerCmd := exec.Command("docker",
-		append([]string{"build",
+		append([]string{
+			"build",
 			"-t", dockerImage,
 			"-f", dockerfile,
-			"./context"},
+			"./context",
+		},
 		)...,
 	)
 
@@ -483,7 +492,8 @@ func buildKanikoImage(
 	additionalFlags := append(buildArgs, kanikoArgs...)
 	logf("Going to build image with kaniko: %s, flags: %s \n", kanikoImage, additionalFlags)
 
-	dockerRunFlags := []string{"run", "--net=host",
+	dockerRunFlags := []string{
+		"run", "--net=host",
 		"-e", benchmarkEnv,
 		"-v", contextDir + ":/workspace",
 		"-v", benchmarkDir + ":/kaniko/benchmarks",

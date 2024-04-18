@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -300,7 +301,7 @@ func checkKanikoDir(dir string) error {
 	if dir != constants.DefaultKanikoPath {
 
 		// The destination directory may be across a different partition, so we cannot simply rename/move the directory in this case.
-		if _, err := util.CopyDir(constants.DefaultKanikoPath, dir, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
+		if _, err := util.CopyDir(constants.DefaultKanikoPath, dir, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID, fs.FileMode(0o600), true); err != nil {
 			return err
 		}
 
@@ -321,7 +322,6 @@ func checkContained() bool {
 
 // checkNoDeprecatedFlags return an error if deprecated flags are used.
 func checkNoDeprecatedFlags() {
-
 	// In version >=2.0.0 make it fail (`Warn` -> `Fatal`)
 	if opts.CustomPlatformDeprecated != "" {
 		logrus.Warn("Flag --customPlatform is deprecated. Use: --custom-platform")
@@ -391,12 +391,12 @@ func resolveEnvironmentBuildArgs(arguments []string, resolver func(string) strin
 // copy Dockerfile to /kaniko/Dockerfile so that if it's specified in the .dockerignore
 // it won't be copied into the image
 func copyDockerfile() error {
-	if _, err := util.CopyFile(opts.DockerfilePath, config.DockerfilePath, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
+	if _, err := util.CopyFile(opts.DockerfilePath, config.DockerfilePath, util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID, fs.FileMode(0o600), true); err != nil {
 		return errors.Wrap(err, "copying dockerfile")
 	}
 	dockerignorePath := opts.DockerfilePath + ".dockerignore"
 	if util.FilepathExists(dockerignorePath) {
-		if _, err := util.CopyFile(dockerignorePath, config.DockerfilePath+".dockerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID); err != nil {
+		if _, err := util.CopyFile(dockerignorePath, config.DockerfilePath+".dockerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID, fs.FileMode(0o600), true); err != nil {
 			return errors.Wrap(err, "copying Dockerfile.dockerignore")
 		}
 	}
