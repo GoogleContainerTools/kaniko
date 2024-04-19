@@ -63,7 +63,7 @@ Not sure what to put? Include:
 
 The code in this repo should follow best practices, specifically:
 
-- [Go code review comments](https://github.com/golang/go/wiki/CodeReviewComments)
+- [Go code review comments](https://go.dev/wiki/CodeReviewComments)
 
 ## Finding something to work on
 

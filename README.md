@@ -867,7 +867,7 @@ build --platform xxx the value has to be on the form
 It's also possible specifying CPU variants adding it as a third parameter (like
 `--custom-platform=linux/arm/v5`). Currently CPU variants are only known to be
 used for the ARM architecture as listed here:
-[GOARM](https://github.com/golang/go/wiki/GoArm#supported-architectures)
+[GOARM](https://go.dev/wiki/GoArm#supported-architectures)
 
 _The resulting images cannot provide any metadata about CPU variant due to a
 limitation of the OCI-image specification._
