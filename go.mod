@@ -36,7 +36,7 @@ require (
 
 require (
 	github.com/GoogleCloudPlatform/docker-credential-gcr/v2 v2.1.22
-	github.com/containerd/containerd v1.7.14
+	github.com/containerd/containerd v1.7.15
 )
 
 require (
