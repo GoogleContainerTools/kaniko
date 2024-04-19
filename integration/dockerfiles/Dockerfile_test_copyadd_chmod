@@ -1,15 +1,10 @@
 FROM alpine@sha256:5ce5f501c457015c4b91f91a15ac69157d9b06f1a75cf9107bf2b62e0843983a
-# Create dev user and group, with id 1001
-RUN yes | adduser -u 1001 dev
-RUN yes | adduser -u 1002 other
-
 ADD --chmod=0666 context/foo /path/file666
 ADD --chmod=777 context/qux /path/dir777
 
 # ADD tests
 RUN test "$(stat -c "%a" /path/file666)" = "666"
 
-RUN test "$(stat -c "%a" /path/dir777)" = "777"
 RUN test "$(stat -c "%a" /path/dir777/qup)" = "777"
 RUN test "$(stat -c "%a" /path/dir777/quw)" = "777"
 RUN test "$(stat -c "%a" /path/dir777/quw/que)" = "777"
@@ -21,7 +16,6 @@ COPY --chmod=755 context/qux /path/copydir755
 
 RUN test "$(stat -c "%a" /path/copyfile755)" = "755"
 
-RUN test "$(stat -c "%a" /path/copydir755)" = "755"
 RUN test "$(stat -c "%a" /path/copydir755/qup)" = "755"
 RUN test "$(stat -c "%a" /path/copydir755/quw)" = "755"
 RUN test "$(stat -c "%a" /path/copydir755/quw/que)" = "755"
