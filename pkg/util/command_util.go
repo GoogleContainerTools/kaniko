@@ -285,8 +285,10 @@ func IsSrcsValid(srcsAndDest instructions.SourcesAndDest, resolvedSources []stri
 			totalFiles++
 		}
 	}
+	// ignore the case where whildcards and there are no files to copy
 	if totalFiles == 0 {
-		return errors.New("copy failed: no source files specified")
+		// using log warning instead of return errors.New("copy failed: no source files specified")
+		logrus.Warn("No files to copy")
 	}
 	// If there are wildcards, and the destination is a file, there must be exactly one file to copy over,
 	// Otherwise, return an error
