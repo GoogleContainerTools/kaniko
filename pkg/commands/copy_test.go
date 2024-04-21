@@ -518,8 +518,10 @@ func Test_CopyEnvAndWildcards(t *testing.T) {
 		testutil.CheckNoError(t, err)
 
 		actual, err := readDirectory(targetPath)
-		if err != nil {
-			t.Fatal(err)
+
+		//check it should error out since no files are copied and targetPath is not created
+		if err == nil {
+			t.Fatal("expected error no dirrectory but got nil")
 		}
 
 		//actual should empty since no files are copied
