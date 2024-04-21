@@ -517,6 +517,11 @@ func Test_CopyEnvAndWildcards(t *testing.T) {
 		}
 		testutil.CheckNoError(t, err)
 
+		actual, err := readDirectory(targetPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		//actual should empty since no files are copied
 		testutil.CheckDeepEqual(t, 0, len(actual))
 	})
