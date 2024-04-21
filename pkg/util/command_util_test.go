@@ -485,7 +485,16 @@ var isSrcValidTests = []struct {
 			"ignore/baz",
 			"ignore/bar",
 		},
-		shouldErr: true,
+		shouldErr: false,
+	},
+	{
+		name: "copy two srcs, wildcard and no file match, to file",
+		srcsAndDest: []string{
+			"ignore/ba[s]",
+			"dest",
+		},
+		resolvedSources: []string{},
+		shouldErr:       false,
 	},
 }
 
