@@ -454,40 +454,6 @@ func Test_CopyEnvAndWildcards(t *testing.T) {
 	t.Run("copy sources into a dir defined in env variable", func(t *testing.T) {
 		testDir, srcDir := setupDirs(t)
 		defer os.RemoveAll(testDir)
-
-		targetPath := filepath.Join(testDir, "target") + "/"
-
-		cmd := CopyCommand{
-			cmd: &instructions.CopyCommand{
-				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir + "/*"}, DestPath: "$TARGET_PATH"},
-			},
-			fileContext: util.FileContext{Root: testDir},
-		}
-
-		cfg := &v1.Config{
-			Cmd:        nil,
-			Env:        []string{"TARGET_PATH=" + targetPath},
-			WorkingDir: testDir,
-		}
-
-		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		testutil.CheckNoError(t, err)
-
-		actual, err := readDirectory(targetPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		//actual should empty since no files are copied
-		testutil.CheckDeepEqual(t, 0, len(actual))
-	})
-
-	t.Run("copy sources into a dir defined in env variable with no file found", func(t *testing.T) {
-		testDir, srcDir := setupDirs(t)
-		defer os.RemoveAll(testDir)
 		expected, err := readDirectory(filepath.Join(testDir, srcDir))
 		if err != nil {
 			t.Fatal(err)
@@ -497,8 +463,7 @@ func Test_CopyEnvAndWildcards(t *testing.T) {
 
 		cmd := CopyCommand{
 			cmd: &instructions.CopyCommand{
-				//should only dam and bam be copied
-				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir + "/tam[s]"}, DestPath: "$TARGET_PATH"},
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir + "/*"}, DestPath: "$TARGET_PATH"},
 			},
 			fileContext: util.FileContext{Root: testDir},
 		}
@@ -523,6 +488,37 @@ func Test_CopyEnvAndWildcards(t *testing.T) {
 			testutil.CheckDeepEqual(t, expected[i].Name(), f.Name())
 			testutil.CheckDeepEqual(t, expected[i].Mode(), f.Mode())
 		}
+
+	})
+
+	t.Run("copy sources into a dir defined in env variable with no file found", func(t *testing.T) {
+		testDir, srcDir := setupDirs(t)
+		defer os.RemoveAll(testDir)
+
+		targetPath := filepath.Join(testDir, "target") + "/"
+
+		cmd := CopyCommand{
+			cmd: &instructions.CopyCommand{
+				//should only dam and bam be copied
+				SourcesAndDest: instructions.SourcesAndDest{SourcePaths: []string{srcDir + "/tam[s]"}, DestPath: "$TARGET_PATH"},
+			},
+			fileContext: util.FileContext{Root: testDir},
+		}
+
+		cfg := &v1.Config{
+			Cmd:        nil,
+			Env:        []string{"TARGET_PATH=" + targetPath},
+			WorkingDir: testDir,
+		}
+
+		err := cmd.ExecuteCommand(cfg, dockerfile.NewBuildArgs([]string{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.CheckNoError(t, err)
+
+		//actual should empty since no files are copied
+		testutil.CheckDeepEqual(t, 0, len(actual))
 	})
 }
 
