@@ -306,7 +306,10 @@ func (d *DockerFileBuilder) BuildImageWithContext(t *testing.T, config *integrat
 	}
 
 	timer := timing.Start(dockerfile + "_docker")
-	d.BuildDockerImage(t, imageRepo, dockerfilesPath, dockerfile, contextDir)
+	if err := d.BuildDockerImage(t, imageRepo, dockerfilesPath, dockerfile, contextDir); err != nil {
+		return err
+	}
+
 	timing.DefaultRun.Stop(timer)
 
 	contextFlag := "-c"
