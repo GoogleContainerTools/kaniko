@@ -52,37 +52,27 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 	}
 
 	if newRegURLs, found := opts.RegistryMaps[ref.Context().RegistryStr()]; found {
-		for _, regToMapTo := range newRegURLs {
+		for _, registryMapping := range newRegURLs {
 
-			//extract custom path if any in all registry map and clean regToMapTo to only the registry without the path
-			custompath, regToMapTo := extractPathFromRegistryURL(regToMapTo)
-			//normalize reference is call in every fallback to ensure that the image is normalized to the new registry include the image prefix
-			ref, err = normalizeReference(ref, image, custompath)
+			regToMapTo, repositoryPrefix := parseRegistryMapping(registryMapping)
 
+			insecurePull := opts.InsecurePull || opts.InsecureRegistries.Contains(regToMapTo)
+
+			remappedRepository, err := remapRepository(ref.Context(), regToMapTo, repositoryPrefix, insecurePull)
 			if err != nil {
 				return nil, err
 			}
 
-			var newReg name.Registry
-			if opts.InsecurePull || opts.InsecureRegistries.Contains(regToMapTo) {
-				newReg, err = name.NewRegistry(regToMapTo, name.WeakValidation, name.Insecure)
-			} else {
-				newReg, err = name.NewRegistry(regToMapTo, name.StrictValidation)
-			}
-			if err != nil {
-				return nil, err
-			}
-			//ref will be already use library/ or the custom path in registry map suffix
-			ref := setNewRegistry(ref, newReg)
-			logrus.Infof("Retrieving image %s from mapped registry %s", ref, regToMapTo)
+			remappedRef := setNewRepository(ref, remappedRepository)
+
+			logrus.Infof("Retrieving image %s from mapped registry %s", remappedRef, regToMapTo)
 			retryFunc := func() (v1.Image, error) {
-				return remoteImageFunc(ref, remoteOptions(regToMapTo, opts, customPlatform)...)
+				return remoteImageFunc(remappedRef, remoteOptions(regToMapTo, opts, customPlatform)...)
 			}
 
 			var remoteImage v1.Image
-			var err error
 			if remoteImage, err = util.RetryWithResult(retryFunc, opts.ImageDownloadRetry, 1000); err != nil {
-				logrus.Warnf("Failed to retrieve image %s from remapped registry %s: %s. Will try with the next registry, or fallback to the original registry.", ref, regToMapTo, err)
+				logrus.Warnf("Failed to retrieve image %s from remapped registry %s: %s. Will try with the next registry, or fallback to the original registry.", remappedRef, regToMapTo, err)
 				continue
 			}
 
@@ -119,19 +109,26 @@ func RetrieveRemoteImage(image string, opts config.RegistryOptions, customPlatfo
 	return remoteImage, err
 }
 
-// normalizeReference adds the library/ or the {path}/ in registry map suffix to images without it.
-//
-// It is mostly useful when using a registry maps that is not able to perform
-// this fix automatically add library or the custom path on registry map.
-func normalizeReference(ref name.Reference, image string, custompath string) (name.Reference, error) {
-	if custompath == "" {
-		custompath = "library"
+// remapRepository adds the {repositoryPrefix}/ to the original repo, and normalizes with an additional library/ if necessary
+func remapRepository(repo name.Repository, regToMapTo string, repositoryPrefix string, insecurePull bool) (name.Repository, error) {
+	if insecurePull {
+		return name.NewRepository(repositoryPrefix+repo.RepositoryStr(), name.WithDefaultRegistry(regToMapTo), name.WeakValidation, name.Insecure)
+	} else {
+		return name.NewRepository(repositoryPrefix+repo.RepositoryStr(), name.WithDefaultRegistry(regToMapTo), name.WeakValidation)
 	}
-	if !strings.ContainsRune(image, '/') {
-		return name.ParseReference(custompath+"/"+image, name.WeakValidation)
-	}
+}
 
-	return ref, nil
+func setNewRepository(ref name.Reference, newRepo name.Repository) name.Reference {
+	switch r := ref.(type) {
+	case name.Tag:
+		r.Repository = newRepo
+		return r
+	case name.Digest:
+		r.Repository = newRepo
+		return r
+	default:
+		return ref
+	}
 }
 
 func setNewRegistry(ref name.Reference, newReg name.Registry) name.Reference {
@@ -165,16 +162,16 @@ func remoteOptions(registryName string, opts config.RegistryOptions, customPlatf
 	return []remote.Option{remote.WithTransport(tr), remote.WithAuthFromKeychain(creds.GetKeychain()), remote.WithPlatform(*platform)}
 }
 
-// Parse the registry URL
-// example: regURL = "registry.example.com/namespace/repo:tag" will return namespace/repo
-func extractPathFromRegistryURL(regFullURL string) (string, string) {
-	// Split the regURL by slashes
-	// becaues the registry url is write without scheme, we just need to remove the first one
-	segments := strings.Split(regFullURL, "/")
-	// Join all segments except the first one (which is typically empty)
-	path := strings.Join(segments[1:], "/")
-	// get the fist segment to get the registry url
-	regURL := segments[0]
+// Parse the registry mapping
+// example: regMapping = "registry.example.com/subdir1/subdir2" will return registry.example.com and subdir1/subdir2/
+func parseRegistryMapping(regMapping string) (string, string) {
+	// Split the registry mapping by first slash
+	regURL, repositoryPrefix, _ := strings.Cut(regMapping, "/")
 
-	return path, regURL
+	// Normalize with a trailing slash if not empty
+	if repositoryPrefix != "" && !strings.HasSuffix(repositoryPrefix, "/") {
+		repositoryPrefix = repositoryPrefix + "/"
+	}
+
+	return regURL, repositoryPrefix
 }
