@@ -843,6 +843,11 @@ Cache timeout in hours. Defaults to two weeks.
 
 Set this flag to clean the filesystem at the end of the build.
 
+#### --retry-cleanup
+
+Set this flag to retry cleanup when it fails
+The failure can happen when a volume is being mounted into an image and receives writes during the cleanup
+
 #### Flag `--compressed-caching`
 
 Set this to false in order to prevent tar compression for cached layers. This

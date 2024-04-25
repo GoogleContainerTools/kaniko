@@ -787,7 +787,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			if opts.Cleanup {
-				if err = util.DeleteFilesystem(); err != nil {
+				if err = util.DeleteFilesystem(opts.RetryCleanup); err != nil {
 					return nil, err
 				}
 			}
@@ -819,7 +819,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 
 		// Delete the filesystem
-		if err := util.DeleteFilesystem(); err != nil {
+		if err := util.DeleteFilesystem(opts.RetryCleanup); err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after stage %d", index))
 		}
 	}
