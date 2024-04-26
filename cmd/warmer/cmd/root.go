@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/cache"
@@ -28,6 +29,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/logging"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/containerd/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -55,6 +57,24 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := logging.Configure(logLevel, logFormat, logTimestamp); err != nil {
 			return err
+		}
+
+		// Allow setting --registry-maps using an environment variable.
+		// some users use warmer with --regisry-mirror before v1.21.0
+		// TODO may need all executors validation in here
+
+		if val, ok := os.LookupEnv("KANIKO_REGISTRY_MAP"); ok {
+			opts.RegistryMaps.Set(val)
+		}
+
+		for _, target := range opts.RegistryMirrors {
+			opts.RegistryMaps.Set(fmt.Sprintf("%s=%s", name.DefaultRegistry, target))
+		}
+
+		if len(opts.RegistryMaps) > 0 {
+			for src, dsts := range opts.RegistryMaps {
+				logrus.Debugf("registry-map remaps %s to %s.", src, strings.Join(dsts, ", "))
+			}
 		}
 
 		if len(opts.Images) == 0 && opts.DockerfilePath == "" {
@@ -97,6 +117,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	opts.RegistriesClientCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesClientCertificates, "registry-client-cert", "", "Use the provided client certificate for mutual TLS (mTLS) communication with the given registry. Expected format is 'my.registry.url=/path/to/client/cert,/path/to/client/key'.")
+	opts.RegistryMaps = make(map[string][]string)
+	RootCmd.PersistentFlags().VarP(&opts.RegistryMaps, "registry-map", "", "Registry map of mirror to use as pull-through cache instead. Expected format is 'orignal.registry=new.registry;other-original.registry=other-remap.registry'")
 	RootCmd.PersistentFlags().VarP(&opts.RegistryMirrors, "registry-mirror", "", "Registry mirror to use as pull-through cache instead of docker.io. Set it repeatedly for multiple mirrors.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.SkipDefaultRegistryFallback, "skip-default-registry-fallback", "", false, "If an image is not found on any mirrors (defined with registry-mirror) do not fallback to the default registry. If registry-mirror is not defined, this flag is ignored.")
 	RootCmd.PersistentFlags().StringVarP(&opts.CustomPlatform, "customPlatform", "", "", "Specify the build platform if different from the current host")
