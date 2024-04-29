@@ -22,7 +22,7 @@ require (
 	github.com/google/slowjam v1.1.1
 	github.com/karrick/godirwalk v1.16.1
 	github.com/minio/highwayhash v1.0.2
-	github.com/moby/buildkit v0.13.1
+	github.com/moby/buildkit v0.13.2
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
