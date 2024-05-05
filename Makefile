@@ -15,7 +15,7 @@
 # Bump these on release
 VERSION_MAJOR ?= 1
 VERSION_MINOR ?= 22
-VERSION_BUILD ?= 0
+VERSION_BUILD ?= 1
 
 VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 VERSION_PACKAGE = $(REPOPATH/pkg/version)
@@ -25,7 +25,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 ORG := github.com/GoogleContainerTools
 PROJECT := kaniko
-REGISTRY?=gcr.io/kaniko-project
+REGISTRY?=wushie/kaniko-project
 
 REPOPATH ?= $(ORG)/$(PROJECT)
 VERSION_PACKAGE = $(REPOPATH)/pkg/version
@@ -100,14 +100,14 @@ k8s-executor-build-push:
 .PHONY: images
 images: DOCKER_BUILDKIT=1
 images:
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/executor:latest -f deploy/Dockerfile --target kaniko-executor .
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/executor:debug -f deploy/Dockerfile --target kaniko-debug .
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/executor:slim -f deploy/Dockerfile --target kaniko-slim .
-	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile --target kaniko-warmer .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/executor:v1.22.1 -f deploy/Dockerfile --target kaniko-executor .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/executor:v1.22.1-debug -f deploy/Dockerfile --target kaniko-debug .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/executor:v1.22.1-slim -f deploy/Dockerfile --target kaniko-slim .
+	docker build ${BUILD_ARG} --build-arg=TARGETARCH=$(GOARCH) --build-arg=TARGETOS=linux -t $(REGISTRY)/warmer:v1.22.1 -f deploy/Dockerfile --target kaniko-warmer .
 
 .PHONY: push
 push:
-	docker push $(REGISTRY)/executor:latest
-	docker push $(REGISTRY)/executor:debug
-	docker push $(REGISTRY)/executor:slim
-	docker push $(REGISTRY)/warmer:latest
+	docker push $(REGISTRY)/executor:v1.22.1
+	docker push $(REGISTRY)/executor:v1.22.1-debug
+	docker push $(REGISTRY)/executor:v1.22.1-slim
+	docker push $(REGISTRY)/warmer:v1.22.1
