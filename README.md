@@ -100,6 +100,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--skip-default-registry-fallback`](#flag---skip-default-registry-fallback)
       - [Flag `--reproducible`](#flag---reproducible)
       - [Flag `--single-snapshot`](#flag---single-snapshot)
+      - [Flag `--skip-snapshot`](#flag---skip-snapshot)
       - [Flag `--skip-push-permission-check`](#flag---skip-push-permission-check)
       - [Flag `--skip-tls-verify`](#flag---skip-tls-verify)
       - [Flag `--skip-tls-verify-pull`](#flag---skip-tls-verify-pull)
@@ -1059,6 +1060,10 @@ reproducible.
 
 This flag takes a single snapshot of the filesystem at the end of the build, so
 only one layer will be appended to the base image.
+
+#### Flag `--skip-snapshot`
+
+This flag allows users to skip all snapshots during the build process. Enabling this flag ensures that no snapshots are taken, potentially speeding up the build process.
 
 #### Flag `--skip-push-permission-check`
 
