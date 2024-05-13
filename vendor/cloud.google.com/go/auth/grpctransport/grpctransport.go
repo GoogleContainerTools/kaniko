@@ -196,6 +196,8 @@ func dial(ctx context.Context, secure bool, opts *Options) (*grpc.ClientConn, er
 	if io := opts.InternalOptions; io != nil {
 		tOpts.DefaultEndpointTemplate = io.DefaultEndpointTemplate
 		tOpts.DefaultMTLSEndpoint = io.DefaultMTLSEndpoint
+		tOpts.EnableDirectPath = io.EnableDirectPath
+		tOpts.EnableDirectPathXds = io.EnableDirectPathXds
 	}
 	transportCreds, endpoint, err := transport.GetGRPCTransportCredsAndEndpoint(tOpts)
 	if err != nil {
@@ -214,12 +216,16 @@ func dial(ctx context.Context, secure bool, opts *Options) (*grpc.ClientConn, er
 	// Authentication can only be sent when communicating over a secure connection.
 	if !opts.DisableAuthentication {
 		metadata := opts.Metadata
-		creds, err := credentials.DetectDefault(opts.resolveDetectOptions())
-		if err != nil {
-			return nil, err
-		}
+
+		var creds *auth.Credentials
 		if opts.Credentials != nil {
 			creds = opts.Credentials
+		} else {
+			var err error
+			creds, err = credentials.DetectDefault(opts.resolveDetectOptions())
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		qp, err := creds.QuotaProjectID(ctx)
