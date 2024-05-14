@@ -1010,7 +1010,7 @@ Expected format is
 `original-registry=remapped-registry[;another-reg=another-remap[;...]]` for
 example.
 
-Note that you can't specify a URL with scheme for this flag. Some valid options
+Note that you **can** specify a URL with scheme for this flag. Some valid options
 are:
 
 - `index.docker.io=mirror.gcr.io`
@@ -1019,6 +1019,7 @@ are:
 - `index.docker.io=docker-io.mirrors.corp.net;index.docker.io=mirror.gcr.io;gcr.io=127.0.0.1`
   will try `docker-io.mirrors.corp.net` then `mirror.gcr.io` for
   `index.docker.io` and `127.0.0.1` for `gcr.io`
+- `docker.io=harbor.provate.io/theproject`
 
 #### Flag `--registry-mirror`
 
@@ -1030,15 +1031,16 @@ the next mirror(s), and at the end fallback on the default registry.
 Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment
 variable.
 
-Expected format is `mirror.gcr.io` for example.
+Expected format is `mirror.gcr.io` or `mirror.gcr.io/path` for example.
 
-Note that you can't specify a URL with scheme for this flag. Some valid options
+Note that you **can** specify a URL with scheme for this flag. Some valid options
 are:
 
 - `mirror.gcr.io`
 - `127.0.0.1`
 - `192.168.0.1:5000`
 - `mycompany-docker-virtual.jfrog.io`
+- `harbor.provate.io/theproject`
 
 #### Flag `--skip-default-registry-fallback`
 
