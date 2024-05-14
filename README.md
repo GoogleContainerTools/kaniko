@@ -1031,7 +1031,7 @@ the next mirror(s), and at the end fallback on the default registry.
 Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment
 variable.
 
-Expected format is `mirror.gcr.io/path` for example.
+Expected format is `mirror.gcr.io` or `mirror.gcr.io/path` for example.
 
 Note that you **can** specify a URL with scheme for this flag. Some valid options
 are:
