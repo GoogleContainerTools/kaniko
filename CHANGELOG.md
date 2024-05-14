@@ -1,3 +1,73 @@
+# v1.23.0 Release 2024-05-14
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.23.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.23.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.23.0-slim
+```
+
+* give warn instead of error when wildcard not match any files [#3127](https://github.com/GoogleContainerTools/kaniko/pull/3127)
+* warmer validate and copy registry mirror to registry map [#3140](https://github.com/GoogleContainerTools/kaniko/pull/3140)
+* docs: update docs on mirrors and registry map. [#3153](https://github.com/GoogleContainerTools/kaniko/pull/3153)
+* Fix: Make `--registry-map` compatible with namespaced images [#3138](https://github.com/GoogleContainerTools/kaniko/pull/3138)
+* "Fixes #2752" [#3132](https://github.com/GoogleContainerTools/kaniko/pull/3132)
+* chore(deps): bump github.com/docker/docker from 26.1.1+incompatible to 26.1.2+incompatible [#3161](https://github.com/GoogleContainerTools/kaniko/pull/3161)
+* chore(deps): bump google.golang.org/api from 0.177.0 to 0.180.0 [#3160](https://github.com/GoogleContainerTools/kaniko/pull/3160)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.15 to 1.16.17 [#3158](https://github.com/GoogleContainerTools/kaniko/pull/3158)
+* chore(deps): bump github.com/docker/docker from 26.1.0+incompatible to 26.1.1+incompatible [#3149](https://github.com/GoogleContainerTools/kaniko/pull/3149)
+* chore(deps): bump actions/setup-go from 5.0.0 to 5.0.1 [#3152](https://github.com/GoogleContainerTools/kaniko/pull/3152)
+* chore(deps): bump google.golang.org/api from 0.175.0 to 0.177.0 [#3151](https://github.com/GoogleContainerTools/kaniko/pull/3151)
+* chore(deps): bump golang.org/x/oauth2 from 0.19.0 to 0.20.0 [#3150](https://github.com/GoogleContainerTools/kaniko/pull/3150)
+* chore(deps): bump github.com/moby/buildkit from 0.13.1 to 0.13.2 [#3145](https://github.com/GoogleContainerTools/kaniko/pull/3145)
+* chore(deps): bump github.com/containerd/containerd from 1.7.15 to 1.7.16 [#3144](https://github.com/GoogleContainerTools/kaniko/pull/3144)
+* chore: bump cred helper libraries [#3133](https://github.com/GoogleContainerTools/kaniko/pull/3133)
+* Added --chmod for ADD and COPY commands. Fixes #2850 and #1751 [#3119](https://github.com/GoogleContainerTools/kaniko/pull/3119)
+* chore(deps): bump github.com/google/slowjam from 1.1.0 to 1.1.1 [#3129](https://github.com/GoogleContainerTools/kaniko/pull/3129)
+* chore(deps): bump google.golang.org/api from 0.172.0 to 0.175.0 [#3128](https://github.com/GoogleContainerTools/kaniko/pull/3128)
+* fix: integration: fail on error when build with docker [#3131](https://github.com/GoogleContainerTools/kaniko/pull/3131)
+* fix(doc): wiki url [#3117](https://github.com/GoogleContainerTools/kaniko/pull/3117)
+* chore(deps): bump golang.org/x/net from 0.22.0 to 0.24.0 [#3113](https://github.com/GoogleContainerTools/kaniko/pull/3113)
+* chore(deps): bump github.com/Azure/azure-sdk-for-go/sdk/storage/azblob from 1.3.1 to 1.3.2 [#3114](https://github.com/GoogleContainerTools/kaniko/pull/3114)
+* chore(deps): bump github.com/containerd/containerd from 1.7.14 to 1.7.15 [#3112](https://github.com/GoogleContainerTools/kaniko/pull/3112)
+* chore(deps): bump docker/setup-buildx-action from 3.2.0 to 3.3.0 [#3111](https://github.com/GoogleContainerTools/kaniko/pull/3111)
+* chore(deps): bump github.com/docker/docker from 26.0.0+incompatible to 26.0.2+incompatible [#3121](https://github.com/GoogleContainerTools/kaniko/pull/3121)
+* chore(deps): bump AdityaGarg8/remove-unwanted-software from 2 to 3 [#3110](https://github.com/GoogleContainerTools/kaniko/pull/3110)
+* chore(deps): bump sigstore/cosign-installer from 3.4.0 to 3.5.0 [#3109](https://github.com/GoogleContainerTools/kaniko/pull/3109)
+* chore(deps): bump golang.org/x/sys from 0.18.0 to 0.19.0 [#3103](https://github.com/GoogleContainerTools/kaniko/pull/3103)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.9 to 1.16.15 [#3104](https://github.com/GoogleContainerTools/kaniko/pull/3104)
+* chore(deps): bump golang.org/x/sync from 0.6.0 to 0.7.0 [#3105](https://github.com/GoogleContainerTools/kaniko/pull/3105)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/config from 1.27.7 to 1.27.11 [#3106](https://github.com/GoogleContainerTools/kaniko/pull/3106)
+* chore(deps): bump golang.org/x/oauth2 from 0.18.0 to 0.19.0 [#3107](https://github.com/GoogleContainerTools/kaniko/pull/3107)
+* chore(deps): bump google.golang.org/api from 0.171.0 to 0.172.0 [#3094](https://github.com/GoogleContainerTools/kaniko/pull/3094)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.52.1 to 1.53.1 [#3096](https://github.com/GoogleContainerTools/kaniko/pull/3096)
+* chore(deps): bump github.com/go-git/go-git/v5 from 5.11.0 to 5.12.0 [#3095](https://github.com/GoogleContainerTools/kaniko/pull/3095)
+* chore(deps): bump github.com/moby/buildkit from 0.13.0 to 0.13.1 [#3093](https://github.com/GoogleContainerTools/kaniko/pull/3093)
+* chore(deps): bump cloud.google.com/go/storage from 1.39.1 to 1.40.0 [#3097](https://github.com/GoogleContainerTools/kaniko/pull/3097)
+* chore: update cred helper go libraries [#3087](https://github.com/GoogleContainerTools/kaniko/pull/3087)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- Djabx
+- Marc Lallaouret
+- Matthias Schneider
+- Prima Adi Pradana
+- Samarth08
+- Verlhac Gaëtan
+
+
 # v1.22.0 Release 2024-03-26
 The executor images in this release are:
 ```
