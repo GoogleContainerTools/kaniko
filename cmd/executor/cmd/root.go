@@ -122,6 +122,8 @@ var RootCmd = &cobra.Command{
 			dir := config.KanikoDir
 			if opts.KanikoDir != constants.DefaultKanikoPath {
 				dir = opts.KanikoDir
+				//forcing the KANIKO_DIR to be the same as the flag in current process (all executeCommand())
+				os.Setenv("KANIKO_DIR", opts.KanikoDir)
 			}
 
 			if err := checkKanikoDir(dir); err != nil {
