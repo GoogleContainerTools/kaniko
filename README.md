@@ -91,6 +91,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--log-format`](#flag---log-format)
       - [Flag `--log-timestamp`](#flag---log-timestamp)
       - [Flag `--no-push`](#flag---no-push)
+      - [Flag `--no-push-cache`](#flag---no-push-cache)
       - [Flag `--oci-layout-path`](#flag---oci-layout-path)
       - [Flag `--push-retry`](#flag---push-retry)
       - [Flag `--registry-certificate`](#flag---registry-certificate)
@@ -947,6 +948,13 @@ Set this flag as `--log-timestamp=<true|false>` to add timestamps to
 Set this flag if you only want to build the image, without pushing to a
 registry. This can also be defined through `KANIKO_NO_PUSH` environment
 variable.
+
+NOTE: this will still push cache layers to the repo, to disable pushing cache layers use `--no-push-cache`
+
+#### Flag `--no-push-cache`
+
+Set this flag if you do not want to push cache layers to a
+registry.  Can be used in addition to `--no-push` to push no layers to a registry.
 
 #### Flag `--oci-layout-path`
 
