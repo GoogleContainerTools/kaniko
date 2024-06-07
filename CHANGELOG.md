@@ -1,3 +1,40 @@
+# v1.23.1 Release 2024-06-07
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.23.1
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.23.1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.23.1-slim
+```
+
+* Enable pushing cache with --no-push [#3181](https://github.com/GoogleContainerTools/kaniko/pull/3181)
+* docs: document --no-push-cache flag in README.md [#3188](https://github.com/GoogleContainerTools/kaniko/pull/3188)
+* chore(deps): bump google.golang.org/api from 0.181.0 to 0.182.0 [#3187](https://github.com/GoogleContainerTools/kaniko/pull/3187)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.17 to 1.16.21 [#3179](https://github.com/GoogleContainerTools/kaniko/pull/3179)
+* chore(deps): bump google.golang.org/api from 0.180.0 to 0.181.0 [#3170](https://github.com/GoogleContainerTools/kaniko/pull/3170)
+* chore(deps): bump google-github-actions/auth from 2.1.2 to 2.1.3 [#3168](https://github.com/GoogleContainerTools/kaniko/pull/3168)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.53.2 to 1.54.2 [#3169](https://github.com/GoogleContainerTools/kaniko/pull/3169)
+* chore(deps): bump cloud.google.com/go/storage from 1.40.0 to 1.41.0 [#3171](https://github.com/GoogleContainerTools/kaniko/pull/3171)
+* chore(deps): bump github.com/containerd/containerd from 1.7.16 to 1.7.17 [#3172](https://github.com/GoogleContainerTools/kaniko/pull/3172)
+* chore(deps): bump github.com/docker/docker from 26.1.2+incompatible to 26.1.3+incompatible [#3173](https://github.com/GoogleContainerTools/kaniko/pull/3173)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+- Leo Palmer Sunmo
+
+
 # v1.23.0 Release 2024-05-14
 The executor images in this release are:
 ```
