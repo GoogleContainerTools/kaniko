@@ -35,6 +35,7 @@ require (
 )
 
 require (
+	github.com/DefangLabs/docker-credential-digitalocean v0.0.0-20240610205821-a2ef21e94d2a
 	github.com/GoogleCloudPlatform/docker-credential-gcr/v2 v2.1.22
 	github.com/containerd/containerd v1.7.18
 )
