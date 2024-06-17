@@ -520,7 +520,7 @@ github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v26.1.3+incompatible
+# github.com/docker/docker v27.0.0+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types

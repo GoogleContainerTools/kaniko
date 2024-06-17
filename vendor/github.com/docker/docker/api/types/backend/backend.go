@@ -89,7 +89,15 @@ type LogSelector struct {
 type ContainerStatsConfig struct {
 	Stream    bool
 	OneShot   bool
-	OutStream io.Writer
+	OutStream func() io.Writer
+}
+
+// ExecStartConfig holds the options to start container's exec.
+type ExecStartConfig struct {
+	Stdin       io.Reader
+	Stdout      io.Writer
+	Stderr      io.Writer
+	ConsoleSize *[2]uint `json:",omitempty"`
 }
 
 // ExecInspect holds information about a running process started
