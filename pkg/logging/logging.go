@@ -49,13 +49,13 @@ func Configure(level, format string, logTimestamp bool) error {
 	switch format {
 	case FormatText:
 		formatter = &logrus.TextFormatter{
-			DisableColors: true,
-			FullTimestamp: logTimestamp,
+			DisableColors:    true,
+			DisableTimestamp: logTimestamp,
 		}
 	case FormatColor:
 		formatter = &logrus.TextFormatter{
-			ForceColors:   true,
-			FullTimestamp: logTimestamp,
+			ForceColors:      true,
+			DisableTimestamp: logTimestamp,
 		}
 	case FormatJSON:
 		formatter = &logrus.JSONFormatter{}
