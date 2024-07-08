@@ -353,15 +353,6 @@ github.com/chrismellard/docker-credential-acr-env/cmd
 github.com/chrismellard/docker-credential-acr-env/pkg/credhelper
 github.com/chrismellard/docker-credential-acr-env/pkg/registry
 github.com/chrismellard/docker-credential-acr-env/pkg/token
-# github.com/cilium/ebpf v0.9.1
-## explicit; go 1.17
-github.com/cilium/ebpf
-github.com/cilium/ebpf/asm
-github.com/cilium/ebpf/btf
-github.com/cilium/ebpf/internal
-github.com/cilium/ebpf/internal/sys
-github.com/cilium/ebpf/internal/unix
-github.com/cilium/ebpf/link
 # github.com/cloudflare/circl v1.3.7
 ## explicit; go 1.19
 github.com/cloudflare/circl/dh/x25519
@@ -379,13 +370,6 @@ github.com/cloudflare/circl/sign/ed448
 # github.com/containerd/cgroups v1.1.0
 ## explicit; go 1.17
 github.com/containerd/cgroups/stats/v1
-# github.com/containerd/cgroups/v3 v3.0.2
-## explicit; go 1.18
-github.com/containerd/cgroups/v3
-github.com/containerd/cgroups/v3/cgroup1
-github.com/containerd/cgroups/v3/cgroup1/stats
-github.com/containerd/cgroups/v3/cgroup2
-github.com/containerd/cgroups/v3/cgroup2/stats
 # github.com/containerd/containerd v1.7.18
 ## explicit; go 1.21
 github.com/containerd/containerd
@@ -439,7 +423,6 @@ github.com/containerd/containerd/pkg/dialer
 github.com/containerd/containerd/pkg/epoch
 github.com/containerd/containerd/pkg/kmutex
 github.com/containerd/containerd/pkg/randutil
-github.com/containerd/containerd/pkg/seccomp
 github.com/containerd/containerd/pkg/streaming
 github.com/containerd/containerd/pkg/transfer
 github.com/containerd/containerd/pkg/transfer/proxy
@@ -496,9 +479,6 @@ github.com/containerd/ttrpc
 # github.com/containerd/typeurl/v2 v2.1.1
 ## explicit; go 1.13
 github.com/containerd/typeurl/v2
-# github.com/coreos/go-systemd/v22 v22.5.0
-## explicit; go 1.12
-github.com/coreos/go-systemd/v22/dbus
 # github.com/cyphar/filepath-securejoin v0.2.4
 ## explicit; go 1.13
 github.com/cyphar/filepath-securejoin
@@ -520,7 +500,7 @@ github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v26.1.3+incompatible
+# github.com/docker/docker v27.0.3+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
@@ -564,7 +544,6 @@ github.com/docker/docker/dockerversion
 github.com/docker/docker/errdefs
 github.com/docker/docker/image
 github.com/docker/docker/internal/cleanups
-github.com/docker/docker/internal/compatcontext
 github.com/docker/docker/internal/mounttree
 github.com/docker/docker/internal/multierror
 github.com/docker/docker/internal/rootless/mountopts
@@ -585,7 +564,6 @@ github.com/docker/docker/pkg/idtools
 github.com/docker/docker/pkg/ioutils
 github.com/docker/docker/pkg/jsonmessage
 github.com/docker/docker/pkg/longpath
-github.com/docker/docker/pkg/parsers
 github.com/docker/docker/pkg/parsers/kernel
 github.com/docker/docker/pkg/plugingetter
 github.com/docker/docker/pkg/plugins
@@ -596,15 +574,12 @@ github.com/docker/docker/pkg/reexec
 github.com/docker/docker/pkg/rootless
 github.com/docker/docker/pkg/streamformatter
 github.com/docker/docker/pkg/stringid
-github.com/docker/docker/pkg/sysinfo
 github.com/docker/docker/pkg/system
 github.com/docker/docker/pkg/tailfile
 github.com/docker/docker/pkg/tarsum
 github.com/docker/docker/pkg/useragent
 github.com/docker/docker/plugin/v2
 github.com/docker/docker/restartmanager
-github.com/docker/docker/runconfig
-github.com/docker/docker/runconfig/opts
 github.com/docker/docker/volume
 github.com/docker/docker/volume/mounts
 # github.com/docker/docker-credential-helpers v0.8.1
@@ -711,9 +686,6 @@ github.com/go-logr/logr/funcr
 # github.com/go-logr/stdr v1.2.2
 ## explicit; go 1.16
 github.com/go-logr/stdr
-# github.com/godbus/dbus/v5 v5.1.0
-## explicit; go 1.12
-github.com/godbus/dbus/v5
 # github.com/gogo/protobuf v1.3.2
 ## explicit; go 1.15
 github.com/gogo/protobuf/gogoproto
@@ -1100,8 +1072,6 @@ go.opentelemetry.io/otel/metric/noop
 ## explicit; go 1.20
 go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
-# go.uber.org/goleak v1.2.1
-## explicit; go 1.18
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr
