@@ -30,7 +30,6 @@ import (
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/oci"
-	"github.com/docker/docker/runconfig/opts"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/shell"
 	"github.com/pkg/errors"
@@ -48,7 +47,8 @@ func dispatch(ctx context.Context, d dispatchRequest, cmd instructions.Command) 
 
 	if ex, ok := cmd.(instructions.SupportsSingleWordExpansion); ok {
 		err := ex.Expand(func(word string) (string, error) {
-			return d.shlex.ProcessWord(word, envs)
+			newword, _, err := d.shlex.ProcessWord(word, envs)
+			return newword, err
 		})
 		if err != nil {
 			return errdefs.InvalidParameter(err)
@@ -242,7 +242,7 @@ func (s *dispatchState) setDefaultPath() {
 	if defaultPath == "" {
 		return
 	}
-	envMap := opts.ConvertKVStringsToMap(s.runConfig.Env)
+	envMap := convertKVStringsToMap(s.runConfig.Env)
 	if _, ok := envMap["PATH"]; !ok {
 		s.runConfig.Env = append(s.runConfig.Env, "PATH="+defaultPath)
 	}

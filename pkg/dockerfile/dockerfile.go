@@ -32,6 +32,7 @@ import (
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/linter"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/pkg/errors"
 )
@@ -90,7 +91,7 @@ func Parse(b []byte) ([]instructions.Stage, []instructions.ArgCommand, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	stages, metaArgs, err := instructions.Parse(p.AST)
+	stages, metaArgs, err := instructions.Parse(p.AST, &linter.Linter{})
 	if err != nil {
 		return nil, nil, err
 	}

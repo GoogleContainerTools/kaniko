@@ -23,6 +23,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/linter"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
@@ -117,7 +118,7 @@ func parse(s string) ([]instructions.Stage, error) {
 	if err != nil {
 		return nil, err
 	}
-	stages, _, err := instructions.Parse(p.AST)
+	stages, _, err := instructions.Parse(p.AST, &linter.Linter{})
 	if err != nil {
 		return nil, err
 	}
