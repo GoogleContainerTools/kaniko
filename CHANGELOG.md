@@ -1,3 +1,49 @@
+# v1.23.2 Release 2024-07-09
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.23.2
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.23.2-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.23.2-slim
+```
+
+* deps: bump github.com/moby/buildkit and github.com/docker/docker [#3242](https://github.com/GoogleContainerTools/kaniko/pull/3242)
+* chore(deps): bump docker/build-push-action from 6.1.0 to 6.3.0 [#3236](https://github.com/GoogleContainerTools/kaniko/pull/3236)
+* chore(deps): bump docker/setup-qemu-action from 3.0.0 to 3.1.0 [#3235](https://github.com/GoogleContainerTools/kaniko/pull/3235)
+* chore(deps): bump docker/setup-buildx-action from 3.3.0 to 3.4.0 [#3237](https://github.com/GoogleContainerTools/kaniko/pull/3237)
+* chore(deps): bump google.golang.org/api from 0.185.0 to 0.187.0 [#3238](https://github.com/GoogleContainerTools/kaniko/pull/3238)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.17.1 to 1.17.5 [#3239](https://github.com/GoogleContainerTools/kaniko/pull/3239)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.24 to 1.17.1 [#3220](https://github.com/GoogleContainerTools/kaniko/pull/3220)
+* chore(deps): bump docker/build-push-action from 6.0.0 to 6.1.0 [#3218](https://github.com/GoogleContainerTools/kaniko/pull/3218)
+* chore(deps): bump google.golang.org/api from 0.183.0 to 0.185.0 [#3219](https://github.com/GoogleContainerTools/kaniko/pull/3219)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/service/s3 from 1.55.1 to 1.56.1 [#3221](https://github.com/GoogleContainerTools/kaniko/pull/3221)
+* chore(deps): bump docker/build-push-action from 5.3.0 to 6.0.0 [#3212](https://github.com/GoogleContainerTools/kaniko/pull/3212)
+* chore(deps): bump cloud.google.com/go/storage from 1.41.0 to 1.42.0 [#3204](https://github.com/GoogleContainerTools/kaniko/pull/3204)
+* chore(deps): bump github.com/spf13/cobra from 1.8.0 to 1.8.1 [#3205](https://github.com/GoogleContainerTools/kaniko/pull/3205)
+* chore(deps): bump github.com/google/go-containerregistry from 0.19.1 to 0.19.2 [#3206](https://github.com/GoogleContainerTools/kaniko/pull/3206)
+* chore(deps): bump imjasonh/setup-crane from 0.3 to 0.4 [#3210](https://github.com/GoogleContainerTools/kaniko/pull/3210)
+* chore(deps): bump golang.org/x/net from 0.25.0 to 0.26.0 [#3190](https://github.com/GoogleContainerTools/kaniko/pull/3190)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2/feature/s3/manager from 1.16.21 to 1.16.24 [#3191](https://github.com/GoogleContainerTools/kaniko/pull/3191)
+* chore(deps): bump google.golang.org/api from 0.182.0 to 0.183.0 [#3192](https://github.com/GoogleContainerTools/kaniko/pull/3192)
+* chore(deps): bump github.com/containerd/containerd from 1.7.17 to 1.7.18 [#3193](https://github.com/GoogleContainerTools/kaniko/pull/3193)
+* chore(deps): bump github.com/aws/aws-sdk-go-v2 from 1.27.0 to 1.27.2 [#3194](https://github.com/GoogleContainerTools/kaniko/pull/3194)
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- dependabot[bot]
+
+
 # v1.23.1 Release 2024-06-07
 The executor images in this release are:
 ```
