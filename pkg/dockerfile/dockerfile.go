@@ -74,7 +74,7 @@ func baseImageIndex(currentStage int, stages []instructions.Stage) int {
 	currentStageBaseName := strings.ToLower(stages[currentStage].BaseName)
 
 	for i, stage := range stages {
-		if i > currentStage {
+		if i >= currentStage {
 			break
 		}
 		if stage.Name == currentStageBaseName {
