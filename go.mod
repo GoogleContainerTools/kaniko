@@ -21,7 +21,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/slowjam v1.1.1
 	github.com/karrick/godirwalk v1.16.1
-	github.com/minio/highwayhash v1.0.2
+	github.com/minio/highwayhash v1.0.3
 	github.com/moby/buildkit v0.14.1
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
