@@ -1,3 +1,7 @@
+# v1.17.9 (2024-07-24)
+
+* **Documentation**: Clarify region hint and credential usage in HeadBucketRegion.
+
 # v1.17.8 (2024-07-18)
 
 * **Dependency Update**: Updated to the latest SDK module versions
