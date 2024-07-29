@@ -36,7 +36,7 @@ jobs:
       with:
         go-version: '1.22'
     - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415 # v3
-    - uses: docker/setup-buildx-action@4fd812986e6c8c2a69e18311145f9371337f27d4 # v1
+    - uses: docker/setup-buildx-action@aa33708b10e362ff993539393ff100fa93ed6a27 # v1
 
     - run: make install-container-diff k3s-setup
     - run: make ${{ matrix.make-target }}
