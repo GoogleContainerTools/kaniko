@@ -31,8 +31,6 @@ IMAGE_REPO="${IMAGE_REPO:-gcr.io/kaniko-test}"
 docker version
 
 echo "Running integration tests..."
-make out/executor
-make out/warmer
 
 FLAGS=(
   "--timeout=50m"
