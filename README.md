@@ -1279,12 +1279,12 @@ this specific platform but the underlying principles should apply anywhere else
 and the examples are kept simple enough, so that you should be able to follow
 along, even without any previous experiences with this specific platform. When
 in doubt, visit the
-[gitlab-ci.yml reference page](https://docs.gitlab.com/ee/ci/yaml/index.html)
+[.gitlab-ci.yml reference page](https://docs.gitlab.com/ee/ci/yaml/index.html)
 for a comprehensive overview of the GitLab CI keywords.
 
 #### Building the Separate Container Images
 
-gitlab-ci.yml:
+.gitlab-ci.yml:
 
 ```yaml
 # define a job for building the containers
@@ -1312,7 +1312,7 @@ build-container:
 
 #### Merging the Container Manifests
 
-gitlab-ci.yml:
+.gitlab-ci.yml:
 
 ```yaml
 # define a job for creating and pushing a merged manifest
@@ -1359,7 +1359,7 @@ GitLab, here is a short rundown:
   `latest` when running on the default branch, to the commit hash when run on
   other branches and to the release tag when run on a tag pipeline.
 
-gitlab-ci.yml:
+.gitlab-ci.yml:
 
 ```yaml
 container-get-tag:
