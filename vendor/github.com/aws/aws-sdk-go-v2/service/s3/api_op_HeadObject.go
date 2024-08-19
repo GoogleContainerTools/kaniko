@@ -30,13 +30,6 @@ import (
 //
 // Request headers are limited to 8 KB in size. For more information, see [Common Request Headers].
 //
-// Directory buckets - For directory buckets, you must make requests for this API
-// operation to the Zonal endpoint. These endpoints support virtual-hosted-style
-// requests in the format
-// https://bucket_name.s3express-az_id.region.amazonaws.com/key-name . Path-style
-// requests are not supported. For more information, see [Regional and Zonal endpoints]in the Amazon S3 User
-// Guide.
-//
 // Permissions
 //
 //   - General purpose bucket permissions - To use HEAD , you must have the
@@ -112,6 +105,12 @@ import (
 //
 // HTTP Host header syntax  Directory buckets - The HTTP Host header syntax is
 // Bucket_name.s3express-az_id.region.amazonaws.com .
+//
+// For directory buckets, you must make requests for this API operation to the
+// Zonal endpoint. These endpoints support virtual-hosted-style requests in the
+// format https://bucket_name.s3express-az_id.region.amazonaws.com/key-name .
+// Path-style requests are not supported. For more information, see [Regional and Zonal endpoints]in the Amazon
+// S3 User Guide.
 //
 // The following actions are related to HeadObject :
 //

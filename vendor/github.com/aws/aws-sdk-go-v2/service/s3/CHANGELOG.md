@@ -1,3 +1,13 @@
+# v1.59.0 (2024-08-15)
+
+* **Feature**: Amazon Simple Storage Service / Features  : Adds support for pagination in the S3 ListBuckets API.
+* **Dependency Update**: Bump minimum Go version to 1.21.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.58.3 (2024-08-02)
+
+* **Bug Fix**: Add assurance tests for auth scheme selection logic.
+
 # v1.58.2 (2024-07-10.2)
 
 * **Dependency Update**: Updated to the latest SDK module versions
