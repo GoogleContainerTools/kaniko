@@ -655,10 +655,12 @@ func newStageContext(command string, args map[string]string, env []string) stage
 
 func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 	type testcase struct {
-		description string
-		cmd1        stageContext
-		cmd2        stageContext
-		shdEqual    bool
+		description                  string
+		cmd1                         stageContext
+		cmd2                         stageContext
+		shdEqual                     bool
+		excludeBuildArgsFromCacheKey []string
+		excludeEnvsFromCacheKey      []string
 	}
 	testCases := []testcase{
 		{
@@ -745,6 +747,21 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 			),
 		},
 		{
+			description: "cache key for same command [RUN] with a build arg values, with excludeBuildArgsFromCacheKey set",
+			cmd1: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "foo"},
+				[]string{},
+			),
+			cmd2: newStageContext(
+				"RUN echo $ARG > test",
+				map[string]string{"ARG": "bar"},
+				[]string{},
+			),
+			shdEqual:                     true,
+			excludeBuildArgsFromCacheKey: []string{"ARG"},
+		},
+		{
 			description: "cache key for same command [RUN] with different env values",
 			cmd1: newStageContext(
 				"RUN echo $ENV > test",
@@ -797,6 +814,21 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 				[]string{"ENV=2"},
 			),
 			shdEqual: false,
+		},
+		{
+			description: "cache key for command [RUN] with different env values, when excludeEnvsFromCacheKey is set",
+			cmd1: newStageContext(
+				"RUN echo ${APP_VERSION%.*} ${APP_VERSION%-*} > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=1"},
+			),
+			cmd2: newStageContext(
+				"RUN echo ${APP_VERSION%.*} ${APP_VERSION%-*} > test",
+				map[string]string{"ARG": "foo"},
+				[]string{"ENV=2"},
+			),
+			shdEqual:                true,
+			excludeEnvsFromCacheKey: []string{"ENV"},
 		},
 		func() testcase {
 			dir, files := tempDirAndFile(t)
@@ -867,7 +899,15 @@ func Test_stageBuilder_populateCompositeKey(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			sb := &stageBuilder{fileContext: util.FileContext{Root: "workspace"}}
+			sb := &stageBuilder{
+				fileContext: util.FileContext{Root: "workspace"},
+				opts: &config.KanikoOptions{
+					CacheOptions: config.CacheOptions{
+						ExcludeBuildArgsFromCacheKey: tc.excludeBuildArgsFromCacheKey,
+						ExcludeEnvsFromCacheKey:      tc.excludeEnvsFromCacheKey,
+					},
+				},
+			}
 			ck := CompositeCache{}
 
 			instructions1, err := dockerfile.ParseCommands([]string{tc.cmd1.command.String()})
