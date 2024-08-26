@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+//go:build linux
 
-// Version is the current tagged release of the library.
-const Version = "1.43.0"
+package metadata
+
+import (
+	"os"
+	"strings"
+)
+
+func systemInfoSuggestsGCE() bool {
+	b, _ := os.ReadFile("/sys/class/dmi/id/product_name")
+	name := strings.TrimSpace(string(b))
+	return name == "Google" || name == "Google Compute Engine"
+}
