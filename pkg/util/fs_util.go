@@ -773,8 +773,7 @@ func NewFileContextFromDockerfile(dockerfilePath, buildcontext string) (FileCont
 	return fileContext, nil
 }
 
-// getExcludedFiles returns a list of files to exclude from the .dockerignore
-func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
+func getIgnoreFilePath(dockerfilePath, buildcontext string) (string, error) {
 	var path string
 
 	dockerignorePath := dockerfilePath + ".dockerignore"
@@ -788,8 +787,14 @@ func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
 	} else if FilepathExists(filepath.Join(buildcontext, ".dockerignore")) {
 		path = filepath.Join(buildcontext, ".dockerignore")
 	} else {
-		return nil, nil
+		return "", errors.New("Ignore file not found")
 	}
+	return path, nil
+}
+
+// getExcludedFiles returns a list of files to exclude from the .containerignore or .dockerignore
+func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
+	path, _ := getIgnoreFilePath(dockerfilePath, buildcontext)
 	logrus.Infof("Using ignorefile: %v", path)
 	contents, err := os.ReadFile(path)
 	if err != nil {

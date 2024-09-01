@@ -1,3 +1,0 @@
-# A .containerignore file to make sure containerignore support works
-ignore_relative/**
-!ignore_relative/foo
