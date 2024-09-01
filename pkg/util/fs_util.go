@@ -798,7 +798,7 @@ func getExcludedFiles(dockerfilePath, buildcontext string) ([]string, error) {
 	logrus.Infof("Using ignorefile: %v", path)
 	contents, err := os.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing ignorefile")
+		return nil, nil
 	}
 	reader := bytes.NewBuffer(contents)
 	return dockerignore.ReadAll(reader)
