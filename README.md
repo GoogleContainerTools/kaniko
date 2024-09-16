@@ -1337,7 +1337,7 @@ merge-manifests:
       linux/amd64,linux/arm64 # "ARCH" will be automatically replaced by
       manifest-tool # with the appropriate arch from the platform definitions
       --template ${CI_REGISTRY_IMAGE}:ARCH # The name of the final, combined
-      image which will be pushed to your registry --target ${CI_REGISTRY_IMAGE}
+      image which will be pushed to your registry --target ${CI_REGISTRY_IMAGE}:latest
 ```
 
 #### On the Note of Adding Versioned Tags
