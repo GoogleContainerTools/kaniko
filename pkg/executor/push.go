@@ -369,11 +369,6 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 		// layer already gzipped by default
 	}
 
-	layer, err := tarball.LayerFromFile(tarPath, layerOpts...)
-	if err != nil {
-		return err
-	}
-
 	cache, err := cache.Destination(opts, cacheKey)
 	if err != nil {
 		return errors.Wrap(err, "getting cache destination")
@@ -385,18 +380,27 @@ func pushLayerToCache(opts *config.KanikoOptions, cacheKey string, tarPath strin
 		return errors.Wrap(err, "setting empty image created time")
 	}
 
-	empty, err = mutate.Append(empty,
-		mutate.Addendum{
-			Layer: layer,
-			History: v1.History{
-				Author:    constants.Author,
-				CreatedBy: createdBy,
+	// WORKDIR can create empty layers by design, yet still we must cache them
+	// to transfer the knowledge that they are empty.
+	if tarPath != "" {
+		layer, err := tarball.LayerFromFile(tarPath, layerOpts...)
+		if err != nil {
+			return err
+		}
+		empty, err = mutate.Append(empty,
+			mutate.Addendum{
+				Layer: layer,
+				History: v1.History{
+					Author:    constants.Author,
+					CreatedBy: createdBy,
+				},
 			},
-		},
-	)
-	if err != nil {
-		return errors.Wrap(err, "appending layer onto empty image")
+		)
+		if err != nil {
+			return errors.Wrap(err, "appending layer onto empty image")
+		}
 	}
+
 	cacheOpts := *opts
 	cacheOpts.TarPath = ""              // tarPath doesn't make sense for Docker layers
 	cacheOpts.NoPush = opts.NoPushCache // we do not want to push cache if --no-push-cache is set.

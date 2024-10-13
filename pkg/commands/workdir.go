@@ -88,11 +88,7 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 
 // FilesToSnapshot returns the workingdir, which should have been created if it didn't already exist
 func (w *WorkdirCommand) FilesToSnapshot() []string {
-	return nil
-}
-
-func (r *WorkdirCommand) ProvidesFilesToSnapshot() bool {
-	return false
+	return w.snapshotFiles
 }
 
 // String returns some information about the command for the image config history
@@ -154,8 +150,11 @@ func (wr *CachingWorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *do
 		return errors.Wrap(err, "retrieving image layers")
 	}
 
-	if len(layers) != 1 {
+	if len(layers) > 1 {
 		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	} else if len(layers) == 0 {
+		// an empty image in cache indicates that no directory was created by WORKDIR
+		return nil
 	}
 
 	wr.layer = layers[0]

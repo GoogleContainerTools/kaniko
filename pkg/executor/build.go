@@ -414,11 +414,13 @@ func (s *stageBuilder) build() error {
 			continue
 		}
 		if isCacheCommand {
-			if files != nil && len(files) == 0 {
+			v := command.(commands.Cached)
+			layer := v.Layer()
+			if (files != nil || layer == nil) && len(files) == 0 {
+				// a cache image with a layer with no files indicates that no files were changed, ie. by 'RUN echo hello'
+				// a cache image without a layer indicates that no files were changed too, ie. by 'WORKDIR /'
 				logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 			} else {
-				v := command.(commands.Cached)
-				layer := v.Layer()
 				if err := s.saveLayerToImage(layer, command.String()); err != nil {
 					return errors.Wrap(err, "failed to save layer")
 				}
