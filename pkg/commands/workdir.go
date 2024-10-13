@@ -38,6 +38,18 @@ type WorkdirCommand struct {
 	shdCache      bool
 }
 
+func ToAbsPath(path string, workdir string) string {
+	if filepath.IsAbs(path) {
+		return path
+	} else {
+		if workdir != "" {
+			return filepath.Join(workdir, path)
+		} else {
+			return filepath.Join("/", path)
+		}
+	}
+}
+
 // For testing
 var mkdirAllWithPermissions = util.MkdirAllWithPermissions
 
@@ -49,15 +61,7 @@ func (w *WorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile
 	if err != nil {
 		return err
 	}
-	if filepath.IsAbs(resolvedWorkingDir) {
-		config.WorkingDir = resolvedWorkingDir
-	} else {
-		if config.WorkingDir != "" {
-			config.WorkingDir = filepath.Join(config.WorkingDir, resolvedWorkingDir)
-		} else {
-			config.WorkingDir = filepath.Join("/", resolvedWorkingDir)
-		}
-	}
+	config.WorkingDir = ToAbsPath(resolvedWorkingDir, config.WorkingDir)
 	logrus.Infof("Changed working directory to %s", config.WorkingDir)
 
 	// Only create and snapshot the dir if it didn't exist already
@@ -136,15 +140,7 @@ func (wr *CachingWorkdirCommand) ExecuteCommand(config *v1.Config, buildArgs *do
 	if err != nil {
 		return err
 	}
-	if filepath.IsAbs(resolvedWorkingDir) {
-		config.WorkingDir = resolvedWorkingDir
-	} else {
-		if config.WorkingDir != "" {
-			config.WorkingDir = filepath.Join(config.WorkingDir, resolvedWorkingDir)
-		} else {
-			config.WorkingDir = filepath.Join("/", resolvedWorkingDir)
-		}
-	}
+	config.WorkingDir = ToAbsPath(resolvedWorkingDir, config.WorkingDir)
 	logrus.Infof("Changed working directory to %s", config.WorkingDir)
 
 	logrus.Infof("Found cached layer, extracting to filesystem")
