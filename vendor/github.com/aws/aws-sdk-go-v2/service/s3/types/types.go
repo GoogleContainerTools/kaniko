@@ -236,7 +236,7 @@ type BucketLoggingStatus struct {
 // Contains all the possible checksum or digest values for an object.
 type Checksum struct {
 
-	// The base64-encoded, 32-bit CRC32 checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32 checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -247,7 +247,7 @@ type Checksum struct {
 	// [Checking object integrity]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html#large-object-checksums
 	ChecksumCRC32 *string
 
-	// The base64-encoded, 32-bit CRC32C checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32C checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -311,7 +311,7 @@ type CompletedMultipartUpload struct {
 // Details of the parts that were uploaded.
 type CompletedPart struct {
 
-	// The base64-encoded, 32-bit CRC32 checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32 checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -322,7 +322,7 @@ type CompletedPart struct {
 	// [Checking object integrity]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html#large-object-checksums
 	ChecksumCRC32 *string
 
-	// The base64-encoded, 32-bit CRC32C checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32C checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -412,14 +412,14 @@ type ContinuationEvent struct {
 // Container for all response elements.
 type CopyObjectResult struct {
 
-	// The base64-encoded, 32-bit CRC32 checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32 checksum of the object. This will only be
 	// present if it was uploaded with the object. For more information, see [Checking object integrity]in the
 	// Amazon S3 User Guide.
 	//
 	// [Checking object integrity]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html
 	ChecksumCRC32 *string
 
-	// The base64-encoded, 32-bit CRC32C checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32C checksum of the object. This will only be
 	// present if it was uploaded with the object. For more information, see [Checking object integrity]in the
 	// Amazon S3 User Guide.
 	//
@@ -453,7 +453,7 @@ type CopyObjectResult struct {
 // Container for all response elements.
 type CopyPartResult struct {
 
-	// The base64-encoded, 32-bit CRC32 checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32 checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -464,7 +464,7 @@ type CopyPartResult struct {
 	// [Checking object integrity]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html#large-object-checksums
 	ChecksumCRC32 *string
 
-	// The base64-encoded, 32-bit CRC32C checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32C checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -673,8 +673,8 @@ type CSVOutput struct {
 	noSmithyDocumentSerde
 }
 
-// The container element for specifying the default Object Lock retention settings
-// for new objects placed in the specified bucket.
+// The container element for optionally specifying the default Object Lock
+// retention settings for new objects placed in the specified bucket.
 //
 //   - The DefaultRetention settings require both a mode and a period.
 //
@@ -870,6 +870,12 @@ type Encryption struct {
 
 // Specifies encryption-related information for an Amazon S3 bucket that is a
 // destination for replicated objects.
+//
+// If you're specifying a customer managed KMS key, we recommend using a fully
+// qualified KMS key ARN. If you use a KMS key alias instead, then KMS resolves the
+// key within the requester’s account. This behavior can result in data that's
+// encrypted with a KMS key that belongs to the requester, and not the bucket
+// owner.
 type EncryptionConfiguration struct {
 
 	// Specifies the ID (Key ARN or Alias ARN) of the customer managed Amazon Web
@@ -1699,10 +1705,12 @@ type EventBridgeConfiguration struct {
 	noSmithyDocumentSerde
 }
 
-// Optional configuration to replicate existing source bucket objects. For more
-// information, see [Replicating Existing Objects]in the Amazon S3 User Guide.
+// Optional configuration to replicate existing source bucket objects.
 //
-// [Replicating Existing Objects]: https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-what-is-isnot-replicated.html#existing-object-replication
+// This parameter is no longer supported. To replicate existing objects, see [Replicating existing objects with S3 Batch Replication] in
+// the Amazon S3 User Guide.
+//
+// [Replicating existing objects with S3 Batch Replication]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-batch-replication-batch.html
 type ExistingObjectReplication struct {
 
 	// Specifies whether Amazon S3 replicates existing source bucket objects.
@@ -2197,7 +2205,7 @@ type LifecycleRule struct {
 	// The Filter is used to identify objects that a Lifecycle Rule applies to. A
 	// Filter must have exactly one of Prefix , Tag , or And specified. Filter is
 	// required if the LifecycleRule does not contain a Prefix element.
-	Filter LifecycleRuleFilter
+	Filter *LifecycleRuleFilter
 
 	// Unique identifier for the rule. The value cannot be longer than 255 characters.
 	ID *string
@@ -2258,69 +2266,32 @@ type LifecycleRuleAndOperator struct {
 // Filter can have exactly one of Prefix , Tag , ObjectSizeGreaterThan ,
 // ObjectSizeLessThan , or And specified. If the Filter element is left empty, the
 // Lifecycle Rule applies to all objects in the bucket.
-//
-// The following types satisfy this interface:
-//
-//	LifecycleRuleFilterMemberAnd
-//	LifecycleRuleFilterMemberObjectSizeGreaterThan
-//	LifecycleRuleFilterMemberObjectSizeLessThan
-//	LifecycleRuleFilterMemberPrefix
-//	LifecycleRuleFilterMemberTag
-type LifecycleRuleFilter interface {
-	isLifecycleRuleFilter()
-}
+type LifecycleRuleFilter struct {
 
-// This is used in a Lifecycle Rule Filter to apply a logical AND to two or more
-// predicates. The Lifecycle Rule will apply to any object matching all of the
-// predicates configured inside the And operator.
-type LifecycleRuleFilterMemberAnd struct {
-	Value LifecycleRuleAndOperator
+	// This is used in a Lifecycle Rule Filter to apply a logical AND to two or more
+	// predicates. The Lifecycle Rule will apply to any object matching all of the
+	// predicates configured inside the And operator.
+	And *LifecycleRuleAndOperator
 
-	noSmithyDocumentSerde
-}
+	// Minimum object size to which the rule applies.
+	ObjectSizeGreaterThan *int64
 
-func (*LifecycleRuleFilterMemberAnd) isLifecycleRuleFilter() {}
+	// Maximum object size to which the rule applies.
+	ObjectSizeLessThan *int64
 
-// Minimum object size to which the rule applies.
-type LifecycleRuleFilterMemberObjectSizeGreaterThan struct {
-	Value int64
+	// Prefix identifying one or more objects to which the rule applies.
+	//
+	// Replacement must be made for object keys containing special characters (such as
+	// carriage returns) when using XML requests. For more information, see [XML related object key constraints].
+	//
+	// [XML related object key constraints]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#object-key-xml-related-constraints
+	Prefix *string
+
+	// This tag must exist in the object's tag set in order for the rule to apply.
+	Tag *Tag
 
 	noSmithyDocumentSerde
 }
-
-func (*LifecycleRuleFilterMemberObjectSizeGreaterThan) isLifecycleRuleFilter() {}
-
-// Maximum object size to which the rule applies.
-type LifecycleRuleFilterMemberObjectSizeLessThan struct {
-	Value int64
-
-	noSmithyDocumentSerde
-}
-
-func (*LifecycleRuleFilterMemberObjectSizeLessThan) isLifecycleRuleFilter() {}
-
-// Prefix identifying one or more objects to which the rule applies.
-//
-// Replacement must be made for object keys containing special characters (such as
-// carriage returns) when using XML requests. For more information, see [XML related object key constraints].
-//
-// [XML related object key constraints]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#object-key-xml-related-constraints
-type LifecycleRuleFilterMemberPrefix struct {
-	Value string
-
-	noSmithyDocumentSerde
-}
-
-func (*LifecycleRuleFilterMemberPrefix) isLifecycleRuleFilter() {}
-
-// This tag must exist in the object's tag set in order for the rule to apply.
-type LifecycleRuleFilterMemberTag struct {
-	Value Tag
-
-	noSmithyDocumentSerde
-}
-
-func (*LifecycleRuleFilterMemberTag) isLifecycleRuleFilter() {}
 
 // Specifies the location where the bucket will be created.
 //
@@ -2769,13 +2740,13 @@ type ObjectPart struct {
 
 	// This header can be used as a data integrity check to verify that the data
 	// received is the same data that was originally sent. This header specifies the
-	// base64-encoded, 32-bit CRC32 checksum of the object. For more information, see [Checking object integrity]
+	// base64-encoded, 32-bit CRC-32 checksum of the object. For more information, see [Checking object integrity]
 	// in the Amazon S3 User Guide.
 	//
 	// [Checking object integrity]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html
 	ChecksumCRC32 *string
 
-	// The base64-encoded, 32-bit CRC32C checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32C checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -2968,13 +2939,13 @@ type Part struct {
 
 	// This header can be used as a data integrity check to verify that the data
 	// received is the same data that was originally sent. This header specifies the
-	// base64-encoded, 32-bit CRC32 checksum of the object. For more information, see [Checking object integrity]
+	// base64-encoded, 32-bit CRC-32 checksum of the object. For more information, see [Checking object integrity]
 	// in the Amazon S3 User Guide.
 	//
 	// [Checking object integrity]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html
 	ChecksumCRC32 *string
 
-	// The base64-encoded, 32-bit CRC32C checksum of the object. This will only be
+	// The base64-encoded, 32-bit CRC-32C checksum of the object. This will only be
 	// present if it was uploaded with the object. When you use an API operation on an
 	// object that was uploaded using multipart uploads, this value may not be a direct
 	// checksum value of the full object. Instead, it's a calculation based on the
@@ -3029,7 +3000,14 @@ type Part struct {
 type PartitionedPrefix struct {
 
 	// Specifies the partition date source for the partitioned prefix.
-	// PartitionDateSource can be EventTime or DeliveryTime.
+	// PartitionDateSource can be EventTime or DeliveryTime .
+	//
+	// For DeliveryTime , the time in the log file names corresponds to the delivery
+	// time for the log files.
+	//
+	// For EventTime , The logs delivered are for a specific day only. The year, month,
+	// and day correspond to the day on which the event occurred, and the hour, minutes
+	// and seconds are set to 00 in the key.
 	PartitionDateSource PartitionDateSource
 
 	noSmithyDocumentSerde
@@ -3107,8 +3085,8 @@ type PublicAccessBlockConfiguration struct {
 
 	// Specifies whether Amazon S3 should restrict public bucket policies for this
 	// bucket. Setting this element to TRUE restricts access to this bucket to only
-	// Amazon Web Service principals and authorized users within this account if the
-	// bucket has a public policy.
+	// Amazon Web Servicesservice principals and authorized users within this account
+	// if the bucket has a public policy.
 	//
 	// Enabling this setting doesn't affect previously stored bucket policies, except
 	// that public and cross-account access within any public bucket policy, including
@@ -3149,7 +3127,14 @@ type QueueConfiguration struct {
 // The container for the records event.
 type RecordsEvent struct {
 
-	// The byte array of partial, one or more result records.
+	// The byte array of partial, one or more result records. S3 Select doesn't
+	// guarantee that a record will be self-contained in one record frame. To ensure
+	// continuous streaming of data, S3 Select might split the same record across
+	// multiple record frames instead of aggregating the results in memory. Some S3
+	// clients (for example, the SDK for Java) handle this behavior by creating a
+	// ByteStream out of the response by default. Other clients might not handle this
+	// behavior by default. In those cases, you must aggregate the results on the
+	// client side and parse the response.
 	Payload []byte
 
 	noSmithyDocumentSerde
@@ -3283,16 +3268,18 @@ type ReplicationRule struct {
 	// [Backward Compatibility]: https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-add-config.html#replication-backward-compat-considerations
 	DeleteMarkerReplication *DeleteMarkerReplication
 
-	// Optional configuration to replicate existing source bucket objects. For more
-	// information, see [Replicating Existing Objects]in the Amazon S3 User Guide.
+	// Optional configuration to replicate existing source bucket objects.
 	//
-	// [Replicating Existing Objects]: https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-what-is-isnot-replicated.html#existing-object-replication
+	// This parameter is no longer supported. To replicate existing objects, see [Replicating existing objects with S3 Batch Replication] in
+	// the Amazon S3 User Guide.
+	//
+	// [Replicating existing objects with S3 Batch Replication]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-batch-replication-batch.html
 	ExistingObjectReplication *ExistingObjectReplication
 
 	// A filter that identifies the subset of objects to which the replication rule
 	// applies. A Filter must specify exactly one Prefix , Tag , or an And child
 	// element.
-	Filter ReplicationRuleFilter
+	Filter *ReplicationRuleFilter
 
 	// A unique identifier for the rule. The maximum value is 255 characters.
 	ID *string
@@ -3356,58 +3343,35 @@ type ReplicationRuleAndOperator struct {
 // A filter that identifies the subset of objects to which the replication rule
 // applies. A Filter must specify exactly one Prefix , Tag , or an And child
 // element.
-//
-// The following types satisfy this interface:
-//
-//	ReplicationRuleFilterMemberAnd
-//	ReplicationRuleFilterMemberPrefix
-//	ReplicationRuleFilterMemberTag
-type ReplicationRuleFilter interface {
-	isReplicationRuleFilter()
-}
+type ReplicationRuleFilter struct {
 
-// A container for specifying rule filters. The filters determine the subset of
-// objects to which the rule applies. This element is required only if you specify
-// more than one filter. For example:
-//
-//   - If you specify both a Prefix and a Tag filter, wrap these filters in an And
-//     tag.
-//
-//   - If you specify a filter based on multiple tags, wrap the Tag elements in an
-//     And tag.
-type ReplicationRuleFilterMemberAnd struct {
-	Value ReplicationRuleAndOperator
+	// A container for specifying rule filters. The filters determine the subset of
+	// objects to which the rule applies. This element is required only if you specify
+	// more than one filter. For example:
+	//
+	//   - If you specify both a Prefix and a Tag filter, wrap these filters in an And
+	//   tag.
+	//
+	//   - If you specify a filter based on multiple tags, wrap the Tag elements in an
+	//   And tag.
+	And *ReplicationRuleAndOperator
 
-	noSmithyDocumentSerde
-}
+	// An object key name prefix that identifies the subset of objects to which the
+	// rule applies.
+	//
+	// Replacement must be made for object keys containing special characters (such as
+	// carriage returns) when using XML requests. For more information, see [XML related object key constraints].
+	//
+	// [XML related object key constraints]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#object-key-xml-related-constraints
+	Prefix *string
 
-func (*ReplicationRuleFilterMemberAnd) isReplicationRuleFilter() {}
-
-// An object key name prefix that identifies the subset of objects to which the
-// rule applies.
-//
-// Replacement must be made for object keys containing special characters (such as
-// carriage returns) when using XML requests. For more information, see [XML related object key constraints].
-//
-// [XML related object key constraints]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#object-key-xml-related-constraints
-type ReplicationRuleFilterMemberPrefix struct {
-	Value string
+	// A container for specifying a tag key and value.
+	//
+	// The rule applies only to objects that have the tag in their tag set.
+	Tag *Tag
 
 	noSmithyDocumentSerde
 }
-
-func (*ReplicationRuleFilterMemberPrefix) isReplicationRuleFilter() {}
-
-// A container for specifying a tag key and value.
-//
-// The rule applies only to objects that have the tag in their tag set.
-type ReplicationRuleFilterMemberTag struct {
-	Value Tag
-
-	noSmithyDocumentSerde
-}
-
-func (*ReplicationRuleFilterMemberTag) isReplicationRuleFilter() {}
 
 //	A container specifying S3 Replication Time Control (S3 RTC) related
 //
@@ -3484,13 +3448,23 @@ type RestoreRequest struct {
 	// Describes the location where the restore job's output is stored.
 	OutputLocation *OutputLocation
 
+	// Amazon S3 Select is no longer available to new customers. Existing customers of
+	// Amazon S3 Select can continue to use the feature as usual. [Learn more]
+	//
 	// Describes the parameters for Select job types.
+	//
+	// [Learn more]: http://aws.amazon.com/blogs/storage/how-to-optimize-querying-your-data-in-amazon-s3/
 	SelectParameters *SelectParameters
 
 	// Retrieval tier at which the restore will be processed.
 	Tier Tier
 
+	// Amazon S3 Select is no longer available to new customers. Existing customers of
+	// Amazon S3 Select can continue to use the feature as usual. [Learn more]
+	//
 	// Type of restore request.
+	//
+	// [Learn more]: http://aws.amazon.com/blogs/storage/how-to-optimize-querying-your-data-in-amazon-s3/
 	Type RestoreRequestType
 
 	noSmithyDocumentSerde
@@ -3677,10 +3651,25 @@ type SelectObjectContentEventStreamMemberStats struct {
 
 func (*SelectObjectContentEventStreamMemberStats) isSelectObjectContentEventStream() {}
 
+// Amazon S3 Select is no longer available to new customers. Existing customers of
+// Amazon S3 Select can continue to use the feature as usual. [Learn more]
+//
 // Describes the parameters for Select job types.
+//
+// Learn [How to optimize querying your data in Amazon S3] using [Amazon Athena], [S3 Object Lambda], or client-side filtering.
+//
+// [Learn more]: http://aws.amazon.com/blogs/storage/how-to-optimize-querying-your-data-in-amazon-s3/
+// [How to optimize querying your data in Amazon S3]: http://aws.amazon.com/blogs/storage/how-to-optimize-querying-your-data-in-amazon-s3/
+// [Amazon Athena]: https://docs.aws.amazon.com/athena/latest/ug/what-is.html
+// [S3 Object Lambda]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/transforming-objects.html
 type SelectParameters struct {
 
+	// Amazon S3 Select is no longer available to new customers. Existing customers of
+	// Amazon S3 Select can continue to use the feature as usual. [Learn more]
+	//
 	// The expression that is used to query the object.
+	//
+	// [Learn more]: http://aws.amazon.com/blogs/storage/how-to-optimize-querying-your-data-in-amazon-s3/
 	//
 	// This member is required.
 	Expression *string
@@ -3705,23 +3694,41 @@ type SelectParameters struct {
 
 // Describes the default server-side encryption to apply to new objects in the
 // bucket. If a PUT Object request doesn't specify any server-side encryption, this
-// default encryption will be applied. If you don't specify a customer managed key
-// at configuration, Amazon S3 automatically creates an Amazon Web Services KMS key
-// in your Amazon Web Services account the first time that you add an object
-// encrypted with SSE-KMS to a bucket. By default, Amazon S3 uses this KMS key for
-// SSE-KMS. For more information, see [PUT Bucket encryption]in the Amazon S3 API Reference.
+// default encryption will be applied. For more information, see [PutBucketEncryption].
 //
-// [PUT Bucket encryption]: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTencryption.html
+//   - General purpose buckets - If you don't specify a customer managed key at
+//     configuration, Amazon S3 automatically creates an Amazon Web Services KMS key (
+//     aws/s3 ) in your Amazon Web Services account the first time that you add an
+//     object encrypted with SSE-KMS to a bucket. By default, Amazon S3 uses this KMS
+//     key for SSE-KMS.
+//
+//   - Directory buckets - Your SSE-KMS configuration can only support 1 [customer managed key]per
+//     directory bucket for the lifetime of the bucket. [Amazon Web Services managed key]( aws/s3 ) isn't supported.
+//
+//   - Directory buckets - For directory buckets, there are only two supported
+//     options for server-side encryption: SSE-S3 and SSE-KMS.
+//
+// [PutBucketEncryption]: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTencryption.html
+// [customer managed key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#customer-cmk
+// [Amazon Web Services managed key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-managed-cmk
 type ServerSideEncryptionByDefault struct {
 
 	// Server-side encryption algorithm to use for the default encryption.
 	//
+	// For directory buckets, there are only two supported values for server-side
+	// encryption: AES256 and aws:kms .
+	//
 	// This member is required.
 	SSEAlgorithm ServerSideEncryption
 
-	// Amazon Web Services Key Management Service (KMS) customer Amazon Web Services
-	// KMS key ID to use for the default encryption. This parameter is allowed if and
-	// only if SSEAlgorithm is set to aws:kms or aws:kms:dsse .
+	// Amazon Web Services Key Management Service (KMS) customer managed key ID to use
+	// for the default encryption.
+	//
+	//   - General purpose buckets - This parameter is allowed if and only if
+	//   SSEAlgorithm is set to aws:kms or aws:kms:dsse .
+	//
+	//   - Directory buckets - This parameter is allowed if and only if SSEAlgorithm is
+	//   set to aws:kms .
 	//
 	// You can specify the key ID, key alias, or the Amazon Resource Name (ARN) of the
 	// KMS key.
@@ -3733,17 +3740,26 @@ type ServerSideEncryptionByDefault struct {
 	//
 	//   - Key Alias: alias/alias-name
 	//
-	// If you use a key ID, you can run into a LogDestination undeliverable error when
-	// creating a VPC flow log.
-	//
 	// If you are using encryption with cross-account or Amazon Web Services service
-	// operations you must use a fully qualified KMS key ARN. For more information, see
-	// [Using encryption for cross-account operations].
+	// operations, you must use a fully qualified KMS key ARN. For more information,
+	// see [Using encryption for cross-account operations].
+	//
+	//   - General purpose buckets - If you're specifying a customer managed KMS key,
+	//   we recommend using a fully qualified KMS key ARN. If you use a KMS key alias
+	//   instead, then KMS resolves the key within the requester’s account. This behavior
+	//   can result in data that's encrypted with a KMS key that belongs to the
+	//   requester, and not the bucket owner. Also, if you use a key ID, you can run into
+	//   a LogDestination undeliverable error when creating a VPC flow log.
+	//
+	//   - Directory buckets - When you specify an [KMS customer managed key]for encryption in your directory
+	//   bucket, only use the key ID or key ARN. The key alias format of the KMS key
+	//   isn't supported.
 	//
 	// Amazon S3 only supports symmetric encryption KMS keys. For more information,
 	// see [Asymmetric keys in Amazon Web Services KMS]in the Amazon Web Services Key Management Service Developer Guide.
 	//
 	// [Using encryption for cross-account operations]: https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html#bucket-encryption-update-bucket-policy
+	// [KMS customer managed key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#customer-cmk
 	// [Asymmetric keys in Amazon Web Services KMS]: https://docs.aws.amazon.com/kms/latest/developerguide/symmetric-asymmetric.html
 	KMSMasterKeyID *string
 
@@ -3763,6 +3779,18 @@ type ServerSideEncryptionConfiguration struct {
 }
 
 // Specifies the default server-side encryption configuration.
+//
+//   - General purpose buckets - If you're specifying a customer managed KMS key,
+//     we recommend using a fully qualified KMS key ARN. If you use a KMS key alias
+//     instead, then KMS resolves the key within the requester’s account. This behavior
+//     can result in data that's encrypted with a KMS key that belongs to the
+//     requester, and not the bucket owner.
+//
+//   - Directory buckets - When you specify an [KMS customer managed key]for encryption in your directory
+//     bucket, only use the key ID or key ARN. The key alias format of the KMS key
+//     isn't supported.
+//
+// [KMS customer managed key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#customer-cmk
 type ServerSideEncryptionRule struct {
 
 	// Specifies the default server-side encryption to apply to new objects in the
@@ -3773,11 +3801,23 @@ type ServerSideEncryptionRule struct {
 	// Specifies whether Amazon S3 should use an S3 Bucket Key with server-side
 	// encryption using KMS (SSE-KMS) for new objects in the bucket. Existing objects
 	// are not affected. Setting the BucketKeyEnabled element to true causes Amazon S3
-	// to use an S3 Bucket Key. By default, S3 Bucket Key is not enabled.
+	// to use an S3 Bucket Key.
 	//
-	// For more information, see [Amazon S3 Bucket Keys] in the Amazon S3 User Guide.
+	//   - General purpose buckets - By default, S3 Bucket Key is not enabled. For
+	//   more information, see [Amazon S3 Bucket Keys]in the Amazon S3 User Guide.
+	//
+	//   - Directory buckets - S3 Bucket Keys are always enabled for GET and PUT
+	//   operations in a directory bucket and can’t be disabled. S3 Bucket Keys aren't
+	//   supported, when you copy SSE-KMS encrypted objects from general purpose buckets
+	//   to directory buckets, from directory buckets to general purpose buckets, or
+	//   between directory buckets, through [CopyObject], [UploadPartCopy], [the Copy operation in Batch Operations], or [the import jobs]. In this case, Amazon S3 makes a
+	//   call to KMS every time a copy request is made for a KMS-encrypted object.
 	//
 	// [Amazon S3 Bucket Keys]: https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-key.html
+	// [CopyObject]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html
+	// [the import jobs]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-import-job
+	// [UploadPartCopy]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPartCopy.html
+	// [the Copy operation in Batch Operations]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-buckets-objects-Batch-Ops
 	BucketKeyEnabled *bool
 
 	noSmithyDocumentSerde
@@ -3786,7 +3826,8 @@ type ServerSideEncryptionRule struct {
 // The established temporary security credentials of the session.
 //
 // Directory buckets - These session credentials are only supported for the
-// authentication and authorization of Zonal endpoint APIs on directory buckets.
+// authentication and authorization of Zonal endpoint API operations on directory
+// buckets.
 type SessionCredentials struct {
 
 	// A unique identifier that's associated with a secret access key. The access key
@@ -4123,7 +4164,5 @@ type UnknownUnionMember struct {
 }
 
 func (*UnknownUnionMember) isAnalyticsFilter()                {}
-func (*UnknownUnionMember) isLifecycleRuleFilter()            {}
 func (*UnknownUnionMember) isMetricsFilter()                  {}
-func (*UnknownUnionMember) isReplicationRuleFilter()          {}
 func (*UnknownUnionMember) isSelectObjectContentEventStream() {}
