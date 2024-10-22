@@ -16,6 +16,7 @@ package mutate
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,8 +25,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	stdgzip "compress/gzip"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -453,12 +452,12 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 		return nil, fmt.Errorf("getting layer: %w", err)
 	}
 	defer layerReader.Close()
-	layerFile, err := os.CreateTemp("kaniko", "")
+	layerFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return nil, fmt.Errorf("cannot create tmp file to write reproducible layer: %w", err)
 	}
 	defer layerFile.Close()
-	gzipWriter, err := stdgzip.NewWriterLevel(layerFile, stdgzip.BestSpeed)
+	gzipWriter, err := gzip.NewWriterLevel(layerFile, gzip.BestSpeed)
 	if err != nil {
 		return nil, fmt.Errorf("invalid gzip compression level: %w", err)
 	}
