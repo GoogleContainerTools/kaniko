@@ -16,16 +16,17 @@ package mutate
 
 import (
 	"archive/tar"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/google/go-containerregistry/internal/gzip"
+	stdgzip "compress/gzip"
+
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/match"
@@ -452,8 +453,16 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 		return nil, fmt.Errorf("getting layer: %w", err)
 	}
 	defer layerReader.Close()
-	w := new(bytes.Buffer)
-	tarWriter := tar.NewWriter(w)
+	layerFile, err := os.CreateTemp("kaniko", "")
+	if err != nil {
+		return nil, fmt.Errorf("cannot create tmp file to write reproducible layer: %w", err)
+	}
+	defer layerFile.Close()
+	gzipWriter, err := stdgzip.NewWriterLevel(layerFile, stdgzip.BestSpeed)
+	if err != nil {
+		return nil, fmt.Errorf("invalid gzip compression level: %w", err)
+	}
+	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
 
 	tarReader := tar.NewReader(layerReader)
@@ -490,10 +499,9 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 		return nil, err
 	}
 
-	b := w.Bytes()
-	// gzip the contents, then create the layer
+	// contents have already been gzipped during writes, then create the layer
 	opener := func() (io.ReadCloser, error) {
-		return gzip.ReadCloser(io.NopCloser(bytes.NewReader(b))), nil
+		return os.Open(layerFile.Name())
 	}
 	layer, err = tarball.LayerFromOpener(opener)
 	if err != nil {
