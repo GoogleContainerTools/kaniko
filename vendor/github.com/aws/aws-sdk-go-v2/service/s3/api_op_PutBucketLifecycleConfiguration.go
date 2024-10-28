@@ -23,17 +23,19 @@ import (
 // they must be included in the new lifecycle configuration. For information about
 // lifecycle configuration, see [Managing your storage lifecycle].
 //
-// Bucket lifecycle configuration now supports specifying a lifecycle rule using
-// an object key name prefix, one or more object tags, object size, or any
-// combination of these. Accordingly, this section describes the latest API. The
-// previous version of the API supported filtering based only on an object key name
-// prefix, which is supported for backward compatibility. For the related API
-// description, see [PutBucketLifecycle].
-//
 // Rules You specify the lifecycle configuration in your request body. The
 // lifecycle configuration is specified as XML consisting of one or more rules. An
 // Amazon S3 Lifecycle configuration can have up to 1,000 rules. This limit is not
-// adjustable. Each rule consists of the following:
+// adjustable.
+//
+// Bucket lifecycle configuration supports specifying a lifecycle rule using an
+// object key name prefix, one or more object tags, object size, or any combination
+// of these. Accordingly, this section describes the latest API. The previous
+// version of the API supported filtering based only on an object key name prefix,
+// which is supported for backward compatibility. For the related API description,
+// see [PutBucketLifecycle].
+//
+// A lifecycle rule consists of the following:
 //
 //   - A filter identifying a subset of objects to which the rule applies. The
 //     filter can be based on a key name prefix, object tags, object size, or any
@@ -129,6 +131,22 @@ type PutBucketLifecycleConfigurationInput struct {
 	// Container for lifecycle rules. You can add as many as 1,000 rules.
 	LifecycleConfiguration *types.BucketLifecycleConfiguration
 
+	// Indicates which default minimum object size behavior is applied to the
+	// lifecycle configuration.
+	//
+	//   - all_storage_classes_128K - Objects smaller than 128 KB will not transition
+	//   to any storage class by default.
+	//
+	//   - varies_by_storage_class - Objects smaller than 128 KB will transition to
+	//   Glacier Flexible Retrieval or Glacier Deep Archive storage classes. By default,
+	//   all other storage classes will prevent transitions smaller than 128 KB.
+	//
+	// To customize the minimum object size for any transition you can add a filter
+	// that specifies a custom ObjectSizeGreaterThan or ObjectSizeLessThan in the body
+	// of your transition rule. Custom filters always take precedence over the default
+	// transition behavior.
+	TransitionDefaultMinimumObjectSize types.TransitionDefaultMinimumObjectSize
+
 	noSmithyDocumentSerde
 }
 
@@ -139,6 +157,23 @@ func (in *PutBucketLifecycleConfigurationInput) bindEndpointParams(p *EndpointPa
 }
 
 type PutBucketLifecycleConfigurationOutput struct {
+
+	// Indicates which default minimum object size behavior is applied to the
+	// lifecycle configuration.
+	//
+	//   - all_storage_classes_128K - Objects smaller than 128 KB will not transition
+	//   to any storage class by default.
+	//
+	//   - varies_by_storage_class - Objects smaller than 128 KB will transition to
+	//   Glacier Flexible Retrieval or Glacier Deep Archive storage classes. By default,
+	//   all other storage classes will prevent transitions smaller than 128 KB.
+	//
+	// To customize the minimum object size for any transition you can add a filter
+	// that specifies a custom ObjectSizeGreaterThan or ObjectSizeLessThan in the body
+	// of your transition rule. Custom filters always take precedence over the default
+	// transition behavior.
+	TransitionDefaultMinimumObjectSize types.TransitionDefaultMinimumObjectSize
+
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
 
@@ -186,6 +221,9 @@ func (c *Client) addOperationPutBucketLifecycleConfigurationMiddlewares(stack *m
 		return err
 	}
 	if err = addRecordResponseTiming(stack); err != nil {
+		return err
+	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -249,6 +287,18 @@ func (c *Client) addOperationPutBucketLifecycleConfigurationMiddlewares(stack *m
 		return err
 	}
 	if err = s3cust.AddExpressDefaultChecksumMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil
