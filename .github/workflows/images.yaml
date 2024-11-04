@@ -66,7 +66,7 @@ jobs:
 
     # Setup auth if not a PR.
     - if: github.event_name != 'pull_request'
-      uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
+      uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v2.1.7
       with:
         credentials_json: '${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}'
         export_environment_variables: true
