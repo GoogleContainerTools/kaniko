@@ -196,17 +196,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 	}
 
 	if opts.OCILayoutPath != "" {
-		resolvedPath := opts.OCILayoutPath
-		if !filepath.IsAbs(resolvedPath) {
-			// If the path is relative, make it absolute
-			cwd, err := os.Getwd()
-			if err != nil {
-				return errors.Wrap(err, "getting current working directory")
-			}
-			resolvedPath = filepath.Join(cwd, resolvedPath)
-		}
-		
-		path, err := layout.Write(resolvedPath, empty.Index)
+		path, err := layout.Write(opts.OCILayoutPath, empty.Index)
 		if err != nil {
 			return errors.Wrap(err, "writing empty layout")
 		}
