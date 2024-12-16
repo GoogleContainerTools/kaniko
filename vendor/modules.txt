@@ -503,7 +503,7 @@ github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v27.0.3+incompatible
+# github.com/docker/docker v27.4.0+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
@@ -561,7 +561,6 @@ github.com/docker/docker/oci/caps
 github.com/docker/docker/pkg/archive
 github.com/docker/docker/pkg/broadcaster
 github.com/docker/docker/pkg/chrootarchive
-github.com/docker/docker/pkg/containerfs
 github.com/docker/docker/pkg/homedir
 github.com/docker/docker/pkg/idtools
 github.com/docker/docker/pkg/ioutils
@@ -902,6 +901,9 @@ github.com/moby/sys/symlink
 # github.com/moby/sys/user v0.1.0
 ## explicit; go 1.17
 github.com/moby/sys/user
+# github.com/moby/sys/userns v0.1.0
+## explicit; go 1.21
+github.com/moby/sys/userns
 # github.com/moby/term v0.5.0
 ## explicit; go 1.18
 github.com/moby/term
