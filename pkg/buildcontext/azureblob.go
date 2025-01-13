@@ -18,12 +18,12 @@ package buildcontext
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/constants"
@@ -35,16 +35,34 @@ type AzureBlob struct {
 	context string
 }
 
-// Download context file from given azure blob storage url and unpack it to BuildContextDir
-func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
-
+func GetClient(accountUrl string, accountName string) (*azblob.Client, error) {
 	// Get Azure_STORAGE_ACCESS_KEY from environment variables
 	accountKey := os.Getenv("AZURE_STORAGE_ACCESS_KEY")
-	if len(accountKey) == 0 {
-		return "", errors.New("AZURE_STORAGE_ACCESS_KEY environment variable is not set")
+
+	// Use storage access key if it's provided
+	if len(accountKey) != 0 {
+		// Generate credential with accountName and accountKey
+		credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create client with accountUrl and credential
+		return azblob.NewClientWithSharedKeyCredential(accountUrl, credential, nil)
 	}
 
-	// Get storage accountName for Azure Blob Storage
+	// Fallback to the default credential chain if access key is not provided
+	credential, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return azblob.NewClient(accountUrl, credential, nil)
+}
+
+// Download context file from given azure blob storage url and unpack it to BuildContextDir
+func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
+	// Get storage account name and url for Azure Blob Storage and setup client
 	parts, err := azblob.ParseURL(b.context)
 	if err != nil {
 		return parts.Host, err
@@ -53,8 +71,7 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 	accountUrl := fmt.Sprintf("%s://%s", parts.Scheme, parts.Host)
 	accountName := strings.Split(parts.Host, ".")[0]
 
-	// Generate credential with accountName and accountKey
-	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	client, err := GetClient(accountUrl, accountName)
 	if err != nil {
 		return parts.Host, err
 	}
@@ -68,10 +85,6 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 	}
 
 	// Downloading context file from Azure Blob Storage
-	client, err := azblob.NewClientWithSharedKeyCredential(accountUrl, credential, nil)
-	if err != nil {
-		return parts.Host, err
-	}
 	ctx := context.Background()
 
 	if _, err := client.DownloadFile(ctx, parts.ContainerName, parts.BlobName, file, nil); err != nil {

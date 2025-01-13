@@ -35,6 +35,7 @@ require (
 )
 
 require (
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/GoogleCloudPlatform/docker-credential-gcr/v2 v2.1.22
 	github.com/containerd/containerd v1.7.20
 )
@@ -146,6 +147,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.2 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.27.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.23.4 // indirect
@@ -162,10 +164,12 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/subcommands v1.2.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -173,6 +177,7 @@ require (
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/skeema/knownhosts v1.2.2 // indirect
