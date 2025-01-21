@@ -36,45 +36,44 @@ jobs:
         - image: executor
           target: kaniko-executor
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-          image-name: gcr.io/kaniko-project/executor
+          image-name: executor
           tag: ${{ github.sha }}
           release-tag: latest
 
         - image: executor-debug
           target: kaniko-debug
           platforms: linux/amd64,linux/arm64,linux/s390x
-          image-name: gcr.io/kaniko-project/executor
+          image-name: executor
           tag: ${{ github.sha }}-debug
           release-tag: debug
 
         - image: executor-slim
           target: kaniko-slim
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-          image-name: gcr.io/kaniko-project/executor
+          image-name: executor
           tag: ${{ github.sha }}-slim
           release-tag: slim
 
         - image: warmer
           target: kaniko-warmer
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-          image-name: gcr.io/kaniko-project/warmer
+          image-name: warmer
           tag: ${{ github.sha }}
           release-tag: latest
 
     steps:
     - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415 # v3
 
-    # Setup auth if not a PR.
-    - if: github.event_name != 'pull_request'
-      uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
+    # Setup auth
+    - uses: aws-actions/configure-aws-credentials@v4
       with:
-        credentials_json: '${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}'
-        export_environment_variables: true
-        create_credentials_file: true
-    - if: github.event_name != 'pull_request'
-      uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200 # v2.1.0
-    - if: github.event_name != 'pull_request'
-      run: gcloud auth configure-docker
+        role-to-assume: arn:aws:iam::161805679122:role/gh-actions-iam-role
+        aws-region: eu-west-1
+        role-session-name: zerve_kaniko_merge_ecr_write
+        role-duration-seconds: 900
+    - uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-type: public
 
     # Don't build for all platforms on PRs.
     - id: platforms
@@ -98,23 +97,12 @@ jobs:
         file: ./deploy/Dockerfile
         platforms: ${{ steps.platforms.outputs.platforms }}
         push: ${{ github.event_name != 'pull_request' }} # Only push if not a PR.
-        tags: ${{ matrix.image-name }}:${{ matrix.tag }}
+        tags: ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}:${{ matrix.tag }}
         no-cache-filters: certs
         # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#github-cache
         cache-from: type=gha
         cache-to: type=gha,mode=max
         target: ${{ matrix.target }}
-
-    # Sign images if not a PR.
-    - if: github.event_name != 'pull_request'
-      uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
-    - if: github.event_name != 'pull_request'
-      run: |
-        cosign sign --yes \
-            --key gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
-            ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
-        cosign sign --yes \
-            ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
 
     # If a tag push, use crane to add more tags.
     - if: startsWith(github.ref, 'refs/tags/v')
@@ -125,15 +113,15 @@ jobs:
         tag=${GITHUB_REF/refs\/tags\//}
 
         # Tag :latest, :debug, :slim
-        crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
-            ${{ matrix.image-name }}:${{ matrix.release-tag }}
+        crane cp ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
+            ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}:${{ matrix.release-tag }}
 
         if [[ "${{ matrix.release-tag }}" == "latest" ]]; then
           # Tag :latest images as :v1.X.Y
-          crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
-              ${{ matrix.image-name }}:${tag}
+          crane cp ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
+              ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}:${tag}
         else
           # Or tag :v1.X.Y-debug and :v1.X.Y-slim
-          crane cp ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
-              ${{ matrix.image-name }}:${tag}-${{ matrix.release-tag }}
+          crane cp ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }} \
+              ${{ steps.login-ecr-public.outputs.registry }}/${{ matrix.image-name }}:${tag}-${{ matrix.release-tag }}
         fi
