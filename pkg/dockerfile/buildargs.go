@@ -17,8 +17,10 @@ limitations under the License.
 package dockerfile
 
 import (
+	"runtime"
 	"strings"
 
+	"github.com/GoogleContainerTools/kaniko/pkg/config"
 	d "github.com/docker/docker/builder/dockerfile"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
@@ -67,4 +69,43 @@ func (b *BuildArgs) AddMetaArgs(metaArgs []instructions.ArgCommand) {
 			b.AddMetaArg(arg.Key, v)
 		}
 	}
+}
+
+// AddPreDefinedBuildArgs adds pre-defined build args. Such as TARGETOS, TARGETARCH, BUILDPLATFORM, TARGETPLATFORM
+func (b *BuildArgs) AddPreDefinedBuildArgs(opts *config.KanikoOptions) {
+	buildPlatform := runtime.GOOS + "/" + runtime.GOARCH
+	buildOs := runtime.GOOS
+	buildArch := runtime.GOARCH
+
+	targetPlatform := ""
+	targetOs := ""
+	targetArch := ""
+	targetVariant := ""
+
+	if opts.CustomPlatform == "" {
+		targetPlatform = buildPlatform
+		targetOs = buildOs
+		targetArch = buildArch
+	} else {
+		targetPlatform = opts.CustomPlatform
+		platformParts := strings.Split(opts.CustomPlatform, "/")
+		if len(platformParts) > 0 {
+			targetOs = platformParts[0]
+		}
+		if len(platformParts) > 1 {
+			targetArch = platformParts[1]
+		}
+		if len(platformParts) > 2 {
+			targetVariant = platformParts[2]
+		}
+	}
+
+	b.AddArg("BUILDPLATFORM", &buildPlatform)
+	b.AddArg("BUILDOS", &buildOs)
+	b.AddArg("BUILDARCH", &buildArch)
+
+	b.AddArg("TARGETPLATFORM", &targetPlatform)
+	b.AddArg("TARGETOS", &targetOs)
+	b.AddArg("TARGETARCH", &targetArch)
+	b.AddArg("TARGETVARIANT", &targetVariant)
 }
