@@ -166,6 +166,7 @@ require (
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/subcommands v1.2.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/isometry/docker-credential-env v1.3.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
