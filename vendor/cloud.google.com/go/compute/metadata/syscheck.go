@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+//go:build !windows && !linux
 
-// Version is the current tagged release of the library.
-const Version = "1.43.0"
+package metadata
+
+// systemInfoSuggestsGCE reports whether the local system (without
+// doing network requests) suggests that we're running on GCE. If this
+// returns true, testOnGCE tries a bit harder to reach its metadata
+// server.
+func systemInfoSuggestsGCE() bool {
+	// We don't currently have checks for other GOOS
+	return false
+}
