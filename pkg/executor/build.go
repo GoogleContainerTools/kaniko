@@ -149,6 +149,7 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 		s.args = dockerfile.NewBuildArgs(s.opts.BuildArgs)
 	}
 	s.args.AddMetaArgs(s.stage.MetaArgs)
+	s.args.AddPreDefinedBuildArgs(opts)
 	return s, nil
 }
 
