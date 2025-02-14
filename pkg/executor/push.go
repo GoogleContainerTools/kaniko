@@ -271,7 +271,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			destRef.Repository.Registry = newReg
 		}
 
-		pushAuth, err := creds.GetKeychain().Resolve(destRef.Context().Registry)
+		pushAuth, err := creds.GetKeychain().Resolve(destRef.Context())
 		if err != nil {
 			return errors.Wrap(err, "resolving pushAuth")
 		}
