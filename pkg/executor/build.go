@@ -760,6 +760,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			configFile.OS = strings.Split(opts.CustomPlatform, "/")[0]
 			configFile.Architecture = strings.Split(opts.CustomPlatform, "/")[1]
 		}
+		if !stage.Final {
+			configFile.Config.Labels = map[string]string{}
+		}
 		sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
 		if err != nil {
 			return nil, err
