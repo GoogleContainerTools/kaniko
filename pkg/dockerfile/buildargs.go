@@ -17,13 +17,20 @@ limitations under the License.
 package dockerfile
 
 import (
-	"runtime"
+	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/config"
+	"github.com/containerd/platforms"
 	d "github.com/docker/docker/builder/dockerfile"
+	containerregistryV1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/sirupsen/logrus"
 )
+
+var defaultArgsOnce sync.Once
+var defaultArgs []string
 
 type BuildArgs struct {
 	d.BuildArgs
@@ -71,41 +78,44 @@ func (b *BuildArgs) AddMetaArgs(metaArgs []instructions.ArgCommand) {
 	}
 }
 
-// AddPreDefinedBuildArgs adds pre-defined build args. Such as TARGETOS, TARGETARCH, BUILDPLATFORM, TARGETPLATFORM
-func (b *BuildArgs) AddPreDefinedBuildArgs(opts *config.KanikoOptions) {
-	buildPlatform := runtime.GOOS + "/" + runtime.GOARCH
-	buildOs := runtime.GOOS
-	buildArch := runtime.GOARCH
-
-	targetPlatform := ""
-	targetOs := ""
-	targetArch := ""
-	targetVariant := ""
-
-	if opts.CustomPlatform == "" {
-		targetPlatform = buildPlatform
-		targetOs = buildOs
-		targetArch = buildArch
-	} else {
-		targetPlatform = opts.CustomPlatform
-		platformParts := strings.Split(opts.CustomPlatform, "/")
-		if len(platformParts) > 0 {
-			targetOs = platformParts[0]
+// DefaultArgs get default args.
+// include pre-defined build args: TARGETOS, TARGETARCH, BUILDPLATFORM, TARGETPLATFORM ...
+func DefaultArgs(opt config.KanikoOptions) []string {
+	defaultArgsOnce.Do(func() {
+		// build info
+		buildPlatform := platforms.Format(platforms.Normalize(platforms.DefaultSpec()))
+		buildPlatformSpec, err := containerregistryV1.ParsePlatform(buildPlatform)
+		if err != nil {
+			logrus.Fatalf("Parse build platform %q: %v", buildPlatform, err)
 		}
-		if len(platformParts) > 1 {
-			targetArch = platformParts[1]
-		}
-		if len(platformParts) > 2 {
-			targetVariant = platformParts[2]
-		}
-	}
 
-	b.AddArg("BUILDPLATFORM", &buildPlatform)
-	b.AddArg("BUILDOS", &buildOs)
-	b.AddArg("BUILDARCH", &buildArch)
+		// target info
+		var targetPlatform string
+		if opt.CustomPlatform != "" {
+			targetPlatform = opt.CustomPlatform
+		} else {
+			targetPlatform = buildPlatform
+		}
+		targetPlatformSpec, err := containerregistryV1.ParsePlatform(opt.CustomPlatform)
+		if err != nil {
+			logrus.Fatalf("Invalid platform %q: %v", opt.CustomPlatform, err)
+		}
 
-	b.AddArg("TARGETPLATFORM", &targetPlatform)
-	b.AddArg("TARGETOS", &targetOs)
-	b.AddArg("TARGETARCH", &targetArch)
-	b.AddArg("TARGETVARIANT", &targetVariant)
+		// pre-defined build args
+		defaultArgs = []string{
+			fmt.Sprintf("%s=%s", "BUILDPLATFORM", buildPlatform),
+			fmt.Sprintf("%s=%s", "BUILDOS", buildPlatformSpec.OS),
+			fmt.Sprintf("%s=%s", "BUILDOSVERSION", buildPlatformSpec.OSVersion),
+			fmt.Sprintf("%s=%s", "BUILDARCH", buildPlatformSpec.Architecture),
+			fmt.Sprintf("%s=%s", "BUILDVARIANT", buildPlatformSpec.Variant),
+			fmt.Sprintf("%s=%s", "TARGETPLATFORM", targetPlatform),
+			fmt.Sprintf("%s=%s", "TARGETOS", targetPlatformSpec.OS),
+			fmt.Sprintf("%s=%s", "TARGETOSVERSION", targetPlatformSpec.OSVersion),
+			fmt.Sprintf("%s=%s", "TARGETARCH", targetPlatformSpec.Architecture),
+			fmt.Sprintf("%s=%s", "TARGETVARIANT", targetPlatformSpec.Variant),
+			fmt.Sprintf("%s=%s", "TARGETSTAGE", opt.Target),
+		}
+		logrus.Infof("init default args: %s", defaultArgs)
+	})
+	return defaultArgs
 }
