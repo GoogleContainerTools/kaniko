@@ -15,7 +15,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// This operation is not supported by directory buckets.
+// This operation is not supported for directory buckets.
 //
 // Set the logging parameters for a bucket and to specify permissions for who can
 // view and modify the logging parameters. All logs are saved to buckets in the
@@ -104,9 +104,9 @@ type PutBucketLoggingInput struct {
 	// This member is required.
 	BucketLoggingStatus *types.BucketLoggingStatus
 
-	// Indicates the algorithm used to create the checksum for the object when you use
-	// the SDK. This header will not provide any additional functionality if you don't
-	// use the SDK. When you send this header, there must be a corresponding
+	// Indicates the algorithm used to create the checksum for the request when you
+	// use the SDK. This header will not provide any additional functionality if you
+	// don't use the SDK. When you send this header, there must be a corresponding
 	// x-amz-checksum or x-amz-trailer header sent. Otherwise, Amazon S3 fails the
 	// request with the HTTP status code 400 Bad Request . For more information, see [Checking object integrity]
 	// in the Amazon S3 User Guide.
@@ -187,6 +187,9 @@ func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -209,6 +212,12 @@ func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = addIsExpressUserAgent(stack); err != nil {
+		return err
+	}
+	if err = addRequestChecksumMetricsTracking(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpPutBucketLoggingValidationMiddleware(stack); err != nil {
@@ -250,6 +259,18 @@ func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack
 	if err = s3cust.AddExpressDefaultChecksumMiddleware(stack); err != nil {
 		return err
 	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -279,9 +300,10 @@ func getPutBucketLoggingRequestAlgorithmMember(input interface{}) (string, bool)
 }
 
 func addPutBucketLoggingInputChecksumMiddlewares(stack *middleware.Stack, options Options) error {
-	return internalChecksum.AddInputMiddleware(stack, internalChecksum.InputMiddlewareOptions{
+	return addInputChecksumMiddleware(stack, internalChecksum.InputMiddlewareOptions{
 		GetAlgorithm:                     getPutBucketLoggingRequestAlgorithmMember,
 		RequireChecksum:                  true,
+		RequestChecksumCalculation:       options.RequestChecksumCalculation,
 		EnableTrailingChecksum:           false,
 		EnableComputeSHA256PayloadHash:   true,
 		EnableDecodedContentLengthHeader: true,
