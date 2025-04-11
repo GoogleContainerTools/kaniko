@@ -454,6 +454,7 @@ func resolveRelativePaths() error {
 		&opts.DigestFile,
 		&opts.ImageNameDigestFile,
 		&opts.ImageNameTagDigestFile,
+		&opts.OCILayoutPath,
 	}
 
 	for _, p := range optsPaths {
