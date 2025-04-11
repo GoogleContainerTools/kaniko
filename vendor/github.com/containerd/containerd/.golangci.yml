@@ -24,6 +24,16 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 
+  exclude-dirs:
+    - api
+    - cluster
+    - design
+    - docs
+    - docs/man
+    - releases
+    - reports
+    - test # e2e scripts
+
   # Only using / doesn't work due to https://github.com/golangci/golangci-lint/issues/1398.
   exclude-rules:
     - path: 'cmd[\\/]containerd[\\/]builtins[\\/]'
@@ -66,8 +76,6 @@ linters-settings:
     rules:
       main:
         deny:
-          - pkg: "github.com/containerd/containerd/errdefs"
-            desc: The containerd errdefs package was migrated to a separate module. Use github.com/containerd/errdefs instead.
           - pkg: "github.com/containerd/containerd/log"
             desc: The containerd log package was migrated to a separate module. Use github.com/containerd/log instead.
           - pkg: "github.com/containerd/containerd/platforms"
@@ -83,15 +91,7 @@ linters-settings:
       - G306
       - G402
       - G404
+      - G115
 
 run:
   timeout: 8m
-  skip-dirs:
-    - api
-    - cluster
-    - design
-    - docs
-    - docs/man
-    - releases
-    - reports
-    - test # e2e scripts

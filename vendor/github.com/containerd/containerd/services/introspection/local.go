@@ -30,10 +30,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 
-	"github.com/containerd/errdefs"
-
 	api "github.com/containerd/containerd/api/services/introspection/v1"
 	"github.com/containerd/containerd/api/types"
+	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/filters"
 	"github.com/containerd/containerd/plugin"
 	"github.com/containerd/containerd/protobuf"
@@ -99,7 +98,7 @@ func (l *Local) UpdateLocal(root string) {
 func (l *Local) Plugins(ctx context.Context, req *api.PluginsRequest, _ ...grpc.CallOption) (*api.PluginsResponse, error) {
 	filter, err := filters.ParseAll(req.Filters...)
 	if err != nil {
-		return nil, errdefs.ToGRPCf(errdefs.ErrInvalidArgument, err.Error())
+		return nil, errdefs.ToGRPC(err)
 	}
 
 	var plugins []*api.Plugin
@@ -162,6 +161,9 @@ func (l *Local) getUUID() (string, error) {
 			return l.generateUUID()
 		}
 		return "", err
+	}
+	if len(data) == 0 {
+		return l.generateUUID()
 	}
 	u := string(data)
 	if _, err := uuid.Parse(u); err != nil {
