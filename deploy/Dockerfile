@@ -55,7 +55,7 @@ RUN \
   make out/executor out/warmer
 
 # Generate latest ca-certificates
-FROM debian:bullseye-slim AS certs
+FROM debian:bookworm-slim AS certs
 RUN apt update && apt install -y ca-certificates
 
 # use musl busybox since it's staticly compiled on all platforms
