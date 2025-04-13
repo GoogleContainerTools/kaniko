@@ -68,7 +68,7 @@ func ResolvePaths(paths []string, wl []util.IgnoreListEntry) (pathsToAdd []strin
 		if e != nil {
 			if !os.IsNotExist(e) {
 				logrus.Errorf("Couldn't eval %s with link %s", f, link)
-				return
+				os.Exit(1)
 			}
 
 			logrus.Tracef("Symlink path %s, target does not exist", f)
