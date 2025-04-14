@@ -112,6 +112,7 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 	}
 	l := snapshot.NewLayeredMap(hasher)
 	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
+	snapshotter.SetExcludeRootDirTarball(opts.ExcludeRootDirTarball)
 
 	digest, err := sourceImage.Digest()
 	if err != nil {
