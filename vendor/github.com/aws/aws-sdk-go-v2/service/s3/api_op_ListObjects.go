@@ -13,7 +13,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// This operation is not supported by directory buckets.
+// This operation is not supported for directory buckets.
 //
 // Returns some or all (up to 1,000) of the objects in a bucket. You can use the
 // request parameters as selection criteria to return a subset of the objects in a
@@ -63,31 +63,32 @@ type ListObjectsInput struct {
 	//
 	// Directory buckets - When you use this operation with a directory bucket, you
 	// must use virtual-hosted-style requests in the format
-	// Bucket_name.s3express-az_id.region.amazonaws.com . Path-style requests are not
-	// supported. Directory bucket names must be unique in the chosen Availability
-	// Zone. Bucket names must follow the format bucket_base_name--az-id--x-s3 (for
-	// example, DOC-EXAMPLE-BUCKET--usw2-az1--x-s3 ). For information about bucket
-	// naming restrictions, see [Directory bucket naming rules]in the Amazon S3 User Guide.
+	// Bucket-name.s3express-zone-id.region-code.amazonaws.com . Path-style requests
+	// are not supported. Directory bucket names must be unique in the chosen Zone
+	// (Availability Zone or Local Zone). Bucket names must follow the format
+	// bucket-base-name--zone-id--x-s3 (for example,
+	// amzn-s3-demo-bucket--usw2-az1--x-s3 ). For information about bucket naming
+	// restrictions, see [Directory bucket naming rules]in the Amazon S3 User Guide.
 	//
-	// Access points - When you use this action with an access point, you must provide
-	// the alias of the access point in place of the bucket name or specify the access
-	// point ARN. When using the access point ARN, you must direct requests to the
-	// access point hostname. The access point hostname takes the form
+	// Access points - When you use this action with an access point for general
+	// purpose buckets, you must provide the alias of the access point in place of the
+	// bucket name or specify the access point ARN. When you use this action with an
+	// access point for directory buckets, you must provide the access point name in
+	// place of the bucket name. When using the access point ARN, you must direct
+	// requests to the access point hostname. The access point hostname takes the form
 	// AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com. When using this
 	// action with an access point through the Amazon Web Services SDKs, you provide
 	// the access point ARN in place of the bucket name. For more information about
 	// access point ARNs, see [Using access points]in the Amazon S3 User Guide.
 	//
-	// Access points and Object Lambda access points are not supported by directory
-	// buckets.
+	// Object Lambda access points are not supported by directory buckets.
 	//
-	// S3 on Outposts - When you use this action with Amazon S3 on Outposts, you must
-	// direct requests to the S3 on Outposts hostname. The S3 on Outposts hostname
-	// takes the form
-	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
-	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
-	// provide the Outposts access point ARN in place of the bucket name. For more
-	// information about S3 on Outposts ARNs, see [What is S3 on Outposts?]in the Amazon S3 User Guide.
+	// S3 on Outposts - When you use this action with S3 on Outposts, you must direct
+	// requests to the S3 on Outposts hostname. The S3 on Outposts hostname takes the
+	// form AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When
+	// you use this action with S3 on Outposts, the destination bucket must be the
+	// Outposts access point ARN or the access point alias. For more information about
+	// S3 on Outposts, see [What is S3 on Outposts?]in the Amazon S3 User Guide.
 	//
 	// [Directory bucket naming rules]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-bucket-naming-rules.html
 	// [What is S3 on Outposts?]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html
@@ -99,12 +100,20 @@ type ListObjectsInput struct {
 	// A delimiter is a character that you use to group keys.
 	Delimiter *string
 
-	// Requests Amazon S3 to encode the object keys in the response and specifies the
-	// encoding method to use. An object key can contain any Unicode character;
-	// however, the XML 1.0 parser cannot parse some characters, such as characters
-	// with an ASCII value from 0 to 10. For characters that are not supported in XML
-	// 1.0, you can add this parameter to request that Amazon S3 encode the keys in the
-	// response.
+	// Encoding type used by Amazon S3 to encode the [object keys] in the response. Responses are
+	// encoded only in UTF-8. An object key can contain any Unicode character. However,
+	// the XML 1.0 parser can't parse certain characters, such as characters with an
+	// ASCII value from 0 to 10. For characters that aren't supported in XML 1.0, you
+	// can add this parameter to request that Amazon S3 encode the keys in the
+	// response. For more information about characters to avoid in object key names,
+	// see [Object key naming guidelines].
+	//
+	// When using the URL encoding type, non-ASCII characters that are used in an
+	// object's key name will be percent-encoded according to UTF-8 code values. For
+	// example, the object test_file(3).png will appear as test_file%283%29.png .
+	//
+	// [Object key naming guidelines]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#object-key-guidelines
+	// [object keys]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 	EncodingType types.EncodingType
 
 	// The account ID of the expected bucket owner. If the account ID that you provide
@@ -172,9 +181,20 @@ type ListObjectsOutput struct {
 	// MaxKeys value.
 	Delimiter *string
 
-	// Encoding type used by Amazon S3 to encode object keys in the response. If using
-	// url , non-ASCII characters used in an object's key name will be URL encoded. For
+	// Encoding type used by Amazon S3 to encode the [object keys] in the response. Responses are
+	// encoded only in UTF-8. An object key can contain any Unicode character. However,
+	// the XML 1.0 parser can't parse certain characters, such as characters with an
+	// ASCII value from 0 to 10. For characters that aren't supported in XML 1.0, you
+	// can add this parameter to request that Amazon S3 encode the keys in the
+	// response. For more information about characters to avoid in object key names,
+	// see [Object key naming guidelines].
+	//
+	// When using the URL encoding type, non-ASCII characters that are used in an
+	// object's key name will be percent-encoded according to UTF-8 code values. For
 	// example, the object test_file(3).png will appear as test_file%283%29.png .
+	//
+	// [Object key naming guidelines]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html#object-key-guidelines
+	// [object keys]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 	EncodingType types.EncodingType
 
 	// A flag that indicates whether Amazon S3 returned all of the results that
@@ -260,6 +280,9 @@ func (c *Client) addOperationListObjectsMiddlewares(stack *middleware.Stack, opt
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -282,6 +305,9 @@ func (c *Client) addOperationListObjectsMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = addIsExpressUserAgent(stack); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpListObjectsValidationMiddleware(stack); err != nil {
@@ -315,6 +341,18 @@ func (c *Client) addOperationListObjectsMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil
