@@ -30,8 +30,10 @@ func (c *Client) PutRegistryCatalogData(ctx context.Context, params *PutRegistry
 type PutRegistryCatalogDataInput struct {
 
 	// The display name for a public registry. The display name is shown as the
-	// repository author in the Amazon ECR Public Gallery. The registry display name is
-	// only publicly visible in the Amazon ECR Public Gallery for verified accounts.
+	// repository author in the Amazon ECR Public Gallery.
+	//
+	// The registry display name is only publicly visible in the Amazon ECR Public
+	// Gallery for verified accounts.
 	DisplayName *string
 
 	noSmithyDocumentSerde
@@ -93,6 +95,9 @@ func (c *Client) addOperationPutRegistryCatalogDataMiddlewares(stack *middleware
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -103,6 +108,15 @@ func (c *Client) addOperationPutRegistryCatalogDataMiddlewares(stack *middleware
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opPutRegistryCatalogData(options.Region), middleware.Before); err != nil {
@@ -121,6 +135,18 @@ func (c *Client) addOperationPutRegistryCatalogDataMiddlewares(stack *middleware
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

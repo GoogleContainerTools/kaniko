@@ -64,12 +64,12 @@ func (gdw *NaiveDiffDriver) Diff(id, parent string) (arch io.ReadCloser, err err
 	}()
 
 	if parent == "" {
-		archive, err := archive.Tar(layerFs, archive.Uncompressed)
+		tarArchive, err := archive.Tar(layerFs, archive.Uncompressed)
 		if err != nil {
 			return nil, err
 		}
-		return ioutils.NewReadCloserWrapper(archive, func() error {
-			err := archive.Close()
+		return ioutils.NewReadCloserWrapper(tarArchive, func() error {
+			err := tarArchive.Close()
 			driver.Put(id)
 			return err
 		}), nil
@@ -86,13 +86,13 @@ func (gdw *NaiveDiffDriver) Diff(id, parent string) (arch io.ReadCloser, err err
 		return nil, err
 	}
 
-	archive, err := archive.ExportChanges(layerFs, changes, gdw.IDMap)
+	tarArchive, err := archive.ExportChanges(layerFs, changes, gdw.IDMap)
 	if err != nil {
 		return nil, err
 	}
 
-	return ioutils.NewReadCloserWrapper(archive, func() error {
-		err := archive.Close()
+	return ioutils.NewReadCloserWrapper(tarArchive, func() error {
+		err := tarArchive.Close()
 		driver.Put(id)
 
 		// NaiveDiffDriver compares file metadata with parent layers. Parent layers
@@ -137,7 +137,7 @@ func (gdw *NaiveDiffDriver) ApplyDiff(id, parent string, diff io.Reader) (size i
 	// Mount the root filesystem so we can apply the diff/layer.
 	layerRootFs, err := driver.Get(id, "")
 	if err != nil {
-		return
+		return 0, err
 	}
 	defer driver.Put(id)
 
@@ -145,28 +145,28 @@ func (gdw *NaiveDiffDriver) ApplyDiff(id, parent string, diff io.Reader) (size i
 	options := &archive.TarOptions{IDMap: gdw.IDMap, BestEffortXattrs: gdw.BestEffortXattrs}
 	start := time.Now().UTC()
 	log.G(context.TODO()).WithField("id", id).Debug("Start untar layer")
-	if size, err = ApplyUncompressedLayer(layerFs, diff, options); err != nil {
-		return
+	appliedSize, err := ApplyUncompressedLayer(layerFs, diff, options)
+	if err != nil {
+		return 0, err
 	}
 	log.G(context.TODO()).WithField("id", id).Debugf("Untar time: %vs", time.Now().UTC().Sub(start).Seconds())
-
-	return
+	return appliedSize, nil
 }
 
 // DiffSize calculates the changes between the specified layer
 // and its parent and returns the size in bytes of the changes
 // relative to its base filesystem directory.
-func (gdw *NaiveDiffDriver) DiffSize(id, parent string) (size int64, err error) {
+func (gdw *NaiveDiffDriver) DiffSize(id, parent string) (size int64, _ error) {
 	driver := gdw.ProtoDriver
 
 	changes, err := gdw.Changes(id, parent)
 	if err != nil {
-		return
+		return 0, err
 	}
 
 	layerFs, err := driver.Get(id, "")
 	if err != nil {
-		return
+		return 0, err
 	}
 	defer driver.Put(id)
 

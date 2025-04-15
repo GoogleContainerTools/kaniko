@@ -11,9 +11,10 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Creates a repository in a public registry. For more information, see Amazon ECR
-// repositories (https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html)
-// in the Amazon Elastic Container Registry User Guide.
+// Creates a repository in a public registry. For more information, see [Amazon ECR repositories] in the
+// Amazon Elastic Container Registry User Guide.
+//
+// [Amazon ECR repositories]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html
 func (c *Client) CreateRepository(ctx context.Context, params *CreateRepositoryInput, optFns ...func(*Options)) (*CreateRepositoryOutput, error) {
 	if params == nil {
 		params = &CreateRepositoryInput{}
@@ -110,6 +111,9 @@ func (c *Client) addOperationCreateRepositoryMiddlewares(stack *middleware.Stack
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -120,6 +124,15 @@ func (c *Client) addOperationCreateRepositoryMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpCreateRepositoryValidationMiddleware(stack); err != nil {
@@ -141,6 +154,18 @@ func (c *Client) addOperationCreateRepositoryMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

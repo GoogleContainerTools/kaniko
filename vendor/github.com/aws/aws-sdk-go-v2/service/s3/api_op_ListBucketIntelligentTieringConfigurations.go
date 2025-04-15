@@ -14,7 +14,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// This operation is not supported by directory buckets.
+// This operation is not supported for directory buckets.
 //
 // Lists the S3 Intelligent-Tiering configuration from the specified bucket.
 //
@@ -150,6 +150,9 @@ func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewar
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -172,6 +175,9 @@ func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewar
 		return err
 	}
 	if err = addIsExpressUserAgent(stack); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpListBucketIntelligentTieringConfigurationsValidationMiddleware(stack); err != nil {
@@ -205,6 +211,18 @@ func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewar
 		return err
 	}
 	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil
