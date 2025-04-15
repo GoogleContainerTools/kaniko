@@ -146,7 +146,9 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 	if args != nil {
 		s.args = args.Clone()
 	} else {
-		s.args = dockerfile.NewBuildArgs(s.opts.BuildArgs)
+		defaultArgs := dockerfile.DefaultArgs(*opts)
+		mergedArgs := append(defaultArgs, s.opts.BuildArgs...)
+		s.args = dockerfile.NewBuildArgs(mergedArgs)
 	}
 	s.args.AddMetaArgs(s.stage.MetaArgs)
 	return s, nil
