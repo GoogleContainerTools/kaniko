@@ -11,12 +11,13 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Lists all the image IDs for the specified repository. You can filter images
-// based on whether or not they are tagged by using the tagStatus filter and
-// specifying either TAGGED , UNTAGGED or ANY . For example, you can filter your
-// results to return only UNTAGGED images and then pipe that result to a
-// BatchDeleteImage operation to delete them. Or, you can filter your results to
-// return only TAGGED images to list all of the tags in your repository.
+// Lists all the image IDs for the specified repository.
+//
+// You can filter images based on whether or not they are tagged by using the
+// tagStatus filter and specifying either TAGGED , UNTAGGED or ANY . For example,
+// you can filter your results to return only UNTAGGED images and then pipe that
+// result to a BatchDeleteImageoperation to delete them. Or, you can filter your results to return
+// only TAGGED images to list all of the tags in your repository.
 func (c *Client) ListImages(ctx context.Context, params *ListImagesInput, optFns ...func(*Options)) (*ListImagesOutput, error) {
 	if params == nil {
 		params = &ListImagesInput{}
@@ -55,6 +56,7 @@ type ListImagesInput struct {
 	// maxResults was used and the results exceeded the value of that parameter.
 	// Pagination continues from the end of the previous results that returned the
 	// nextToken value. This value is null when there are no more results to return.
+	//
 	// This token should be treated as an opaque identifier that is only used to
 	// retrieve the next items in a list and not for other programmatic purposes.
 	NextToken *string
@@ -127,6 +129,9 @@ func (c *Client) addOperationListImagesMiddlewares(stack *middleware.Stack, opti
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -137,6 +142,15 @@ func (c *Client) addOperationListImagesMiddlewares(stack *middleware.Stack, opti
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpListImagesValidationMiddleware(stack); err != nil {
@@ -160,15 +174,20 @@ func (c *Client) addOperationListImagesMiddlewares(stack *middleware.Stack, opti
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
+		return err
+	}
 	return nil
 }
-
-// ListImagesAPIClient is a client that implements the ListImages operation.
-type ListImagesAPIClient interface {
-	ListImages(context.Context, *ListImagesInput, ...func(*Options)) (*ListImagesOutput, error)
-}
-
-var _ ListImagesAPIClient = (*Client)(nil)
 
 // ListImagesPaginatorOptions is the paginator options for ListImages
 type ListImagesPaginatorOptions struct {
@@ -239,6 +258,9 @@ func (p *ListImagesPaginator) NextPage(ctx context.Context, optFns ...func(*Opti
 	}
 	params.MaxResults = limit
 
+	optFns = append([]func(*Options){
+		addIsPaginatorUserAgent,
+	}, optFns...)
 	result, err := p.client.ListImages(ctx, &params, optFns...)
 	if err != nil {
 		return nil, err
@@ -257,6 +279,13 @@ func (p *ListImagesPaginator) NextPage(ctx context.Context, optFns ...func(*Opti
 
 	return result, nil
 }
+
+// ListImagesAPIClient is a client that implements the ListImages operation.
+type ListImagesAPIClient interface {
+	ListImages(context.Context, *ListImagesInput, ...func(*Options)) (*ListImagesOutput, error)
+}
+
+var _ ListImagesAPIClient = (*Client)(nil)
 
 func newServiceMetadataMiddleware_opListImages(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{

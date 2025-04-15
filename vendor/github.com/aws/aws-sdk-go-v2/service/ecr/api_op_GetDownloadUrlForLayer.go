@@ -12,10 +12,13 @@ import (
 
 // Retrieves the pre-signed Amazon S3 download URL corresponding to an image
 // layer. You can only get URLs for image layers that are referenced in an image.
-// When an image is pulled, the GetDownloadUrlForLayer API is called once per image
-// layer that is not already cached. This operation is used by the Amazon ECR proxy
-// and is not generally used by customers for pulling and pushing images. In most
-// cases, you should use the docker CLI to pull, tag, and push images.
+//
+// When an image is pulled, the GetDownloadUrlForLayer API is called once per
+// image layer that is not already cached.
+//
+// This operation is used by the Amazon ECR proxy and is not generally used by
+// customers for pulling and pushing images. In most cases, you should use the
+// docker CLI to pull, tag, and push images.
 func (c *Client) GetDownloadUrlForLayer(ctx context.Context, params *GetDownloadUrlForLayerInput, optFns ...func(*Options)) (*GetDownloadUrlForLayerOutput, error) {
 	if params == nil {
 		params = &GetDownloadUrlForLayerInput{}
@@ -108,6 +111,9 @@ func (c *Client) addOperationGetDownloadUrlForLayerMiddlewares(stack *middleware
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -118,6 +124,15 @@ func (c *Client) addOperationGetDownloadUrlForLayerMiddlewares(stack *middleware
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetDownloadUrlForLayerValidationMiddleware(stack); err != nil {
@@ -139,6 +154,18 @@ func (c *Client) addOperationGetDownloadUrlForLayerMiddlewares(stack *middleware
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

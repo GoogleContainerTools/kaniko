@@ -3,6 +3,7 @@ package manager
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/internal/awsutil"
 	internalcontext "github.com/aws/aws-sdk-go-v2/internal/context"
@@ -120,6 +120,9 @@ type UploadOutput struct {
 
 	// The base64-encoded, 32-bit CRC32C checksum of the object.
 	ChecksumCRC32C *string
+
+	// The base64-encoded, 64-bit CRC64NVME checksum of the object.
+	ChecksumCRC64NVME *string
 
 	// The base64-encoded, 160-bit SHA-1 digest of the object.
 	ChecksumSHA1 *string
@@ -511,6 +514,7 @@ func (u *uploader) singlePart(r io.ReadSeeker, cleanup func()) (*UploadOutput, e
 		BucketKeyEnabled:     aws.ToBool(out.BucketKeyEnabled),
 		ChecksumCRC32:        out.ChecksumCRC32,
 		ChecksumCRC32C:       out.ChecksumCRC32C,
+		ChecksumCRC64NVME:    out.ChecksumCRC64NVME,
 		ChecksumSHA1:         out.ChecksumSHA1,
 		ChecksumSHA256:       out.ChecksumSHA256,
 		ETag:                 out.ETag,
@@ -584,6 +588,8 @@ func (a completedParts) Less(i, j int) bool {
 // upload will perform a multipart upload using the firstBuf buffer containing
 // the first chunk of data.
 func (u *multiuploader) upload(firstBuf io.ReadSeeker, cleanup func()) (*UploadOutput, error) {
+	u.initChecksumAlgorithm()
+
 	var params s3.CreateMultipartUploadInput
 	awsutil.Copy(&params, u.in)
 
@@ -651,6 +657,7 @@ func (u *multiuploader) upload(firstBuf io.ReadSeeker, cleanup func()) (*UploadO
 		BucketKeyEnabled:     aws.ToBool(completeOut.BucketKeyEnabled),
 		ChecksumCRC32:        completeOut.ChecksumCRC32,
 		ChecksumCRC32C:       completeOut.ChecksumCRC32C,
+		ChecksumCRC64NVME:    completeOut.ChecksumCRC64NVME,
 		ChecksumSHA1:         completeOut.ChecksumSHA1,
 		ChecksumSHA256:       completeOut.ChecksumSHA256,
 		ETag:                 completeOut.ETag,
@@ -686,7 +693,7 @@ func (u *multiuploader) shouldContinue(part int32, nextChunkLen int, err error) 
 			msg = fmt.Sprintf("exceeded total allowed S3 limit MaxUploadParts (%d). Adjust PartSize to fit in this limit",
 				MaxUploadParts)
 		}
-		return false, fmt.Errorf(msg)
+		return false, errors.New(msg)
 	}
 
 	return true, err
@@ -750,6 +757,27 @@ func (u *multiuploader) send(c chunk) error {
 	u.m.Unlock()
 
 	return nil
+}
+
+func (u *multiuploader) initChecksumAlgorithm() {
+	if u.in.ChecksumAlgorithm != "" {
+		return
+	}
+
+	switch {
+	case u.in.ChecksumCRC32 != nil:
+		u.in.ChecksumAlgorithm = types.ChecksumAlgorithmCrc32
+	case u.in.ChecksumCRC32C != nil:
+		u.in.ChecksumAlgorithm = types.ChecksumAlgorithmCrc32c
+	case u.in.ChecksumCRC64NVME != nil:
+		u.in.ChecksumAlgorithm = types.ChecksumAlgorithmCrc64nvme
+	case u.in.ChecksumSHA1 != nil:
+		u.in.ChecksumAlgorithm = types.ChecksumAlgorithmSha1
+	case u.in.ChecksumSHA256 != nil:
+		u.in.ChecksumAlgorithm = types.ChecksumAlgorithmSha256
+	default:
+		u.in.ChecksumAlgorithm = types.ChecksumAlgorithmCrc32
+	}
 }
 
 // geterr is a thread-safe getter for the error object
