@@ -230,7 +230,7 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 }
 
 // DeleteFilesystem deletes the extracted image file system
-func DeleteFilesystem() error {
+func DeleteFilesystem(retry bool) error {
 	logrus.Info("Deleting filesystem...")
 	return filepath.Walk(config.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -256,7 +256,19 @@ func DeleteFilesystem() error {
 		if path == config.RootDir {
 			return nil
 		}
-		return os.RemoveAll(path)
+		if retry {
+			for i := 0; i < 3; i++ { // Retry 3 times
+				err := os.RemoveAll(path)
+				if err == nil {
+					return nil
+				}
+				logrus.Warnf("Error deleting %s, retrying (%d/3): %v", path, i+1, err)
+				time.Sleep(1 * time.Second) // Wait before retrying
+			}
+			return fmt.Errorf("failed to delete %s after 3 retries", path)
+		} else {
+			return os.RemoveAll(path)
+		}
 	})
 }
 
