@@ -199,20 +199,39 @@ func isOCILayout(path string) bool {
 }
 
 func (s *stageBuilder) populateCompositeKey(command commands.DockerCommand, files []string, compositeKey CompositeCache, args *dockerfile.BuildArgs, env []string) (CompositeCache, error) {
-	// First replace all the environment variables or args in the command
-	replacementEnvs := args.ReplacementEnvs(env)
-	// The sort order of `replacementEnvs` is basically undefined, sort it
-	// so we can ensure a stable cache key.
-	sort.Strings(replacementEnvs)
-	// Use the special argument "|#" at the start of the args array. This will
-	// avoid conflicts with any RUN command since commands can not
-	// start with | (vertical bar). The "#" (number of build envs) is there to
-	// help ensure proper cache matches.
-
 	if command.IsArgsEnvsRequiredInCache() {
-		if len(replacementEnvs) > 0 {
-			compositeKey.AddKey(fmt.Sprintf("|%d", len(replacementEnvs)))
-			compositeKey.AddKey(replacementEnvs...)
+		filteredEnvs := []string{}
+		for _, e := range env {
+			envName := strings.SplitN(e, "=", 2)[0]
+			if s.opts.ExcludeEnvsFromCacheKey.Contains(envName) {
+				continue
+			}
+			filteredEnvs = append(filteredEnvs, e)
+		}
+
+		// First replace all the environment variables or args in the command
+		envsAndBuildArgs := args.ReplacementEnvs(filteredEnvs)
+
+		filteredEnvsAndBuildArgs := []string{}
+		for i, env := range envsAndBuildArgs {
+			envArgName := strings.SplitN(env, "=", 2)[0]
+			if s.opts.ExcludeBuildArgsFromCacheKey.Contains(envArgName) {
+				continue
+			}
+			filteredEnvsAndBuildArgs = append(filteredEnvs, envsAndBuildArgs[i])
+		}
+
+		// The sort order of `filteredEnvs` is basically undefined, sort it
+		// so we can ensure a stable cache key.
+		sort.Strings(filteredEnvsAndBuildArgs)
+
+		if len(filteredEnvsAndBuildArgs) > 0 {
+			// Use the special argument "|#" at the start of the args array. This will
+			// avoid conflicts with any RUN command since commands can not
+			// start with | (vertical bar). The "#" (number of build envs) is there to
+			// help ensure proper cache matches.
+			compositeKey.AddKey(fmt.Sprintf("|%d", len(filteredEnvsAndBuildArgs)))
+			compositeKey.AddKey(filteredEnvsAndBuildArgs...)
 		}
 	}
 
