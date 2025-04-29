@@ -15,9 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/platforms"
 	"github.com/docker/docker/api"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/builder"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
@@ -91,17 +90,17 @@ func dispatchAdd(ctx context.Context, d dispatchRequest, c *instructions.AddComm
 		return errors.New("the --chmod option requires BuildKit. Refer to https://docs.docker.com/go/buildkit/ to learn how to build images with BuildKit enabled")
 	}
 	downloader := newRemoteSourceDownloader(d.builder.Output, d.builder.Stdout)
-	copier := copierFromDispatchRequest(d, downloader, nil)
-	defer copier.Cleanup()
+	cpr := copierFromDispatchRequest(d, downloader, nil)
+	defer cpr.Cleanup()
 
-	copyInstruction, err := copier.createCopyInstruction(c.SourcesAndDest, "ADD")
+	instruction, err := cpr.createCopyInstruction(c.SourcesAndDest, "ADD")
 	if err != nil {
 		return err
 	}
-	copyInstruction.chownStr = c.Chown
-	copyInstruction.allowLocalDecompression = true
+	instruction.chownStr = c.Chown
+	instruction.allowLocalDecompression = true
 
-	return d.builder.performCopy(ctx, d, copyInstruction)
+	return d.builder.performCopy(ctx, d, instruction)
 }
 
 // COPY foo /path
@@ -119,17 +118,17 @@ func dispatchCopy(ctx context.Context, d dispatchRequest, c *instructions.CopyCo
 			return errors.Wrapf(err, "invalid from flag value %s", c.From)
 		}
 	}
-	copier := copierFromDispatchRequest(d, errOnSourceDownload, im)
-	defer copier.Cleanup()
-	copyInstruction, err := copier.createCopyInstruction(c.SourcesAndDest, "COPY")
+	cpr := copierFromDispatchRequest(d, errOnSourceDownload, im)
+	defer cpr.Cleanup()
+	instruction, err := cpr.createCopyInstruction(c.SourcesAndDest, "COPY")
 	if err != nil {
 		return err
 	}
-	copyInstruction.chownStr = c.Chown
-	if c.From != "" && copyInstruction.chownStr == "" {
-		copyInstruction.preserveOwnership = true
+	instruction.chownStr = c.Chown
+	if c.From != "" && instruction.chownStr == "" {
+		instruction.preserveOwnership = true
 	}
-	return d.builder.performCopy(ctx, d, copyInstruction)
+	return d.builder.performCopy(ctx, d, instruction)
 }
 
 func (d *dispatchRequest) getImageMount(ctx context.Context, imageRefOrID string) (*imageMount, error) {
@@ -158,8 +157,8 @@ func initializeStage(ctx context.Context, d dispatchRequest, cmd *instructions.S
 	}
 
 	var platform *ocispec.Platform
-	if v := cmd.Platform; v != "" {
-		v, err := d.getExpandedString(d.shlex, v)
+	if val := cmd.Platform; val != "" {
+		v, err := d.getExpandedString(d.shlex, val)
 		if err != nil {
 			return errors.Wrapf(err, "failed to process arguments for platform %s", v)
 		}
@@ -224,7 +223,7 @@ func (d *dispatchRequest) getExpandedString(shlex *shell.Lex, str string) (strin
 		substitutionArgs = append(substitutionArgs, key+"="+value)
 	}
 
-	name, _, err := shlex.ProcessWord(str, substitutionArgs)
+	name, _, err := shlex.ProcessWord(str, shell.EnvsFromSlice(substitutionArgs))
 	if err != nil {
 		return "", err
 	}
@@ -367,7 +366,7 @@ func dispatchRun(ctx context.Context, d dispatchRequest, c *instructions.RunComm
 		withCmd(cmdFromArgs),
 		withArgsEscaped(argsEscaped),
 		withEnv(append(stateRunConfig.Env, buildArgs...)),
-		withEntrypointOverride(saveCmd, strslice.StrSlice{""}),
+		withEntrypointOverride(saveCmd, []string{""}),
 		withoutHealthcheck())
 
 	cID, err := d.builder.create(ctx, runConfig)
@@ -412,7 +411,7 @@ func dispatchRun(ctx context.Context, d dispatchRequest, c *instructions.RunComm
 // remove any unreferenced built-in args from the environment variables.
 // These args are transparent so resulting image should be the same regardless
 // of the value.
-func prependEnvOnCmd(buildArgs *BuildArgs, buildArgVars []string, cmd strslice.StrSlice) strslice.StrSlice {
+func prependEnvOnCmd(buildArgs *BuildArgs, buildArgVars []string, cmd []string) []string {
 	tmpBuildEnv := make([]string, 0, len(buildArgVars))
 	for _, env := range buildArgVars {
 		key, _, _ := strings.Cut(env, "=")
@@ -508,7 +507,7 @@ func dispatchEntrypoint(ctx context.Context, d dispatchRequest, c *instructions.
 //
 // Expose ports for links and port mappings. This all ends up in
 // req.runConfig.ExposedPorts for runconfig.
-func dispatchExpose(ctx context.Context, d dispatchRequest, c *instructions.ExposeCommand, envs []string) error {
+func dispatchExpose(ctx context.Context, d dispatchRequest, c *instructions.ExposeCommand, envs shell.EnvGetter) error {
 	// custom multi word expansion
 	// expose $FOO with FOO="80 443" is expanded as EXPOSE [80,443]. This is the only command supporting word to words expansion
 	// so the word processing has been de-generalized

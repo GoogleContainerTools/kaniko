@@ -124,4 +124,54 @@ var (
 			return fmt.Sprintf("Base image %s was pulled with platform %q, expected %q for current build", image, actual, expected)
 		},
 	}
+	RuleRedundantTargetPlatform = LinterRule[func(string) string]{
+		Name:        "RedundantTargetPlatform",
+		Description: "Setting platform to predefined $TARGETPLATFORM in FROM is redundant as this is the default behavior",
+		URL:         "https://docs.docker.com/go/dockerfile/rule/redundant-target-platform/",
+		Format: func(platformVar string) string {
+			return fmt.Sprintf("Setting platform to predefined %s in FROM is redundant as this is the default behavior", platformVar)
+		},
+	}
+	RuleSecretsUsedInArgOrEnv = LinterRule[func(string, string) string]{
+		Name:        "SecretsUsedInArgOrEnv",
+		Description: "Sensitive data should not be used in the ARG or ENV commands",
+		URL:         "https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/",
+		Format: func(instruction, secretKey string) string {
+			return fmt.Sprintf("Do not use ARG or ENV instructions for sensitive data (%s %q)", instruction, secretKey)
+		},
+	}
+	RuleInvalidDefaultArgInFrom = LinterRule[func(string) string]{
+		Name:        "InvalidDefaultArgInFrom",
+		Description: "Default value for global ARG results in an empty or invalid base image name",
+		URL:         "https://docs.docker.com/go/dockerfile/rule/invalid-default-arg-in-from/",
+		Format: func(baseName string) string {
+			return fmt.Sprintf("Default value for ARG %v results in empty or invalid base image name", baseName)
+		},
+	}
+	RuleFromPlatformFlagConstDisallowed = LinterRule[func(string) string]{
+		Name:        "FromPlatformFlagConstDisallowed",
+		Description: "FROM --platform flag should not use a constant value",
+		URL:         "https://docs.docker.com/go/dockerfile/rule/from-platform-flag-const-disallowed/",
+		Format: func(platform string) string {
+			return fmt.Sprintf("FROM --platform flag should not use constant value %q", platform)
+		},
+	}
+	RuleCopyIgnoredFile = LinterRule[func(string, string) string]{
+		Name:        "CopyIgnoredFile",
+		Description: "Attempting to Copy file that is excluded by .dockerignore",
+		URL:         "https://docs.docker.com/go/dockerfile/rule/copy-ignored-file/",
+		Format: func(cmd, file string) string {
+			return fmt.Sprintf("Attempting to %s file %q that is excluded by .dockerignore", cmd, file)
+		},
+		Experimental: true,
+	}
+	RuleInvalidDefinitionDescription = LinterRule[func(string, string) string]{
+		Name:        "InvalidDefinitionDescription",
+		Description: "Comment for build stage or argument should follow the format: `# <arg/stage name> <description>`. If this is not intended to be a description comment, add an empty line or comment between the instruction and the comment.",
+		URL:         "https://docs.docker.com/go/dockerfile/rule/invalid-definition-description/",
+		Format: func(instruction, defName string) string {
+			return fmt.Sprintf("Comment for %s should follow the format: `# %s <description>`", instruction, defName)
+		},
+		Experimental: true,
+	}
 )

@@ -7,15 +7,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	libcontainerdtypes "github.com/docker/docker/libcontainerd/types"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 )
 
 // State holds the current container state, and has methods to get and
-// set the state. Container has an embed, which allows all of the
-// functions defined against State to run against Container.
+// set the state. State is embedded in the [Container] struct.
+//
+// State contains an exported [sync.Mutex] which is used as a global lock
+// for both the State and the Container it's embedded in.
 type State struct {
+	// This Mutex is exported by design and is used as a global lock
+	// for both the State and the Container it's embedded in.
 	sync.Mutex
 	// Note that `Running` and `Paused` are not mutually exclusive:
 	// When pausing a container (on Linux), the freezer cgroup is used to suspend
@@ -110,10 +114,10 @@ func (s *State) String() string {
 
 // IsValidHealthString checks if the provided string is a valid container health status or not.
 func IsValidHealthString(s string) bool {
-	return s == types.Starting ||
-		s == types.Healthy ||
-		s == types.Unhealthy ||
-		s == types.NoHealthcheck
+	return s == container.Starting ||
+		s == container.Healthy ||
+		s == container.Unhealthy ||
+		s == container.NoHealthcheck
 }
 
 // StateString returns a single string to describe state
@@ -235,9 +239,10 @@ func (s *State) conditionAlreadyMet(condition WaitCondition) bool {
 		return !s.Running
 	case WaitConditionRemoved:
 		return s.Removed
+	default:
+		// TODO(thaJeztah): how do we want to handle "WaitConditionNextExit"?
+		return false
 	}
-
-	return false
 }
 
 // IsRunning returns whether the running flag is set. Used by Container to check whether a container is running.
