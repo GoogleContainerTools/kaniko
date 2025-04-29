@@ -29,9 +29,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/moby/sys/userns"
+
 	"github.com/containerd/containerd/archive/tarheader"
 	"github.com/containerd/containerd/pkg/epoch"
-	"github.com/containerd/containerd/pkg/userns"
 	"github.com/containerd/continuity/fs"
 	"github.com/containerd/log"
 )
@@ -342,7 +343,7 @@ func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header
 			}
 		}
 
-	//nolint:staticcheck // TypeRegA is deprecated but we may still receive an external tar with TypeRegA
+	//nolint:staticcheck // Ignore SA1019.  TypeRegA is deprecated but we may still receive an external tar with TypeRegA
 	case tar.TypeReg, tar.TypeRegA:
 		file, err := openFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, hdrInfo.Mode())
 		if err != nil {
