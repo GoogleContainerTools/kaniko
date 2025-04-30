@@ -843,7 +843,7 @@ func Volumes() []string {
 
 func MkdirAllWithPermissions(path string, mode os.FileMode, uid, gid int64) error {
 	// Check if a file already exists on the path, if yes then delete it
-	info, err := os.Stat(path)
+	info, err := os.Lstat(path)
 	if err == nil && !info.IsDir() {
 		logrus.Tracef("Removing file because it needs to be a directory %s", path)
 		if err := os.Remove(path); err != nil {
