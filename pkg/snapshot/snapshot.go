@@ -39,9 +39,10 @@ var snapshotPathPrefix = ""
 
 // Snapshotter holds the root directory from which to take snapshots, and a list of snapshots taken
 type Snapshotter struct {
-	l          *LayeredMap
-	directory  string
-	ignorelist []util.IgnoreListEntry
+	l                     *LayeredMap
+	directory             string
+	ignorelist            []util.IgnoreListEntry
+	excludeRootDirTarball bool
 }
 
 // NewSnapshotter creates a new snapshotter rooted at d
@@ -114,7 +115,7 @@ func (s *Snapshotter) TakeSnapshot(files []string, shdCheckDelete bool, forceBui
 
 	t := util.NewTar(f)
 	defer t.Close()
-	if err := writeToTar(t, filesToAdd, filesToWhiteout); err != nil {
+	if err := writeToTar(t, filesToAdd, filesToWhiteout, s.excludeRootDirTarball); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -136,10 +137,15 @@ func (s *Snapshotter) TakeSnapshotFS() (string, error) {
 		return "", err
 	}
 
-	if err := writeToTar(t, filesToAdd, filesToWhiteOut); err != nil {
+	if err := writeToTar(t, filesToAdd, filesToWhiteOut, s.excludeRootDirTarball); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
+}
+
+// SetExcludeRootDirTarball sets the flag to exclude root directory from the tar archive.
+func (s *Snapshotter) SetExcludeRootDirTarball(e bool) {
+	s.excludeRootDirTarball = e
 }
 
 func (s *Snapshotter) getSnashotPathPrefix() string {
@@ -230,7 +236,7 @@ func removeObsoleteWhiteouts(deletedFiles map[string]struct{}) (filesToWhiteout 
 	return filesToWhiteout
 }
 
-func writeToTar(t util.Tar, files, whiteouts []string) error {
+func writeToTar(t util.Tar, files, whiteouts []string, excludeRootDirTarball bool) error {
 	timer := timing.Start("Writing tar file")
 	defer timing.DefaultRun.Stop(timer)
 
@@ -246,7 +252,7 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 			continue
 		}
 
-		if err := addParentDirectories(t, addedPaths, path); err != nil {
+		if err := addParentDirectories(t, addedPaths, path, excludeRootDirTarball); err != nil {
 			return err
 		}
 		if err := t.Whiteout(path); err != nil {
@@ -255,10 +261,13 @@ func writeToTar(t util.Tar, files, whiteouts []string) error {
 	}
 
 	for _, path := range files {
-		if err := addParentDirectories(t, addedPaths, path); err != nil {
+		if err := addParentDirectories(t, addedPaths, path, excludeRootDirTarball); err != nil {
 			return err
 		}
 		if _, pathAdded := addedPaths[path]; pathAdded {
+			continue
+		}
+		if path == config.RootDir && excludeRootDirTarball {
 			continue
 		}
 		if err := t.AddFileToTar(path); err != nil {
@@ -284,9 +293,12 @@ func parentPathIncludesNonDirectory(path string) (bool, error) {
 	return false, nil
 }
 
-func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string) error {
+func addParentDirectories(t util.Tar, addedPaths map[string]bool, path string, excludeRootDirTarball bool) error {
 	for _, parentPath := range util.ParentDirectories(path) {
 		if _, pathAdded := addedPaths[parentPath]; pathAdded {
+			continue
+		}
+		if parentPath == config.RootDir && excludeRootDirTarball {
 			continue
 		}
 		if err := t.AddFileToTar(parentPath); err != nil {
