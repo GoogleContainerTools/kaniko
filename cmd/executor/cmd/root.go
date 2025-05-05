@@ -395,7 +395,12 @@ func copyDockerfile() error {
 		return errors.Wrap(err, "copying dockerfile")
 	}
 	dockerignorePath := opts.DockerfilePath + ".dockerignore"
-	if util.FilepathExists(dockerignorePath) {
+	containerignorePath := opts.DockerfilePath + ".containerignore"
+	if util.FilepathExists(containerignorePath) {
+		if _, err := util.CopyFile(containerignorePath, config.DockerfilePath+".containerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID, fs.FileMode(0o600), true); err != nil {
+			return errors.Wrap(err, "copying Dockerfile.containerignore")
+		}
+	} else if util.FilepathExists(dockerignorePath) {
 		if _, err := util.CopyFile(dockerignorePath, config.DockerfilePath+".dockerignore", util.FileContext{}, util.DoNotChangeUID, util.DoNotChangeGID, fs.FileMode(0o600), true); err != nil {
 			return errors.Wrap(err, "copying Dockerfile.dockerignore")
 		}
