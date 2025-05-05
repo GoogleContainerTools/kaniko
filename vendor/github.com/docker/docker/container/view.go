@@ -1,5 +1,5 @@
 // FIXME(thaJeztah): remove once we are a module; the go:build directive prevents go from downgrading language version to go1.16:
-//go:build go1.21
+//go:build go1.23
 
 package container // import "github.com/docker/docker/container"
 
@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/containerd/log"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
@@ -28,17 +28,10 @@ const (
 	memdbContainerIDIndex = "containerid"
 )
 
-var (
-	// ErrNameReserved is an error which is returned when a name is requested to be reserved that already is reserved
-	ErrNameReserved = errors.New("name is reserved")
-	// ErrNameNotReserved is an error which is returned when trying to find a name that is not reserved
-	ErrNameNotReserved = errors.New("name is not reserved")
-)
-
 // Snapshot is a read only view for Containers. It holds all information necessary to serve container queries in a
 // versioned ACID in-memory store.
 type Snapshot struct {
-	types.Container
+	container.Summary
 
 	// additional info queries need to filter on
 	// preserve nanosec resolution for queries
@@ -112,6 +105,7 @@ func NewViewDB() (*ViewDB, error) {
 
 // GetByPrefix returns a container with the given ID prefix. It returns an
 // error if an empty prefix was given or if multiple containers match the prefix.
+// It returns an [errdefs.NotFound] if the given s yielded no results.
 func (db *ViewDB) GetByPrefix(s string) (string, error) {
 	if s == "" {
 		return "", errdefs.InvalidParameter(errors.New("prefix can't be empty"))
@@ -152,7 +146,7 @@ func (db *ViewDB) withTxn(cb func(*memdb.Txn) error) error {
 	err := cb(txn)
 	if err != nil {
 		txn.Abort()
-		return errdefs.System(err)
+		return err
 	}
 	txn.Commit()
 	return nil
@@ -183,10 +177,9 @@ func (db *ViewDB) Delete(c *Container) error {
 	})
 }
 
-// ReserveName registers a container ID to a name
-// ReserveName is idempotent
-// Attempting to reserve a container ID to a name that already exists results in an `ErrNameReserved`
-// A name reservation is globally unique
+// ReserveName registers a container ID to a name. ReserveName is idempotent,
+// but returns an [errdefs.Conflict] when attempting to reserve a container ID
+// to a name that already is reserved.
 func (db *ViewDB) ReserveName(name, containerID string) error {
 	return db.withTxn(func(txn *memdb.Txn) error {
 		s, err := txn.First(memdbNamesTable, memdbIDIndex, name)
@@ -195,7 +188,7 @@ func (db *ViewDB) ReserveName(name, containerID string) error {
 		}
 		if s != nil {
 			if s.(nameAssociation).containerID != containerID {
-				return ErrNameReserved
+				return errdefs.Conflict(errors.New("name is reserved"))
 			}
 			return nil
 		}
@@ -235,6 +228,7 @@ func (v *View) All() ([]Snapshot, error) {
 }
 
 // Get returns an item by id. Returned objects must never be modified.
+// It returns an [errdefs.NotFound] if the given id was not found.
 func (v *View) Get(id string) (*Snapshot, error) {
 	s, err := v.txn.First(memdbContainersTable, memdbIDIndex, id)
 	if err != nil {
@@ -266,13 +260,14 @@ func (v *View) getNames(containerID string) []string {
 }
 
 // GetID returns the container ID that the passed in name is reserved to.
+// It returns an [errdefs.NotFound] if the given id was not found.
 func (v *View) GetID(name string) (string, error) {
 	s, err := v.txn.First(memdbNamesTable, memdbIDIndex, name)
 	if err != nil {
 		return "", errdefs.System(err)
 	}
 	if s == nil {
-		return "", ErrNameNotReserved
+		return "", errdefs.NotFound(errors.New("name is not reserved"))
 	}
 	return s.(nameAssociation).containerID, nil
 }
@@ -299,33 +294,33 @@ func (v *View) GetAllNames() map[string][]string {
 
 // transform maps a (deep) copied Container object to what queries need.
 // A lock on the Container is not held because these are immutable deep copies.
-func (v *View) transform(container *Container) *Snapshot {
-	health := types.NoHealthcheck
-	if container.Health != nil {
-		health = container.Health.Status()
+func (v *View) transform(ctr *Container) *Snapshot {
+	health := container.NoHealthcheck
+	if ctr.Health != nil {
+		health = ctr.Health.Status()
 	}
 	snapshot := &Snapshot{
-		Container: types.Container{
-			ID:      container.ID,
-			Names:   v.getNames(container.ID),
-			ImageID: container.ImageID.String(),
-			Ports:   []types.Port{},
-			Mounts:  container.GetMountPoints(),
-			State:   container.State.StateString(),
-			Status:  container.State.String(),
-			Created: container.Created.Unix(),
+		Summary: container.Summary{
+			ID:      ctr.ID,
+			Names:   v.getNames(ctr.ID),
+			ImageID: ctr.ImageID.String(),
+			Ports:   []container.Port{},
+			Mounts:  ctr.GetMountPoints(),
+			State:   ctr.State.StateString(),
+			Status:  ctr.State.String(),
+			Created: ctr.Created.Unix(),
 		},
-		CreatedAt:    container.Created,
-		StartedAt:    container.StartedAt,
-		Name:         container.Name,
-		Pid:          container.Pid,
-		Managed:      container.Managed,
+		CreatedAt:    ctr.Created,
+		StartedAt:    ctr.StartedAt,
+		Name:         ctr.Name,
+		Pid:          ctr.Pid,
+		Managed:      ctr.Managed,
 		ExposedPorts: make(nat.PortSet),
 		PortBindings: make(nat.PortSet),
 		Health:       health,
-		Running:      container.Running,
-		Paused:       container.Paused,
-		ExitCode:     container.ExitCode(),
+		Running:      ctr.Running,
+		Paused:       ctr.Paused,
+		ExitCode:     ctr.ExitCode(),
 	}
 
 	if snapshot.Names == nil {
@@ -333,26 +328,26 @@ func (v *View) transform(container *Container) *Snapshot {
 		snapshot.Names = []string{}
 	}
 
-	if container.HostConfig != nil {
-		snapshot.Container.HostConfig.NetworkMode = string(container.HostConfig.NetworkMode)
-		snapshot.Container.HostConfig.Annotations = maps.Clone(container.HostConfig.Annotations)
-		snapshot.HostConfig.Isolation = string(container.HostConfig.Isolation)
-		for binding := range container.HostConfig.PortBindings {
+	if ctr.HostConfig != nil {
+		snapshot.Summary.HostConfig.NetworkMode = string(ctr.HostConfig.NetworkMode)
+		snapshot.Summary.HostConfig.Annotations = maps.Clone(ctr.HostConfig.Annotations)
+		snapshot.HostConfig.Isolation = string(ctr.HostConfig.Isolation)
+		for binding := range ctr.HostConfig.PortBindings {
 			snapshot.PortBindings[binding] = struct{}{}
 		}
 	}
 
-	if container.Config != nil {
-		snapshot.Image = container.Config.Image
-		snapshot.Labels = container.Config.Labels
-		for exposed := range container.Config.ExposedPorts {
+	if ctr.Config != nil {
+		snapshot.Image = ctr.Config.Image
+		snapshot.Labels = ctr.Config.Labels
+		for exposed := range ctr.Config.ExposedPorts {
 			snapshot.ExposedPorts[exposed] = struct{}{}
 		}
 	}
 
-	if len(container.Args) > 0 {
+	if len(ctr.Args) > 0 {
 		var args []string
-		for _, arg := range container.Args {
+		for _, arg := range ctr.Args {
 			if strings.Contains(arg, " ") {
 				args = append(args, fmt.Sprintf("'%s'", arg))
 			} else {
@@ -360,15 +355,15 @@ func (v *View) transform(container *Container) *Snapshot {
 			}
 		}
 		argsAsString := strings.Join(args, " ")
-		snapshot.Command = fmt.Sprintf("%s %s", container.Path, argsAsString)
+		snapshot.Command = fmt.Sprintf("%s %s", ctr.Path, argsAsString)
 	} else {
-		snapshot.Command = container.Path
+		snapshot.Command = ctr.Path
 	}
 
-	snapshot.Ports = []types.Port{}
+	snapshot.Ports = []container.Port{}
 	networks := make(map[string]*network.EndpointSettings)
-	if container.NetworkSettings != nil {
-		for name, netw := range container.NetworkSettings.Networks {
+	if ctr.NetworkSettings != nil {
+		for name, netw := range ctr.NetworkSettings.Networks {
 			if netw == nil || netw.EndpointSettings == nil {
 				continue
 			}
@@ -382,6 +377,7 @@ func (v *View) transform(container *Container) *Snapshot {
 				GlobalIPv6PrefixLen: netw.GlobalIPv6PrefixLen,
 				MacAddress:          netw.MacAddress,
 				NetworkID:           netw.NetworkID,
+				GwPriority:          netw.GwPriority,
 			}
 			if netw.IPAMConfig != nil {
 				networks[name].IPAMConfig = &network.EndpointIPAMConfig{
@@ -390,14 +386,14 @@ func (v *View) transform(container *Container) *Snapshot {
 				}
 			}
 		}
-		for port, bindings := range container.NetworkSettings.Ports {
+		for port, bindings := range ctr.NetworkSettings.Ports {
 			p, err := nat.ParsePort(port.Port())
 			if err != nil {
 				log.G(context.TODO()).WithError(err).Warn("invalid port map")
 				continue
 			}
 			if len(bindings) == 0 {
-				snapshot.Ports = append(snapshot.Ports, types.Port{
+				snapshot.Ports = append(snapshot.Ports, container.Port{
 					PrivatePort: uint16(p),
 					Type:        port.Proto(),
 				})
@@ -409,7 +405,7 @@ func (v *View) transform(container *Container) *Snapshot {
 					log.G(context.TODO()).WithError(err).Warn("invalid host port map")
 					continue
 				}
-				snapshot.Ports = append(snapshot.Ports, types.Port{
+				snapshot.Ports = append(snapshot.Ports, container.Port{
 					PrivatePort: uint16(p),
 					PublicPort:  uint16(h),
 					Type:        port.Proto(),
@@ -418,7 +414,15 @@ func (v *View) transform(container *Container) *Snapshot {
 			}
 		}
 	}
-	snapshot.NetworkSettings = &types.SummaryNetworkSettings{Networks: networks}
+	snapshot.NetworkSettings = &container.NetworkSettingsSummary{Networks: networks}
+
+	if ctr.ImageManifest != nil {
+		imageManifest := *ctr.ImageManifest
+		if imageManifest.Platform == nil {
+			imageManifest.Platform = &ctr.ImagePlatform
+		}
+		snapshot.Summary.ImageManifestDescriptor = &imageManifest
+	}
 
 	return snapshot
 }
@@ -431,7 +435,7 @@ type containerByIDIndexer struct{}
 const terminator = "\x00"
 
 // FromObject implements the memdb.SingleIndexer interface for Container objects
-func (e *containerByIDIndexer) FromObject(obj interface{}) (bool, []byte, error) {
+func (e *containerByIDIndexer) FromObject(obj any) (bool, []byte, error) {
 	c, ok := obj.(*Container)
 	if !ok {
 		return false, nil, fmt.Errorf("%T is not a Container", obj)
@@ -441,7 +445,7 @@ func (e *containerByIDIndexer) FromObject(obj interface{}) (bool, []byte, error)
 }
 
 // FromArgs implements the memdb.Indexer interface
-func (e *containerByIDIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+func (e *containerByIDIndexer) FromArgs(args ...any) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("must provide only a single argument")
 	}
@@ -453,7 +457,7 @@ func (e *containerByIDIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 	return []byte(arg + terminator), nil
 }
 
-func (e *containerByIDIndexer) PrefixFromArgs(args ...interface{}) ([]byte, error) {
+func (e *containerByIDIndexer) PrefixFromArgs(args ...any) ([]byte, error) {
 	val, err := e.FromArgs(args...)
 	if err != nil {
 		return nil, err
@@ -466,7 +470,7 @@ func (e *containerByIDIndexer) PrefixFromArgs(args ...interface{}) ([]byte, erro
 // namesByNameIndexer is used to index container name associations by name.
 type namesByNameIndexer struct{}
 
-func (e *namesByNameIndexer) FromObject(obj interface{}) (bool, []byte, error) {
+func (e *namesByNameIndexer) FromObject(obj any) (bool, []byte, error) {
 	n, ok := obj.(nameAssociation)
 	if !ok {
 		return false, nil, fmt.Errorf(`%T does not have type "nameAssociation"`, obj)
@@ -476,7 +480,7 @@ func (e *namesByNameIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 	return true, []byte(n.name + terminator), nil
 }
 
-func (e *namesByNameIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+func (e *namesByNameIndexer) FromArgs(args ...any) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("must provide only a single argument")
 	}
@@ -491,7 +495,7 @@ func (e *namesByNameIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 // namesByContainerIDIndexer is used to index container names by container ID.
 type namesByContainerIDIndexer struct{}
 
-func (e *namesByContainerIDIndexer) FromObject(obj interface{}) (bool, []byte, error) {
+func (e *namesByContainerIDIndexer) FromObject(obj any) (bool, []byte, error) {
 	n, ok := obj.(nameAssociation)
 	if !ok {
 		return false, nil, fmt.Errorf(`%T does not have type "nameAssociation"`, obj)
@@ -501,7 +505,7 @@ func (e *namesByContainerIDIndexer) FromObject(obj interface{}) (bool, []byte, e
 	return true, []byte(n.containerID + terminator), nil
 }
 
-func (e *namesByContainerIDIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+func (e *namesByContainerIDIndexer) FromArgs(args ...any) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("must provide only a single argument")
 	}
