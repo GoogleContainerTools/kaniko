@@ -400,8 +400,12 @@ func (s *stageBuilder) build() error {
 		if isCacheCommand {
 			v := command.(commands.Cached)
 			layer := v.Layer()
-			if err := s.saveLayerToImage(layer, command.String()); err != nil {
-				return errors.Wrap(err, "failed to save layer")
+			if layer == nil && len(files) == 0 {
+				// an empty cache image without a layer indicates that no files were changed, ie. by WORKDIR
+			} else {
+				if err := s.saveLayerToImage(layer, command.String()); err != nil {
+					return errors.Wrap(err, "failed to save layer")
+				}
 			}
 		} else {
 			tarPath, err := s.takeSnapshot(files, command.ShouldDetectDeletedFiles())
