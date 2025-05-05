@@ -93,6 +93,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--no-push`](#flag---no-push)
       - [Flag `--no-push-cache`](#flag---no-push-cache)
       - [Flag `--oci-layout-path`](#flag---oci-layout-path)
+      - [Flag `--push-ignore-immutable-tag-errors`](#flag---push-ignore-immutable-tag-errors)
       - [Flag `--push-retry`](#flag---push-retry)
       - [Flag `--registry-certificate`](#flag---registry-certificate)
       - [Flag `--registry-client-cert`](#flag---registry-client-cert)
@@ -130,6 +131,7 @@ _If you are interested in contributing to kaniko, see
   - [Community](#community-1)
   - [Limitations](#limitations)
     - [mtime and snapshotting](#mtime-and-snapshotting)
+    - [Dockerfile commands `--chown` support](#dockerfile-commands---chown-support)
   - [References](#references)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -1031,6 +1033,9 @@ are:
 
 #### Flag `--registry-mirror`
 
+> [!WARNING]
+> `--registry-mirror` is in deprecation path and has been superseded by [registry-map](#flag---registry-map)
+
 Set this flag if you want to use a registry mirror instead of the default
 `index.docker.io`. You can use this flag more than once, if you want to set
 multiple mirrors. If an image is not found on the first mirror, Kaniko will try
@@ -1038,6 +1043,9 @@ the next mirror(s), and at the end fallback on the default registry.
 
 Mirror can also be defined through `KANIKO_REGISTRY_MIRROR` environment
 variable.
+
+> [!NOTE]
+> prefer use of `KANIKO_REGISTRY_MAP` (see [registry-map](#flag---registry-map)).
 
 Expected format is `mirror.gcr.io` or `mirror.gcr.io/path` for example.
 
@@ -1053,11 +1061,11 @@ are:
 #### Flag `--skip-default-registry-fallback`
 
 Set this flag if you want the build process to fail if none of the mirrors
-listed in flag [registry-mirror](#flag---registry-mirror) can pull some image.
+listed in flag [registry-mirror](#flag---registry-mirror) or [registry-map](#flag---registry-map) can pull some image.
 This should be used with mirrors that implements a whitelist or some image
 restrictions.
 
-If [registry-mirror](#flag---registry-mirror) is not set or is empty, this flag
+If [registry-mirror](#flag---registry-mirror) or [registry-map](#flag---registry-map) is not set or is empty, this flag
 is ignored.
 
 #### Flag `--reproducible`
