@@ -10,7 +10,6 @@ import (
 
 	"github.com/containerd/continuity/fs"
 	"github.com/containerd/log"
-	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	mounttypes "github.com/docker/docker/api/types/mount"
@@ -22,9 +21,6 @@ import (
 )
 
 const (
-	// defaultStopSignal is the default syscall signal used to stop a container.
-	defaultStopSignal = "SIGTERM"
-
 	// defaultStopTimeout sets the default time, in seconds, to wait
 	// for the graceful container stop before forcefully terminating it.
 	defaultStopTimeout = 10
@@ -248,14 +244,6 @@ func (container *Container) UnmountSecrets() error {
 	return mount.RecursiveUnmount(p)
 }
 
-type conflictingUpdateOptions string
-
-func (e conflictingUpdateOptions) Error() string {
-	return string(e)
-}
-
-func (e conflictingUpdateOptions) Conflict() {}
-
 // UpdateContainer updates configuration of a container. Callers must hold a Lock on the Container.
 func (container *Container) UpdateContainer(hostConfig *containertypes.HostConfig) error {
 	// update resources of container
@@ -432,10 +420,10 @@ func (container *Container) TmpfsMounts() ([]Mount, error) {
 }
 
 // GetMountPoints gives a platform specific transformation to types.MountPoint. Callers must hold a Container lock.
-func (container *Container) GetMountPoints() []types.MountPoint {
-	mountPoints := make([]types.MountPoint, 0, len(container.MountPoints))
+func (container *Container) GetMountPoints() []containertypes.MountPoint {
+	mountPoints := make([]containertypes.MountPoint, 0, len(container.MountPoints))
 	for _, m := range container.MountPoints {
-		mountPoints = append(mountPoints, types.MountPoint{
+		mountPoints = append(mountPoints, containertypes.MountPoint{
 			Type:        m.Type,
 			Name:        m.Name,
 			Source:      m.Path(),
