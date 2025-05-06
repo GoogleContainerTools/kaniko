@@ -11,8 +11,10 @@ import (
 )
 
 // Applies a repository policy to the specified public repository to control
-// access permissions. For more information, see Amazon ECR Repository Policies (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html)
-// in the Amazon Elastic Container Registry User Guide.
+// access permissions. For more information, see [Amazon ECR Repository Policies]in the Amazon Elastic Container
+// Registry User Guide.
+//
+// [Amazon ECR Repository Policies]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html
 func (c *Client) SetRepositoryPolicy(ctx context.Context, params *SetRepositoryPolicyInput, optFns ...func(*Options)) (*SetRepositoryPolicyOutput, error) {
 	if params == nil {
 		params = &SetRepositoryPolicyInput{}
@@ -31,8 +33,9 @@ func (c *Client) SetRepositoryPolicy(ctx context.Context, params *SetRepositoryP
 type SetRepositoryPolicyInput struct {
 
 	// The JSON repository policy text to apply to the repository. For more
-	// information, see Amazon ECR Repository Policies (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policy-examples.html)
-	// in the Amazon Elastic Container Registry User Guide.
+	// information, see [Amazon ECR Repository Policies]in the Amazon Elastic Container Registry User Guide.
+	//
+	// [Amazon ECR Repository Policies]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policy-examples.html
 	//
 	// This member is required.
 	PolicyText *string
@@ -43,8 +46,8 @@ type SetRepositoryPolicyInput struct {
 	RepositoryName *string
 
 	// If the policy that you want to set on a repository policy would prevent you
-	// from setting another policy in the future, you must force the
-	// SetRepositoryPolicy operation. This prevents accidental repository lockouts.
+	// from setting another policy in the future, you must force the SetRepositoryPolicyoperation. This
+	// prevents accidental repository lockouts.
 	Force bool
 
 	// The Amazon Web Services account ID that's associated with the registry that
@@ -115,6 +118,9 @@ func (c *Client) addOperationSetRepositoryPolicyMiddlewares(stack *middleware.St
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -125,6 +131,15 @@ func (c *Client) addOperationSetRepositoryPolicyMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpSetRepositoryPolicyValidationMiddleware(stack); err != nil {
@@ -146,6 +161,18 @@ func (c *Client) addOperationSetRepositoryPolicyMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil
