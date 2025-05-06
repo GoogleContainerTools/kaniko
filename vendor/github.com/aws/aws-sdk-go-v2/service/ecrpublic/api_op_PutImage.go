@@ -12,11 +12,15 @@ import (
 )
 
 // Creates or updates the image manifest and tags that are associated with an
-// image. When an image is pushed and all new image layers have been uploaded, the
+// image.
+//
+// When an image is pushed and all new image layers have been uploaded, the
 // PutImage API is called once to create or update the image manifest and the tags
-// that are associated with the image. This operation is used by the Amazon ECR
-// proxy and is not generally used by customers for pulling and pushing images. In
-// most cases, you should use the docker CLI to pull, tag, and push images.
+// that are associated with the image.
+//
+// This operation is used by the Amazon ECR proxy and is not generally used by
+// customers for pulling and pushing images. In most cases, you should use the
+// docker CLI to pull, tag, and push images.
 func (c *Client) PutImage(ctx context.Context, params *PutImageInput, optFns ...func(*Options)) (*PutImageOutput, error) {
 	if params == nil {
 		params = &PutImageInput{}
@@ -119,6 +123,9 @@ func (c *Client) addOperationPutImageMiddlewares(stack *middleware.Stack, option
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -129,6 +136,15 @@ func (c *Client) addOperationPutImageMiddlewares(stack *middleware.Stack, option
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpPutImageValidationMiddleware(stack); err != nil {
@@ -150,6 +166,18 @@ func (c *Client) addOperationPutImageMiddlewares(stack *middleware.Stack, option
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

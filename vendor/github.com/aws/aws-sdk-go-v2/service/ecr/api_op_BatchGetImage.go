@@ -12,8 +12,10 @@ import (
 )
 
 // Gets detailed information for an image. Images are specified with either an
-// imageTag or imageDigest . When an image is pulled, the BatchGetImage API is
-// called once to retrieve the image manifest.
+// imageTag or imageDigest .
+//
+// When an image is pulled, the BatchGetImage API is called once to retrieve the
+// image manifest.
 func (c *Client) BatchGetImage(ctx context.Context, params *BatchGetImageInput, optFns ...func(*Options)) (*BatchGetImageOutput, error) {
 	if params == nil {
 		params = &BatchGetImageInput{}
@@ -42,8 +44,9 @@ type BatchGetImageInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// The accepted media types for the request. Valid values:
-	// application/vnd.docker.distribution.manifest.v1+json |
+	// The accepted media types for the request.
+	//
+	// Valid values: application/vnd.docker.distribution.manifest.v1+json |
 	// application/vnd.docker.distribution.manifest.v2+json |
 	// application/vnd.oci.image.manifest.v1+json
 	AcceptedMediaTypes []string
@@ -113,6 +116,9 @@ func (c *Client) addOperationBatchGetImageMiddlewares(stack *middleware.Stack, o
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -123,6 +129,15 @@ func (c *Client) addOperationBatchGetImageMiddlewares(stack *middleware.Stack, o
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpBatchGetImageValidationMiddleware(stack); err != nil {
@@ -144,6 +159,18 @@ func (c *Client) addOperationBatchGetImageMiddlewares(stack *middleware.Stack, o
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

@@ -13,8 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/log"
+	"github.com/containerd/platforms"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	mounttypes "github.com/docker/docker/api/types/mount"
@@ -27,19 +28,17 @@ import (
 	"github.com/docker/docker/daemon/network"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/image"
-	"github.com/docker/docker/layer"
 	libcontainerdtypes "github.com/docker/docker/libcontainerd/types"
 	"github.com/docker/docker/oci"
-	"github.com/docker/docker/pkg/containerfs"
-	"github.com/docker/docker/pkg/idtools"
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/restartmanager"
 	"github.com/docker/docker/volume"
 	volumemounts "github.com/docker/docker/volume/mounts"
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 	agentexec "github.com/moby/swarmkit/v2/agent/exec"
+	"github.com/moby/sys/atomicwriter"
 	"github.com/moby/sys/signal"
 	"github.com/moby/sys/symlink"
+	"github.com/moby/sys/user"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
@@ -50,6 +49,9 @@ import (
 const (
 	configFileName     = "config.v2.json"
 	hostConfigFileName = "hostconfig.json"
+
+	// defaultStopSignal is the default syscall signal used to stop a container.
+	defaultStopSignal = syscall.SIGTERM
 )
 
 // ExitStatus provides exit reasons for a container.
@@ -64,11 +66,15 @@ type ExitStatus struct {
 // Container holds the structure defining a container object.
 type Container struct {
 	StreamConfig *stream.Config
-	// embed for Container to support states directly.
-	*State          `json:"State"` // Needed for Engine API version <= 1.11
-	Root            string         `json:"-"` // Path to the "home" of the container, including metadata.
-	BaseFS          string         `json:"-"` // Path to the graphdriver mountpoint
-	RWLayer         layer.RWLayer  `json:"-"`
+	// We embed [State] here so that Container supports states directly,
+	// but marshal it as a struct in JSON.
+	//
+	// State also provides a [sync.Mutex] which is used as lock for both
+	// the Container and State.
+	*State          `json:"State"`
+	Root            string  `json:"-"` // Path to the "home" of the container, including metadata.
+	BaseFS          string  `json:"-"` // Path to the graphdriver mountpoint
+	RWLayer         RWLayer `json:"-"`
 	ID              string
 	Created         time.Time
 	Managed         bool
@@ -81,7 +87,12 @@ type Container struct {
 	LogPath         string
 	Name            string
 	Driver          string
-	OS              string
+
+	// Deprecated: use [ImagePlatform.OS] instead.
+	// TODO: Remove, see https://github.com/moby/moby/issues/48892
+	OS string
+
+	ImagePlatform ocispec.Platform
 
 	RestartCount             int
 	HasBeenStartedBefore     bool
@@ -119,6 +130,7 @@ type SecurityOptions struct {
 	AppArmorProfile string
 	SeccompProfile  string
 	NoNewPrivileges bool
+	WritableCgroups *bool
 }
 
 type localLogCacheMeta struct {
@@ -159,11 +171,17 @@ func (container *Container) FromDisk() error {
 		return err
 	}
 
-	// Ensure the operating system is set if blank. Assume it is the OS of the
-	// host OS if not, to ensure containers created before multiple-OS
-	// support are migrated
-	if container.OS == "" {
-		container.OS = runtime.GOOS
+	if container.OS != "" {
+		// OS was deprecated in favor of ImagePlatform
+		// Make sure we migrate the OS to ImagePlatform.OS.
+		if container.ImagePlatform.OS == "" {
+			container.ImagePlatform.OS = container.OS //nolint:staticcheck // ignore SA1019: field is deprecated
+		}
+	} else {
+		// Pre multiple-OS support containers have no OS set.
+		// Assume it is the host platform.
+		container.ImagePlatform = platforms.DefaultSpec()
+		container.OS = container.ImagePlatform.OS //nolint:staticcheck // ignore SA1019: field is deprecated
 	}
 
 	return container.readHostConfig()
@@ -178,7 +196,7 @@ func (container *Container) toDisk() (*Container, error) {
 	}
 
 	// Save container settings
-	f, err := ioutils.NewAtomicFileWriter(pth, 0o600)
+	f, err := atomicwriter.New(pth, 0o600)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +276,7 @@ func (container *Container) WriteHostConfig() (*containertypes.HostConfig, error
 		return nil, err
 	}
 
-	f, err := ioutils.NewAtomicFileWriter(pth, 0o600)
+	f, err := atomicwriter.New(pth, 0o600)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +320,7 @@ func (container *Container) CommitInMemory(store *ViewDB) error {
 }
 
 // SetupWorkingDirectory sets up the container's working directory as set in container.Config.WorkingDir
-func (container *Container) SetupWorkingDirectory(rootIdentity idtools.Identity) error {
+func (container *Container) SetupWorkingDirectory(uid int, gid int) error {
 	if container.Config.WorkingDir == "" {
 		return nil
 	}
@@ -313,7 +331,7 @@ func (container *Container) SetupWorkingDirectory(rootIdentity idtools.Identity)
 		return err
 	}
 
-	if err := idtools.MkdirAllAndChownNew(pth, 0o755, rootIdentity); err != nil {
+	if err := user.MkdirAllAndChown(pth, 0o755, uid, gid, user.WithOnlyNew); err != nil {
 		pthInfo, err2 := os.Stat(pth)
 		if err2 == nil && pthInfo != nil && !pthInfo.IsDir() {
 			return errors.Errorf("Cannot mkdir: %s is not a directory", container.Config.WorkingDir)
@@ -326,7 +344,7 @@ func (container *Container) SetupWorkingDirectory(rootIdentity idtools.Identity)
 }
 
 // GetResourcePath evaluates `path` in the scope of the container's BaseFS, with proper path
-// sanitisation. Symlinks are all scoped to the BaseFS of the container, as
+// sanitization. Symlinks are all scoped to the BaseFS of the container, as
 // though the container's BaseFS was `/`.
 //
 // The BaseFS of a container is the host-facing path which is bind-mounted as
@@ -345,7 +363,7 @@ func (container *Container) GetResourcePath(path string) (string, error) {
 	}
 	// IMPORTANT - These are paths on the OS where the daemon is running, hence
 	// any filepath operations must be done in an OS-agnostic way.
-	r, e := symlink.FollowSymlinkInScope(filepath.Join(container.BaseFS, containerfs.CleanScopedPath(path)), container.BaseFS)
+	r, e := symlink.FollowSymlinkInScope(filepath.Join(container.BaseFS, cleanScopedPath(path)), container.BaseFS)
 
 	// Log this here on the daemon side as there's otherwise no indication apart
 	// from the error being propagated all the way back to the client. This makes
@@ -356,8 +374,20 @@ func (container *Container) GetResourcePath(path string) (string, error) {
 	return r, e
 }
 
+// cleanScopedPath prepares the given path to be combined with a mount path or
+// a drive-letter. On Windows, it removes any existing driveletter (e.g. "C:").
+// The returned path is always prefixed with a [filepath.Separator].
+func cleanScopedPath(path string) string {
+	if len(path) >= 2 {
+		if v := filepath.VolumeName(path); len(v) > 0 {
+			path = path[len(v):]
+		}
+	}
+	return filepath.Join(string(filepath.Separator), path)
+}
+
 // GetRootResourcePath evaluates `path` in the scope of the container's root, with proper path
-// sanitisation. Symlinks are all scoped to the root of the container, as
+// sanitization. Symlinks are all scoped to the root of the container, as
 // though the container's root was `/`.
 //
 // The root of a container is the host-facing configuration metadata directory.
@@ -551,13 +581,13 @@ func (container *Container) IsDestinationMounted(destination string) bool {
 
 // StopSignal returns the signal used to stop the container.
 func (container *Container) StopSignal() syscall.Signal {
-	var stopSignal syscall.Signal
+	stopSignal := defaultStopSignal
 	if container.Config.StopSignal != "" {
-		stopSignal, _ = signal.ParseSignal(container.Config.StopSignal)
-	}
-
-	if stopSignal == 0 {
-		stopSignal, _ = signal.ParseSignal(defaultStopSignal)
+		// signal.ParseSignal returns "-1" for invalid or unknown signals.
+		sig, err := signal.ParseSignal(container.Config.StopSignal)
+		if err == nil && sig > 0 {
+			stopSignal = sig
+		}
 	}
 	return stopSignal
 }
@@ -737,7 +767,7 @@ func getConfigTargetPath(r *swarmtypes.ConfigReference) string {
 // CreateDaemonEnvironment creates a new environment variable slice for this container.
 func (container *Container) CreateDaemonEnvironment(tty bool, linkedEnv []string) []string {
 	// Setup environment
-	ctrOS := container.OS
+	ctrOS := container.ImagePlatform.OS
 	if ctrOS == "" {
 		ctrOS = runtime.GOOS
 	}
@@ -826,3 +856,11 @@ func (i *rio) Wait() {
 
 	i.IO.Wait()
 }
+
+type conflictingUpdateOptions string
+
+func (e conflictingUpdateOptions) Error() string {
+	return string(e)
+}
+
+func (e conflictingUpdateOptions) Conflict() {}

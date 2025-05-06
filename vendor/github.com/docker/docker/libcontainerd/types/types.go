@@ -5,9 +5,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/pkg/cio"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // EventType represents a possible event from libcontainerd

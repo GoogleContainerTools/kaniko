@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/builder"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/chrootarchive"
 	"github.com/docker/docker/pkg/longpath"
 	"github.com/docker/docker/pkg/system"
 	"github.com/docker/docker/pkg/tarsum"
+	"github.com/moby/go-archive/chrootarchive"
+	"github.com/moby/go-archive/compression"
 	"github.com/moby/sys/symlink"
 	"github.com/pkg/errors"
 )
@@ -66,7 +66,7 @@ func FromArchive(tarStream io.Reader) (builder.Source, error) {
 		}
 	}()
 
-	decompressedStream, err := archive.DecompressStream(tarStream)
+	decompressedStream, err := compression.DecompressStream(tarStream)
 	if err != nil {
 		return nil, err
 	}
@@ -124,5 +124,5 @@ func normalize(path string, root string) (cleanPath, fullPath string, err error)
 	if err != nil {
 		return "", "", errors.Wrapf(err, "forbidden path outside the build context: %s (%s)", path, cleanPath)
 	}
-	return
+	return cleanPath, fullPath, nil
 }
