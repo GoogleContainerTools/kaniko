@@ -22,6 +22,7 @@ RUN \
   ls -lh /usr/local/bin/myfile
 FROM base as final
 COPY --from=build ["/usr/local/bin/myfile", "/usr/local/bin/"]
-RUN [ -u /usr/local/bin/myfile ]
+# Test if file exists and its set-user-id bit is set
+RUN test -u /usr/local/bin/myfile
 LABEL \
   description="Testing setuid behavior in Kaniko"
