@@ -16,12 +16,12 @@ FROM docker.io/debian:bullseye-slim as base
 FROM base as build
 RUN \
   set -eu; \
-  touch /usr/local/bin/top1; \
-  chown root:root /usr/local/bin/top1; \
-  chmod u=rxs,go=rx /usr/local/bin/top1; \
-  ls -lh /usr/local/bin/top1
+  touch /usr/local/bin/myfile; \
+  chown root:root /usr/local/bin/myfile; \
+  chmod u=rxs,go=rx /usr/local/bin/myfile; \
+  ls -lh /usr/local/bin/myfile
 FROM base as final
-COPY --from=build ["/usr/local/bin/top1", "/usr/local/bin/"]
-RUN [ -u /usr/local/bin/top1 ]
+COPY --from=build ["/usr/local/bin/myfile", "/usr/local/bin/"]
+RUN [ -u /usr/local/bin/myfile ]
 LABEL \
   description="Testing setuid behavior in Kaniko"
