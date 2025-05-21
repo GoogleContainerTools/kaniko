@@ -6,17 +6,20 @@ type EncryptionType string
 
 // Enum values for EncryptionType
 const (
-	EncryptionTypeAes256 EncryptionType = "AES256"
-	EncryptionTypeKms    EncryptionType = "KMS"
+	EncryptionTypeAes256  EncryptionType = "AES256"
+	EncryptionTypeKms     EncryptionType = "KMS"
+	EncryptionTypeKmsDsse EncryptionType = "KMS_DSSE"
 )
 
 // Values returns all known values for EncryptionType. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (EncryptionType) Values() []EncryptionType {
 	return []EncryptionType{
 		"AES256",
 		"KMS",
+		"KMS_DSSE",
 	}
 }
 
@@ -33,8 +36,9 @@ const (
 )
 
 // Values returns all known values for FindingSeverity. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (FindingSeverity) Values() []FindingSeverity {
 	return []FindingSeverity{
 		"INFORMATIONAL",
@@ -54,8 +58,9 @@ const (
 )
 
 // Values returns all known values for ImageActionType. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ImageActionType) Values() []ImageActionType {
 	return []ImageActionType{
 		"EXPIRE",
@@ -79,8 +84,9 @@ const (
 )
 
 // Values returns all known values for ImageFailureCode. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ImageFailureCode) Values() []ImageFailureCode {
 	return []ImageFailureCode{
 		"InvalidImageDigest",
@@ -105,8 +111,9 @@ const (
 )
 
 // Values returns all known values for ImageTagMutability. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ImageTagMutability) Values() []ImageTagMutability {
 	return []ImageTagMutability{
 		"MUTABLE",
@@ -123,8 +130,9 @@ const (
 )
 
 // Values returns all known values for LayerAvailability. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (LayerAvailability) Values() []LayerAvailability {
 	return []LayerAvailability{
 		"AVAILABLE",
@@ -141,8 +149,9 @@ const (
 )
 
 // Values returns all known values for LayerFailureCode. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (LayerFailureCode) Values() []LayerFailureCode {
 	return []LayerFailureCode{
 		"InvalidLayerDigest",
@@ -162,14 +171,34 @@ const (
 
 // Values returns all known values for LifecyclePolicyPreviewStatus. Note that
 // this can be expanded in the future, and so it is only as up to date as the
-// client. The ordering of this slice is not guaranteed to be stable across
-// updates.
+// client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (LifecyclePolicyPreviewStatus) Values() []LifecyclePolicyPreviewStatus {
 	return []LifecyclePolicyPreviewStatus{
 		"IN_PROGRESS",
 		"COMPLETE",
 		"EXPIRED",
 		"FAILED",
+	}
+}
+
+type RCTAppliedFor string
+
+// Enum values for RCTAppliedFor
+const (
+	RCTAppliedForReplication      RCTAppliedFor = "REPLICATION"
+	RCTAppliedForPullThroughCache RCTAppliedFor = "PULL_THROUGH_CACHE"
+)
+
+// Values returns all known values for RCTAppliedFor. Note that this can be
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (RCTAppliedFor) Values() []RCTAppliedFor {
+	return []RCTAppliedFor{
+		"REPLICATION",
+		"PULL_THROUGH_CACHE",
 	}
 }
 
@@ -183,8 +212,9 @@ const (
 )
 
 // Values returns all known values for ReplicationStatus. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ReplicationStatus) Values() []ReplicationStatus {
 	return []ReplicationStatus{
 		"IN_PROGRESS",
@@ -201,8 +231,9 @@ const (
 )
 
 // Values returns all known values for RepositoryFilterType. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (RepositoryFilterType) Values() []RepositoryFilterType {
 	return []RepositoryFilterType{
 		"PREFIX_MATCH",
@@ -219,8 +250,9 @@ const (
 )
 
 // Values returns all known values for ScanFrequency. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ScanFrequency) Values() []ScanFrequency {
 	return []ScanFrequency{
 		"SCAN_ON_PUSH",
@@ -238,8 +270,9 @@ const (
 
 // Values returns all known values for ScanningConfigurationFailureCode. Note that
 // this can be expanded in the future, and so it is only as up to date as the
-// client. The ordering of this slice is not guaranteed to be stable across
-// updates.
+// client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ScanningConfigurationFailureCode) Values() []ScanningConfigurationFailureCode {
 	return []ScanningConfigurationFailureCode{
 		"REPOSITORY_NOT_FOUND",
@@ -255,8 +288,9 @@ const (
 
 // Values returns all known values for ScanningRepositoryFilterType. Note that
 // this can be expanded in the future, and so it is only as up to date as the
-// client. The ordering of this slice is not guaranteed to be stable across
-// updates.
+// client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ScanningRepositoryFilterType) Values() []ScanningRepositoryFilterType {
 	return []ScanningRepositoryFilterType{
 		"WILDCARD",
@@ -275,11 +309,13 @@ const (
 	ScanStatusPending                ScanStatus = "PENDING"
 	ScanStatusScanEligibilityExpired ScanStatus = "SCAN_ELIGIBILITY_EXPIRED"
 	ScanStatusFindingsUnavailable    ScanStatus = "FINDINGS_UNAVAILABLE"
+	ScanStatusLimitExceeded          ScanStatus = "LIMIT_EXCEEDED"
 )
 
 // Values returns all known values for ScanStatus. Note that this can be expanded
-// in the future, and so it is only as up to date as the client. The ordering of
-// this slice is not guaranteed to be stable across updates.
+// in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ScanStatus) Values() []ScanStatus {
 	return []ScanStatus{
 		"IN_PROGRESS",
@@ -290,6 +326,7 @@ func (ScanStatus) Values() []ScanStatus {
 		"PENDING",
 		"SCAN_ELIGIBILITY_EXPIRED",
 		"FINDINGS_UNAVAILABLE",
+		"LIMIT_EXCEEDED",
 	}
 }
 
@@ -302,8 +339,9 @@ const (
 )
 
 // Values returns all known values for ScanType. Note that this can be expanded in
-// the future, and so it is only as up to date as the client. The ordering of this
-// slice is not guaranteed to be stable across updates.
+// the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (ScanType) Values() []ScanType {
 	return []ScanType{
 		"BASIC",
@@ -321,8 +359,9 @@ const (
 )
 
 // Values returns all known values for TagStatus. Note that this can be expanded
-// in the future, and so it is only as up to date as the client. The ordering of
-// this slice is not guaranteed to be stable across updates.
+// in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (TagStatus) Values() []TagStatus {
 	return []TagStatus{
 		"TAGGED",
@@ -335,24 +374,29 @@ type UpstreamRegistry string
 
 // Enum values for UpstreamRegistry
 const (
+	UpstreamRegistryEcr                     UpstreamRegistry = "ecr"
 	UpstreamRegistryEcrPublic               UpstreamRegistry = "ecr-public"
 	UpstreamRegistryQuay                    UpstreamRegistry = "quay"
 	UpstreamRegistryK8s                     UpstreamRegistry = "k8s"
 	UpstreamRegistryDockerHub               UpstreamRegistry = "docker-hub"
 	UpstreamRegistryGitHubContainerRegistry UpstreamRegistry = "github-container-registry"
 	UpstreamRegistryAzureContainerRegistry  UpstreamRegistry = "azure-container-registry"
+	UpstreamRegistryGitLabContainerRegistry UpstreamRegistry = "gitlab-container-registry"
 )
 
 // Values returns all known values for UpstreamRegistry. Note that this can be
-// expanded in the future, and so it is only as up to date as the client. The
-// ordering of this slice is not guaranteed to be stable across updates.
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
 func (UpstreamRegistry) Values() []UpstreamRegistry {
 	return []UpstreamRegistry{
+		"ecr",
 		"ecr-public",
 		"quay",
 		"k8s",
 		"docker-hub",
 		"github-container-registry",
 		"azure-container-registry",
+		"gitlab-container-registry",
 	}
 }

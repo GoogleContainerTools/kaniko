@@ -11,7 +11,6 @@ import (
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	smithywaiter "github.com/aws/smithy-go/waiter"
-	"github.com/jmespath/go-jmespath"
 	"time"
 )
 
@@ -140,6 +139,9 @@ func (c *Client) addOperationDescribeImageScanFindingsMiddlewares(stack *middlew
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -150,6 +152,15 @@ func (c *Client) addOperationDescribeImageScanFindingsMiddlewares(stack *middlew
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDescribeImageScanFindingsValidationMiddleware(stack); err != nil {
@@ -173,106 +184,19 @@ func (c *Client) addOperationDescribeImageScanFindingsMiddlewares(stack *middlew
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
+		return err
+	}
 	return nil
-}
-
-// DescribeImageScanFindingsAPIClient is a client that implements the
-// DescribeImageScanFindings operation.
-type DescribeImageScanFindingsAPIClient interface {
-	DescribeImageScanFindings(context.Context, *DescribeImageScanFindingsInput, ...func(*Options)) (*DescribeImageScanFindingsOutput, error)
-}
-
-var _ DescribeImageScanFindingsAPIClient = (*Client)(nil)
-
-// DescribeImageScanFindingsPaginatorOptions is the paginator options for
-// DescribeImageScanFindings
-type DescribeImageScanFindingsPaginatorOptions struct {
-	// The maximum number of image scan results returned by DescribeImageScanFindings
-	// in paginated output. When this parameter is used, DescribeImageScanFindings
-	// only returns maxResults results in a single page along with a nextToken
-	// response element. The remaining results of the initial request can be seen by
-	// sending another DescribeImageScanFindings request with the returned nextToken
-	// value. This value can be between 1 and 1000. If this parameter is not used, then
-	// DescribeImageScanFindings returns up to 100 results and a nextToken value, if
-	// applicable.
-	Limit int32
-
-	// Set to true if pagination should stop if the service returns a pagination token
-	// that matches the most recent token provided to the service.
-	StopOnDuplicateToken bool
-}
-
-// DescribeImageScanFindingsPaginator is a paginator for DescribeImageScanFindings
-type DescribeImageScanFindingsPaginator struct {
-	options   DescribeImageScanFindingsPaginatorOptions
-	client    DescribeImageScanFindingsAPIClient
-	params    *DescribeImageScanFindingsInput
-	nextToken *string
-	firstPage bool
-}
-
-// NewDescribeImageScanFindingsPaginator returns a new
-// DescribeImageScanFindingsPaginator
-func NewDescribeImageScanFindingsPaginator(client DescribeImageScanFindingsAPIClient, params *DescribeImageScanFindingsInput, optFns ...func(*DescribeImageScanFindingsPaginatorOptions)) *DescribeImageScanFindingsPaginator {
-	if params == nil {
-		params = &DescribeImageScanFindingsInput{}
-	}
-
-	options := DescribeImageScanFindingsPaginatorOptions{}
-	if params.MaxResults != nil {
-		options.Limit = *params.MaxResults
-	}
-
-	for _, fn := range optFns {
-		fn(&options)
-	}
-
-	return &DescribeImageScanFindingsPaginator{
-		options:   options,
-		client:    client,
-		params:    params,
-		firstPage: true,
-		nextToken: params.NextToken,
-	}
-}
-
-// HasMorePages returns a boolean indicating whether more pages are available
-func (p *DescribeImageScanFindingsPaginator) HasMorePages() bool {
-	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
-}
-
-// NextPage retrieves the next DescribeImageScanFindings page.
-func (p *DescribeImageScanFindingsPaginator) NextPage(ctx context.Context, optFns ...func(*Options)) (*DescribeImageScanFindingsOutput, error) {
-	if !p.HasMorePages() {
-		return nil, fmt.Errorf("no more pages available")
-	}
-
-	params := *p.params
-	params.NextToken = p.nextToken
-
-	var limit *int32
-	if p.options.Limit > 0 {
-		limit = &p.options.Limit
-	}
-	params.MaxResults = limit
-
-	result, err := p.client.DescribeImageScanFindings(ctx, &params, optFns...)
-	if err != nil {
-		return nil, err
-	}
-	p.firstPage = false
-
-	prevToken := p.nextToken
-	p.nextToken = result.NextToken
-
-	if p.options.StopOnDuplicateToken &&
-		prevToken != nil &&
-		p.nextToken != nil &&
-		*prevToken == *p.nextToken {
-		p.nextToken = nil
-	}
-
-	return result, nil
 }
 
 // ImageScanCompleteWaiterOptions are waiter options for ImageScanCompleteWaiter
@@ -307,12 +231,13 @@ type ImageScanCompleteWaiterOptions struct {
 
 	// Retryable is function that can be used to override the service defined
 	// waiter-behavior based on operation output, or returned error. This function is
-	// used by the waiter to decide if a state is retryable or a terminal state. By
-	// default service-modeled logic will populate this option. This option can thus be
-	// used to define a custom waiter state with fall-back to service-modeled waiter
-	// state mutators.The function returns an error in case of a failure state. In case
-	// of retry state, this function returns a bool value of true and nil error, while
-	// in case of success it returns a bool value of false and nil error.
+	// used by the waiter to decide if a state is retryable or a terminal state.
+	//
+	// By default service-modeled logic will populate this option. This option can
+	// thus be used to define a custom waiter state with fall-back to service-modeled
+	// waiter state mutators.The function returns an error in case of a failure state.
+	// In case of retry state, this function returns a bool value of true and nil
+	// error, while in case of success it returns a bool value of false and nil error.
 	Retryable func(context.Context, *DescribeImageScanFindingsInput, *DescribeImageScanFindingsOutput, error) (bool, error)
 }
 
@@ -389,7 +314,13 @@ func (w *ImageScanCompleteWaiter) WaitForOutput(ctx context.Context, params *Des
 		}
 
 		out, err := w.client.DescribeImageScanFindings(ctx, params, func(o *Options) {
+			baseOpts := []func(*Options){
+				addIsWaiterUserAgent,
+			}
 			o.APIOptions = append(o.APIOptions, apiOptions...)
+			for _, opt := range baseOpts {
+				opt(o)
+			}
 			for _, opt := range options.ClientOptions {
 				opt(o)
 			}
@@ -428,41 +359,142 @@ func (w *ImageScanCompleteWaiter) WaitForOutput(ctx context.Context, params *Des
 func imageScanCompleteStateRetryable(ctx context.Context, input *DescribeImageScanFindingsInput, output *DescribeImageScanFindingsOutput, err error) (bool, error) {
 
 	if err == nil {
-		pathValue, err := jmespath.Search("imageScanStatus.status", output)
-		if err != nil {
-			return false, fmt.Errorf("error evaluating waiter state: %w", err)
+		v1 := output.ImageScanStatus
+		var v2 types.ScanStatus
+		if v1 != nil {
+			v3 := v1.Status
+			v2 = v3
 		}
-
 		expectedValue := "COMPLETE"
-		value, ok := pathValue.(types.ScanStatus)
-		if !ok {
-			return false, fmt.Errorf("waiter comparator expected types.ScanStatus value, got %T", pathValue)
-		}
-
-		if string(value) == expectedValue {
+		var pathValue string
+		pathValue = string(v2)
+		if pathValue == expectedValue {
 			return false, nil
 		}
 	}
 
 	if err == nil {
-		pathValue, err := jmespath.Search("imageScanStatus.status", output)
-		if err != nil {
-			return false, fmt.Errorf("error evaluating waiter state: %w", err)
+		v1 := output.ImageScanStatus
+		var v2 types.ScanStatus
+		if v1 != nil {
+			v3 := v1.Status
+			v2 = v3
 		}
-
 		expectedValue := "FAILED"
-		value, ok := pathValue.(types.ScanStatus)
-		if !ok {
-			return false, fmt.Errorf("waiter comparator expected types.ScanStatus value, got %T", pathValue)
-		}
-
-		if string(value) == expectedValue {
+		var pathValue string
+		pathValue = string(v2)
+		if pathValue == expectedValue {
 			return false, fmt.Errorf("waiter state transitioned to Failure")
 		}
 	}
 
+	if err != nil {
+		return false, err
+	}
 	return true, nil
 }
+
+// DescribeImageScanFindingsPaginatorOptions is the paginator options for
+// DescribeImageScanFindings
+type DescribeImageScanFindingsPaginatorOptions struct {
+	// The maximum number of image scan results returned by DescribeImageScanFindings
+	// in paginated output. When this parameter is used, DescribeImageScanFindings
+	// only returns maxResults results in a single page along with a nextToken
+	// response element. The remaining results of the initial request can be seen by
+	// sending another DescribeImageScanFindings request with the returned nextToken
+	// value. This value can be between 1 and 1000. If this parameter is not used, then
+	// DescribeImageScanFindings returns up to 100 results and a nextToken value, if
+	// applicable.
+	Limit int32
+
+	// Set to true if pagination should stop if the service returns a pagination token
+	// that matches the most recent token provided to the service.
+	StopOnDuplicateToken bool
+}
+
+// DescribeImageScanFindingsPaginator is a paginator for DescribeImageScanFindings
+type DescribeImageScanFindingsPaginator struct {
+	options   DescribeImageScanFindingsPaginatorOptions
+	client    DescribeImageScanFindingsAPIClient
+	params    *DescribeImageScanFindingsInput
+	nextToken *string
+	firstPage bool
+}
+
+// NewDescribeImageScanFindingsPaginator returns a new
+// DescribeImageScanFindingsPaginator
+func NewDescribeImageScanFindingsPaginator(client DescribeImageScanFindingsAPIClient, params *DescribeImageScanFindingsInput, optFns ...func(*DescribeImageScanFindingsPaginatorOptions)) *DescribeImageScanFindingsPaginator {
+	if params == nil {
+		params = &DescribeImageScanFindingsInput{}
+	}
+
+	options := DescribeImageScanFindingsPaginatorOptions{}
+	if params.MaxResults != nil {
+		options.Limit = *params.MaxResults
+	}
+
+	for _, fn := range optFns {
+		fn(&options)
+	}
+
+	return &DescribeImageScanFindingsPaginator{
+		options:   options,
+		client:    client,
+		params:    params,
+		firstPage: true,
+		nextToken: params.NextToken,
+	}
+}
+
+// HasMorePages returns a boolean indicating whether more pages are available
+func (p *DescribeImageScanFindingsPaginator) HasMorePages() bool {
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
+}
+
+// NextPage retrieves the next DescribeImageScanFindings page.
+func (p *DescribeImageScanFindingsPaginator) NextPage(ctx context.Context, optFns ...func(*Options)) (*DescribeImageScanFindingsOutput, error) {
+	if !p.HasMorePages() {
+		return nil, fmt.Errorf("no more pages available")
+	}
+
+	params := *p.params
+	params.NextToken = p.nextToken
+
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxResults = limit
+
+	optFns = append([]func(*Options){
+		addIsPaginatorUserAgent,
+	}, optFns...)
+	result, err := p.client.DescribeImageScanFindings(ctx, &params, optFns...)
+	if err != nil {
+		return nil, err
+	}
+	p.firstPage = false
+
+	prevToken := p.nextToken
+	p.nextToken = result.NextToken
+
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
+		p.nextToken = nil
+	}
+
+	return result, nil
+}
+
+// DescribeImageScanFindingsAPIClient is a client that implements the
+// DescribeImageScanFindings operation.
+type DescribeImageScanFindingsAPIClient interface {
+	DescribeImageScanFindings(context.Context, *DescribeImageScanFindingsInput, ...func(*Options)) (*DescribeImageScanFindingsOutput, error)
+}
+
+var _ DescribeImageScanFindingsAPIClient = (*Client)(nil)
 
 func newServiceMetadataMiddleware_opDescribeImageScanFindings(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{

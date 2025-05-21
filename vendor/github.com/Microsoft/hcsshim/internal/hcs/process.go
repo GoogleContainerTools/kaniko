@@ -12,14 +12,16 @@ import (
 	"syscall"
 	"time"
 
+	"go.opencensus.io/trace"
+
 	"github.com/Microsoft/hcsshim/internal/cow"
+	hcsschema "github.com/Microsoft/hcsshim/internal/hcs/schema2"
 	"github.com/Microsoft/hcsshim/internal/log"
 	"github.com/Microsoft/hcsshim/internal/oc"
+	"github.com/Microsoft/hcsshim/internal/protocol/guestrequest"
 	"github.com/Microsoft/hcsshim/internal/vmcompute"
-	"go.opencensus.io/trace"
 )
 
-// ContainerError is an error encountered in HCS
 type Process struct {
 	handleLock          sync.RWMutex
 	handle              vmcompute.HcsProcess
@@ -50,35 +52,6 @@ func newProcess(process vmcompute.HcsProcess, processID int, computeSystem *Syst
 	}
 }
 
-type processModifyRequest struct {
-	Operation   string
-	ConsoleSize *consoleSize `json:",omitempty"`
-	CloseHandle *closeHandle `json:",omitempty"`
-}
-
-type consoleSize struct {
-	Height uint16
-	Width  uint16
-}
-
-type closeHandle struct {
-	Handle string
-}
-
-type processStatus struct {
-	ProcessID      uint32
-	Exited         bool
-	ExitCode       uint32
-	LastWaitResult int32
-}
-
-const stdIn string = "StdIn"
-
-const (
-	modifyConsoleSize string = "ConsoleSize"
-	modifyCloseHandle string = "CloseHandle"
-)
-
 // Pid returns the process ID of the process within the container.
 func (process *Process) Pid() int {
 	return process.processID
@@ -90,10 +63,10 @@ func (process *Process) SystemID() string {
 }
 
 func (process *Process) processSignalResult(ctx context.Context, err error) (bool, error) {
-	switch err {
-	case nil:
+	if err == nil {
 		return true, nil
-	case ErrVmcomputeOperationInvalidState, ErrComputeSystemDoesNotExist, ErrElementNotFound:
+	}
+	if errors.Is(err, ErrVmcomputeOperationInvalidState) || errors.Is(err, ErrComputeSystemDoesNotExist) || errors.Is(err, ErrElementNotFound) {
 		if !process.stopped() {
 			// The process should be gone, but we have not received the notification.
 			// After a second, force unblock the process wait to work around a possible
@@ -109,9 +82,8 @@ func (process *Process) processSignalResult(ctx context.Context, err error) (boo
 			}()
 		}
 		return false, nil
-	default:
-		return false, err
 	}
+	return false, nil
 }
 
 // Signal signals the process with `options`.
@@ -260,14 +232,14 @@ func (process *Process) waitBackground() {
 		process.handleLock.RLock()
 		defer process.handleLock.RUnlock()
 
-		// Make sure we didnt race with Close() here
+		// Make sure we didn't race with Close() here
 		if process.handle != 0 {
 			propertiesJSON, resultJSON, err = vmcompute.HcsGetProcessProperties(ctx, process.handle)
 			events := processHcsResult(ctx, resultJSON)
 			if err != nil {
 				err = makeProcessError(process, operation, err, events)
 			} else {
-				properties := &processStatus{}
+				properties := &hcsschema.ProcessStatus{}
 				err = json.Unmarshal([]byte(propertiesJSON), properties)
 				if err != nil {
 					err = makeProcessError(process, operation, err, nil)
@@ -318,10 +290,9 @@ func (process *Process) ResizeConsole(ctx context.Context, width, height uint16)
 	if process.handle == 0 {
 		return makeProcessError(process, operation, ErrAlreadyClosed, nil)
 	}
-
-	modifyRequest := processModifyRequest{
-		Operation: modifyConsoleSize,
-		ConsoleSize: &consoleSize{
+	modifyRequest := hcsschema.ProcessModifyRequest{
+		Operation: guestrequest.ModifyProcessConsoleSize,
+		ConsoleSize: &hcsschema.ConsoleSize{
 			Height: height,
 			Width:  width,
 		},
@@ -423,10 +394,10 @@ func (process *Process) CloseStdin(ctx context.Context) (err error) {
 
 	//HcsModifyProcess request to close stdin will fail if the process has already exited
 	if !process.stopped() {
-		modifyRequest := processModifyRequest{
-			Operation: modifyCloseHandle,
-			CloseHandle: &closeHandle{
-				Handle: stdIn,
+		modifyRequest := hcsschema.ProcessModifyRequest{
+			Operation: guestrequest.CloseProcessHandle,
+			CloseHandle: &hcsschema.CloseHandle{
+				Handle: guestrequest.STDInHandle,
 			},
 		}
 

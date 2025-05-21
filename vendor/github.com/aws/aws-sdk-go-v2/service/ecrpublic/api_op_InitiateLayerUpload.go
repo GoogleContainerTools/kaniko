@@ -10,12 +10,15 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Notifies Amazon ECR that you intend to upload an image layer. When an image is
-// pushed, the InitiateLayerUpload API is called once for each image layer that
-// hasn't already been uploaded. Whether an image layer uploads is determined by
-// the BatchCheckLayerAvailability API action. This operation is used by the Amazon
-// ECR proxy and is not generally used by customers for pulling and pushing images.
-// In most cases, you should use the docker CLI to pull, tag, and push images.
+// Notifies Amazon ECR that you intend to upload an image layer.
+//
+// When an image is pushed, the InitiateLayerUpload API is called once for each
+// image layer that hasn't already been uploaded. Whether an image layer uploads is
+// determined by the BatchCheckLayerAvailability API action.
+//
+// This operation is used by the Amazon ECR proxy and is not generally used by
+// customers for pulling and pushing images. In most cases, you should use the
+// docker CLI to pull, tag, and push images.
 func (c *Client) InitiateLayerUpload(ctx context.Context, params *InitiateLayerUploadInput, optFns ...func(*Options)) (*InitiateLayerUploadOutput, error) {
 	if params == nil {
 		params = &InitiateLayerUploadInput{}
@@ -51,8 +54,8 @@ type InitiateLayerUploadOutput struct {
 	// The size, in bytes, that Amazon ECR expects future layer part uploads to be.
 	PartSize *int64
 
-	// The upload ID for the layer upload. This parameter is passed to further
-	// UploadLayerPart and CompleteLayerUpload operations.
+	// The upload ID for the layer upload. This parameter is passed to further UploadLayerPart and CompleteLayerUpload
+	// operations.
 	UploadId *string
 
 	// Metadata pertaining to the operation's result.
@@ -104,6 +107,9 @@ func (c *Client) addOperationInitiateLayerUploadMiddlewares(stack *middleware.St
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -114,6 +120,15 @@ func (c *Client) addOperationInitiateLayerUploadMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpInitiateLayerUploadValidationMiddleware(stack); err != nil {
@@ -135,6 +150,18 @@ func (c *Client) addOperationInitiateLayerUploadMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

@@ -14,11 +14,14 @@ import (
 // Retrieves an authorization token. An authorization token represents your IAM
 // authentication credentials and can be used to access any Amazon ECR registry
 // that your IAM principal has access to. The authorization token is valid for 12
-// hours. The authorizationToken returned is a base64 encoded string that can be
-// decoded and used in a docker login command to authenticate to a registry. The
-// CLI offers an get-login-password command that simplifies the login process. For
-// more information, see Registry authentication (https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html#registry_auth)
-// in the Amazon Elastic Container Registry User Guide.
+// hours.
+//
+// The authorizationToken returned is a base64 encoded string that can be decoded
+// and used in a docker login command to authenticate to a registry. The CLI
+// offers an get-login-password command that simplifies the login process. For
+// more information, see [Registry authentication]in the Amazon Elastic Container Registry User Guide.
+//
+// [Registry authentication]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html#registry_auth
 func (c *Client) GetAuthorizationToken(ctx context.Context, params *GetAuthorizationTokenInput, optFns ...func(*Options)) (*GetAuthorizationTokenOutput, error) {
 	if params == nil {
 		params = &GetAuthorizationTokenInput{}
@@ -104,6 +107,9 @@ func (c *Client) addOperationGetAuthorizationTokenMiddlewares(stack *middleware.
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -114,6 +120,15 @@ func (c *Client) addOperationGetAuthorizationTokenMiddlewares(stack *middleware.
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetAuthorizationToken(options.Region), middleware.Before); err != nil {
@@ -132,6 +147,18 @@ func (c *Client) addOperationGetAuthorizationTokenMiddlewares(stack *middleware.
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

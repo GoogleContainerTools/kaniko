@@ -35,7 +35,7 @@ type GetRegistryPolicyOutput struct {
 	// The JSON text of the permissions policy for a registry.
 	PolicyText *string
 
-	// The ID of the registry.
+	// The registry ID associated with the request.
 	RegistryId *string
 
 	// Metadata pertaining to the operation's result.
@@ -87,6 +87,9 @@ func (c *Client) addOperationGetRegistryPolicyMiddlewares(stack *middleware.Stac
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -97,6 +100,15 @@ func (c *Client) addOperationGetRegistryPolicyMiddlewares(stack *middleware.Stac
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetRegistryPolicy(options.Region), middleware.Before); err != nil {
@@ -115,6 +127,18 @@ func (c *Client) addOperationGetRegistryPolicyMiddlewares(stack *middleware.Stac
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

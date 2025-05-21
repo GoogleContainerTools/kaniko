@@ -125,6 +125,20 @@ func (p *Pusher) writer(ctx context.Context, repo name.Repository, o *options) (
 	return rw, rw.init(ctx)
 }
 
+func (p *Pusher) Put(ctx context.Context, ref name.Reference, t Taggable) error {
+	w, err := p.writer(ctx, ref.Context(), p.o)
+	if err != nil {
+		return err
+	}
+
+	m, err := taggableToManifest(t)
+	if err != nil {
+		return err
+	}
+
+	return w.commitManifest(ctx, ref, m)
+}
+
 func (p *Pusher) Push(ctx context.Context, ref name.Reference, t Taggable) error {
 	w, err := p.writer(ctx, ref.Context(), p.o)
 	if err != nil {
@@ -148,7 +162,7 @@ func (p *Pusher) Delete(ctx context.Context, ref name.Reference) error {
 	}
 
 	u := url.URL{
-		Scheme: ref.Context().Registry.Scheme(),
+		Scheme: ref.Context().Scheme(),
 		Host:   ref.Context().RegistryStr(),
 		Path:   fmt.Sprintf("/v2/%s/manifests/%s", ref.Context().RepositoryStr(), ref.Identifier()),
 	}
