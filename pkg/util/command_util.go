@@ -70,7 +70,7 @@ func ResolveEnvironmentReplacementList(values, envs []string, isFilepath bool) (
 // "a\"b" -> "a"b"
 func ResolveEnvironmentReplacement(value string, envs []string, isFilepath bool) (string, error) {
 	shlex := shell.NewLex(parser.DefaultEscapeToken)
-	fp, _, err := shlex.ProcessWord(value, envs)
+	fp, _, err := shlex.ProcessWord(value, shell.EnvsFromSlice(envs))
 	// Check after replacement if value is a remote URL
 	if !isFilepath || IsSrcRemoteFileURL(fp) {
 		return fp, err

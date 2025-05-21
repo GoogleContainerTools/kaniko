@@ -14,9 +14,25 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/stringid"
 	"github.com/docker/docker/volume"
+	"github.com/moby/sys/user"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/pkg/errors"
 )
+
+// RWLayer represents a writable layer.
+type RWLayer interface {
+	// Mount mounts the RWLayer and returns the filesystem path
+	// to the writable layer.
+	Mount(mountLabel string) (string, error)
+
+	// Unmount unmounts the RWLayer. This should be called
+	// for every mount. If there are multiple mount calls
+	// this operation will only decrement the internal mount counter.
+	Unmount() error
+
+	// Metadata returns the low level metadata for the mutable layer
+	Metadata() (map[string]string, error)
+}
 
 // MountPoint is the intersection point between a volume and a container. It
 // specifies which volume is to be used and where inside a container it should
@@ -80,6 +96,8 @@ type MountPoint struct {
 	// SafePaths created by Setup that should be cleaned up before unmounting
 	// the volume.
 	safePaths []*safepath.SafePath
+
+	Layer RWLayer `json:"-"`
 }
 
 // Cleanup frees resources used by the mountpoint and cleans up all the paths
@@ -202,6 +220,20 @@ func (m *MountPoint) Setup(ctx context.Context, mountLabel string, rootIDs idtoo
 		return volumePath, clean, nil
 	}
 
+	if m.Type == mounttypes.TypeImage {
+		if m.Spec.ImageOptions != nil && m.Spec.ImageOptions.Subpath != "" {
+			subpath := m.Spec.ImageOptions.Subpath
+
+			safePath, err := safepath.Join(ctx, m.Source, subpath)
+			if err != nil {
+				return "", noCleanup, err
+			}
+			m.safePaths = append(m.safePaths, safePath)
+			log.G(ctx).Debugf("mounting (%s|%s) via %s", m.Source, subpath, safePath.Path())
+			return safePath.Path(), safePath.Close, nil
+		}
+	}
+
 	if len(m.Source) == 0 {
 		return "", noCleanup, fmt.Errorf("Unable to setup mount point, neither source nor volume defined")
 	}
@@ -216,9 +248,9 @@ func (m *MountPoint) Setup(ctx context.Context, mountLabel string, rootIDs idtoo
 			}
 		}
 
-		// idtools.MkdirAllNewAs() produces an error if m.Source exists and is a file (not a directory)
+		// user.MkdirAllAndChown produces an error if m.Source exists and is a file (not a directory)
 		// also, makes sure that if the directory is created, the correct remapped rootUID/rootGID will own it
-		if err := idtools.MkdirAllAndChownNew(m.Source, 0o755, rootIDs); err != nil {
+		if err := user.MkdirAllAndChown(m.Source, 0o755, rootIDs.UID, rootIDs.GID, user.WithOnlyNew); err != nil {
 			if perr, ok := err.(*os.PathError); ok {
 				if perr.Err != syscall.ENOTDIR {
 					return "", noCleanup, errors.Wrapf(err, "error while creating mount source path '%s'", m.Source)

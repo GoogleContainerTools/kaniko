@@ -45,9 +45,10 @@ type DescribeRepositoriesInput struct {
 	// parameter. Pagination continues from the end of the previous results that
 	// returned the nextToken value. This value is null when there are no more results
 	// to return. This option cannot be used when you specify repositories with
-	// repositoryNames . This token should be treated as an opaque identifier that is
-	// only used to retrieve the next items in a list and not for other programmatic
-	// purposes.
+	// repositoryNames .
+	//
+	// This token should be treated as an opaque identifier that is only used to
+	// retrieve the next items in a list and not for other programmatic purposes.
 	NextToken *string
 
 	// The Amazon Web Services account ID associated with the registry that contains
@@ -122,6 +123,9 @@ func (c *Client) addOperationDescribeRepositoriesMiddlewares(stack *middleware.S
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -132,6 +136,15 @@ func (c *Client) addOperationDescribeRepositoriesMiddlewares(stack *middleware.S
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeRepositories(options.Region), middleware.Before); err != nil {
@@ -152,16 +165,20 @@ func (c *Client) addOperationDescribeRepositoriesMiddlewares(stack *middleware.S
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
+		return err
+	}
 	return nil
 }
-
-// DescribeRepositoriesAPIClient is a client that implements the
-// DescribeRepositories operation.
-type DescribeRepositoriesAPIClient interface {
-	DescribeRepositories(context.Context, *DescribeRepositoriesInput, ...func(*Options)) (*DescribeRepositoriesOutput, error)
-}
-
-var _ DescribeRepositoriesAPIClient = (*Client)(nil)
 
 // DescribeRepositoriesPaginatorOptions is the paginator options for
 // DescribeRepositories
@@ -235,6 +252,9 @@ func (p *DescribeRepositoriesPaginator) NextPage(ctx context.Context, optFns ...
 	}
 	params.MaxResults = limit
 
+	optFns = append([]func(*Options){
+		addIsPaginatorUserAgent,
+	}, optFns...)
 	result, err := p.client.DescribeRepositories(ctx, &params, optFns...)
 	if err != nil {
 		return nil, err
@@ -253,6 +273,14 @@ func (p *DescribeRepositoriesPaginator) NextPage(ctx context.Context, optFns ...
 
 	return result, nil
 }
+
+// DescribeRepositoriesAPIClient is a client that implements the
+// DescribeRepositories operation.
+type DescribeRepositoriesAPIClient interface {
+	DescribeRepositories(context.Context, *DescribeRepositoriesInput, ...func(*Options)) (*DescribeRepositoriesOutput, error)
+}
+
+var _ DescribeRepositoriesAPIClient = (*Client)(nil)
 
 func newServiceMetadataMiddleware_opDescribeRepositories(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{

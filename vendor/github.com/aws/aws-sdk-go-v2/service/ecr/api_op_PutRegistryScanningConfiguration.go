@@ -34,15 +34,18 @@ type PutRegistryScanningConfigurationInput struct {
 	// occur.
 	Rules []types.RegistryScanningRule
 
-	// The scanning type to set for the registry. When a registry scanning
-	// configuration is not defined, by default the BASIC scan type is used. When
-	// basic scanning is used, you may specify filters to determine which individual
-	// repositories, or all repositories, are scanned when new images are pushed to
-	// those repositories. Alternatively, you can do manual scans of images with basic
-	// scanning. When the ENHANCED scan type is set, Amazon Inspector provides
-	// automated vulnerability scanning. You may choose between continuous scanning or
-	// scan on push and you may specify filters to determine which individual
-	// repositories, or all repositories, are scanned.
+	// The scanning type to set for the registry.
+	//
+	// When a registry scanning configuration is not defined, by default the BASIC
+	// scan type is used. When basic scanning is used, you may specify filters to
+	// determine which individual repositories, or all repositories, are scanned when
+	// new images are pushed to those repositories. Alternatively, you can do manual
+	// scans of images with basic scanning.
+	//
+	// When the ENHANCED scan type is set, Amazon Inspector provides automated
+	// vulnerability scanning. You may choose between continuous scanning or scan on
+	// push and you may specify filters to determine which individual repositories, or
+	// all repositories, are scanned.
 	ScanType types.ScanType
 
 	noSmithyDocumentSerde
@@ -102,6 +105,9 @@ func (c *Client) addOperationPutRegistryScanningConfigurationMiddlewares(stack *
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -112,6 +118,15 @@ func (c *Client) addOperationPutRegistryScanningConfigurationMiddlewares(stack *
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpPutRegistryScanningConfigurationValidationMiddleware(stack); err != nil {
@@ -133,6 +148,18 @@ func (c *Client) addOperationPutRegistryScanningConfigurationMiddlewares(stack *
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

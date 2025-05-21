@@ -11,8 +11,9 @@ import (
 )
 
 // Creates or updates the lifecycle policy for the specified repository. For more
-// information, see Lifecycle policy template (https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html)
-// .
+// information, see [Lifecycle policy template].
+//
+// [Lifecycle policy template]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html
 func (c *Client) PutLifecyclePolicy(ctx context.Context, params *PutLifecyclePolicyInput, optFns ...func(*Options)) (*PutLifecyclePolicyOutput, error) {
 	if params == nil {
 		params = &PutLifecyclePolicyInput{}
@@ -108,6 +109,9 @@ func (c *Client) addOperationPutLifecyclePolicyMiddlewares(stack *middleware.Sta
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -118,6 +122,15 @@ func (c *Client) addOperationPutLifecyclePolicyMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpPutLifecyclePolicyValidationMiddleware(stack); err != nil {
@@ -139,6 +152,18 @@ func (c *Client) addOperationPutLifecyclePolicyMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

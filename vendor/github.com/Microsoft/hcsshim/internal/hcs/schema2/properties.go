@@ -10,7 +10,7 @@
 package hcsschema
 
 import (
-	v1 "github.com/containerd/cgroups/stats/v1"
+	v1 "github.com/containerd/cgroups/v3/cgroup1/stats"
 )
 
 type Properties struct {
@@ -25,6 +25,8 @@ type Properties struct {
 	Owner string `json:"Owner,omitempty"`
 
 	RuntimeId string `json:"RuntimeId,omitempty"`
+
+	SystemGUID string `json:"SystemGUID,omitempty"`
 
 	RuntimeTemplateId string `json:"RuntimeTemplateId,omitempty"`
 

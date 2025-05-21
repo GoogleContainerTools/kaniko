@@ -7,25 +7,22 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/containerd/log"
 	"github.com/docker/distribution"
 	"github.com/docker/docker/pkg/ioutils"
+	"github.com/moby/sys/atomicwriter"
 	"github.com/opencontainers/go-digest"
 	"github.com/pkg/errors"
 )
 
-var (
-	stringIDRegexp      = regexp.MustCompile(`^[a-f0-9]{64}(-init)?$`)
-	supportedAlgorithms = []digest.Algorithm{
-		digest.SHA256,
-		// digest.SHA384, // Currently not used
-		// digest.SHA512, // Currently not used
-	}
-)
+var supportedAlgorithms = []digest.Algorithm{
+	digest.SHA256,
+	// digest.SHA384, // Currently not used
+	// digest.SHA512, // Currently not used
+}
 
 type fileMetadataStore struct {
 	root string
@@ -33,7 +30,7 @@ type fileMetadataStore struct {
 
 type fileMetadataTransaction struct {
 	store *fileMetadataStore
-	ws    *ioutils.AtomicWriteSet
+	ws    *atomicwriter.WriteSet
 }
 
 // newFSMetadataStore returns an instance of a metadata store
@@ -70,7 +67,7 @@ func (fms *fileMetadataStore) StartTransaction() (*fileMetadataTransaction, erro
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, err
 	}
-	ws, err := ioutils.NewAtomicWriteSet(tmpDir)
+	ws, err := atomicwriter.NewWriteSet(tmpDir)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +259,7 @@ func (fms *fileMetadataStore) GetMountID(mount string) (string, error) {
 	}
 	content := strings.TrimSpace(string(contentBytes))
 
-	if !stringIDRegexp.MatchString(content) {
+	if !isValidID(content) {
 		return "", errors.New("invalid mount id value")
 	}
 
@@ -279,7 +276,7 @@ func (fms *fileMetadataStore) GetInitID(mount string) (string, error) {
 	}
 	content := strings.TrimSpace(string(contentBytes))
 
-	if !stringIDRegexp.MatchString(content) {
+	if !isValidID(content) {
 		return "", errors.New("invalid init id value")
 	}
 
@@ -430,4 +427,19 @@ func (fms *fileMetadataStore) Remove(layer ChainID, cache string) error {
 
 func (fms *fileMetadataStore) RemoveMount(mount string) error {
 	return os.RemoveAll(fms.getMountDirectory(mount))
+}
+
+// isValidID checks if mount/init id is valid. It is similar to
+// regexp.MustCompile(`^[a-f0-9]{64}(-init)?$`).MatchString(id).
+func isValidID(id string) bool {
+	id = strings.TrimSuffix(id, "-init")
+	if len(id) != 64 {
+		return false
+	}
+	for _, c := range id {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }
