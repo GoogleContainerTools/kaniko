@@ -19,6 +19,7 @@ package buildcontext
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,8 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 	if err != nil {
 		return parts.Host, err
 	}
+
+	accountUrl := fmt.Sprintf("%s://%s", parts.Scheme, parts.Host)
 	accountName := strings.Split(parts.Host, ".")[0]
 
 	// Generate credential with accountName and accountKey
@@ -65,7 +68,7 @@ func (b *AzureBlob) UnpackTarFromBuildContext() (string, error) {
 	}
 
 	// Downloading context file from Azure Blob Storage
-	client, err := azblob.NewClientWithSharedKeyCredential(b.context, credential, nil)
+	client, err := azblob.NewClientWithSharedKeyCredential(accountUrl, credential, nil)
 	if err != nil {
 		return parts.Host, err
 	}
