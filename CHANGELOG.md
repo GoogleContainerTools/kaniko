@@ -1,3 +1,34 @@
+# v1.24.0 Release 2025-05-21
+The executor images in this release are:
+```
+gcr.io/kaniko-project/executor:v1.24.0
+gcr.io/kaniko-project/executor:latest
+```
+
+The debug images are available at:
+```
+gcr.io/kaniko-project/executor:debug
+gcr.io/kaniko-project/executor:v1.24.0-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+gcr.io/kaniko-project/executor:slim
+gcr.io/kaniko-project/executor:v1.24.0-slim
+```
+
+
+
+Huge thank you for this release towards our contributors: 
+- Aaron Prindle
+- Aswin A
+- dependabot[bot]
+- Michael Plump
+- Mick van Gelderen
+- Thomas L. Kjeldsen
+
+
+
 # v1.23.2 Release 2024-07-09
 The executor images in this release are:
 ```
