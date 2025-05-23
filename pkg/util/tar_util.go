@@ -169,7 +169,7 @@ func readSecurityXattrToTarHeader(path string, hdr *tar.Header) error {
 		hdr.Xattrs = make(map[string]string)
 	}
 	capability, err := system.Lgetxattr(path, securityCapabilityXattr)
-	if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && !errors.Is(err, system.ErrNotSupportedPlatform) {
+	if err != nil && !errors.Is(err, syscall.EOPNOTSUPP) && !errors.Is(err, system.ErrNotSupportedPlatform) && !errors.Is(err, syscall.EBADF) {
 		return errors.Wrapf(err, "failed to read %q attribute from %q", securityCapabilityXattr, path)
 	}
 	if capability != nil {
