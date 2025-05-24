@@ -113,11 +113,19 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 	l := snapshot.NewLayeredMap(hasher)
 	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
 
-	sourceImageNoTimestamps, err := mutate.CreatedAt(sourceImage, v1.Time{})
+	cf, err := sourceImage.ConfigFile()
 	if err != nil {
 		return nil, err
 	}
-	digest, err := sourceImageNoTimestamps.Digest()
+	cfg := cf.DeepCopy()
+	cfg.Created = v1.Time{}
+	cfg.Config.Labels = map[string]string{}
+	sourceImageReproducible, err := mutate.ConfigFile(sourceImage, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	digest, err := sourceImageReproducible.Digest()
 	if err != nil {
 		return nil, err
 	}
