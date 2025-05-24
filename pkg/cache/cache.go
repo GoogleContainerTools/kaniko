@@ -32,6 +32,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -228,11 +229,6 @@ func mfstFromPath(p string) (*v1.Manifest, error) {
 }
 
 func cachedImageFromPath(p string) (v1.Image, error) {
-	imgTar, err := tarball.ImageFromPath(p, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting image from path")
-	}
-
 	// Manifests may be present next to the tar, named with a ".json" suffix
 	mfstPath := p + ".json"
 
@@ -248,9 +244,28 @@ func cachedImageFromPath(p string) (v1.Image, error) {
 		}
 	}
 
+	var imgTar v1.Image
+	var err error
+	switch extractMediaTypeVendor(mfst.MediaType) {
+	case types.DockerVendorPrefix:
+		imgTar, err = tarball.ImageFromPath(p, nil)
+	case types.OCIVendorPrefix:
+		imgTar, err = tarball.OCIImageFromPath(p, nil)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "getting image from path")
+	}
+
 	return &cachedImage{
 		digest: filepath.Base(p),
 		Image:  imgTar,
 		mfst:   mfst,
 	}, nil
+}
+
+func extractMediaTypeVendor(mt types.MediaType) string {
+	if strings.Contains(string(mt), types.OCIVendorPrefix) {
+		return types.OCIVendorPrefix
+	}
+	return types.DockerVendorPrefix
 }
