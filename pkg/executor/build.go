@@ -434,6 +434,13 @@ func (s *stageBuilder) build() error {
 
 				logrus.Debugf("Build: cache key for command %v %v", command.String(), ck)
 
+				// Raise Warnings for commands that are uncacheable
+				if _, ok := command.(*commands.WorkdirCommand); ok {
+					logrus.Warn("cache-violation: WORKDIR implicitly creates a folder that can't be cached - consider creating it explicitly with RUN instead.\nhttps://github.com/GoogleContainerTools/kaniko/issues/3340")
+				}
+				if _, ok := command.(*commands.AddCommand); ok {
+					logrus.Warn("cache-violation: ADD can't be cached - consider using COPY instead.\nhttps://github.com/GoogleContainerTools/kaniko/issues/3340")
+				}
 				// Push layer to cache (in parallel) now along with new config file
 				if command.ShouldCacheOutput() && !s.opts.NoPushCache {
 					cacheGroup.Go(func() error {
