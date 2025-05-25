@@ -92,7 +92,11 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 		return nil, err
 	}
 
-	imageConfig, err := initializeConfig(sourceImage, opts)
+	_opts := *opts
+	if !stage.Final {
+		_opts.Labels = []string{}
+	}
+	imageConfig, err := initializeConfig(sourceImage, &_opts)
 	if err != nil {
 		return nil, err
 	}
@@ -772,9 +776,7 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 			configFile.OS = strings.Split(opts.CustomPlatform, "/")[0]
 			configFile.Architecture = strings.Split(opts.CustomPlatform, "/")[1]
 		}
-		if !stage.Final {
-			configFile.Config.Labels = map[string]string{}
-		}
+
 		sourceImage, err = mutate.ConfigFile(sourceImage, configFile)
 		if err != nil {
 			return nil, err
