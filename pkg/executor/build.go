@@ -92,7 +92,11 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 		return nil, err
 	}
 
-	imageConfig, err := initializeConfig(sourceImage, opts)
+	_opts := *opts
+	if !stage.Final {
+		_opts.Labels = []string{}
+	}
+	imageConfig, err := initializeConfig(sourceImage, &_opts)
 	if err != nil {
 		return nil, err
 	}
