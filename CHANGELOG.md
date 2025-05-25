@@ -1,3 +1,66 @@
+# v1.24.0-2 Release 2025-05-25
+The executor images in this release are:
+```
+martizih/kaniko:latest
+martizih/kaniko:v1.24.0-2
+```
+
+The debug images are available at:
+```
+martizih/kaniko:debug
+martizih/kaniko:v1.24.0-2-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+martizih/kaniko:slim
+martizih/kaniko:v1.24.0-2-slim
+```
+
+The warmer images are available at:
+```
+martizih/kaniko:warmer
+martizih/kaniko:v1.24.0-2-warmer
+```
+
+* fix: preserve labels from base images by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/6
+* fix CI by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/5
+* drop image signing by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/7
+* drop whitespace diff by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/8
+* add integration test by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/10
+
+
+# v1.24.0-1 Release 2025-05-24
+The executor images in this release are:
+```
+martizih/kaniko:latest
+martizih/kaniko:v1.24.0-1
+```
+
+The debug images are available at:
+```
+martizih/kaniko:debug
+martizih/kaniko:v1.24.0-1-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+martizih/kaniko:slim
+martizih/kaniko:v1.24.0-1-slim
+```
+
+The warmer images are available at:
+```
+martizih/kaniko:warmer
+martizih/kaniko:v1.24.0-1-warmer
+```
+
+* fix: sourceImage's CreatedAt timestamp should not be included in cach… by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/1
+* fix: ignore labels on base image for cache by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/2
+* fix: cache extract fails on invalid symlinks by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/3
+* fix: intermediate images should not be labelled by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/4
+
+
 # v1.24.0 Release 2025-05-21
 The executor images in this release are:
 ```
