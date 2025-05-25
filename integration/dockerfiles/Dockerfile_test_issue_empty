@@ -1,0 +1,9 @@
+FROM ubuntu AS base
+
+# Creates cache misses on main@1d2bff5:
+# When building the image directly no layer is created.
+# When rebuilding from cache a layer is emitted even for empty statements,
+# as we currently have no logic for skipping the layer when rebuilding from emtpy cache.
+# This causes one-time cache misses as now the chain of layers has changed.
+#
+RUN echo blubb
