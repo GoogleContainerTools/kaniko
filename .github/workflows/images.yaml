@@ -100,17 +100,6 @@ jobs:
         cache-to: type=gha,mode=max
         target: ${{ matrix.target }}
 
-    # Sign images if not a PR.
-    - if: github.event_name != 'pull_request'
-      uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
-    - if: github.event_name != 'pull_request'
-      run: |
-        cosign sign --yes \
-            --key gcpkms://projects/kaniko-project/locations/global/keyRings/cosign/cryptoKeys/cosign \
-            ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
-        cosign sign --yes \
-            ${{ matrix.image-name }}@${{ steps.build-and-push.outputs.digest }}
-
     # If a tag push, use crane to add more tags.
     - if: startsWith(github.ref, 'refs/tags/v')
       uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
