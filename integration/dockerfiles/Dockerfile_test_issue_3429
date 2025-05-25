@@ -1,0 +1,13 @@
+FROM ubuntu
+
+RUN mkdir /test \
+    && ln -s /test /link
+
+# Fails on main@1d2bff5 before #3429: On the second run,
+# when extracting from cache, we first delete the /test directory
+# and thereafter fail to replace the link with a directory.
+# The link is now broken and 'stat' returns an error.
+# On build this works as we first delete the link,
+# and only thereafter create the directory.
+RUN rm -rf /test /link \
+    && mkdir /link
