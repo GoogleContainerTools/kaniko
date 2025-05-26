@@ -218,6 +218,12 @@ func NewDockerFileBuilder() *DockerFileBuilder {
 		"Dockerfile_test_cache_install": {},
 		"Dockerfile_test_cache_perm":    {},
 		"Dockerfile_test_cache_copy":    {},
+		// TODO: WORKDIR command is uncacheable
+		//"Dockerfile_test_issue_workdir":    {},
+		// TODO: ADD command is uncacheable
+		//"Dockerfile_test_issue_add":    {},
+		// TODO: Empty Layers are uncacheable
+		//"Dockerfile_test_issue_empty":    {},
 	}
 	d.TestOCICacheDockerfiles = map[string]struct{}{
 		"Dockerfile_test_cache_oci":         {},

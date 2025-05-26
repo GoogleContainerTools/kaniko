@@ -1,0 +1,8 @@
+FROM ubuntu
+
+# Creates cache misses on main@1d2bff5 before #3340:
+# Folders created implicitly by WORKDIR are not cached.
+# As a workaround create them excplicitly with RUN
+#
+# RUN mkdir /app
+WORKDIR /app

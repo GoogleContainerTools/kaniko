@@ -17,7 +17,7 @@
 # if the cache is implemented correctly
 
 FROM debian:10.13
+RUN mkdir /foo
 WORKDIR /foo
 RUN apt-get update && apt-get install -y make
-COPY context/bar /context
 RUN echo "hey" > foo
