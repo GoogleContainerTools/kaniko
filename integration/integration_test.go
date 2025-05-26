@@ -1030,7 +1030,7 @@ func checkLayers(t *testing.T, image1, image2 string, offset int) {
 func resolveCreatedBy(image string, layerIndex int) (string, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return "", fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+		return "", fmt.Errorf("Couldn't parse reference to image %s: %w", image, err)
 	}
 	imgRef, err := daemon.Image(ref)
 	if err != nil {
@@ -1056,7 +1056,7 @@ func resolveCreatedBy(image string, layerIndex int) (string, error) {
 func getImageLayers(image string) ([]v1.Layer, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+		return nil, fmt.Errorf("Couldn't parse reference to image %s: %w", image, err)
 	}
 	imgRef, err := daemon.Image(ref)
 	if err != nil {
@@ -1072,7 +1072,7 @@ func getImageLayers(image string) ([]v1.Layer, error) {
 func getImageDetails(image string) (*imageDetails, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+		return nil, fmt.Errorf("Couldn't parse reference to image %s: %w", image, err)
 	}
 	imgRef, err := daemon.Image(ref)
 	if err != nil {
@@ -1096,7 +1096,7 @@ func getImageDetails(image string) (*imageDetails, error) {
 func getLastLayerFiles(image string) ([]string, error) {
 	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+		return nil, fmt.Errorf("Couldn't parse reference to image %s: %w", image, err)
 	}
 
 	imgRef, err := remote.Image(ref)
