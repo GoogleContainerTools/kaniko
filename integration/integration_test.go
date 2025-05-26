@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
@@ -742,6 +743,7 @@ func verifyBuildWith(t *testing.T, cache, dockerfile string) {
 
 	expected := fmt.Sprintf(emptyContainerDiff, kanikoVersion0, kanikoVersion1, kanikoVersion0, kanikoVersion1)
 	checkContainerDiffOutput(t, diff, expected)
+	layerDiff(t, kanikoVersion0, kanikoVersion1)
 }
 
 func TestRelativePaths(t *testing.T) {
@@ -957,6 +959,39 @@ func filterFileDiff(f []fileDiff) []fileDiff {
 	return newDiffs
 }
 
+func layerDiff(t *testing.T, image1, image2 string) {
+	t.Helper()
+	layers1, err := getImageLayers(image1)
+	if err != nil {
+		t.Fatalf("Couldn't get details from image reference for (%s): %s", image1, err)
+	}
+
+	layers2, err := getImageLayers(image2)
+	if err != nil {
+		t.Fatalf("Couldn't get details from image reference for (%s): %s", image2, err)
+	}
+
+	for idx := range min(len(layers1), len(layers2)) {
+		l1d, err := layers1[idx].Digest()
+		if err != nil {
+			t.Fatalf("Couldn't get digest from image layer (%s #%d): %s", image1, idx, err)
+		}
+
+		l2d, err := layers2[idx].Digest()
+		if err != nil {
+			t.Fatalf("Couldn't get digest from image layer (%s #%d): %s", image2, idx, err)
+		}
+
+		if l1d != l2d {
+			t.Errorf("Image Layers #%d differ %s != %s", idx, l1d, l2d)
+		}
+	}
+
+	if len(layers1) != len(layers2) {
+		t.Errorf("Image Layer count differs %d != %d", len(layers1), len(layers2))
+	}
+}
+
 func checkLayers(t *testing.T, image1, image2 string, offset int) {
 	t.Helper()
 	img1, err := getImageDetails(image1)
@@ -973,6 +1008,22 @@ func checkLayers(t *testing.T, image1, image2 string, offset int) {
 	if actualOffset != offset {
 		t.Fatalf("Difference in number of layers in each image is %d but should be %d. Image 1: %s, Image 2: %s", actualOffset, offset, img1, img2)
 	}
+}
+
+func getImageLayers(image string) ([]v1.Layer, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+	}
+	imgRef, err := daemon.Image(ref)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get reference to image %s from daemon: %w", image, err)
+	}
+	layers, err := imgRef.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("Error getting layers for image %s: %w", image, err)
+	}
+	return layers, nil
 }
 
 func getImageDetails(image string) (*imageDetails, error) {
