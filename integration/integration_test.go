@@ -963,12 +963,12 @@ func layerDiff(t *testing.T, image1, image2 string) {
 	t.Helper()
 	layers1, err := getImageLayers(image1)
 	if err != nil {
-		t.Fatalf("Couldn't get details from image reference for (%s): %s", image1, err)
+		t.Fatalf("Couldn't get layers from image reference for (%s): %s", image1, err)
 	}
 
 	layers2, err := getImageLayers(image2)
 	if err != nil {
-		t.Fatalf("Couldn't get details from image reference for (%s): %s", image2, err)
+		t.Fatalf("Couldn't get layers from image reference for (%s): %s", image2, err)
 	}
 
 	for idx := range min(len(layers1), len(layers2)) {
@@ -983,12 +983,29 @@ func layerDiff(t *testing.T, image1, image2 string) {
 		}
 
 		if l1d != l2d {
-			t.Errorf("Image Layers #%d differ %s != %s", idx, l1d, l2d)
+			command, err := resolveCreatedBy(image1, idx)
+			if err != nil {
+				t.Errorf("Image Layers #%d differ", idx)
+			} else {
+				t.Errorf("Image Layers #%d differ: %s", idx, command)
+			}
 		}
 	}
 
-	if len(layers1) != len(layers2) {
-		t.Errorf("Image Layer count differs %d != %d", len(layers1), len(layers2))
+	if len(layers1) > len(layers2) {
+		command, err := resolveCreatedBy(image1, len(layers2))
+		if err != nil {
+			t.Errorf("Image Layer count differs %d != %d", len(layers1), len(layers2))
+		} else {
+			t.Errorf("Image Layer count differs %d != %d: %s", len(layers1), len(layers2), command)
+		}
+	} else if len(layers1) < len(layers2) {
+		command, err := resolveCreatedBy(image2, len(layers1))
+		if err != nil {
+			t.Errorf("Image Layer count differs %d != %d", len(layers1), len(layers2))
+		} else {
+			t.Errorf("Image Layer count differs %d != %d: %s", len(layers1), len(layers2), command)
+		}
 	}
 }
 
@@ -1008,6 +1025,32 @@ func checkLayers(t *testing.T, image1, image2 string, offset int) {
 	if actualOffset != offset {
 		t.Fatalf("Difference in number of layers in each image is %d but should be %d. Image 1: %s, Image 2: %s", actualOffset, offset, img1, img2)
 	}
+}
+
+func resolveCreatedBy(image string, layerIndex int) (string, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return "", fmt.Errorf("Couldn't parse referance to image %s: %w", image, err)
+	}
+	imgRef, err := daemon.Image(ref)
+	if err != nil {
+		return "", fmt.Errorf("Couldn't get reference to image %s from daemon: %w", image, err)
+	}
+	cfg, err := imgRef.ConfigFile()
+	if err != nil {
+		return "", fmt.Errorf("Couldn't get Config for image %s: %w", image, err)
+	}
+	idx := 0
+	for _, history := range cfg.History {
+		if history.EmptyLayer {
+			continue
+		}
+		if idx == layerIndex {
+			return history.CreatedBy, nil
+		}
+		idx++
+	}
+	return "", fmt.Errorf("LayerIndex %d not found in History of length %d", layerIndex, len(cfg.History))
 }
 
 func getImageLayers(image string) ([]v1.Layer, error) {
