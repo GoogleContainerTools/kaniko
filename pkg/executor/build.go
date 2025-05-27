@@ -121,10 +121,10 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 	if err != nil {
 		return nil, err
 	}
-	cfg := cf.DeepCopy()
+	cfg := *cf
 	cfg.Created = v1.Time{}
 	cfg.Config.Labels = map[string]string{}
-	sourceImageReproducible, err := mutate.ConfigFile(sourceImage, cfg)
+	sourceImageReproducible, err := mutate.ConfigFile(sourceImage, &cfg)
 	if err != nil {
 		return nil, err
 	}
