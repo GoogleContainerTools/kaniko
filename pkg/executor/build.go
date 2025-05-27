@@ -440,11 +440,6 @@ func (s *stageBuilder) build() error {
 
 				// Raise Warnings for commands that are uncacheable
 				switch command.(type) {
-				case *commands.RunCommand:
-					fi, err := os.Stat(tarPath)
-					if err == nil && fi.Size() <= emptyTarSize {
-						logrus.Warn("cache-violation: RUN created an empty layer, this will cause a diff when rebuilding from cache for the first time.")
-					}
 				case *commands.WorkdirCommand:
 					if len(files) > 0 {
 						logrus.Warn("cache-violation: WORKDIR implicitly created a folder that can't be cached - consider creating it explicitly with RUN instead. https://github.com/GoogleContainerTools/kaniko/issues/3340")
