@@ -722,9 +722,9 @@ func TestWarmerTwice(t *testing.T) {
 }
 
 func verifyBuildWith(t *testing.T, cache, dockerfile string) {
-	args := []string{}
-	if strings.HasPrefix(dockerfile, "Dockerfile_test_cache_copy") {
-		args = append(args, "--cache-copy-layers=true")
+	args, ok := additionalKanikoFlagsMap[dockerfile]
+	if !ok {
+		args = []string{}
 	}
 
 	// Build the initial image which will cache layers

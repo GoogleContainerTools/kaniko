@@ -18,3 +18,5 @@
 
 FROM debian:10.13
 RUN date > /date
+COPY context/foo /foo
+# RUN echo hey
