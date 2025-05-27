@@ -437,7 +437,8 @@ func (s *stageBuilder) build() error {
 				// Raise Warnings for commands that are uncacheable
 				switch command.(type) {
 				case *commands.RunCommand:
-					if len(files) == 0 {
+					fi, err := os.Stat(tarPath)
+					if err == nil && fi.Size() <= emptyTarSize {
 						logrus.Warn("cache-violation: RUN created an empty layer, this will cause a diff when rebuilding from cache for the first time.")
 					}
 				case *commands.WorkdirCommand:
