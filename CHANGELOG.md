@@ -1,3 +1,36 @@
+# v1.24.0-3 Release 2025-05-27
+The executor images in this release are:
+```
+martizih/kaniko:latest
+martizih/kaniko:v1.24.0-3
+```
+
+The debug images are available at:
+```
+martizih/kaniko:debug
+martizih/kaniko:v1.24.0-3-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+martizih/kaniko:slim
+martizih/kaniko:v1.24.0-3-slim
+```
+
+The warmer images are available at:
+```
+martizih/kaniko:warmer
+martizih/kaniko:v1.24.0-3-warmer
+```
+
+* Integration test for caching by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/14
+* warn about potential cache-misses explicitly by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/12
+* integration tests args overrides by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/15
+* no need for deepcopy by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/17
+* RUN commands dont specify which files were added by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/18
+* Fix caching for empty RUN by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/19
+
+
 # v1.24.0-2 Release 2025-05-25
 The executor images in this release are:
 ```
