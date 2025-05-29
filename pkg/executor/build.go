@@ -414,11 +414,13 @@ func (s *stageBuilder) build() error {
 			continue
 		}
 		if isCacheCommand {
-			if files != nil && len(files) == 0 {
+			v := command.(commands.Cached)
+			layer := v.Layer()
+			if (files != nil || layer == nil) && len(files) == 0 {
+				// a cache image with a layer with no files indicates that no files were changed, ie. by 'RUN echo hello'
+				// a cache image without a layer indicates that no files were changed too, ie. by 'WORKDIR /'
 				logrus.Info("No files were changed, appending empty layer to config. No layer added to image.")
 			} else {
-				v := command.(commands.Cached)
-				layer := v.Layer()
 				if err := s.saveLayerToImage(layer, command.String()); err != nil {
 					return errors.Wrap(err, "failed to save layer")
 				}
@@ -440,10 +442,6 @@ func (s *stageBuilder) build() error {
 
 				// Raise Warnings for commands that are uncacheable
 				switch command.(type) {
-				case *commands.WorkdirCommand:
-					if len(files) > 0 {
-						logrus.Warn("cache-violation: WORKDIR implicitly created a folder that can't be cached - consider creating it explicitly with RUN instead. https://github.com/GoogleContainerTools/kaniko/issues/3340")
-					}
 				case *commands.AddCommand:
 					logrus.Warn("cache-violation: ADD can't be cached - consider using COPY instead.")
 				}

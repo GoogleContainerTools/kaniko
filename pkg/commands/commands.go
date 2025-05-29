@@ -78,7 +78,7 @@ func GetCommand(cmd instructions.Command, fileContext util.FileContext, useNewRu
 	case *instructions.EnvCommand:
 		return &EnvCommand{cmd: c}, nil
 	case *instructions.WorkdirCommand:
-		return &WorkdirCommand{cmd: c}, nil
+		return &WorkdirCommand{cmd: c, shdCache: cacheRun}, nil
 	case *instructions.AddCommand:
 		return &AddCommand{cmd: c, fileContext: fileContext}, nil
 	case *instructions.CmdCommand:
