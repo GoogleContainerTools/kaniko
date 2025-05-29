@@ -225,8 +225,7 @@ func NewDockerFileBuilder() *DockerFileBuilder {
 		"Dockerfile_test_cache_perm":    {},
 		"Dockerfile_test_cache_copy":    {},
 		"Dockerfile_test_issue_3429":    {},
-		// TODO: WORKDIR command is uncacheable
-		//"Dockerfile_test_issue_workdir":    {},
+		"Dockerfile_test_issue_workdir": {},
 		// TODO: ADD command is uncacheable
 		//"Dockerfile_test_issue_add":    {},
 		"Dockerfile_test_issue_empty": {},

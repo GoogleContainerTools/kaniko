@@ -442,10 +442,6 @@ func (s *stageBuilder) build() error {
 
 				// Raise Warnings for commands that are uncacheable
 				switch command.(type) {
-				case *commands.WorkdirCommand:
-					if len(files) > 0 {
-						logrus.Warn("cache-violation: WORKDIR implicitly created a folder that can't be cached - consider creating it explicitly with RUN instead. https://github.com/GoogleContainerTools/kaniko/issues/3340")
-					}
 				case *commands.AddCommand:
 					logrus.Warn("cache-violation: ADD can't be cached - consider using COPY instead.")
 				}
