@@ -17,6 +17,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 
+	kConfig "github.com/GoogleContainerTools/kaniko/pkg/config"
 	"github.com/GoogleContainerTools/kaniko/pkg/dockerfile"
 
 	"github.com/GoogleContainerTools/kaniko/pkg/util"
@@ -35,6 +37,7 @@ type AddCommand struct {
 	cmd           *instructions.AddCommand
 	fileContext   util.FileContext
 	snapshotFiles []string
+	shdCache      bool
 }
 
 // ExecuteCommand executes the ADD command
@@ -132,9 +135,98 @@ func (a *AddCommand) String() string {
 }
 
 func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
+	return addCmdFilesUsedFromContext(config, buildArgs, a.cmd, a.fileContext)
+}
+
+func (a *AddCommand) MetadataOnly() bool {
+	return false
+}
+
+func (a *AddCommand) RequiresUnpackedFS() bool {
+	return true
+}
+
+func (a *AddCommand) ShouldCacheOutput() bool {
+	return a.shdCache
+}
+
+// CacheCommand returns true since this command should be cached
+func (a *AddCommand) CacheCommand(img v1.Image) DockerCommand {
+	return &CachingAddCommand{
+		img:         img,
+		cmd:         a.cmd,
+		fileContext: a.fileContext,
+		extractFn:   util.ExtractFile,
+	}
+}
+
+type CachingAddCommand struct {
+	BaseCommand
+	caching
+	img            v1.Image
+	extractedFiles []string
+	cmd            *instructions.AddCommand
+	fileContext    util.FileContext
+	extractFn      util.ExtractFunction
+}
+
+func (ca *CachingAddCommand) ExecuteCommand(config *v1.Config, buildArgs *dockerfile.BuildArgs) error {
+	logrus.Infof("Found cached layer, extracting to filesystem")
+	var err error
+
+	if ca.img == nil {
+		return errors.New(fmt.Sprintf("cached command image is nil %v", ca.String()))
+	}
+
+	layers, err := ca.img.Layers()
+	if err != nil {
+		return errors.Wrapf(err, "retrieve image layers")
+	}
+
+	if len(layers) != 1 {
+		return errors.New(fmt.Sprintf("expected %d layers but got %d", 1, len(layers)))
+	}
+
+	ca.layer = layers[0]
+	ca.extractedFiles, err = util.GetFSFromLayers(kConfig.RootDir, layers, util.ExtractFunc(ca.extractFn), util.IncludeWhiteout())
+
+	logrus.Debugf("ExtractedFiles: %s", ca.extractedFiles)
+	if err != nil {
+		return errors.Wrap(err, "extracting fs from image")
+	}
+
+	return nil
+}
+
+func (ca *CachingAddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs) ([]string, error) {
+	return addCmdFilesUsedFromContext(config, buildArgs, ca.cmd, ca.fileContext)
+}
+
+func (ca *CachingAddCommand) FilesToSnapshot() []string {
+	f := ca.extractedFiles
+	logrus.Debugf("%d files extracted by caching copy command", len(f))
+	logrus.Tracef("Extracted files: %s", f)
+
+	return f
+}
+
+func (ca *CachingAddCommand) MetadataOnly() bool {
+	return false
+}
+
+func (ca *CachingAddCommand) String() string {
+	if ca.cmd == nil {
+		return "nil command"
+	}
+	return ca.cmd.String()
+}
+
+func addCmdFilesUsedFromContext(config *v1.Config, buildArgs *dockerfile.BuildArgs, cmd *instructions.AddCommand,
+	fileContext util.FileContext,
+) ([]string, error) {
 	replacementEnvs := buildArgs.ReplacementEnvs(config.Env)
 
-	srcs, _, err := util.ResolveEnvAndWildcards(a.cmd.SourcesAndDest, a.fileContext, replacementEnvs)
+	srcs, _, err := util.ResolveEnvAndWildcards(cmd.SourcesAndDest, fileContext, replacementEnvs)
 	if err != nil {
 		return nil, err
 	}
@@ -147,18 +239,10 @@ func (a *AddCommand) FilesUsedFromContext(config *v1.Config, buildArgs *dockerfi
 		if util.IsFileLocalTarArchive(src) {
 			continue
 		}
-		fullPath := filepath.Join(a.fileContext.Root, src)
+		fullPath := filepath.Join(fileContext.Root, src)
 		files = append(files, fullPath)
 	}
 
 	logrus.Infof("Using files from context: %v", files)
 	return files, nil
-}
-
-func (a *AddCommand) MetadataOnly() bool {
-	return false
-}
-
-func (a *AddCommand) RequiresUnpackedFS() bool {
-	return true
 }
