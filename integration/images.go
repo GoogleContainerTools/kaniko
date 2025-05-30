@@ -93,6 +93,7 @@ var additionalKanikoFlagsMap = map[string][]string{
 	"Dockerfile_test_cache_install_oci":      {"--cache-copy-layers=true"},
 	"Dockerfile_test_cache_copy":             {"--cache-copy-layers=true"},
 	"Dockerfile_test_cache_copy_oci":         {"--cache-copy-layers=true"},
+	"Dockerfile_test_issue_add":              {"--cache-copy-layers=true"},
 }
 
 // output check to do when building with kaniko
@@ -226,9 +227,8 @@ func NewDockerFileBuilder() *DockerFileBuilder {
 		"Dockerfile_test_cache_copy":    {},
 		"Dockerfile_test_issue_3429":    {},
 		"Dockerfile_test_issue_workdir": {},
-		// TODO: ADD command is uncacheable
-		//"Dockerfile_test_issue_add":    {},
-		"Dockerfile_test_issue_empty": {},
+		"Dockerfile_test_issue_add":     {},
+		"Dockerfile_test_issue_empty":   {},
 	}
 	d.TestOCICacheDockerfiles = map[string]struct{}{
 		"Dockerfile_test_cache_oci":         {},
