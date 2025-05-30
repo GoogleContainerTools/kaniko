@@ -76,7 +76,7 @@ func Test_CompositeCache_AddPath_dir(t *testing.T) {
 
 	fn := func() string {
 		r := NewCompositeCache()
-		if err := r.AddPath(tmpDir, util.FileContext{}); err != nil {
+		if err := r.AddPath(tmpDir, util.FileContext{}, false); err != nil {
 			t.Errorf("expected error to be nil but was %v", err)
 		}
 
@@ -114,7 +114,7 @@ func Test_CompositeCache_AddPath_file(t *testing.T) {
 	p := tmpfile.Name()
 	fn := func() string {
 		r := NewCompositeCache()
-		if err := r.AddPath(p, util.FileContext{}); err != nil {
+		if err := r.AddPath(p, util.FileContext{}, false); err != nil {
 			t.Errorf("expected error to be nil but was %v", err)
 		}
 
@@ -166,7 +166,7 @@ func setIgnoreContext(t *testing.T, content string) (util.FileContext, error) {
 
 func hashDirectory(dirpath string, fileContext util.FileContext) (string, error) {
 	cache1 := NewCompositeCache()
-	err := cache1.AddPath(dirpath, fileContext)
+	err := cache1.AddPath(dirpath, fileContext, false)
 	if err != nil {
 		return "", err
 	}
