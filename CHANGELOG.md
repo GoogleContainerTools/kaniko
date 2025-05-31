@@ -1,3 +1,33 @@
+# v1.24.0-4 Release 2025-05-31
+The executor images in this release are:
+```
+martizih/kaniko:latest
+martizih/kaniko:v1.24.0-4
+```
+
+The debug images are available at:
+```
+martizih/kaniko:debug
+martizih/kaniko:v1.24.0-4-debug
+```
+
+The slim executor images which don't contain any authentication binaries are available at:
+```
+martizih/kaniko:slim
+martizih/kaniko:v1.24.0-4-slim
+```
+
+The warmer images are available at:
+```
+martizih/kaniko:warmer
+martizih/kaniko:v1.24.0-4-warmer
+```
+
+* WORKDIR learned to cache it's potential output layer by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/22
+* simplify logic for detecting empty layers by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/23
+* fix: ADD learned to cache it's output layer by @mzihlmann in https://github.com/mzihlmann/kaniko/pull/24
+
+
 # v1.24.0-3 Release 2025-05-27
 The executor images in this release are:
 ```
