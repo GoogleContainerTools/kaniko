@@ -59,7 +59,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           image-name: martizih/kaniko
           tag: ${{ github.sha }}-warmer
-          release-tag: latest
+          release-tag: warmer
 
     steps:
     - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415 # v3
