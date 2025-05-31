@@ -440,12 +440,6 @@ func (s *stageBuilder) build() error {
 
 				logrus.Debugf("Build: cache key for command %v %v", command.String(), ck)
 
-				// Raise Warnings for commands that are uncacheable
-				switch command.(type) {
-				case *commands.AddCommand:
-					logrus.Warn("cache-violation: ADD can't be cached - consider using COPY instead.")
-				}
-
 				// Push layer to cache (in parallel) now along with new config file
 				if command.ShouldCacheOutput() && !s.opts.NoPushCache {
 					cacheGroup.Go(func() error {
