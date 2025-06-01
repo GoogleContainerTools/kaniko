@@ -695,6 +695,23 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 	return depGraph, nil
 }
 
+func restoreFilesystem(tarball string, opts *config.KanikoOptions) error {
+	if err := util.DeleteFilesystem(); err != nil {
+		return err
+	}
+	if opts.PreserveContext {
+		if tarball == "" {
+			return fmt.Errorf("context snapshot is missing")
+		}
+		_, err := util.UnpackLocalTarArchive(tarball, config.RootDir)
+		if err != nil {
+			return errors.Wrap(err, "failed to unpack context snapshot")
+		}
+		logrus.Info("Context restored")
+	}
+	return nil
+}
+
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
@@ -812,18 +829,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			if opts.Cleanup {
-				if err = util.DeleteFilesystem(); err != nil {
+				err = restoreFilesystem(tarball, opts)
+				if err != nil {
 					return nil, err
-				}
-				if opts.PreserveContext {
-					if tarball == "" {
-						return nil, fmt.Errorf("context snapshot is missing")
-					}
-					_, err := util.UnpackLocalTarArchive(tarball, config.RootDir)
-					if err != nil {
-						return nil, errors.Wrap(err, "failed to unpack context snapshot")
-					}
-					logrus.Info("Context restored")
 				}
 			}
 			timing.DefaultRun.Stop(t)
@@ -854,18 +862,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 
 		// Delete the filesystem
-		if err := util.DeleteFilesystem(); err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after stage %d", index))
-		}
-		if opts.PreserveContext {
-			if tarball == "" {
-				return nil, fmt.Errorf("context snapshot is missing")
-			}
-			_, err := util.UnpackLocalTarArchive(tarball, config.RootDir)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to unpack context snapshot")
-			}
-			logrus.Info("Context restored")
+		err = restoreFilesystem(tarball, opts)
+		if err != nil {
+			return nil, err
 		}
 	}
 
