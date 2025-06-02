@@ -12,8 +12,8 @@ import (
 
 	"github.com/containerd/log"
 	"github.com/containerd/platforms"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/backend"
+	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/builder"
@@ -323,7 +323,7 @@ func copyStringSlice(orig []string) []string {
 // getShell is a helper function which gets the right shell for prefixing the
 // shell-form of RUN, ENTRYPOINT and CMD instructions
 func getShell(c *container.Config, os string) []string {
-	if 0 == len(c.Shell) {
+	if len(c.Shell) == 0 {
 		return append([]string{}, defaultShellForOS(os)[:]...)
 	}
 	return append([]string{}, c.Shell[:]...)
@@ -364,7 +364,7 @@ func (b *Builder) create(ctx context.Context, runConfig *container.Config) (stri
 	return ctr.ID, nil
 }
 
-func hostConfigFromOptions(options *types.ImageBuildOptions) *container.HostConfig {
+func hostConfigFromOptions(options *build.ImageBuildOptions) *container.HostConfig {
 	resources := container.Resources{
 		CgroupParent: options.CgroupParent,
 		CPUShares:    options.CPUShares,
