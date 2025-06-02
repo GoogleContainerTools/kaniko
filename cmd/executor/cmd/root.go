@@ -257,6 +257,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().VarP(&opts.Compression, "compression", "", "Compression algorithm (gzip, zstd)")
 	RootCmd.PersistentFlags().IntVarP(&opts.CompressionLevel, "compression-level", "", -1, "Compression level")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cache, "cache", "", false, "Use cache when building image")
+	RootCmd.PersistentFlags().VarP(&opts.ExcludeBuildArgsFromCacheKey, "exclude-build-arg-from-cache-key", "", "This flag allows you to exclude ARG values from the cache key. Set it repeatedly for multiple values.")
+	RootCmd.PersistentFlags().VarP(&opts.ExcludeEnvsFromCacheKey, "exclude-env-from-cache-key", "", "This flag allows you to exclude ENV values from the cache key. Set it repeatedly for multiple values.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.CompressedCaching, "compressed-caching", "", true, "Compress the cached layers. Decreases build time, but increases memory usage.")
 	RootCmd.PersistentFlags().BoolVarP(&opts.Cleanup, "cleanup", "", false, "Clean the filesystem at the end")
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout, requires value and unit of duration -> ex: 6h. Defaults to two weeks.")
