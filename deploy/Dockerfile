@@ -66,12 +66,12 @@ FROM scratch AS kaniko-base-slim
 # Create kaniko directory with world write permission to allow non root run
 RUN --mount=from=busybox,dst=/usr/ ["busybox", "sh", "-c", "mkdir -p /kaniko && chmod 777 /kaniko"]
 
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY files/nsswitch.conf /etc/nsswitch.conf
 ENV HOME /root
 ENV USER root
 ENV PATH /usr/local/bin:/kaniko
-ENV SSL_CERT_DIR=/kaniko/ssl/certs
+ENV SSL_CERT_DIR=/etc/ssl/certs/
 
 FROM kaniko-base-slim AS kaniko-base
 
