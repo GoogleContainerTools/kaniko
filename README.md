@@ -88,6 +88,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--custom-platform`](#flag---custom-platform)
       - [Flag `--digest-file`](#flag---digest-file)
       - [Flag `--dockerfile`](#flag---dockerfile)
+      - [Flag `--exclude-root-dir-tarball`](#flag---exclude-root-dir-tarball)
       - [Flag `--force`](#flag---force)
       - [Flag `--git`](#flag---git)
       - [Flag `--image-name-with-digest-file`](#flag---image-name-with-digest-file)
@@ -898,6 +899,10 @@ the digest to that file, which is picked up by Kubernetes automatically as the
 #### Flag `--dockerfile`
 
 Path to the dockerfile to be built. (default "Dockerfile")
+
+#### Flag `--exclude-root-dir-tarball`
+
+Set this flag to exclude root directory in tar archive. This can enable tools like Flux that use non-GNU tar to extract images created by Kaniko.
 
 #### Flag `--force`
 
