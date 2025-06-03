@@ -204,7 +204,7 @@ func DoPush(image v1.Image, opts *config.KanikoOptions) error {
 			return errors.Wrap(err, "appending image")
 		}
 	}
-
+	
 	if opts.NoPush && len(opts.Destinations) == 0 {
 		if opts.TarPath != "" {
 			setDummyDestinations(opts)
