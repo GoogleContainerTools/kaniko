@@ -101,6 +101,7 @@ _If you are interested in contributing to kaniko, see
       - [Flag `--no-push`](#flag---no-push)
       - [Flag `--no-push-cache`](#flag---no-push-cache)
       - [Flag `--oci-layout-path`](#flag---oci-layout-path)
+      - [Flag `--preserve-context`](#flag---preserve-context)
       - [Flag `--push-retry`](#flag---push-retry)
       - [Flag `--registry-certificate`](#flag---registry-certificate)
       - [Flag `--registry-client-cert`](#flag---registry-client-cert)
@@ -977,6 +978,17 @@ this flag should be set to match the image resource `outputImageDir`.
 _Note: Depending on the built image, the media type of the image manifest might
 be either `application/vnd.oci.image.manifest.v1+json` or
 `application/vnd.docker.distribution.manifest.v2+json`._
+
+#### Flag `--preserve-context`
+
+Set this boolean flag to `true` if you want kaniko to restore the build-context for multi-stage builds.
+If set, kaniko will take a snapshot of the full filesystem before it starts building to later restore to that state. If combined with the `--cleanup` flag it will also restore the state after cleanup.
+
+This is useful if you want to pass in secrets via files or if you want to execute commands after the build completes.
+
+It will only take the snapshot if we are building a multistage image or if we plan to cleanup the filesystem after the build.
+
+Defaults to `false`
 
 #### Flag `--push-ignore-immutable-tag-errors`
 

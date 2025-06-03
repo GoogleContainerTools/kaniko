@@ -85,6 +85,20 @@ type stageBuilder struct {
 	pushLayerToCache cachePusher
 }
 
+func makeSnapshotter(opts *config.KanikoOptions) (*snapshot.Snapshotter, error) {
+	err := util.InitIgnoreList()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize ignore list")
+	}
+
+	hasher, err := getHasher(opts.SnapshotMode)
+	if err != nil {
+		return nil, err
+	}
+	l := snapshot.NewLayeredMap(hasher)
+	return snapshot.NewSnapshotter(l, config.RootDir), nil
+}
+
 // newStageBuilder returns a new type stageBuilder which contains all the information required to build the stage
 func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, stage config.KanikoStage, crossStageDeps map[int][]string, dcm map[string]string, sid map[string]string, stageNameToIdx map[string]string, fileContext util.FileContext) (*stageBuilder, error) {
 	sourceImage, err := image_util.RetrieveSourceImage(stage, opts)
@@ -101,17 +115,10 @@ func newStageBuilder(args *dockerfile.BuildArgs, opts *config.KanikoOptions, sta
 		return nil, err
 	}
 
-	err = util.InitIgnoreList()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize ignore list")
-	}
-
-	hasher, err := getHasher(opts.SnapshotMode)
+	snapshotter, err := makeSnapshotter(opts)
 	if err != nil {
 		return nil, err
 	}
-	l := snapshot.NewLayeredMap(hasher)
-	snapshotter := snapshot.NewSnapshotter(l, config.RootDir)
 
 	digest, err := sourceImage.Digest()
 	if err != nil {
@@ -688,6 +695,23 @@ func CalculateDependencies(stages []config.KanikoStage, opts *config.KanikoOptio
 	return depGraph, nil
 }
 
+func restoreFilesystem(tarball string, opts *config.KanikoOptions) error {
+	if err := util.DeleteFilesystem(); err != nil {
+		return err
+	}
+	if opts.PreserveContext {
+		if tarball == "" {
+			return fmt.Errorf("context snapshot is missing")
+		}
+		_, err := util.UnpackLocalTarArchive(tarball, config.RootDir)
+		if err != nil {
+			return errors.Wrap(err, "failed to unpack context snapshot")
+		}
+		logrus.Info("Context restored")
+	}
+	return nil
+}
+
 // DoBuild executes building the Dockerfile
 func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	t := timing.Start("Total Build Time")
@@ -721,6 +745,24 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 	logrus.Infof("Built cross stage deps: %v", crossStageDependencies)
 
 	var args *dockerfile.BuildArgs
+
+	var tarball string
+	if opts.PreserveContext {
+		if len(kanikoStages) > 1 || opts.Cleanup {
+			logrus.Info("Creating snapshot of build context")
+			snapshotter, err := makeSnapshotter(opts)
+			if err != nil {
+				return nil, err
+			}
+
+			tarball, err = snapshotter.TakeSnapshotFS()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			logrus.Info("Skipping context snapshot as no-one requires it")
+		}
+	}
 
 	for index, stage := range kanikoStages {
 		sb, err := newStageBuilder(
@@ -787,7 +829,8 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 				}
 			}
 			if opts.Cleanup {
-				if err = util.DeleteFilesystem(); err != nil {
+				err = restoreFilesystem(tarball, opts)
+				if err != nil {
 					return nil, err
 				}
 			}
@@ -819,8 +862,9 @@ func DoBuild(opts *config.KanikoOptions) (v1.Image, error) {
 		}
 
 		// Delete the filesystem
-		if err := util.DeleteFilesystem(); err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("deleting file system after stage %d", index))
+		err = restoreFilesystem(tarball, opts)
+		if err != nil {
+			return nil, err
 		}
 	}
 
