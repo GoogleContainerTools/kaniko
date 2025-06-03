@@ -1,3 +1,11 @@
+# 🧊 This project is archived and no longer developed or maintained. 🧊
+
+The code remains available for historic purposes.
+
+The README as of the archival date remains unchanged below for historic purposes.
+
+-----
+
 # kaniko - Build Images In Kubernetes
 
 ## 🚨NOTE: kaniko is not an officially supported Google product🚨
