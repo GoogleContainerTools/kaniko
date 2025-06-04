@@ -122,7 +122,8 @@ func (t *Tar) AddFileToTar(p string) error {
 
 	hardlink, linkDst := t.checkHardlink(p, i)
 	if hardlink {
-		hdr.Linkname = linkDst
+		// Docker uses no leading / in the tarball
+		hdr.Linkname = strings.TrimLeft(linkDst, "/")
 		hdr.Typeflag = tar.TypeLink
 		hdr.Size = 0
 	}
