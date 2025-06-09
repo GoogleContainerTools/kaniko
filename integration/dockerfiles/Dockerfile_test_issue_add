@@ -1,0 +1,9 @@
+FROM ubuntu AS base
+
+# Creates cache misses on main@1d2bff5:
+# Even with --cache-copy-layers, only COPY layers are cached.
+# ADD instruction is never cached.
+# As a workaround use COPY instruction instead
+#
+# COPY context/foo foo
+ADD context/foo foo
