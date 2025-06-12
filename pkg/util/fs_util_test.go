@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -917,6 +918,84 @@ func Test_childDirInSkiplist(t *testing.T) {
 				t.Errorf("childDirInIgnoreList() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_getIgnoreFilePath(t *testing.T) {
+	dockerfilePath := filepath.Join(os.TempDir(), "Dockerfile")
+	buildcontext := filepath.Join(os.TempDir(), "buildcontext")
+
+	err := os.MkdirAll(buildcontext, 0755)
+	if err != nil {
+		t.Errorf("'%v' folder cannot be created", buildcontext)
+	}
+
+	cleanup := func() {
+		os.Remove(dockerfilePath + ".containerignore")
+		os.Remove(dockerfilePath + ".dockerignore")
+		os.Remove(filepath.Join(buildcontext, ".containerignore"))
+		os.Remove(filepath.Join(buildcontext, ".dockerignore"))
+	}
+
+	t.Run(".containerignore exists next to Dockerfile", func(t *testing.T) {
+		err := ioutil.WriteFile(dockerfilePath+".containerignore", []byte("foo"), 0644)
+		if err != nil {
+			t.Errorf("cannot create '%v'.containerignore", dockerfilePath)
+		}
+		path, err := getIgnoreFilePath(dockerfilePath, buildcontext)
+		expectedPath := dockerfilePath + ".containerignore"
+		if err != nil || path != expectedPath {
+			t.Errorf("expected '%v', got '%v', error: '%v'", expectedPath, path, err)
+		}
+
+		cleanup()
+	})
+
+	t.Run(".containerignore exists in the buildcontext", func(t *testing.T) {
+		err := ioutil.WriteFile(filepath.Join(buildcontext, ".containerignore"), []byte("foo"), 0644)
+		if err != nil {
+			t.Errorf("cannot create '%v'.containerignore", buildcontext)
+		}
+		path, err := getIgnoreFilePath(dockerfilePath, buildcontext)
+		expectedPath := filepath.Join(buildcontext, ".containerignore")
+		if err != nil || path != expectedPath {
+			t.Errorf("expected '%v', got '%v', error: '%v'", expectedPath, path, err)
+		}
+
+		cleanup()
+	})
+
+	t.Run(".dockerignore exists next to Dockerfile", func(t *testing.T) {
+		err := ioutil.WriteFile(dockerfilePath+".dockerignore", []byte("foo"), 0644)
+		if err != nil {
+			t.Errorf("cannot create '%v'.dockerignore", dockerfilePath)
+		}
+		path, err := getIgnoreFilePath(dockerfilePath, buildcontext)
+		expectedPath := dockerfilePath + ".dockerignore"
+		if err != nil || path != expectedPath {
+			t.Errorf("expected '%v', got '%v', error: '%v'", expectedPath, path, err)
+		}
+
+		cleanup()
+	})
+
+	t.Run(".dockerignore exists in the buildcontext", func(t *testing.T) {
+		err := ioutil.WriteFile(filepath.Join(buildcontext, ".dockerignore"), []byte("foo"), 0644)
+		if err != nil {
+			t.Errorf("cannot create '%v'.dockerignore", buildcontext)
+		}
+		path, err := getIgnoreFilePath(dockerfilePath, buildcontext)
+		expectedPath := filepath.Join(buildcontext, ".dockerignore")
+		if err != nil || path != expectedPath {
+			t.Errorf("expected '%v', got '%v', error: '%v'", expectedPath, path, err)
+		}
+
+		cleanup()
+	})
+
+	err = os.RemoveAll(buildcontext)
+	if err != nil {
+		t.Errorf("cannot clean '%v' folder", buildcontext)
 	}
 }
 
