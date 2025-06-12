@@ -108,6 +108,21 @@ func hashDir(p string, context util.FileContext) (bool, string, error) {
 		if err != nil {
 			return err
 		}
+
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+
+		absRoot, err := filepath.Abs(context.Root)
+		if err != nil {
+			return err
+		}
+
+		if _, err := sha.Write([]byte(strings.TrimPrefix(absPath, absRoot))); err != nil {
+			return err
+		}
+
 		if _, err := sha.Write([]byte(fileHash)); err != nil {
 			return err
 		}

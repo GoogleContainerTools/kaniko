@@ -96,6 +96,7 @@ func Test_CompositeCache_AddPath_dir(t *testing.T) {
 		t.Errorf("expected hash %v to equal hash %v", hash1, hash2)
 	}
 }
+
 func Test_CompositeCache_AddPath_file(t *testing.T) {
 	tmpfile, err := os.CreateTemp("/tmp", "foo.txt")
 	if err != nil {
@@ -206,8 +207,6 @@ func Test_CompositeKey_AddPath_Works(t *testing.T) {
 		},
 	}
 
-	fileContext := util.FileContext{}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testDir1 := t.TempDir()
@@ -222,11 +221,11 @@ func Test_CompositeKey_AddPath_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
-			hash1, err := hashDirectory(testDir1, fileContext)
+			hash1, err := hashDirectory(testDir1, util.FileContext{Root: testDir1})
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
-			hash2, err := hashDirectory(testDir2, fileContext)
+			hash2, err := hashDirectory(testDir2, util.FileContext{Root: testDir2})
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
@@ -435,10 +434,13 @@ func Test_CompositeKey_AddPath_WithExtraFilIgnored_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
+			fileContext.Root = testDir1
 			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
+
+			fileContext.Root = testDir2
 			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
@@ -508,10 +510,13 @@ func Test_CompositeKey_AddPath_WithExtraDirIgnored_Works(t *testing.T) {
 				t.Fatalf("Error creating filesytem structure: %s", err)
 			}
 
+			fileContext.Root = testDir1
 			hash1, err := hashDirectory(testDir1, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
 			}
+
+			fileContext.Root = testDir2
 			hash2, err := hashDirectory(testDir2, fileContext)
 			if err != nil {
 				t.Fatalf("Failed to calculate hash: %s", err)
@@ -521,5 +526,79 @@ func Test_CompositeKey_AddPath_WithExtraDirIgnored_Works(t *testing.T) {
 				t.Errorf("Expected equal hashes, got: %s and %s", hash1, hash2)
 			}
 		})
+	}
+}
+
+func Test_CompositeCache_AddPath_DiffFileNames_Cache_Differently_Works(t *testing.T) {
+	tmpDir1 := t.TempDir()
+	tmpDir2 := t.TempDir()
+
+	content := `meow meow meow`
+	if err := os.WriteFile(filepath.Join(tmpDir1, "foo.txt"), []byte(content), 0777); err != nil {
+		t.Errorf("got error writing temp file %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(tmpDir2, "bar.txt"), []byte(content), 0777); err != nil {
+		t.Errorf("got error writing temp file %v", err)
+	}
+
+	fn := func(p string) string {
+		r := NewCompositeCache()
+		if err := r.AddPath(p, util.FileContext{Root: p}); err != nil {
+			t.Errorf("expected error to be nil but was %v", err)
+		}
+
+		if len(r.keys) != 1 {
+			t.Errorf("expected len of keys to be 1 but was %v", len(r.keys))
+		}
+
+		hash, err := r.Hash()
+		if err != nil {
+			t.Errorf("couldnt generate hash from test cache")
+		}
+		return hash
+	}
+
+	hash1 := fn(tmpDir1)
+	hash2 := fn(tmpDir2)
+	if hash1 == hash2 {
+		t.Errorf("expected hash %v to be different than hash %v", hash1, hash2)
+	}
+}
+
+func Test_CompositeCache_AddPath_SameFileNames_In_Diff_Contexts_Works(t *testing.T) {
+	tmpDir1 := t.TempDir()
+	tmpDir2 := t.TempDir()
+
+	content := `meow meow meow`
+	if err := os.WriteFile(filepath.Join(tmpDir1, "foo.txt"), []byte(content), 0777); err != nil {
+		t.Errorf("got error writing temp file %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(tmpDir2, "foo.txt"), []byte(content), 0777); err != nil {
+		t.Errorf("got error writing temp file %v", err)
+	}
+
+	fn := func(p string) string {
+		r := NewCompositeCache()
+		if err := r.AddPath(p, util.FileContext{Root: p}); err != nil {
+			t.Errorf("expected error to be nil but was %v", err)
+		}
+
+		if len(r.keys) != 1 {
+			t.Errorf("expected len of keys to be 1 but was %v", len(r.keys))
+		}
+
+		hash, err := r.Hash()
+		if err != nil {
+			t.Errorf("couldnt generate hash from test cache")
+		}
+		return hash
+	}
+
+	hash1 := fn(tmpDir1)
+	hash2 := fn(tmpDir2)
+	if hash1 != hash2 {
+		t.Errorf("expected hash %v to be the same as hash %v", hash1, hash2)
 	}
 }
