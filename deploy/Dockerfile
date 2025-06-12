@@ -49,6 +49,9 @@ RUN go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/doc
 # Get ACR docker env credential helper
 RUN go install github.com/chrismellard/docker-credential-acr-env
 
+# Get docker generic environment credential helper
+RUN go install github.com/isometry/docker-credential-env
+
 RUN \
   --mount=type=cache,target=/root/.cache/go-build \
   --mount=type=cache,target=/go/pkg \
@@ -78,6 +81,7 @@ FROM kaniko-base-slim AS kaniko-base
 COPY --from=builder --chown=0:0 /usr/local/bin/docker-credential-gcr /kaniko/docker-credential-gcr
 COPY --from=builder --chown=0:0 /usr/local/bin/docker-credential-ecr-login /kaniko/docker-credential-ecr-login
 COPY --from=builder --chown=0:0 /usr/local/bin/docker-credential-acr-env /kaniko/docker-credential-acr-env
+COPY --from=builder --chown=0:0 /usr/local/bin/docker-credential-env /kaniko/docker-credential-env
 
 COPY --from=builder /kaniko/.docker /kaniko/.docker
 
