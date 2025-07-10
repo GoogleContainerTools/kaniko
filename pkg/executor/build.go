@@ -219,8 +219,9 @@ func (s *stageBuilder) populateCompositeKey(command commands.DockerCommand, file
 	// Add the next command to the cache key.
 	compositeKey.AddKey(command.String())
 
+	considerExcludedFiles := command.IsConsiderExcludedFilesInCache()
 	for _, f := range files {
-		if err := compositeKey.AddPath(f, s.fileContext); err != nil {
+		if err := compositeKey.AddPath(f, s.fileContext, considerExcludedFiles); err != nil {
 			return compositeKey, err
 		}
 	}

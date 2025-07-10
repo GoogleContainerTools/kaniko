@@ -55,7 +55,7 @@ func (s *CompositeCache) Hash() (string, error) {
 	return util.SHA256(strings.NewReader(s.Key()))
 }
 
-func (s *CompositeCache) AddPath(p string, context util.FileContext) error {
+func (s *CompositeCache) AddPath(p string, context util.FileContext, considerExcludedFiles bool) error {
 	sha := sha256.New()
 	fi, err := os.Lstat(p)
 	if err != nil {
@@ -70,7 +70,7 @@ func (s *CompositeCache) AddPath(p string, context util.FileContext) error {
 
 		// Only add the hash of this directory to the key
 		// if there is any ignored content.
-		if !empty || !context.ExcludesFile(p) {
+		if !empty || considerExcludedFiles || !context.ExcludesFile(p) {
 			s.keys = append(s.keys, k)
 		}
 		return nil
