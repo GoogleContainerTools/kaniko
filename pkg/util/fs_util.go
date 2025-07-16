@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -227,6 +228,30 @@ func GetFSFromLayers(root string, layers []v1.Layer, opts ...FSOpt) ([]string, e
 		}
 	}
 	return extractedFiles, nil
+}
+
+// CleanupFilesystem deletes the extracted image file system, snapshots and stage dependent files
+func CleanupFilesystem() error {
+	DeleteFilesystem()
+	logrus.Info("Deleting snapshots and layer dependet files...")
+	numericPattern := regexp.MustCompile(`^\d+$`)
+	return filepath.Walk(config.KanikoDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// ignore errors when deleting.
+			return nil //nolint:nilerr
+		}
+
+		if numericPattern.MatchString(info.Name()) && isExist(path) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				logrus.Debugf("Error deleting path: %s\n", path)
+				return nil //nolint:nilerr
+			}
+			logrus.Debugf("Deleted path: %s\n", path)
+		}
+
+		return nil //nolint:nilerr
+	})
 }
 
 // DeleteFilesystem deletes the extracted image file system
