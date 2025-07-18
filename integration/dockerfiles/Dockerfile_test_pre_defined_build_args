@@ -1,0 +1,46 @@
+# ingegration test for pre-defined build args; see pkg/dockerfile/buildargs.go
+FROM alpine:3 AS builder
+ARG BUILDPLATFORM
+ARG BUILDOS
+ARG BUILDARCH
+ARG BUILDVARIANT
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG TARGETSTAGE
+RUN echo "BUILDPLATFORM: ${BUILDPLATFORM}" && \
+    echo "BUILDOS: ${BUILDOS}" && \
+    echo "BUILDARCH: ${BUILDARCH}" && \
+    echo "BUILDVARIANT: ${BUILDVARIANT}" && \
+    echo "TARGETPLATFORM: ${TARGETPLATFORM}" && \
+    echo "TARGETOS: ${TARGETOS}" && \
+    echo "TARGETARCH: ${TARGETARCH}" && \
+    echo "TARGETVARIANT: ${TARGETVARIANT}" && \
+    echo "TARGETSTAGE: ${TARGETSTAGE}"
+RUN uname -a
+COPY foo /app/foo
+RUN echo 'add line' >> /app/foo
+
+FROM alpine:3
+COPY --from=builder /app/foo /app/foo
+ARG BUILDPLATFORM
+ARG BUILDOS
+ARG BUILDARCH
+ARG BUILDVARIANT
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG TARGETSTAGE
+RUN echo "BUILDPLATFORM: ${BUILDPLATFORM}" && \
+    echo "BUILDOS: ${BUILDOS}" && \
+    echo "BUILDARCH: ${BUILDARCH}" && \
+    echo "BUILDVARIANT: ${BUILDVARIANT}" && \
+    echo "TARGETPLATFORM: ${TARGETPLATFORM}" && \
+    echo "TARGETOS: ${TARGETOS}" && \
+    echo "TARGETARCH: ${TARGETARCH}" && \
+    echo "TARGETVARIANT: ${TARGETVARIANT}" && \
+    echo "TARGETSTAGE: ${TARGETSTAGE}"
+RUN uname -a
+RUN cat /app/foo
