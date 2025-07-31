@@ -814,6 +814,18 @@ export IFS=''
 /kaniko/executor --build-arg "MY_VAR='value with spaces'" ...
 ```
 
+It is also possible to lookup the build argument value from the environment
+variables which is especially useful when you already have the build argument
+value in the environment variables and don't want to fiddle around with shell escaping.
+To use an environment variable as build argument value, you just need to
+use the `--build-arg` parameter just with the name of the argument:
+
+```bash
+/kaniko/executor --build-arg "MY_VAR" ...
+```
+In this example, Kaniko will then set the build argument `MY_VAR` to the value of the environment
+variable `MY_VAR`.
+
 #### Flag `--cache`
 
 Set this flag as `--cache=true` to opt into caching with kaniko.
