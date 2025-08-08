@@ -28,6 +28,9 @@ import (
 type CacheOptions struct {
 	CacheDir string
 	CacheTTL time.Duration
+
+	ExcludeBuildArgsFromCacheKey multiArg
+	ExcludeEnvsFromCacheKey      multiArg
 }
 
 // RegistryOptions are all the options related to the registries, set by command line arguments.
