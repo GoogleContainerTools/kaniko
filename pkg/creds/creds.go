@@ -19,6 +19,7 @@ package creds
 import (
 	"io"
 
+	do "github.com/DefangLabs/docker-credential-digitalocean/pkg/credhelper"
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	gitlab "github.com/ePirat/docker-credential-gitlabci/pkg/credhelper"
@@ -34,5 +35,6 @@ func GetKeychain() authn.Keychain {
 		authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))),
 		authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
 		authn.NewKeychainFromHelper(gitlab.NewGitLabCredentialsHelper()),
+		authn.NewKeychainFromHelper(do.NewDigitalOceanCredentialHelper(do.WithReadWrite(), do.WithExpiry(3600))),
 	)
 }
